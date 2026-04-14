@@ -104,6 +104,12 @@ class ProgramListingForm(forms.ModelForm):
         choices=ProgramListing.GRADE_BAND_CHOICES,
         widget=forms.CheckboxSelectMultiple,
     )
+    venue_requirements = forms.MultipleChoiceField(
+        label="필요 공간",
+        choices=ProgramListing.VENUE_REQUIREMENT_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
     attachments = MultipleFileField(
         required=False,
         label="상세 안내자료",
@@ -124,18 +130,30 @@ class ProgramListingForm(forms.ModelForm):
             "city",
             "coverage_note",
             "duration_text",
+            "schedule_basis",
+            "schedule_detail",
             "capacity_text",
             "price_text",
+            "venue_requirements",
+            "venue_note",
             "safety_info",
             "materials_info",
             "faq",
         ]
         widgets = {
-            "summary": forms.TextInput(attrs={"placeholder": "예) 학교로 직접 찾아가 90분 안에 끝나는 과학 체험"}),
+            "summary": forms.TextInput(attrs={"placeholder": "예) 학교로 직접 찾아가 2교시 안에 끝나는 과학 체험"}),
             "description": forms.Textarea(attrs={"rows": 6}),
             "theme_tags_text": forms.TextInput(attrs={"placeholder": "예) 환경, 과학, 생태, 협동"}),
             "city": forms.TextInput(attrs={"placeholder": "예) 수원, 강서구, 해운대구"}),
             "coverage_note": forms.TextInput(attrs={"placeholder": "예) 용인·성남·분당까지 방문 가능"}),
+            "duration_text": forms.TextInput(attrs={"placeholder": "예) 2교시 연속, 1~2교시, 3교시 분산 운영"}),
+            "schedule_detail": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": "예) 1교시 환경 퀴즈\n2교시 업사이클 만들기\n선택 항목이라 비워도 됩니다.",
+                }
+            ),
+            "venue_note": forms.TextInput(attrs={"placeholder": "예) 강당 무대 마이크 2대, 책상 이동 가능한 교실 필요"}),
             "safety_info": forms.Textarea(attrs={"rows": 4}),
             "materials_info": forms.Textarea(attrs={"rows": 4}),
             "faq": forms.Textarea(attrs={"rows": 4}),
@@ -145,10 +163,11 @@ class ProgramListingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields["grade_bands"].initial = self.instance.grade_bands
+            self.fields["venue_requirements"].initial = self.instance.venue_requirements
         if self.instance.pk and not self.initial.get("theme_tags_text"):
             self.initial["theme_tags_text"] = self.instance.theme_tags_text
         for name, field in self.fields.items():
-            if name == "grade_bands":
+            if name in {"grade_bands", "venue_requirements"}:
                 continue
             if isinstance(field.widget, forms.Textarea):
                 field.widget.attrs["class"] = TEXTAREA_CLASS
@@ -159,6 +178,15 @@ class ProgramListingForm(forms.ModelForm):
         if region_list_id:
             self.fields["city"].widget.attrs["list"] = region_list_id
         self.fields["attachments"].widget.attrs["accept"] = ",".join(sorted(LISTING_ATTACHMENT_ALLOWED_EXTENSIONS))
+        self.fields["summary"].help_text = "목록에서 바로 보이는 한 줄"
+        self.fields["duration_text"].label = "운영 교시"
+        self.fields["duration_text"].help_text = "분 대신 교시로 적습니다."
+        self.fields["schedule_basis"].help_text = "학교 시간표 기준"
+        self.fields["schedule_detail"].help_text = "교시별 운영안은 선택 입력"
+        self.fields["capacity_text"].help_text = "학급 수, 반 수, 전체 인원 중 편한 방식"
+        self.fields["price_text"].help_text = "학급당, 총액, 협의 여부를 같이 적어 주세요."
+        self.fields["venue_requirements"].help_text = "필요한 공간만 체크"
+        self.fields["venue_note"].help_text = "특수 배치나 장비가 있으면 짧게"
 
     def clean_theme_tags_text(self):
         return _normalize_csv_text(self.cleaned_data.get("theme_tags_text", ""))
@@ -173,6 +201,7 @@ class ProgramListingForm(forms.ModelForm):
         instance = super().save(commit=False)
         instance.grade_bands = self.cleaned_data["grade_bands"]
         instance.theme_tags = [item.strip() for item in self.cleaned_data["theme_tags_text"].split(",") if item.strip()]
+        instance.venue_requirements = self.cleaned_data["venue_requirements"]
         if commit:
             instance.save()
         return instance

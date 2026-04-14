@@ -44,7 +44,7 @@ def build_listing(provider, **overrides):
     defaults = {
         "provider": provider,
         "title": "모델 테스트 프로그램",
-        "summary": "90분 방문형 프로그램",
+        "summary": "2교시 방문형 프로그램",
         "description": "교실에서 진행하는 프로그램입니다.",
         "category": ProgramListing.Category.FIELDTRIP,
         "theme_tags": ["환경"],
@@ -52,9 +52,12 @@ def build_listing(provider, **overrides):
         "delivery_mode": ProgramListing.DeliveryMode.VISITING,
         "province": "gyeonggi",
         "city": "수원",
-        "duration_text": "90분",
+        "duration_text": "2교시",
+        "schedule_basis": ProgramListing.ScheduleBasis.SCHOOL_LEVEL,
         "capacity_text": "30명",
         "price_text": "학급당 35만원",
+        "venue_requirements": ["classroom"],
+        "venue_note": "빔프로젝터 사용 가능한 교실",
     }
     defaults.update(overrides)
     return ProgramListing(**defaults)
@@ -104,6 +107,18 @@ class ProgramListingLifecycleTests(TestCase):
         self.assertEqual(listing.approval_status, ProgramListing.ApprovalStatus.APPROVED)
         self.assertEqual(listing.submitted_at, submitted_at)
         self.assertIsNotNone(listing.published_at)
+
+    def test_schedule_and_venue_helpers_return_school_ready_labels(self):
+        listing = build_listing(
+            self.provider,
+            schedule_basis=ProgramListing.ScheduleBasis.SCHOOL_LEVEL,
+            venue_requirements=["auditorium", "computer_room"],
+        )
+
+        listing.save()
+
+        self.assertEqual(listing.schedule_basis_note, "초등 40분 · 중등 45분 · 고등 50분 · 쉬는시간 10분")
+        self.assertEqual(listing.venue_requirement_labels, ["강당", "컴퓨터실"])
 
 
 class InquiryReviewModelTests(TestCase):

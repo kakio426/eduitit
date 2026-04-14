@@ -2,8 +2,12 @@
 
 {% block title %}{{ page_title }}{% endblock %}
 
+{% block extra_css %}
+    {% include "schoolprograms/vendor/_form_skin.html" %}
+{% endblock %}
+
 {% block content %}
-<main class="service-shell min-h-screen bg-slate-50 pb-20">
+<main class="schoolprograms-vendor-form min-h-screen bg-slate-50 pt-32 pb-20 text-slate-900">
     <section class="mx-auto max-w-5xl px-4 sm:px-6">
         <div class="mb-5 flex flex-wrap items-center gap-3">
             <a href="{% url 'schoolprograms:vendor_dashboard' %}" class="inline-flex min-h-[44px] items-center rounded-full bg-white px-4 text-sm font-black text-slate-600 shadow-sm">
@@ -14,11 +18,11 @@
             {% endif %}
         </div>
 
-        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div class="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-900 shadow-sm sm:p-8">
             <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">프로그램 등록</p>
             <h1 class="mt-3 text-3xl font-black text-slate-900">{% if listing %}대표 프로그램을 수정하세요{% else %}첫 프로그램부터 바로 공개 준비까지{% endif %}</h1>
             <p class="mt-4 text-sm leading-6 text-slate-600">
-                임시 저장 후 다시 들어와 보완할 수 있고, 심사 요청을 보내면 승인 전까지 공개 검색에는 노출되지 않습니다.
+                교사가 시간표에 바로 넣을 수 있게 교시와 공간 기준으로 정리합니다.
             </p>
 
             {% if not profile_ready %}
@@ -74,34 +78,231 @@
                 {% if form.non_field_errors %}
                     <div class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{{ form.non_field_errors }}</div>
                 {% endif %}
-                <div class="grid gap-5 md:grid-cols-2">
-                    {% for field in form %}
-                        {% if field.name != "attachments" %}
-                            <label class="block {% if field.name == 'description' or field.name == 'safety_info' or field.name == 'materials_info' or field.name == 'faq' or field.name == 'grade_bands' %}md:col-span-2{% endif %}">
-                                <span class="mb-2 block text-sm font-black text-slate-700">{{ field.label }}</span>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <p class="mt-2 text-sm font-bold text-rose-600">{{ field.errors|join:", " }}</p>
-                                {% endif %}
-                            </label>
-                        {% endif %}
-                    {% endfor %}
-                    <label class="block md:col-span-2">
-                        <span class="mb-2 block text-sm font-black text-slate-700">사진 추가</span>
-                        <input type="file" name="new_images" multiple class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
-                    </label>
-                    <label class="block md:col-span-2">
-                        <span class="mb-2 block text-sm font-black text-slate-700">{{ form.attachments.label }}</span>
-                        {{ form.attachments }}
-                        <p class="mt-2 text-sm leading-6 text-slate-500">
-                            PDF, HWP, HWPX, JPG, PNG 파일을 올릴 수 있습니다.
-                            파일당 최대 {{ form.attachment_limits.max_file_mb }}MB, 한 번에 최대 {{ form.attachment_limits.max_files }}개까지 지원합니다.
-                        </p>
-                        {% if form.attachments.errors %}
-                            <p class="mt-2 text-sm font-bold text-rose-600">{{ form.attachments.errors|join:", " }}</p>
-                        {% endif %}
-                    </label>
-                </div>
+                <section class="rounded-[1.5rem] bg-slate-50 p-5">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">기본 정보</p>
+                            <h2 class="mt-2 text-2xl font-black text-slate-900">교사가 첫 화면에서 보는 내용</h2>
+                        </div>
+                    </div>
+                    <div class="mt-5 grid gap-5 md:grid-cols-2">
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.title.label }}</span>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.title.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.category.label }}</span>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.category.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.delivery_mode.label }}</span>
+                            {{ form.delivery_mode }}
+                            {% if form.delivery_mode.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.delivery_mode.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.summary.label }}</span>
+                            {{ form.summary }}
+                            {% if form.summary.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.summary.help_text }}</p>
+                            {% endif %}
+                            {% if form.summary.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.summary.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.description.label }}</span>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.description.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.theme_tags_text.label }}</span>
+                            {{ form.theme_tags_text }}
+                            {% if form.theme_tags_text.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.theme_tags_text.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] bg-slate-50 p-5">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">운영 정보</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-900">대상, 지역, 인원, 가격</h2>
+                    </div>
+                    <div class="mt-5 grid gap-5 md:grid-cols-2">
+                        <div class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.grade_bands.label }}</span>
+                            {{ form.grade_bands }}
+                            {% if form.grade_bands.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.grade_bands.errors|join:", " }}</p>
+                            {% endif %}
+                        </div>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.province.label }}</span>
+                            {{ form.province }}
+                            {% if form.province.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.province.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.city.label }}</span>
+                            {{ form.city }}
+                            {% if form.city.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.city.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.coverage_note.label }}</span>
+                            {{ form.coverage_note }}
+                            {% if form.coverage_note.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.coverage_note.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.capacity_text.label }}</span>
+                            {{ form.capacity_text }}
+                            {% if form.capacity_text.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.capacity_text.help_text }}</p>
+                            {% endif %}
+                            {% if form.capacity_text.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.capacity_text.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.price_text.label }}</span>
+                            {{ form.price_text }}
+                            {% if form.price_text.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.price_text.help_text }}</p>
+                            {% endif %}
+                            {% if form.price_text.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.price_text.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] bg-slate-50 p-5">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">학교 시간표 기준</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-900">몇 교시로 운영하는지 먼저 적어 주세요</h2>
+                    </div>
+                    <div class="mt-5 grid gap-5 md:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.duration_text.label }}</span>
+                            {{ form.duration_text }}
+                            {% if form.duration_text.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.duration_text.help_text }}</p>
+                            {% endif %}
+                            {% if form.duration_text.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.duration_text.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.schedule_basis.label }}</span>
+                            {{ form.schedule_basis }}
+                            {% if form.schedule_basis.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.schedule_basis.help_text }}</p>
+                            {% endif %}
+                            {% if form.schedule_basis.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.schedule_basis.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.schedule_detail.label }}</span>
+                            {{ form.schedule_detail }}
+                            {% if form.schedule_detail.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.schedule_detail.help_text }}</p>
+                            {% endif %}
+                            {% if form.schedule_detail.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.schedule_detail.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] bg-slate-50 p-5">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">공간 / 준비</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-900">학교가 미리 알아야 할 공간 조건</h2>
+                    </div>
+                    <div class="mt-5 grid gap-5 md:grid-cols-2">
+                        <div class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.venue_requirements.label }}</span>
+                            {{ form.venue_requirements }}
+                            {% if form.venue_requirements.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.venue_requirements.help_text }}</p>
+                            {% endif %}
+                            {% if form.venue_requirements.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.venue_requirements.errors|join:", " }}</p>
+                            {% endif %}
+                        </div>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.venue_note.label }}</span>
+                            {{ form.venue_note }}
+                            {% if form.venue_note.help_text %}
+                                <p class="mt-2 text-xs font-bold text-slate-400">{{ form.venue_note.help_text }}</p>
+                            {% endif %}
+                            {% if form.venue_note.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.venue_note.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.safety_info.label }}</span>
+                            {{ form.safety_info }}
+                            {% if form.safety_info.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.safety_info.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.materials_info.label }}</span>
+                            {{ form.materials_info }}
+                            {% if form.materials_info.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.materials_info.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.faq.label }}</span>
+                            {{ form.faq }}
+                            {% if form.faq.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.faq.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                    </div>
+                </section>
+
+                <section class="rounded-[1.5rem] bg-slate-50 p-5">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.15em] text-orange-500">사진 / 자료</p>
+                        <h2 class="mt-2 text-2xl font-black text-slate-900">교사가 바로 확인할 자료를 붙여 주세요</h2>
+                    </div>
+                    <div class="mt-5 grid gap-5 md:grid-cols-2">
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">사진 추가</span>
+                            <input type="file" name="new_images" multiple class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
+                        </label>
+                        <label class="block md:col-span-2">
+                            <span class="mb-2 block text-sm font-black text-slate-700">{{ form.attachments.label }}</span>
+                            {{ form.attachments }}
+                            <p class="mt-2 text-sm leading-6 text-slate-500">
+                                PDF, HWP, HWPX, JPG, PNG 파일을 올릴 수 있습니다.
+                                파일당 최대 {{ form.attachment_limits.max_file_mb }}MB, 한 번에 최대 {{ form.attachment_limits.max_files }}개까지 지원합니다.
+                            </p>
+                            {% if form.attachments.errors %}
+                                <p class="mt-2 text-sm font-bold text-rose-600">{{ form.attachments.errors|join:", " }}</p>
+                            {% endif %}
+                        </label>
+                    </div>
+                </section>
                 <datalist id="listing-region-suggestions">
                     {% for region in region_suggestions %}
                         <option value="{{ region }}">

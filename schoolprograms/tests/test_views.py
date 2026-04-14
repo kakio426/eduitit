@@ -53,7 +53,7 @@ def create_listing(*, provider, title="찾아오는 환경 체험", approval_sta
     defaults = {
         "provider": provider,
         "title": title,
-        "summary": "90분 안에 끝나는 학교 방문형 환경 체험",
+        "summary": "2교시 안에 끝나는 학교 방문형 환경 체험",
         "description": "교실 또는 강당에서 바로 진행하는 체험 수업입니다.",
         "category": ProgramListing.Category.FIELDTRIP,
         "theme_tags": ["환경", "생태"],
@@ -62,9 +62,13 @@ def create_listing(*, provider, title="찾아오는 환경 체험", approval_sta
         "province": "gyeonggi",
         "city": "수원",
         "coverage_note": "수원·용인·성남 방문 가능",
-        "duration_text": "90분",
+        "duration_text": "2교시",
+        "schedule_basis": ProgramListing.ScheduleBasis.SCHOOL_LEVEL,
+        "schedule_detail": "1교시 환경 퀴즈\n2교시 업사이클 만들기",
         "capacity_text": "학급당 30명, 최대 4개 반",
         "price_text": "학급당 35만원부터",
+        "venue_requirements": ["classroom", "auditorium"],
+        "venue_note": "빔프로젝터와 마이크 사용 가능 공간 필요",
         "safety_info": "안전 지도안과 보험 안내 제공",
         "materials_info": "빔프로젝터와 책상 배치 필요",
         "faq": "우천 시에도 교내 진행 가능합니다.",
@@ -108,7 +112,7 @@ class SchoolProgramsLandingTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "학교로 찾아오는 업체를 먼저 둘러보세요")
+        self.assertContains(response, "지역, 학년, 방식으로 고르기")
         self.assertContains(response, self.provider.provider_name)
         self.assertContains(response, "조건 더 보기")
         self.assertNotContains(response, "업체 등록 안내 보기")
@@ -161,7 +165,7 @@ class SchoolProgramsDiscoveryTests(TestCase):
         response = self.client.get(reverse("schoolprograms:provider_detail", args=[self.provider.slug]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "활동을 고르면 오른쪽에서 바로 문의를 시작할 수 있습니다.")
+        self.assertContains(response, "활동 선택 후 문의")
         self.assertContains(response, "이 활동으로 문의 보내기")
         self.assertEqual(response.context["selected_listing"].pk, self.primary.pk)
 
@@ -172,9 +176,13 @@ class SchoolProgramsDiscoveryTests(TestCase):
         listing_response = self.client.get(reverse("schoolprograms:listing_detail", args=[self.primary.slug]))
 
         download_url = reverse("schoolprograms:download_listing_attachment", args=[self.primary.slug, attachment.id])
-        self.assertContains(provider_response, "상세 안내자료")
+        self.assertContains(provider_response, "첨부 자료")
+        self.assertContains(provider_response, "운영 교시")
+        self.assertContains(provider_response, "기준 시간표")
         self.assertContains(provider_response, download_url)
         self.assertContains(listing_response, "첨부 자료")
+        self.assertContains(listing_response, "상세 교시 운영안")
+        self.assertContains(listing_response, "필요 공간")
         self.assertContains(listing_response, download_url)
 
     def test_filter_combination_returns_expected_listing(self):
@@ -848,7 +856,7 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
         response = self.client.get(reverse("schoolprograms:vendor_dashboard"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "지금 해야 할 일")
+        self.assertContains(response, "지금 할 일")
         self.assertContains(response, "수정 필요한 체험")
         self.assertContains(response, "안전 운영 문구와 준비물 범위를 조금 더 구체적으로 적어 주세요.")
 
@@ -874,8 +882,12 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
                 "city": self.approved_listing.city,
                 "coverage_note": self.approved_listing.coverage_note,
                 "duration_text": self.approved_listing.duration_text,
+                "schedule_basis": self.approved_listing.schedule_basis,
+                "schedule_detail": self.approved_listing.schedule_detail,
                 "capacity_text": self.approved_listing.capacity_text,
                 "price_text": self.approved_listing.price_text,
+                "venue_requirements": self.approved_listing.venue_requirements,
+                "venue_note": self.approved_listing.venue_note,
                 "safety_info": self.approved_listing.safety_info,
                 "materials_info": self.approved_listing.materials_info,
                 "faq": self.approved_listing.faq,
@@ -898,7 +910,7 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
 
         dashboard = self.client.get(reverse("schoolprograms:vendor_dashboard"))
         self.assertEqual(dashboard.status_code, 200)
-        self.assertContains(dashboard, "회사 정보 먼저 입력")
+        self.assertContains(dashboard, "회사 정보 입력")
 
         response = self.client.post(
             reverse("schoolprograms:vendor_listing_create"),
@@ -913,9 +925,13 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
                 "province": "gyeonggi",
                 "city": "수원",
                 "coverage_note": "수원·용인",
-                "duration_text": "90분",
+                "duration_text": "2교시",
+                "schedule_basis": ProgramListing.ScheduleBasis.SCHOOL_LEVEL,
+                "schedule_detail": "1교시 환경 퀴즈\n2교시 체험 만들기",
                 "capacity_text": "학급당 30명",
                 "price_text": "학급당 35만원",
+                "venue_requirements": ["classroom", "auditorium"],
+                "venue_note": "강당 또는 빔 사용 가능한 교실 필요",
                 "safety_info": "안전 운영 정보",
                 "materials_info": "준비물 정보",
                 "faq": "FAQ",
@@ -945,8 +961,12 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
                 "city": self.approved_listing.city,
                 "coverage_note": self.approved_listing.coverage_note,
                 "duration_text": self.approved_listing.duration_text,
+                "schedule_basis": self.approved_listing.schedule_basis,
+                "schedule_detail": self.approved_listing.schedule_detail,
                 "capacity_text": self.approved_listing.capacity_text,
                 "price_text": self.approved_listing.price_text,
+                "venue_requirements": self.approved_listing.venue_requirements,
+                "venue_note": self.approved_listing.venue_note,
                 "safety_info": self.approved_listing.safety_info,
                 "materials_info": self.approved_listing.materials_info,
                 "faq": self.approved_listing.faq,
@@ -986,8 +1006,12 @@ class SchoolProgramsVendorWorkflowTests(TestCase):
                 "city": self.approved_listing.city,
                 "coverage_note": self.approved_listing.coverage_note,
                 "duration_text": self.approved_listing.duration_text,
+                "schedule_basis": self.approved_listing.schedule_basis,
+                "schedule_detail": self.approved_listing.schedule_detail,
                 "capacity_text": self.approved_listing.capacity_text,
                 "price_text": self.approved_listing.price_text,
+                "venue_requirements": self.approved_listing.venue_requirements,
+                "venue_note": self.approved_listing.venue_note,
                 "safety_info": self.approved_listing.safety_info,
                 "materials_info": self.approved_listing.materials_info,
                 "faq": self.approved_listing.faq,

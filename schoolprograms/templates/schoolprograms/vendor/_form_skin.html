@@ -1,0 +1,101 @@
+<style>
+    .schoolprograms-vendor-form {
+        color: #0f172a;
+    }
+
+    .schoolprograms-vendor-form input[type="text"],
+    .schoolprograms-vendor-form input[type="email"],
+    .schoolprograms-vendor-form input[type="url"],
+    .schoolprograms-vendor-form input[type="tel"],
+    .schoolprograms-vendor-form input[type="number"],
+    .schoolprograms-vendor-form input[type="file"],
+    .schoolprograms-vendor-form textarea,
+    .schoolprograms-vendor-form select {
+        color: #334155 !important;
+        -webkit-text-fill-color: #334155;
+        background-color: #ffffff;
+        border-color: #cbd5e1;
+        caret-color: #0f172a;
+    }
+
+    .schoolprograms-vendor-form input::placeholder,
+    .schoolprograms-vendor-form textarea::placeholder {
+        color: #94a3b8;
+        -webkit-text-fill-color: #94a3b8;
+    }
+
+    .schoolprograms-vendor-form input:focus,
+    .schoolprograms-vendor-form textarea:focus,
+    .schoolprograms-vendor-form select:focus {
+        outline: none;
+        border-color: #fb923c;
+        box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.16);
+    }
+
+    .schoolprograms-vendor-form input:-webkit-autofill,
+    .schoolprograms-vendor-form textarea:-webkit-autofill,
+    .schoolprograms-vendor-form select:-webkit-autofill {
+        -webkit-text-fill-color: #334155 !important;
+        box-shadow: 0 0 0 1000px #ffffff inset;
+        transition: background-color 9999s ease-out 0s;
+    }
+
+    .schoolprograms-vendor-form select option {
+        color: #0f172a;
+        background-color: #ffffff;
+    }
+
+    .schoolprograms-vendor-form input[type="file"]::file-selector-button {
+        margin-right: 0.75rem;
+        border: 0;
+        border-radius: 9999px;
+        background: #e2e8f0;
+        color: #0f172a;
+        font-weight: 700;
+        padding: 0.55rem 0.95rem;
+    }
+
+    .schoolprograms-vendor-form input[type="checkbox"] {
+        accent-color: #f97316;
+    }
+
+    .schoolprograms-vendor-form #id_grade_bands,
+    .schoolprograms-vendor-form #id_venue_requirements {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    @media (min-width: 768px) {
+        .schoolprograms-vendor-form #id_grade_bands,
+        .schoolprograms-vendor-form #id_venue_requirements {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .schoolprograms-vendor-form #id_grade_bands > div,
+    .schoolprograms-vendor-form #id_venue_requirements > div {
+        min-width: 0;
+    }
+
+    .schoolprograms-vendor-form #id_grade_bands label,
+    .schoolprograms-vendor-form #id_venue_requirements label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        min-height: 100%;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        background: #ffffff;
+        padding: 0.95rem 1rem;
+        color: #334155;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    .schoolprograms-vendor-form #id_grade_bands input[type="checkbox"],
+    .schoolprograms-vendor-form #id_venue_requirements input[type="checkbox"] {
+        margin-top: 0.2rem;
+        flex-shrink: 0;
+    }
+</style>

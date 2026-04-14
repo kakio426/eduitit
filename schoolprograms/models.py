@@ -101,6 +101,13 @@ class ProgramListing(models.Model):
         APPROVED = "approved", "공개중"
         REJECTED = "rejected", "반려"
 
+    class ScheduleBasis(models.TextChoices):
+        SCHOOL_LEVEL = "school_level", "학교급 기준"
+        ELEMENTARY = "elementary", "초등 기준"
+        MIDDLE = "middle", "중등 기준"
+        HIGH = "high", "고등 기준"
+        FLEXIBLE = "flexible", "학교 시간표 조율"
+
     PROVINCE_CHOICES = [
         ("nationwide", "전국"),
         ("seoul", "서울"),
@@ -132,6 +139,19 @@ class ProgramListing(models.Model):
         ("all_school", "전교 단위"),
     ]
 
+    VENUE_REQUIREMENT_CHOICES = [
+        ("classroom", "교실"),
+        ("auditorium", "강당"),
+        ("playground", "운동장"),
+        ("gym", "체육관"),
+        ("art_room", "미술실"),
+        ("computer_room", "컴퓨터실"),
+        ("science_lab", "과학실"),
+        ("music_room", "음악실"),
+        ("multipurpose_room", "다목적실"),
+        ("outdoor_space", "야외 공간"),
+    ]
+
     provider = models.ForeignKey(
         ProviderProfile,
         on_delete=models.CASCADE,
@@ -151,8 +171,18 @@ class ProgramListing(models.Model):
     city = models.CharField(max_length=80, blank=True, verbose_name="대표 시군구")
     coverage_note = models.CharField(max_length=140, blank=True, verbose_name="추가 방문 가능 권역")
     duration_text = models.CharField(max_length=80, verbose_name="진행 시간")
+    schedule_basis = models.CharField(
+        max_length=20,
+        choices=ScheduleBasis.choices,
+        default=ScheduleBasis.SCHOOL_LEVEL,
+        verbose_name="기준 시간표",
+    )
+    schedule_detail = models.TextField(blank=True, verbose_name="상세 교시 운영안")
     capacity_text = models.CharField(max_length=80, verbose_name="수용 인원")
     price_text = models.CharField(max_length=120, verbose_name="가격 표시")
+    venue_requirements = models.JSONField(default=list, blank=True, verbose_name="필요 공간")
+    venue_requirements_text = models.CharField(max_length=200, blank=True, verbose_name="필요 공간 검색용")
+    venue_note = models.CharField(max_length=180, blank=True, verbose_name="공간 메모")
     safety_info = models.TextField(blank=True, verbose_name="안전/보험 안내")
     materials_info = models.TextField(blank=True, verbose_name="준비물/요청 사항")
     faq = models.TextField(blank=True, verbose_name="자주 묻는 질문")
@@ -209,10 +239,18 @@ class ProgramListing(models.Model):
             self.slug = _unique_slug(model=ProgramListing, source=source, current_pk=self.pk, prefix="listing")
         normalized_tags = [str(item).strip() for item in (self.theme_tags or []) if str(item).strip()]
         normalized_grades = [str(item).strip() for item in (self.grade_bands or []) if str(item).strip()]
+        venue_label_map = dict(self.VENUE_REQUIREMENT_CHOICES)
+        normalized_venues = [str(item).strip() for item in (self.venue_requirements or []) if str(item).strip()]
         self.theme_tags = normalized_tags
         self.theme_tags_text = ", ".join(normalized_tags)
         self.grade_bands = normalized_grades
         self.grade_bands_text = ", ".join(normalized_grades)
+        self.venue_requirements = normalized_venues
+        self.venue_requirements_text = ", ".join(
+            venue_label_map.get(code, code) for code in normalized_venues
+        )
+        self.schedule_detail = str(self.schedule_detail or "").strip()
+        self.venue_note = str(self.venue_note or "").strip()
         super().save(*args, **kwargs)
 
     @property
@@ -228,6 +266,22 @@ class ProgramListing(models.Model):
         if self.coverage_note:
             return f"{region} · {self.coverage_note}"
         return region
+
+    @property
+    def schedule_basis_note(self) -> str:
+        notes = {
+            self.ScheduleBasis.SCHOOL_LEVEL: "초등 40분 · 중등 45분 · 고등 50분 · 쉬는시간 10분",
+            self.ScheduleBasis.ELEMENTARY: "40분 수업 + 쉬는시간 10분 기준",
+            self.ScheduleBasis.MIDDLE: "45분 수업 + 쉬는시간 10분 기준",
+            self.ScheduleBasis.HIGH: "50분 수업 + 쉬는시간 10분 기준",
+            self.ScheduleBasis.FLEXIBLE: "학교 시간표에 맞춰 교시를 조율합니다.",
+        }
+        return notes.get(self.schedule_basis, "")
+
+    @property
+    def venue_requirement_labels(self) -> list[str]:
+        label_map = dict(self.VENUE_REQUIREMENT_CHOICES)
+        return [label_map.get(code, code) for code in (self.venue_requirements or []) if str(code).strip()]
 
 
 class ListingImage(models.Model):
