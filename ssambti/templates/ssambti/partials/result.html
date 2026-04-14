@@ -192,7 +192,7 @@
             </button>
             <button onclick="downloadImage()"
                 class="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition shadow-clay text-lg">
-                <i class="fa-solid fa-share-nodes"></i> 이미지 저장/공유
+                <i class="fa-solid fa-image"></i> 이미지 저장
             </button>
             <a href="{% url 'ssambti:main' %}"
                 class="px-8 py-4 rounded-full bg-orange-500 text-white font-bold hover:bg-orange-600 transition shadow-clay flex items-center justify-center gap-2 text-lg">
@@ -304,31 +304,22 @@
             button.disabled = true;
 
             const response = await fetch(imageUrl);
+            if (!response.ok) {
+                throw new Error(`image fetch failed: ${response.status}`);
+            }
             const blob = await response.blob();
-            const file = new File([blob], 'ssambti_{{ animal_name }}.png', { type: 'image/png' });
 
             button.innerHTML = originalText;
             button.disabled = false;
 
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        files: [file],
-                        title: '쌤BTI 결과',
-                        text: '{{ animal_name }} 선생님의 교실 속 본캐를 확인해보세요!'
-                    });
-                    return;
-                } catch (shareError) {
-                    if (shareError.name !== 'AbortError') console.log('Share failed:', shareError);
-                    else return;
-                }
-            }
-
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            const objectUrl = URL.createObjectURL(blob);
+            link.href = objectUrl;
             link.download = 'ssambti_{{ animal_name }}.png';
+            document.body.appendChild(link);
             link.click();
-            URL.revokeObjectURL(link.href);
+            document.body.removeChild(link);
+            URL.revokeObjectURL(objectUrl);
 
         } catch (error) {
             console.error('❌ Download error:', error);
