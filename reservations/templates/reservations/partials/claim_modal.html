@@ -5,7 +5,7 @@
     x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4">
     <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
         <h3 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <span class="text-xs px-2 py-1 rounded-full font-black bg-amber-100 text-amber-700">내 예약 열기</span>
+            <span class="text-xs px-2 py-1 rounded-full font-black bg-amber-100 text-amber-700">열기 / 취소</span>
             <span class="text-purple-600 font-extrabold" x-text="claimRoomName"></span>
         </h3>
         <p class="text-sm text-gray-600" x-text="`${claimDate} · ${claimPeriodLabel}`"></p>
@@ -16,8 +16,9 @@
         </div>
 
         <form class="space-y-4 mt-4"
-            x-bind:action="getClaimUrl()"
-            x-bind:hx-post="getClaimUrl()"
+            x-bind:action="getClaimSubmitUrl()"
+            x-bind:hx-post="getClaimSubmitUrl()"
+            x-bind:hx-confirm="claimSubmitMode === 'delete' ? '이 예약을 바로 취소할까요?' : ''"
             hx-target="#reservation-grid-container"
             hx-swap="none"
             hx-indicator="#reservation-claim-indicator"
@@ -35,15 +36,23 @@
 
             <div class="flex gap-2 mt-6">
                 <button type="button" @click="showClaimModal = false"
-                    class="w-1/3 py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-100 transition-colors">취소</button>
+                    class="w-1/3 py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-100 transition-colors">닫기</button>
                 <button type="submit"
+                    @click="claimSubmitMode = 'open'"
                     :disabled="!claimHasEditCode"
                     :class="claimHasEditCode ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
-                    class="w-2/3 py-3 rounded-xl font-bold shadow-clay transition-colors transform active:scale-95 inline-flex items-center justify-center gap-2">
+                    class="w-1/3 py-3 rounded-xl font-bold shadow-clay transition-colors transform active:scale-95 inline-flex items-center justify-center gap-2">
                     <span id="reservation-claim-indicator" class="htmx-indicator">
                         <i class="fas fa-circle-notch fa-spin"></i>
                     </span>
-                    <span>내 예약 열기</span>
+                    <span>열기</span>
+                </button>
+                <button type="submit"
+                    @click="claimSubmitMode = 'delete'"
+                    :disabled="!claimHasEditCode"
+                    :class="claimHasEditCode ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
+                    class="w-1/3 py-3 rounded-xl font-bold shadow-clay transition-colors transform active:scale-95 inline-flex items-center justify-center gap-2">
+                    <span>바로 취소</span>
                 </button>
             </div>
         </form>

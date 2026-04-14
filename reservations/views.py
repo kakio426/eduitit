@@ -1363,7 +1363,25 @@ def delete_reservation(request, school_slug, reservation_id):
         return _stale_reservation_response(request, school)
 
     owned_ids = request.session.get(OWNED_RESERVATIONS_SESSION_KEY, [])
-    if not access["can_edit"] or not _can_edit_reservation(request, reservation):
+    delete_granted = access["can_edit"] and _can_edit_reservation(request, reservation)
+    if not delete_granted:
+        raw_edit_code = (request.POST.get('edit_code') or '').strip()
+        if raw_edit_code:
+            try:
+                normalized_edit_code = validate_reservation_edit_code(raw_edit_code)
+            except ValueError:
+                return HttpResponse("수정 코드는 숫자 4자리로 입력해 주세요.", status=400)
+            if reservation.has_edit_code() and reservation.check_edit_code(normalized_edit_code):
+                delete_granted = True
+            else:
+                logger.warning(
+                    "[Reservation] Invalid delete edit code | reservation_id=%s | school=%s",
+                    reservation_id,
+                    school.slug,
+                )
+                return HttpResponseForbidden("수정 코드가 맞지 않습니다.")
+
+    if not delete_granted:
         logger.warning(
             "[Reservation] Unauthorized delete attempt blocked | reservation_id=%s | school=%s",
             reservation_id,

@@ -10,6 +10,7 @@
         editReservationId: null,
         reservationCreateUrl: '{% url 'reservations:create_reservation' school.slug %}',
         reservationClaimUrlTemplate: '{% url 'reservations:claim_reservation_access' school.slug 999999 %}',
+        reservationDeleteUrlTemplate: '{% url 'reservations:delete_reservation' school.slug 999999 %}',
         reservationUpdateUrlTemplate: '{% url 'reservations:update_reservation' school.slug 999999 %}',
         selectedRoom: null,
         selectedRoomId: null,
@@ -48,14 +49,19 @@
         claimPeriodLabel: '',
         claimHasEditCode: true,
         claimEditCode: '',
+        claimSubmitMode: 'open',
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
             }
             return this.reservationCreateUrl;
         },
-        getClaimUrl() {
-            return this.reservationClaimUrlTemplate.replace('999999', this.claimReservationId || '999999');
+        getClaimSubmitUrl() {
+            const reservationId = this.claimReservationId || '999999';
+            if (this.claimSubmitMode === 'delete') {
+                return this.reservationDeleteUrlTemplate.replace('999999', reservationId);
+            }
+            return this.reservationClaimUrlTemplate.replace('999999', reservationId);
         },
         getSubmitLabel() {
             return this.submitMode === 'edit' ? '수정하기' : '예약하기';
@@ -355,6 +361,7 @@
             this.claimPeriodLabel = payload.periodLabel;
             this.claimHasEditCode = payload.hasEditCode;
             this.claimEditCode = this.readSavedEditCode();
+            this.claimSubmitMode = 'open';
             this.showClaimModal = true;
         },
         prepareClaimSubmit(event) {

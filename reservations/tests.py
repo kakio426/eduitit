@@ -524,6 +524,43 @@ class ReservationsViewTest(TestCase):
         self.assertRedirects(response, reverse('reservations:reservation_index', args=[self.school.slug]))
         self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
 
+    def test_delete_reservation_by_matching_edit_code_without_ownership(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            edit_code_hash=hash_reservation_edit_code('1357'),
+            date=self.target_date,
+            period=6,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = second_client.post(url, {'edit_code': '1357'}, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.headers.get('HX-Trigger'), 'refresh-reservations')
+        self.assertFalse(Reservation.objects.filter(id=reservation.id).exists())
+
+    def test_delete_reservation_rejects_wrong_edit_code_without_ownership(self):
+        reservation = Reservation.objects.create(
+            room=self.room,
+            edit_code_hash=hash_reservation_edit_code('1357'),
+            date=self.target_date,
+            period=6,
+            grade=2,
+            class_no=3,
+            name='이병주',
+        )
+
+        second_client = Client()
+        url = reverse('reservations:delete_reservation', args=[self.school.slug, reservation.id])
+        response = second_client.post(url, {'edit_code': '9999'}, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
+
     def test_delete_reservation_forbidden_without_ownership(self):
         reservation = Reservation.objects.create(
             room=self.room,
