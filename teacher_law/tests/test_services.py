@@ -46,6 +46,20 @@ class QueryNormalizerTests(SimpleTestCase):
         self.assertTrue(profile["scope_supported"])
         self.assertTrue(profile["candidate_queries"])
 
+    def test_build_query_profile_routes_recording_device_possession_to_guidance_and_clarify(self):
+        profile = build_query_profile("학생이 학교에 녹음기 가져왔다")
+
+        self.assertEqual(profile["incident_type"], "student_guidance")
+        self.assertTrue(profile["clarify_needed"])
+        self.assertIn("recording_status", profile["missing_facts"])
+        self.assertTrue(profile["clarify_questions"])
+
+    def test_build_query_profile_keeps_actual_recording_question_in_recording_defamation(self):
+        profile = build_query_profile("학생이 교사를 몰래 녹음했다. 어떻게 대응하나요?")
+
+        self.assertEqual(profile["incident_type"], "recording_defamation")
+        self.assertFalse(profile["clarify_needed"])
+
     def test_build_query_profile_structures_school_safety_liability_question(self):
         profile = build_query_profile("쉬는시간에 제가 교실에 있었는데 학생이 다쳤습니다. 교사인 제 법적 책임이 있나요?")
 
@@ -391,6 +405,32 @@ class BeopmangLawApiTests(SimpleTestCase):
         self.assertEqual(len(citations), 1)
         self.assertEqual(citations[0]["reference_label"], "제260조(폭행)")
 
+    def test_select_relevant_case_citations_prefers_matching_article_reference(self):
+        profile = build_query_profile("학부모가 학교에 들어와서 교사인 저를 때렸습니다. 어떤 법이 적용되나요?")
+        case_results = [
+            {
+                "case_id": "case-1",
+                "title": "폭행 사건 판례",
+                "case_number": "2024다11111",
+                "quote": "폭행 여부와 보호의무를 판단했다.",
+                "law_id": "001695",
+                "article": "260",
+            },
+            {
+                "case_id": "case-2",
+                "title": "일반 교육활동 판례",
+                "case_number": "2024다22222",
+                "quote": "교육활동 침해를 검토했다.",
+                "law_id": "001695",
+                "article": "314",
+            },
+        ]
+
+        citations = law_api.select_relevant_case_citations(case_results, profile, limit=1, law_id="001695", article_ref="260")
+
+        self.assertEqual(len(citations), 1)
+        self.assertEqual(citations[0]["case_number"], "2024다11111")
+
 
 @override_settings(
     TEACHER_LAW_ENABLED=True,
@@ -467,20 +507,20 @@ class TeacherLawCachingTests(TestCase):
         citation = {
             "citation_id": "law-1",
             "source_type": "law",
-            "title": "민법",
-            "law_name": "민법",
-            "law_id": "001706",
+            "title": "개인정보 보호법",
+            "law_name": "개인정보 보호법",
+            "law_id": "001111",
             "mst": "",
-            "reference_label": "제750조",
-            "article_label": "제750조",
+            "reference_label": "제15조",
+            "article_label": "제15조",
             "case_number": "",
-            "quote": "고의 또는 과실로 인한 손해배상 책임이 있다.",
+            "quote": "개인정보 처리와 동의에 관한 내용을 정한다.",
             "source_url": "",
             "provider": "beopmang",
             "fetched_at": "2026-04-05T00:00:00+09:00",
         }
         llm_answer = {
-            "summary": "민법상 손해배상 책임 기준을 먼저 확인해야 합니다.",
+            "summary": "개인정보 보호법상 동의 기준을 먼저 확인해야 합니다.",
             "action_items": ["사실관계를 기록합니다."],
             "citations": ["law-1"],
             "risk_level": "medium",
@@ -498,8 +538,9 @@ class TeacherLawCachingTests(TestCase):
                     {"law_name": "초ㆍ중등교육법", "law_id": "001222", "mst": "", "detail_link": "", "provider": "beopmang"},
                 ],
             ),
-            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
+            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []}) as detail_mock,
             patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[]),
             patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
         ):
             result = answer_legal_question(
@@ -581,6 +622,8 @@ class TeacherLawCachingTests(TestCase):
 
         self.assertEqual(result["payload"]["citations"][0]["source_type"], "law")
         self.assertEqual(result["payload"]["citations"][1]["source_type"], "case")
+        self.assertEqual(result["payload"]["representative_case"]["case_number"], case_citation["case_number"])
+        self.assertIn("가장 가까운 판례 1건", result["payload"]["representative_case_notice"])
         self.assertTrue(any(item["source_type"] == "case" for item in result["audit"]["selected_laws_json"]))
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
@@ -611,3 +654,136 @@ class TeacherLawCachingTests(TestCase):
         self.assertTrue(result["payload"]["answer_held"])
         self.assertIn("책임 판단", result["payload"]["summary"])
         llm_mock.assert_not_called()
+
+    def test_answer_question_clarifies_before_search_for_ambiguous_recording_device_question(self):
+        with (
+            patch("teacher_law.services.chat.resolve_law_by_name") as resolve_mock,
+            patch("teacher_law.services.chat.generate_legal_answer") as llm_mock,
+        ):
+            result = answer_legal_question(
+                question="학생이 학교에 녹음기 가져왔다",
+                incident_type="student_guidance",
+                legal_goal="immediate_action",
+            )
+
+        self.assertEqual(result["status"], "clarify")
+        self.assertTrue(result["payload"]["clarify_needed"])
+        self.assertTrue(result["payload"]["clarify_questions"])
+        resolve_mock.assert_not_called()
+        llm_mock.assert_not_called()
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_skips_unexpected_law_detail_outside_allowlist(self):
+        citation = {
+            "citation_id": "law-1",
+            "source_type": "law",
+            "title": "초ㆍ중등교육법",
+            "law_name": "초ㆍ중등교육법",
+            "law_id": "001222",
+            "mst": "",
+            "reference_label": "제18조",
+            "article_label": "제18조",
+            "case_number": "",
+            "quote": "학교생활과 학생지도를 위한 기준을 둔다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        llm_answer = {
+            "summary": "초ㆍ중등교육법 기준을 먼저 확인해야 합니다.",
+            "action_items": ["사실관계를 기록합니다."],
+            "citations": ["law-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001222", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
+            patch(
+                "teacher_law.services.chat.get_law_details",
+                side_effect=[
+                    {"law_name": "국민안전처 소관 비영리법인 설립 및 감독에 관한 규칙", "law_id": "999999", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001222", "mst": "", "detail_link": "", "provider": "beopmang", "articles": []},
+                ],
+            ),
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[citation]) as select_mock,
+            patch("teacher_law.services.chat.search_cases", return_value=[]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(
+                question="학생 사진을 올리려면 동의가 필요한가요?",
+                incident_type="privacy_photo",
+                legal_goal="posting_allowed",
+                counterpart="student",
+            )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(select_mock.call_count, 1)
+        self.assertEqual(result["payload"]["citations"][0]["law_name"], "초ㆍ중등교육법")
+        self.assertFalse(
+            any("비영리법인 설립 및 감독" in item["law_name"] for item in result["audit"]["selected_laws_json"])
+        )
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_exposes_precedent_note_when_case_is_missing(self):
+        law_citation = {
+            "citation_id": "law-1",
+            "source_type": "law",
+            "title": "학교안전사고 예방 및 보상에 관한 법률",
+            "law_name": "학교안전사고 예방 및 보상에 관한 법률",
+            "law_id": "009620",
+            "mst": "",
+            "reference_label": "제2조",
+            "article_label": "제2조",
+            "case_number": "",
+            "quote": "학교안전사고의 정의를 정한다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        llm_answer = {
+            "summary": "학교안전사고 관련 법령을 먼저 확인해야 합니다.",
+            "action_items": ["사고 경위를 바로 기록합니다."],
+            "citations": ["law-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": law_citation["law_name"], "law_id": "009620", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "민법", "law_id": "001706", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001901", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
+            patch("teacher_law.services.chat.get_law_details", return_value={"law_name": law_citation["law_name"], "law_id": "009620", "mst": "", "detail_link": "", "provider": "beopmang", "articles": [], "related_cases": []}),
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[law_citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(
+                question="쉬는시간에 학생이 다쳤는데 교사 책임이 있나요?",
+                incident_type="school_safety",
+                legal_goal="teacher_liability",
+                scene="break_time",
+            )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertIsNone(result["payload"]["representative_case"])
+        self.assertIn("관련 판례는 더 확인 필요", result["payload"]["precedent_note"])

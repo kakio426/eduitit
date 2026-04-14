@@ -19,6 +19,7 @@ from .law_api import (
     get_law_details,
     get_law_provider,
     is_configured as is_law_api_configured,
+    rank_search_results,
     resolve_law_by_name,
     search_cases,
     select_relevant_case_citations,
@@ -63,16 +64,68 @@ def get_or_create_active_session(user) -> LegalChatSession:
     return LegalChatSession.objects.create(user=user)
 
 
+def _law_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z가-힣]", "", compact_text(value).lower())
+
+
+def _is_allowed_law_detail(detail: dict, profile: dict) -> bool:
+    allowed_laws = profile.get("law_allowlist") or []
+    if not allowed_laws:
+        return True
+    detail_key = _law_name_key(detail.get("law_name") or "")
+    if not detail_key:
+        return False
+    return detail_key in {_law_name_key(item) for item in allowed_laws if compact_text(item)}
+
+
+def _truncate_body_text(value: str, *, limit: int = 200) -> str:
+    text = compact_text(value)
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
+
+
+def _build_fallback_reasoning_summary(citations: list[dict]) -> str:
+    law_titles = ", ".join(_citation_title(item) for item in citations if item.get("source_type") != "case")
+    representative_case = next((item for item in citations if item.get("source_type") == "case"), None)
+    parts = []
+    if law_titles:
+        parts.append(f"{law_titles} 조문을 먼저 기준으로 판단했습니다.")
+    if representative_case:
+        parts.append(f"{_citation_title(representative_case)} 판례는 사실관계 비교용 보조 근거로 참고했습니다.")
+    else:
+        parts.append("관련 판례는 추가 확인이 필요합니다.")
+    return compact_text(" ".join(parts))
+
+
+def _build_representative_case_notice(representative_case: dict | None) -> str:
+    if not representative_case:
+        return ""
+    return "가장 가까운 판례 1건을 참고로 보여드리지만, 실제 사건과 사실관계 차이로 연관성이 많이 부족할 수 있습니다."
+
+
 def build_answer_body(payload: dict) -> str:
     action_items = [item for item in (payload.get("action_items") or []) if str(item).strip()]
+    clarify_questions = [item for item in (payload.get("clarify_questions") or []) if str(item).strip()]
     citations = [item for item in (payload.get("citations") or []) if isinstance(item, dict)]
     law_citations = [item for item in citations if item.get("source_type") != "case"]
     case_citations = [item for item in citations if item.get("source_type") == "case"]
+    reasoning_summary = compact_text(payload.get("reasoning_summary"))
+    representative_case = payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None
+    representative_case_notice = compact_text(payload.get("representative_case_notice"))
+    precedent_note = compact_text(payload.get("precedent_note"))
 
     lines = [
-        "핵심 답변",
+        "핵심 판단",
         payload.get("summary") or "추가 확인 필요",
     ]
+
+    if reasoning_summary:
+        lines.extend(["", "판단 이유", reasoning_summary])
+
+    if clarify_questions:
+        lines.extend(["", "먼저 확인할 것"])
+        lines.extend(f"- {item}" for item in clarify_questions[:2])
 
     if citations:
         lines.extend(["", "이번 답변에서 먼저 본 것"])
@@ -81,7 +134,7 @@ def build_answer_body(payload: dict) -> str:
             if law_titles:
                 lines.append(f"- 기본 법령: {law_titles}")
         if case_citations:
-            case_titles = ", ".join(_citation_title(item) for item in case_citations[:2] if _citation_title(item))
+            case_titles = ", ".join(_citation_title(item) for item in case_citations[:1] if _citation_title(item))
             if case_titles:
                 lines.append(f"- 참고 판례: {case_titles}")
 
@@ -103,19 +156,26 @@ def build_answer_body(payload: dict) -> str:
             if citation_label:
                 lines.append(f"- {citation_label}")
 
-    if case_citations:
-        lines.extend(["", "참고 판례"])
-        for citation in case_citations[:2]:
-            citation_label = " / ".join(
-                part
-                for part in [
-                    compact_text(citation.get("title") or citation.get("law_name")),
-                    compact_text(citation.get("reference_label") or citation.get("article_label")),
-                ]
-                if part
-            )
-            if citation_label:
-                lines.append(f"- {citation_label}")
+    representative_case = representative_case or (case_citations[0] if case_citations else None)
+    if representative_case:
+        citation_label = " / ".join(
+            part
+            for part in [
+                compact_text(representative_case.get("title") or representative_case.get("law_name")),
+                compact_text(representative_case.get("reference_label") or representative_case.get("article_label")),
+            ]
+            if part
+        )
+        lines.extend(["", "대표 판례"])
+        if citation_label:
+            lines.append(f"- {citation_label}")
+        quote = _truncate_body_text(representative_case.get("quote") or "")
+        if quote:
+            lines.append(f"- {quote}")
+        if representative_case_notice:
+            lines.append(f"- {representative_case_notice}")
+    elif precedent_note:
+        lines.extend(["", "대표 판례", f"- {precedent_note}"])
 
     if payload.get("needs_human_help"):
         lines.extend(["", "사람 상담 권장", "- 고위험 사안일 수 있어 학교 관리자나 전문 상담을 함께 권장합니다."])
@@ -158,6 +218,24 @@ def answer_legal_question(
                 "detail_fetch_count": 0,
                 "selected_laws_json": [],
                 "failure_reason": "out_of_scope",
+                "error_message": "",
+                "elapsed_ms": _elapsed_ms(started),
+            },
+        }
+
+    if profile.get("clarify_needed"):
+        payload = _build_clarify_payload(profile, [])
+        return {
+            "status": "clarify",
+            "profile": profile,
+            "payload": payload,
+            "audit": {
+                "cache_hit": False,
+                "search_attempt_count": 0,
+                "search_result_count": 0,
+                "detail_fetch_count": 0,
+                "selected_laws_json": [],
+                "failure_reason": "clarify_profile",
                 "error_message": "",
                 "elapsed_ms": _elapsed_ms(started),
             },
@@ -219,7 +297,9 @@ def answer_legal_question(
         search_result_count += 1
         resolved_laws.append(resolved)
 
-    for ranked in _dedupe_search_results(resolved_laws)[:detail_limit]:
+    ranked_laws = rank_search_results(_dedupe_search_results(resolved_laws), profile)
+
+    for ranked in ranked_laws[:detail_limit]:
         _ensure_total_timeout(started, total_timeout_seconds)
         detail_fetch_count += 1
         detail = get_law_details(
@@ -229,6 +309,13 @@ def answer_legal_question(
             query_hint=law_query_hint,
             law_name=ranked.get("law_name") or "",
         )
+        if not _is_allowed_law_detail(detail, profile):
+            logger.warning(
+                "[TeacherLaw] skipped unexpected law detail law_name=%s allowlist=%s",
+                detail.get("law_name") or ranked.get("law_name") or "",
+                profile.get("law_allowlist") or [],
+            )
+            continue
         selected_sources.append(
             {
                 "source_type": "law",
@@ -260,6 +347,7 @@ def answer_legal_question(
                     profile,
                     limit=1,
                     law_id=first_law_id,
+                    article_ref=first_article_ref,
                 )
             )
         if not collected_case_citations:
@@ -280,6 +368,7 @@ def answer_legal_question(
                         profile,
                         limit=1,
                         law_id=first_law_id,
+                        article_ref=first_article_ref,
                     )
                 )
                 if collected_case_citations:
@@ -453,6 +542,7 @@ def _build_cache_key(profile: dict) -> str:
 def _build_out_of_scope_payload(profile: dict) -> dict:
     return {
         "summary": "학교 현장과 직접 연결된 법률 질문을 먼저 안내하고 있어요. 학교 밖 개인 생활 분쟁은 아직 정확하게 답하기 어렵습니다.",
+        "reasoning_summary": "",
         "action_items": [
             "교사·학생·학부모·교실·수업 중 어떤 상황인지 함께 적어 주세요.",
             "학교 밖 개인 생활 분쟁이라면 전문 상담 기관이나 변호사 상담을 함께 검토해 주세요.",
@@ -465,6 +555,12 @@ def _build_out_of_scope_payload(profile: dict) -> dict:
         "status": "ok",
         "answer_held": False,
         "clarify_reason": "",
+        "clarify_needed": False,
+        "clarify_questions": [],
+        "missing_facts": [],
+        "representative_case": None,
+        "representative_case_notice": "",
+        "precedent_note": "",
     }
 
 
@@ -499,7 +595,15 @@ def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
     citations = [_build_placeholder_citation(source, fetched_at=fetched_at) for source in selected_sources[:2]]
     legal_goal = profile.get("legal_goal") or ""
     legal_issues = set(profile.get("legal_issues") or [])
-    if profile.get("incident_type") == "education_activity" and "폭행" in legal_issues:
+    profile_clarify_questions = [item for item in (profile.get("clarify_questions") or []) if compact_text(item)]
+    missing_facts = [item for item in (profile.get("missing_facts") or []) if compact_text(item)]
+    reasoning_summary = ""
+
+    if profile_clarify_questions:
+        summary = compact_text(profile.get("clarify_summary")) or "정확한 답변과 대표 판례를 붙이려면 먼저 두 가지만 확인할게요."
+        action_items = []
+        reasoning_summary = "핵심 사실이 더 확인되면 관련 법령과 대표 판례를 더 정확하게 고를 수 있습니다."
+    elif profile.get("incident_type") == "education_activity" and "폭행" in legal_issues:
         summary = "형법상 폭행·상해와 교육활동 침해 여부를 함께 봐야 하지만, 지금 근거만으로는 바로 맞는 조문 연결이 약합니다."
         action_items = [
             "학교 관리자와 교육청에 교육활동 침해 사실을 바로 알리고 기록해 두세요.",
@@ -545,6 +649,7 @@ def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
 
     return {
         "summary": summary,
+        "reasoning_summary": reasoning_summary,
         "action_items": action_items,
         "citations": citations,
         "risk_level": "medium",
@@ -554,19 +659,29 @@ def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
         "status": "clarify",
         "answer_held": True,
         "clarify_reason": summary,
+        "clarify_needed": True,
+        "clarify_questions": profile_clarify_questions,
+        "missing_facts": missing_facts,
+        "representative_case": None,
+        "representative_case_notice": "",
+        "precedent_note": "",
     }
 
 
 def _preferred_visible_citations(citations: list[dict]) -> list[dict]:
     law_citations = [citation for citation in citations if citation.get("source_type") != "case"][:2]
-    case_citations = [citation for citation in citations if citation.get("source_type") == "case"][:2]
+    case_citations = [citation for citation in citations if citation.get("source_type") == "case"][:1]
     return law_citations + case_citations
 
 
 def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict) -> dict:
     selected_ids = [item for item in (answer.get("citations") or []) if str(item).strip()]
     visible_citations = [citation for citation in citations if citation.get("citation_id") in selected_ids]
-    if not visible_citations:
+    if not visible_citations or not any(item.get("source_type") != "case" for item in visible_citations):
+        visible_citations = _preferred_visible_citations(citations)
+    elif any(item.get("source_type") == "case" for item in citations) and not any(
+        item.get("source_type") == "case" for item in visible_citations
+    ):
         visible_citations = _preferred_visible_citations(citations)
 
     risk_level = str(answer.get("risk_level") or "medium").strip().lower()
@@ -579,12 +694,20 @@ def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict
 
     action_items = [compact_text(item) for item in (answer.get("action_items") or []) if compact_text(item)]
     summary = compact_text(answer.get("summary"))
+    reasoning_summary = compact_text(answer.get("reasoning_summary"))
     if not summary:
         summary = "추가 확인 필요"
         needs_human_help = True
+    if not reasoning_summary:
+        reasoning_summary = _build_fallback_reasoning_summary(visible_citations)
+
+    representative_case = next((citation for citation in visible_citations if citation.get("source_type") == "case"), None)
+    representative_case_notice = _build_representative_case_notice(representative_case)
+    precedent_note = "" if representative_case else "관련 판례는 더 확인 필요합니다."
 
     return {
         "summary": summary,
+        "reasoning_summary": reasoning_summary,
         "action_items": action_items[:4],
         "citations": visible_citations,
         "risk_level": risk_level,
@@ -596,12 +719,19 @@ def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict
         "status": "ok",
         "answer_held": False,
         "clarify_reason": "",
+        "clarify_needed": False,
+        "clarify_questions": [],
+        "missing_facts": [],
+        "representative_case": representative_case,
+        "representative_case_notice": representative_case_notice,
+        "precedent_note": precedent_note,
     }
 
 
 def _serialize_cache_payload(payload: dict) -> dict:
     serialized = {
         "summary": payload.get("summary") or "",
+        "reasoning_summary": payload.get("reasoning_summary") or "",
         "action_items": list(payload.get("action_items") or []),
         "citations": [],
         "risk_level": payload.get("risk_level") or "medium",
@@ -611,6 +741,12 @@ def _serialize_cache_payload(payload: dict) -> dict:
         "status": payload.get("status") or "ok",
         "answer_held": bool(payload.get("answer_held")),
         "clarify_reason": payload.get("clarify_reason") or "",
+        "clarify_needed": bool(payload.get("clarify_needed")),
+        "clarify_questions": list(payload.get("clarify_questions") or []),
+        "missing_facts": list(payload.get("missing_facts") or []),
+        "representative_case": payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None,
+        "representative_case_notice": payload.get("representative_case_notice") or "",
+        "precedent_note": payload.get("precedent_note") or "",
     }
     for citation in payload.get("citations") or []:
         if not isinstance(citation, dict):
@@ -645,6 +781,7 @@ def _restore_cache_payload(raw_payload):
         citations.append(citation)
     return {
         "summary": compact_text(raw_payload.get("summary")),
+        "reasoning_summary": compact_text(raw_payload.get("reasoning_summary")),
         "action_items": [compact_text(item) for item in raw_payload.get("action_items") or [] if compact_text(item)],
         "citations": citations,
         "risk_level": compact_text(raw_payload.get("risk_level") or "medium") or "medium",
@@ -656,6 +793,12 @@ def _restore_cache_payload(raw_payload):
         "status": compact_text(raw_payload.get("status") or "ok") or "ok",
         "answer_held": bool(raw_payload.get("answer_held")),
         "clarify_reason": compact_text(raw_payload.get("clarify_reason")),
+        "clarify_needed": bool(raw_payload.get("clarify_needed")),
+        "clarify_questions": [compact_text(item) for item in raw_payload.get("clarify_questions") or [] if compact_text(item)],
+        "missing_facts": [compact_text(item) for item in raw_payload.get("missing_facts") or [] if compact_text(item)],
+        "representative_case": raw_payload.get("representative_case") if isinstance(raw_payload.get("representative_case"), dict) else None,
+        "representative_case_notice": compact_text(raw_payload.get("representative_case_notice")),
+        "precedent_note": compact_text(raw_payload.get("precedent_note")),
     }
 
 

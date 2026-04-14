@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 
-ANSWER_POLICY_VERSION = "teacher-law-v3"
+ANSWER_POLICY_VERSION = "teacher-law-v4"
 
 QUESTION_REPLACEMENTS = (
     ("학폭", "학교폭력"),
@@ -248,6 +248,26 @@ HIGH_RISK_KEYWORDS = {
 }
 
 PHYSICAL_VIOLENCE_KEYWORDS = ("폭행", "상해", "때렸", "맞았", "구타", "손찌검", "밀쳤")
+RECORDING_DEVICE_KEYWORDS = ("녹음기", "보이스레코더", "녹음 장치", "녹음장치")
+RECORDING_POSSESSION_KEYWORDS = ("가져왔", "들고", "소지", "압수", "보관", "제출", "반입", "회수")
+RECORDING_GUIDANCE_KEYWORDS = ("압수", "보관", "제출", "회수", "생활지도", "소지품", "통제")
+RECORDING_ACTION_KEYWORDS = (
+    "녹음했다",
+    "녹취했다",
+    "녹음했",
+    "녹취했",
+    "녹음하고",
+    "녹취하고",
+    "녹음한",
+    "녹취한",
+    "녹음해서",
+    "녹취해서",
+    "녹음 중",
+    "녹취 중",
+)
+RECORDING_INTENT_KEYWORDS = ("녹음하려", "녹취하려", "녹음하려고", "녹취하려고", "녹음 시도", "녹취 시도")
+RECORDING_DISCLOSURE_KEYWORDS = ("공개", "게시", "퍼뜨", "유포", "공유", "올렸", "전송")
+RECORDING_TARGET_KEYWORDS = ("교사", "선생님", "학생을", "친구", "학부모", "학급", "수업", "대화", "상담")
 
 QUICK_QUESTION_PRESETS = [
     {
@@ -417,6 +437,10 @@ def infer_legal_goal(question: str, *, legal_issues: list[str]) -> str:
 
 def detect_incident_type(question: str, *, legal_issues: list[str], scene: list[str]) -> str:
     normalized = normalize_for_matching(question)
+    if _is_recording_device_guidance_context(normalized):
+        return "student_guidance"
+    if _has_recording_execution_context(normalized):
+        return "recording_defamation"
     best_incident = ""
     best_score = 0
     for option in INCIDENT_OPTIONS:
@@ -437,6 +461,83 @@ def _looks_like_teacher_context_question(normalized: str) -> bool:
 
 def _has_physical_violence_context(normalized_question: str, legal_issues: list[str]) -> bool:
     return "폭행" in legal_issues or _has_any_keyword(normalized_question, PHYSICAL_VIOLENCE_KEYWORDS)
+
+
+def _has_recording_execution_context(normalized_question: str) -> bool:
+    return _has_any_keyword(normalized_question, RECORDING_ACTION_KEYWORDS) or (
+        "녹음" in normalized_question and _has_any_keyword(normalized_question, RECORDING_DISCLOSURE_KEYWORDS)
+    )
+
+
+def _has_recording_intent_context(normalized_question: str) -> bool:
+    return _has_any_keyword(normalized_question, RECORDING_INTENT_KEYWORDS)
+
+
+def _has_recording_device_context(normalized_question: str) -> bool:
+    return _has_any_keyword(normalized_question, RECORDING_DEVICE_KEYWORDS)
+
+
+def _is_recording_device_guidance_context(normalized_question: str) -> bool:
+    if not (_has_recording_device_context(normalized_question) or _has_recording_intent_context(normalized_question)):
+        return False
+    if _has_recording_execution_context(normalized_question):
+        return False
+    return _has_any_keyword(normalized_question, RECORDING_POSSESSION_KEYWORDS) or _has_recording_device_context(
+        normalized_question
+    )
+
+
+def _build_clarify_bundle(
+    *,
+    normalized_question: str,
+    incident_key: str,
+    goal_key: str,
+    scene_key: str,
+    counterpart_key: str,
+) -> tuple[list[str], list[str], str]:
+    missing_facts = []
+    clarify_questions = []
+
+    if incident_key == "student_guidance" and _is_recording_device_guidance_context(normalized_question):
+        explicit_guidance = _has_any_keyword(normalized_question, RECORDING_GUIDANCE_KEYWORDS)
+        if not explicit_guidance:
+            missing_facts.append("recording_status")
+            clarify_questions.append("녹음기만 가져온 것인지, 이미 녹음했거나 녹음하려 한 것인지 적어 주세요.")
+        if not explicit_guidance and not _has_any_keyword(normalized_question, RECORDING_TARGET_KEYWORDS):
+            missing_facts.append("recording_target")
+            clarify_questions.append("누구를 대상으로 한 상황인지 적어 주세요.")
+    elif incident_key == "recording_defamation":
+        if not _has_recording_execution_context(normalized_question):
+            missing_facts.append("recording_status")
+            clarify_questions.append("이미 녹음했는지, 단순히 녹음하려 한 것인지 적어 주세요.")
+        if goal_key in {"legal_risk", "posting_allowed"} and not _has_any_keyword(
+            normalized_question,
+            RECORDING_DISCLOSURE_KEYWORDS,
+        ):
+            missing_facts.append("recording_disclosure")
+            clarify_questions.append("녹음본을 이미 공개했는지, 아직 공개 전인지 적어 주세요.")
+
+    incident = INCIDENT_MAP.get(incident_key, {})
+    if incident.get("requires") == "scene" and scene_key not in SCENE_MAP:
+        missing_facts.append("scene")
+        clarify_questions.append("수업 중인지, 쉬는시간인지, 체험학습인지 먼저 골라 주세요.")
+    if (
+        incident.get("requires") == "counterpart"
+        and counterpart_key not in COUNTERPART_MAP
+        and not _has_any_keyword(normalized_question, ("학부모", "보호자", "외부인", "학생"))
+    ):
+        missing_facts.append("counterpart")
+        clarify_questions.append("상대가 학생인지, 학부모인지, 보호자인지 먼저 적어 주세요.")
+
+    clarify_questions = _unique_items(clarify_questions)[:2]
+    missing_facts = _unique_items(missing_facts)
+    if not clarify_questions:
+        return [], [], ""
+
+    summary = "정확한 답변과 대표 판례를 붙이려면 먼저 두 가지만 확인할게요."
+    if len(clarify_questions) == 1:
+        summary = "정확한 답변과 대표 판례를 붙이려면 먼저 한 가지만 확인할게요."
+    return missing_facts, clarify_questions, summary
 
 
 def is_supported_question(question: str, *, incident_type: str) -> bool:
@@ -674,6 +775,13 @@ def build_query_profile(
         candidate_queries = _unique_items([*violence_terms, *candidate_queries])
         case_queries = _unique_items([*violence_terms, *case_queries])
         law_query_hint = compact_text(" ".join(_unique_items([law_query_hint, "폭행", "상해", "형법"])))
+    missing_facts, clarify_questions, clarify_summary = _build_clarify_bundle(
+        normalized_question=normalized_question,
+        incident_key=incident_key,
+        goal_key=goal_key,
+        scene_key=scene_key,
+        counterpart_key=counterpart_key,
+    )
     quick_question_key = _match_quick_question_key(
         normalized_question,
         incident_type=incident_key,
@@ -720,4 +828,8 @@ def build_query_profile(
         "quick_question_key": quick_question_key,
         "requires_scene": incident.get("requires") == "scene",
         "requires_counterpart": incident.get("requires") == "counterpart",
+        "clarify_needed": bool(clarify_questions),
+        "clarify_questions": clarify_questions,
+        "missing_facts": missing_facts,
+        "clarify_summary": clarify_summary,
     }

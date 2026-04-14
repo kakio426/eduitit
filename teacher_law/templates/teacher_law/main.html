@@ -701,6 +701,7 @@
                                             value="{{ option.value }}"
                                             data-teacher-law-incident-option="true"
                                             data-requires="{{ option.requires }}"
+                                            {% if clarify_draft_incident_type == option.value %}checked{% endif %}
                                             {% if ui_blocked %}disabled{% endif %}
                                         >
                                         <label class="teacher-law-chip-label" for="teacher-law-incident-{{ option.value }}">{{ option.label }}</label>
@@ -722,6 +723,7 @@
                                             id="teacher-law-goal-{{ option.value }}"
                                             value="{{ option.value }}"
                                             data-teacher-law-goal-option="true"
+                                            {% if clarify_draft_legal_goal == option.value %}checked{% endif %}
                                             {% if ui_blocked %}disabled{% endif %}
                                         >
                                         <label class="teacher-law-chip-label" for="teacher-law-goal-{{ option.value }}">{{ option.label }}</label>
@@ -730,7 +732,7 @@
                                 </div>
                             </section>
 
-                            <section class="teacher-law-picker" data-teacher-law-field-group="scene" data-teacher-law-scene-group="true" hidden>
+                            <section class="teacher-law-picker" data-teacher-law-field-group="scene" data-teacher-law-scene-group="true" {% if clarify_draft_requirement != "scene" %}hidden{% endif %}>
                                 <div class="teacher-law-picker-title">장면</div>
                                 <p class="teacher-law-picker-hint">필요 시 선택</p>
                                 <div class="teacher-law-choice-grid">
@@ -743,6 +745,7 @@
                                             id="teacher-law-scene-{{ option.value }}"
                                             value="{{ option.value }}"
                                             data-teacher-law-scene-option="true"
+                                            {% if clarify_draft_scene == option.value %}checked{% endif %}
                                             {% if ui_blocked %}disabled{% endif %}
                                         >
                                         <label class="teacher-law-chip-label" for="teacher-law-scene-{{ option.value }}">{{ option.label }}</label>
@@ -751,7 +754,7 @@
                                 </div>
                             </section>
 
-                            <section class="teacher-law-picker" data-teacher-law-field-group="counterpart" data-teacher-law-counterpart-group="true" hidden>
+                            <section class="teacher-law-picker" data-teacher-law-field-group="counterpart" data-teacher-law-counterpart-group="true" {% if clarify_draft_requirement != "counterpart" %}hidden{% endif %}>
                                 <div class="teacher-law-picker-title">상대</div>
                                 <p class="teacher-law-picker-hint">필요 시 선택</p>
                                 <div class="teacher-law-choice-grid">
@@ -764,6 +767,7 @@
                                             id="teacher-law-counterpart-{{ option.value }}"
                                             value="{{ option.value }}"
                                             data-teacher-law-counterpart-option="true"
+                                            {% if clarify_draft_counterpart == option.value %}checked{% endif %}
                                             {% if ui_blocked %}disabled{% endif %}
                                         >
                                         <label class="teacher-law-chip-label" for="teacher-law-counterpart-{{ option.value }}">{{ option.label }}</label>
@@ -774,7 +778,7 @@
                         </div>
 
                         <label class="sr-only" for="teacher-law-question">상황</label>
-                        <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?" {% if ui_blocked %}disabled{% endif %}></textarea>
+                        <textarea id="teacher-law-question" name="question" class="teacher-law-textarea" data-teacher-law-input="true" placeholder="예: 학생 사진을 학급 밴드에 올리려면 어떤 동의가 필요한가요?" {% if ui_blocked %}disabled{% endif %}>{{ clarify_draft_question }}</textarea>
                     </div>
                     <div class="teacher-law-composer-actions">
                         <button type="submit" class="teacher-law-send-button" data-teacher-law-send="true" {% if ui_blocked %}disabled{% endif %}>
@@ -867,6 +871,11 @@
                                         {% endif %}
                                     </div>
                                     {% endfor %}
+                                    {% if latest_pair.assistant_message.representative_case_notice %}
+                                    <div class="teacher-law-citation">
+                                        <p class="teacher-law-citation-quote">{{ latest_pair.assistant_message.representative_case_notice }}</p>
+                                    </div>
+                                    {% endif %}
                                     {% endif %}
                                     {% if latest_pair.assistant_message.disclaimer %}
                                     <p class="teacher-law-disclaimer mt-4">{{ latest_pair.assistant_message.disclaimer }}</p>

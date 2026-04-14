@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = "teacher_law:main"
 SERVICE_TITLE = "교사용 AI 법률 가이드"
+CLARIFY_DRAFT_SESSION_KEY = "teacher_law:clarify_draft"
 
 
 def _get_service():
@@ -87,6 +88,9 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         )
     law_citations = [citation for citation in citations if citation.get("source_type") != "case"]
     case_citations = [citation for citation in citations if citation.get("source_type") == "case"]
+    representative_case = payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None
+    if not representative_case and case_citations:
+        representative_case = case_citations[0]
     return {
         "id": message.id,
         "role": message.role,
@@ -94,6 +98,7 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         "created_at": message.created_at.isoformat(),
         "created_at_display": message.created_at.strftime("%m.%d %H:%M"),
         "summary": payload.get("summary") or "",
+        "reasoning_summary": payload.get("reasoning_summary") or "",
         "action_items": list(payload.get("action_items") or []),
         "citations": citations,
         "law_citations": law_citations,
@@ -105,6 +110,12 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         "status": payload.get("status") or "ok",
         "answer_held": bool(payload.get("answer_held")),
         "clarify_reason": payload.get("clarify_reason") or "",
+        "clarify_needed": bool(payload.get("clarify_needed")),
+        "clarify_questions": list(payload.get("clarify_questions") or []),
+        "missing_facts": list(payload.get("missing_facts") or []),
+        "representative_case": representative_case,
+        "representative_case_notice": payload.get("representative_case_notice") or "",
+        "precedent_note": payload.get("precedent_note") or "",
     }
 
 
@@ -139,6 +150,8 @@ def _build_page_context(request):
     service = _get_service()
     session = get_or_create_active_session(request.user)
     law_provider = get_law_provider()
+    clarify_draft = _get_clarify_draft(request)
+    input_options = get_input_options()
     warning_messages = []
     if not getattr(request.user, "is_authenticated", False):
         warning_messages.append("로그인 후 사용할 수 있습니다.")
@@ -154,6 +167,12 @@ def _build_page_context(request):
     latest_pair = all_pairs[-1] if all_pairs else None
     history_pairs = list(reversed(all_pairs[:-1]))[:6] if len(all_pairs) > 1 else []
     ui_blocked = bool(warning_messages)
+    clarify_draft_requirement = ""
+    incident_options = input_options["incident_options"]
+    for option in incident_options:
+        if option.get("value") == clarify_draft.get("incident_type"):
+            clarify_draft_requirement = option.get("requires") or ""
+            break
 
     return {
         "service": service,
@@ -171,12 +190,19 @@ def _build_page_context(request):
         ),
         "warning_messages": warning_messages,
         "quick_questions": get_quick_questions(),
-        **get_input_options(),
+        "incident_options": incident_options,
+        **{key: value for key, value in input_options.items() if key != "incident_options"},
         "daily_limit_per_user": _daily_limit_per_user(),
         "session": session,
         "latest_pair": latest_pair,
         "history_pairs": history_pairs,
         "ask_url": reverse("teacher_law:ask"),
+        "clarify_draft_question": clarify_draft.get("question") or "",
+        "clarify_draft_incident_type": clarify_draft.get("incident_type") or "",
+        "clarify_draft_legal_goal": clarify_draft.get("legal_goal") or "",
+        "clarify_draft_scene": clarify_draft.get("scene") or "",
+        "clarify_draft_counterpart": clarify_draft.get("counterpart") or "",
+        "clarify_draft_requirement": clarify_draft_requirement,
     }
 
 
@@ -238,6 +264,44 @@ def _release_daily_limit(user_id: int) -> None:
         cache.delete(cache_key)
         return
     cache.set(cache_key, current - 1, timeout=86410)
+
+
+def _get_clarify_draft(request) -> dict:
+    raw_draft = {}
+    if getattr(request, "session", None) is not None:
+        raw_draft = request.session.get(CLARIFY_DRAFT_SESSION_KEY) or {}
+    if not isinstance(raw_draft, dict):
+        return {}
+    return {
+        "question": str(raw_draft.get("question") or "").strip(),
+        "incident_type": str(raw_draft.get("incident_type") or "").strip(),
+        "legal_goal": str(raw_draft.get("legal_goal") or "").strip(),
+        "scene": str(raw_draft.get("scene") or "").strip(),
+        "counterpart": str(raw_draft.get("counterpart") or "").strip(),
+    }
+
+
+def _store_clarify_draft(request, *, question: str, incident_type: str, legal_goal: str, scene: str, counterpart: str) -> None:
+    if getattr(request, "session", None) is None:
+        return
+    request.session[CLARIFY_DRAFT_SESSION_KEY] = {
+        "question": str(question or "").strip(),
+        "incident_type": str(incident_type or "").strip(),
+        "legal_goal": str(legal_goal or "").strip(),
+        "scene": str(scene or "").strip(),
+        "counterpart": str(counterpart or "").strip(),
+    }
+    if hasattr(request.session, "modified"):
+        request.session.modified = True
+
+
+def _clear_clarify_draft(request) -> None:
+    if getattr(request, "session", None) is None:
+        return
+    if CLARIFY_DRAFT_SESSION_KEY in request.session:
+        del request.session[CLARIFY_DRAFT_SESSION_KEY]
+        if hasattr(request.session, "modified"):
+            request.session.modified = True
 
 
 def _create_assistant_message(session, payload: dict):
@@ -377,6 +441,7 @@ def ask_question_api(request):
             return _json_error(message_text, status=429)
         messages.error(request, message_text)
         return redirect("teacher_law:main")
+    daily_limit_reserved = True
 
     session = get_or_create_active_session(request.user)
     user_message = LegalChatMessage.objects.create(
@@ -401,8 +466,23 @@ def ask_question_api(request):
         user_message.refresh_from_db()
         assistant_message = _create_assistant_message(session, result.get("payload") or {})
         _persist_success_audit(session, user_message, assistant_message, result)
+        if (result.get("status") or "ok") == "clarify":
+            _store_clarify_draft(
+                request,
+                question=question,
+                incident_type=incident_type,
+                legal_goal=legal_goal,
+                scene=scene,
+                counterpart=counterpart,
+            )
+            if daily_limit_reserved:
+                _release_daily_limit(request.user.id)
+                daily_limit_reserved = False
+        else:
+            _clear_clarify_draft(request)
     except TeacherLawDisabledError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -416,7 +496,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiConfigError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -430,7 +511,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiVerificationError as exc:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         verification_message = str(exc).strip()
         _persist_error_audit(
             session,
@@ -448,7 +530,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiTimeoutError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -462,7 +545,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except TeacherLawTimeoutError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -476,7 +560,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LlmClientError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         _persist_error_audit(
             session,
             user_message,
@@ -490,7 +575,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except LawApiError:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         logger.exception("[TeacherLaw] law api error")
         _persist_error_audit(
             session,
@@ -505,7 +591,8 @@ def ask_question_api(request):
         messages.error(request, message_text)
         return redirect("teacher_law:main")
     except Exception:
-        _release_daily_limit(request.user.id)
+        if daily_limit_reserved:
+            _release_daily_limit(request.user.id)
         logger.exception("[TeacherLaw] unexpected error")
         _persist_error_audit(
             session,

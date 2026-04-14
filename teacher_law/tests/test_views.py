@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from products.models import Product, ServiceManual
 from teacher_law.models import LegalCitation, LegalChatMessage, LegalChatSession, LegalQueryAudit
-from teacher_law.views import _build_page_context, ask_question_api, main_view
+from teacher_law.views import CLARIFY_DRAFT_SESSION_KEY, _build_page_context, ask_question_api, main_view
 
 
 User = get_user_model()
@@ -77,6 +77,49 @@ class TeacherLawViewTests(TestCase):
             },
         }
 
+    def _build_clarify_result(self, question="학생이 학교에 녹음기 가져왔다"):
+        return {
+            "status": "clarify",
+            "profile": {
+                "original_question": question,
+                "normalized_question": question,
+                "topic": "student_guidance",
+                "scope_supported": True,
+                "risk_flags": [],
+                "candidate_queries": [],
+                "quick_question_key": "",
+            },
+            "payload": {
+                "summary": "정확한 답변과 대표 판례를 붙이려면 먼저 한 가지만 확인할게요.",
+                "reasoning_summary": "핵심 사실이 더 확인되면 관련 법령과 대표 판례를 더 정확하게 고를 수 있습니다.",
+                "action_items": [],
+                "citations": [],
+                "risk_level": "medium",
+                "needs_human_help": False,
+                "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+                "scope_supported": True,
+                "status": "clarify",
+                "answer_held": True,
+                "clarify_reason": "정확한 답변과 대표 판례를 붙이려면 먼저 한 가지만 확인할게요.",
+                "clarify_needed": True,
+                "clarify_questions": ["녹음기만 가져온 것인지, 이미 녹음했거나 녹음하려 한 것인지 적어 주세요."],
+                "missing_facts": ["recording_status"],
+                "representative_case": None,
+                "representative_case_notice": "",
+                "precedent_note": "",
+            },
+            "audit": {
+                "cache_hit": False,
+                "search_attempt_count": 0,
+                "search_result_count": 0,
+                "detail_fetch_count": 0,
+                "selected_laws_json": [],
+                "failure_reason": "clarify_profile",
+                "error_message": "",
+                "elapsed_ms": 120,
+            },
+        }
+
     def test_main_view_renders_quick_questions(self):
         request = self.factory.get("/teacher-law/")
         request.user = self.user
@@ -122,6 +165,7 @@ class TeacherLawViewTests(TestCase):
                 "citations": [],
                 "risk_level": "medium",
                 "needs_human_help": False,
+                "representative_case_notice": "가장 가까운 판례 1건을 참고로 보여드리지만, 실제 사건과 사실관계 차이로 연관성이 많이 부족할 수 있습니다.",
                 "disclaimer": "",
                 "scope_supported": True,
             },
@@ -183,6 +227,7 @@ class TeacherLawViewTests(TestCase):
         self.assertContains(response, "참고 판례")
         self.assertContains(response, "학교안전사고 예방 및 보상에 관한 법률")
         self.assertContains(response, "학교안전사고 손해배상")
+        self.assertContains(response, "가장 가까운 판례 1건을 참고로 보여드리지만")
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch("teacher_law.views.is_llm_configured", return_value=True)
@@ -304,6 +349,64 @@ class TeacherLawViewTests(TestCase):
         self.assertEqual(LegalQueryAudit.objects.count(), 1)
 
     @override_settings(TEACHER_LAW_DAILY_LIMIT_PER_USER=1)
+    def test_clarify_request_does_not_consume_daily_limit(self):
+        shared_session = {}
+        clarify_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps(
+                self._build_request_payload(
+                    "학생이 학교에 녹음기 가져왔다",
+                    incident_type="student_guidance",
+                    legal_goal="immediate_action",
+                    counterpart="",
+                )
+            ),
+            content_type="application/json",
+        )
+        clarify_request.user = self.user
+        clarify_request.session = shared_session
+
+        answer_request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps(
+                self._build_request_payload(
+                    "학생이 학교에 녹음기 가져왔고 교사를 몰래 녹음했습니다.",
+                    incident_type="student_guidance",
+                    legal_goal="immediate_action",
+                    counterpart="",
+                )
+            ),
+            content_type="application/json",
+        )
+        answer_request.user = self.user
+        answer_request.session = shared_session
+
+        with patch("teacher_law.views.answer_legal_question", return_value=self._build_clarify_result()):
+            clarify_response = ask_question_api(clarify_request)
+
+        page_request = self.factory.get("/teacher-law/")
+        page_request.user = self.user
+        page_request.session = shared_session
+        with (
+            patch("teacher_law.views.is_law_api_configured", return_value=True),
+            patch("teacher_law.views.is_llm_configured", return_value=True),
+        ):
+            context_after_clarify = _build_page_context(page_request)
+
+        self.assertEqual(clarify_response.status_code, 200)
+        self.assertFalse(context_after_clarify["ui_blocked"])
+        self.assertIn(CLARIFY_DRAFT_SESSION_KEY, shared_session)
+
+        with patch(
+            "teacher_law.views.answer_legal_question",
+            return_value=self._build_success_result("학생이 학교에 녹음기 가져왔고 교사를 몰래 녹음했습니다."),
+        ):
+            answer_response = ask_question_api(answer_request)
+
+        self.assertEqual(answer_response.status_code, 201)
+        self.assertEqual(LegalQueryAudit.objects.count(), 2)
+
+    @override_settings(TEACHER_LAW_DAILY_LIMIT_PER_USER=1)
     @patch("teacher_law.views.is_law_api_configured", return_value=True)
     @patch("teacher_law.views.is_llm_configured", return_value=True)
     def test_main_view_blocks_form_when_daily_limit_is_reached(self, _llm_mock, _law_mock):
@@ -354,6 +457,61 @@ class TeacherLawViewTests(TestCase):
         self.assertEqual(failed_response.status_code, 503)
         self.assertEqual(success_response.status_code, 201)
         self.assertEqual(LegalQueryAudit.objects.count(), 2)
+
+    def test_main_view_prefills_clarify_draft(self):
+        request = self.factory.get("/teacher-law/")
+        request.user = self.user
+        request.session = {
+            CLARIFY_DRAFT_SESSION_KEY: {
+                "question": "학생이 학교에 녹음기 가져왔다",
+                "incident_type": "student_guidance",
+                "legal_goal": "immediate_action",
+                "scene": "",
+                "counterpart": "",
+            }
+        }
+
+        context = _build_page_context(request)
+        response = main_view(request)
+
+        self.assertEqual(context["clarify_draft_question"], "학생이 학교에 녹음기 가져왔다")
+        self.assertEqual(context["clarify_draft_incident_type"], "student_guidance")
+        self.assertEqual(context["clarify_draft_legal_goal"], "immediate_action")
+        self.assertContains(response, "학생이 학교에 녹음기 가져왔다")
+
+    def test_success_request_clears_clarify_draft(self):
+        shared_session = {
+            CLARIFY_DRAFT_SESSION_KEY: {
+                "question": "학생이 학교에 녹음기 가져왔다",
+                "incident_type": "student_guidance",
+                "legal_goal": "immediate_action",
+                "scene": "",
+                "counterpart": "",
+            }
+        }
+        request = self.factory.post(
+            "/teacher-law/ask/",
+            data=json.dumps(
+                self._build_request_payload(
+                    "학생이 학교에 녹음기 가져왔고 교사를 몰래 녹음했습니다.",
+                    incident_type="recording_defamation",
+                    legal_goal="immediate_action",
+                    counterpart="student",
+                )
+            ),
+            content_type="application/json",
+        )
+        request.user = self.user
+        request.session = shared_session
+
+        with patch(
+            "teacher_law.views.answer_legal_question",
+            return_value=self._build_success_result("학생이 학교에 녹음기 가져왔고 교사를 몰래 녹음했습니다."),
+        ):
+            response = ask_question_api(request)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertNotIn(CLARIFY_DRAFT_SESSION_KEY, shared_session)
 
     def test_ask_api_missing_structured_fields_returns_400_without_saving_messages(self):
         request = self.factory.post(

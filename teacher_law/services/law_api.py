@@ -776,7 +776,14 @@ def _build_case_citation(case_result: dict, *, index: int, law_id: str = "") -> 
     }
 
 
-def select_relevant_case_citations(case_results: list[dict], profile: dict, *, limit: int = 2, law_id: str = "") -> list[dict]:
+def select_relevant_case_citations(
+    case_results: list[dict],
+    profile: dict,
+    *,
+    limit: int = 2,
+    law_id: str = "",
+    article_ref: str = "",
+) -> list[dict]:
     strong_terms = _build_strong_match_terms(profile)
     weak_terms = _build_weak_match_terms(profile)
     scored = []
@@ -789,6 +796,13 @@ def select_relevant_case_citations(case_results: list[dict], profile: dict, *, l
         if strong_score <= 0:
             continue
         score = strong_score + weak_score
+        if law_id and compact_text(case_result.get("law_id")) == compact_text(law_id):
+            score += 6
+        case_article_ref = _extract_article_reference(
+            case_result.get("article") or case_result.get("article_no") or case_result.get("reference_label") or ""
+        )
+        if article_ref and case_article_ref and case_article_ref == compact_text(article_ref):
+            score += 4
         scored.append((score, case_result))
 
     if not scored:

@@ -97,9 +97,17 @@
         const userMessage = pair.user_message;
         const assistantMessage = pair.assistant_message;
         const actionItems = Array.isArray(assistantMessage.action_items) ? assistantMessage.action_items.filter(Boolean) : [];
+        const clarifyQuestions = Array.isArray(assistantMessage.clarify_questions)
+            ? assistantMessage.clarify_questions.filter(Boolean)
+            : [];
         const partitioned = partitionCitations(assistantMessage);
         const lawCitations = partitioned.lawCitations;
         const caseCitations = partitioned.caseCitations;
+        const reasoningSummary = String(assistantMessage.reasoning_summary || "").trim();
+        const representativeCase = assistantMessage.representative_case || (caseCitations.length ? caseCitations[0] : null);
+        const representativeCaseNotice = String(assistantMessage.representative_case_notice || "").trim();
+        const precedentNote = String(assistantMessage.precedent_note || "").trim();
+        const overviewCases = representativeCase ? [representativeCase] : caseCitations;
         const actionHtml = actionItems.length
             ? `
                 <div class="teacher-law-section-title">할 일</div>
@@ -108,19 +116,43 @@
                 </ul>
             `
             : "";
-        const evidenceOverviewHtml = buildEvidenceOverviewHtml(lawCitations, caseCitations);
+        const reasoningHtml = reasoningSummary
+            ? `
+                <div class="teacher-law-section-title">판단 이유</div>
+                <p class="teacher-law-citation-quote">${escapeHtml(reasoningSummary)}</p>
+            `
+            : "";
+        const clarifyQuestionHtml = clarifyQuestions.length
+            ? `
+                <div class="teacher-law-section-title">먼저 확인할 것</div>
+                <ul class="teacher-law-list">
+                    ${clarifyQuestions.map(function (item) { return `<li>${escapeHtml(item)}</li>`; }).join("")}
+                </ul>
+            `
+            : "";
+        const evidenceOverviewHtml = buildEvidenceOverviewHtml(lawCitations, overviewCases);
         const lawCitationHtml = lawCitations.length
             ? `
                 <div class="teacher-law-section-title">기본 법령</div>
                 ${lawCitations.map(buildCitationHtml).join("")}
             `
             : "";
-        const caseCitationHtml = caseCitations.length
+        const caseCitationHtml = representativeCase
             ? `
-                <div class="teacher-law-section-title">참고 판례</div>
-                ${caseCitations.map(buildCitationHtml).join("")}
+                <div class="teacher-law-section-title">대표 판례</div>
+                ${buildCitationHtml(representativeCase)}
+                ${representativeCaseNotice
+                    ? `<div class="teacher-law-citation"><p class="teacher-law-citation-quote">${escapeHtml(representativeCaseNotice)}</p></div>`
+                    : ""}
             `
-            : "";
+            : precedentNote
+                ? `
+                    <div class="teacher-law-section-title">대표 판례</div>
+                    <div class="teacher-law-citation">
+                        <p class="teacher-law-citation-quote">${escapeHtml(precedentNote)}</p>
+                    </div>
+                `
+                : "";
         const disclaimerHtml = assistantMessage.disclaimer
             ? `<p class="teacher-law-disclaimer mt-4">${escapeHtml(assistantMessage.disclaimer)}</p>`
             : "";
@@ -145,6 +177,8 @@
                     </div>
                 </div>
                 <p class="teacher-law-summary">${escapeHtml(assistantMessage.summary || assistantMessage.body || "")}</p>
+                ${reasoningHtml}
+                ${clarifyQuestionHtml}
                 ${evidenceOverviewHtml}
                 ${actionHtml}
                 ${lawCitationHtml}
@@ -213,6 +247,15 @@
         root.querySelectorAll(`input[name="${name}"]`).forEach(function (input) {
             input.checked = false;
         });
+    }
+
+    function focusInputToEnd(input) {
+        if (!input) return;
+        input.focus();
+        if (typeof input.setSelectionRange === "function") {
+            const length = String(input.value || "").length;
+            input.setSelectionRange(length, length);
+        }
     }
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -439,6 +482,7 @@
                     if (data.field_errors) applyFieldErrors(data.field_errors);
                     throw new Error(data.message || "답변을 준비하지 못했습니다.");
                 }
+                const responseStatus = data.status || "ok";
                 const nextPair = buildPairFromResponse(data, question);
                 if (latestPair) {
                     historyPairs = [latestPair].concat(historyPairs).slice(0, 6);
@@ -446,16 +490,22 @@
                 latestPair = nextPair;
                 stopProgressSequence();
                 renderHistory();
-                if (input) input.value = "";
-                clearRadioValue(root, "incident_type");
-                clearRadioValue(root, "legal_goal");
-                clearRadioValue(root, "scene");
-                clearRadioValue(root, "counterpart");
-                updateDependentVisibility();
+                if (responseStatus === "clarify") {
+                    if (input) input.value = question;
+                    updateDependentVisibility();
+                    focusInputToEnd(input);
+                } else {
+                    if (input) input.value = "";
+                    clearRadioValue(root, "incident_type");
+                    clearRadioValue(root, "legal_goal");
+                    clearRadioValue(root, "scene");
+                    clearRadioValue(root, "counterpart");
+                    updateDependentVisibility();
+                }
                 updateSubmitEnabled();
                 scrollConversationToBottom({ page: true });
-                if ((data.status || "ok") === "clarify") {
-                    dispatchToast("추가 확인 필요", "info");
+                if (responseStatus === "clarify") {
+                    dispatchToast("추가 확인 필요: 질문은 그대로 두고 필요한 사실만 덧붙여 주세요.", "info");
                 }
             } catch (error) {
                 stopProgressSequence();

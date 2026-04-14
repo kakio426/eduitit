@@ -57,9 +57,10 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
         "주어진 근거 외의 조문이나 판례를 지어내지 마세요. "
         "법령은 1차 근거이고 판례는 2차 보조 근거입니다. "
         "판례가 있더라도 법령보다 앞세워 단정하지 마세요. "
-        "summary는 220자 이하, action_items는 1~4개, "
+        "summary는 220자 이하, reasoning_summary는 320자 이하, action_items는 1~4개, "
         "citations는 선택한 citation_id 배열, risk_level은 low/medium/high 중 하나입니다. "
         "근거가 약하면 summary에 '추가 확인 필요'를 포함하고 needs_human_help를 true로 올리세요. "
+        "reasoning_summary에는 왜 그렇게 판단하는지와 판례가 있다면 어떻게 참고하는지를 한 단락으로 적으세요. "
         "scope_supported는 반드시 true 또는 false로 반환하세요."
     )
     user_prompt = "\n\n".join(
@@ -80,6 +81,7 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
             json.dumps(
                 {
                     "summary": "",
+                    "reasoning_summary": "",
                     "action_items": [""],
                     "citations": [""],
                     "risk_level": "medium",
@@ -107,6 +109,7 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
         citations_result = []
     return {
         "summary": str(payload.get("summary") or "").strip(),
+        "reasoning_summary": str(payload.get("reasoning_summary") or "").strip(),
         "action_items": [str(item).strip() for item in action_items if str(item).strip()][:4],
         "citations": [str(item).strip() for item in citations_result if str(item).strip()],
         "risk_level": str(payload.get("risk_level") or "medium").strip().lower() or "medium",
