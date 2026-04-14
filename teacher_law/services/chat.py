@@ -19,6 +19,7 @@ from .law_api import (
     get_law_details,
     get_law_provider,
     is_configured as is_law_api_configured,
+    rank_case_matches,
     rank_search_results,
     resolve_law_by_name,
     search_cases,
@@ -98,10 +99,48 @@ def _build_fallback_reasoning_summary(citations: list[dict]) -> str:
     return compact_text(" ".join(parts))
 
 
-def _build_representative_case_notice(representative_case: dict | None) -> str:
+def _case_confidence_label(confidence: str) -> str:
+    mapping = {
+        "high": "높음",
+        "medium": "보통",
+        "low": "낮음",
+    }
+    return mapping.get(compact_text(confidence).lower(), "")
+
+
+def _normalize_case_mismatch_reasons(reasons) -> list[str]:
+    normalized = []
+    for reason in reasons or []:
+        compact_reason = compact_text(reason)
+        if compact_reason and compact_reason not in normalized:
+            normalized.append(compact_reason)
+    return normalized[:3]
+
+
+def _build_representative_case_notice(
+    representative_case: dict | None,
+    *,
+    confidence: str = "",
+    mismatch_reasons: list[str] | None = None,
+) -> str:
     if not representative_case:
         return ""
-    return "가장 가까운 판례 1건을 참고로 보여드리지만, 실제 사건과 사실관계 차이로 연관성이 많이 부족할 수 있습니다."
+    normalized_confidence = compact_text(confidence).lower()
+    normalized_reasons = _normalize_case_mismatch_reasons(mismatch_reasons)
+    if normalized_confidence == "high" and not normalized_reasons:
+        return "대표 판례 1건을 보조 근거로 함께 봤습니다. 실제 사건은 세부 사실에 따라 달라질 수 있습니다."
+    return "가장 가까운 판례 1건을 참고로 보여드리지만, 실제 사건과 사실관계 차이로 연관성이 부족할 수 있습니다."
+
+
+def _build_screened_precedent_note(screened_case_match: dict | None) -> str:
+    if not isinstance(screened_case_match, dict):
+        return "관련 판례는 더 확인 필요합니다."
+    mismatch_reasons = _normalize_case_mismatch_reasons(screened_case_match.get("mismatch_reasons") or [])
+    parts = ["가장 가까운 판례 후보는 있었지만 사실관계 차이로 대표 판례로 쓰지 않았습니다."]
+    if mismatch_reasons:
+        parts.append(f"주된 차이: {', '.join(mismatch_reasons)}.")
+    parts.append("관련 판례는 더 확인이 필요합니다.")
+    return compact_text(" ".join(parts))
 
 
 def build_answer_body(payload: dict) -> str:
@@ -114,6 +153,10 @@ def build_answer_body(payload: dict) -> str:
     representative_case = payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None
     representative_case_notice = compact_text(payload.get("representative_case_notice"))
     precedent_note = compact_text(payload.get("precedent_note"))
+    representative_case_confidence = compact_text(payload.get("representative_case_confidence")).lower()
+    representative_case_mismatch_reasons = _normalize_case_mismatch_reasons(
+        payload.get("representative_case_mismatch_reasons") or []
+    )
 
     lines = [
         "핵심 판단",
@@ -172,6 +215,11 @@ def build_answer_body(payload: dict) -> str:
         quote = _truncate_body_text(representative_case.get("quote") or "")
         if quote:
             lines.append(f"- {quote}")
+        confidence_label = _case_confidence_label(representative_case_confidence)
+        if confidence_label:
+            lines.append(f"- 판례 신뢰도: {confidence_label}")
+        if representative_case_mismatch_reasons:
+            lines.append(f"- 사실관계 차이: {', '.join(representative_case_mismatch_reasons)}")
         if representative_case_notice:
             lines.append(f"- {representative_case_notice}")
     elif precedent_note:
@@ -337,20 +385,20 @@ def answer_legal_question(
     first_law_id = next((item.get("law_id") for item in selected_sources if item.get("source_type") == "law" and item.get("law_id")), "")
     first_article_ref = _extract_reference_label(law_citations[0].get("reference_label")) if law_citations else ""
 
-    collected_case_citations = []
+    collected_case_results = []
+    screened_case_match = None
     if law_citations:
         deduped_case_results = _dedupe_case_results(related_case_results)
         if deduped_case_results:
-            collected_case_citations.extend(
-                select_relevant_case_citations(
-                    deduped_case_results,
-                    profile,
-                    limit=1,
-                    law_id=first_law_id,
-                    article_ref=first_article_ref,
-                )
-            )
-        if not collected_case_citations:
+            collected_case_results.extend(deduped_case_results)
+        ranked_case_matches = rank_case_matches(
+            _dedupe_case_results(collected_case_results),
+            profile,
+            law_id=first_law_id,
+            article_ref=first_article_ref,
+        )
+        has_visible_case_match = any(match.get("confidence") in {"high", "medium"} for match in ranked_case_matches)
+        if not has_visible_case_match:
             for query in case_queries:
                 _ensure_total_timeout(started, total_timeout_seconds)
                 search_attempt_count += 1
@@ -362,19 +410,35 @@ def answer_legal_question(
                 search_result_count += len(case_results)
                 if not case_results:
                     continue
-                collected_case_citations.extend(
-                    select_relevant_case_citations(
-                        case_results,
-                        profile,
-                        limit=1,
-                        law_id=first_law_id,
-                        article_ref=first_article_ref,
-                    )
+                collected_case_results.extend(case_results)
+                ranked_case_matches = rank_case_matches(
+                    _dedupe_case_results(collected_case_results),
+                    profile,
+                    law_id=first_law_id,
+                    article_ref=first_article_ref,
                 )
-                if collected_case_citations:
+                has_visible_case_match = any(match.get("confidence") in {"high", "medium"} for match in ranked_case_matches)
+                if has_visible_case_match:
                     break
 
-    case_citations = _dedupe_citations(collected_case_citations)
+    case_results = _dedupe_case_results(collected_case_results)
+    ranked_case_matches = rank_case_matches(
+        case_results,
+        profile,
+        law_id=first_law_id,
+        article_ref=first_article_ref,
+    )
+    case_citations = _dedupe_citations(
+        select_relevant_case_citations(
+            case_results,
+            profile,
+            limit=1,
+            law_id=first_law_id,
+            article_ref=first_article_ref,
+        )
+    )
+    if not case_citations and ranked_case_matches and ranked_case_matches[0].get("confidence") == "low":
+        screened_case_match = ranked_case_matches[0]
     for citation in case_citations[:1]:
         selected_sources.append(
             {
@@ -417,7 +481,12 @@ def answer_legal_question(
         citations=visible_citations,
         timeout_seconds=int(getattr(settings, "TEACHER_LAW_LLM_TIMEOUT_SECONDS", 12)),
     )
-    payload = _normalize_answer_payload(llm_answer, visible_citations, profile)
+    payload = _normalize_answer_payload(
+        llm_answer,
+        visible_citations,
+        profile,
+        screened_case_match=screened_case_match,
+    )
     audit = {
         "cache_hit": False,
         "search_attempt_count": search_attempt_count,
@@ -559,8 +628,12 @@ def _build_out_of_scope_payload(profile: dict) -> dict:
         "clarify_questions": [],
         "missing_facts": [],
         "representative_case": None,
+        "representative_case_confidence": "",
+        "representative_case_score": None,
+        "representative_case_mismatch_reasons": [],
         "representative_case_notice": "",
         "precedent_note": "",
+        "precedent_screened_out": False,
     }
 
 
@@ -663,8 +736,12 @@ def _build_clarify_payload(profile: dict, selected_sources: list[dict]) -> dict:
         "clarify_questions": profile_clarify_questions,
         "missing_facts": missing_facts,
         "representative_case": None,
+        "representative_case_confidence": "",
+        "representative_case_score": None,
+        "representative_case_mismatch_reasons": [],
         "representative_case_notice": "",
         "precedent_note": "",
+        "precedent_screened_out": False,
     }
 
 
@@ -674,7 +751,13 @@ def _preferred_visible_citations(citations: list[dict]) -> list[dict]:
     return law_citations + case_citations
 
 
-def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict) -> dict:
+def _normalize_answer_payload(
+    answer: dict,
+    citations: list[dict],
+    profile: dict,
+    *,
+    screened_case_match: dict | None = None,
+) -> dict:
     selected_ids = [item for item in (answer.get("citations") or []) if str(item).strip()]
     visible_citations = [citation for citation in citations if citation.get("citation_id") in selected_ids]
     if not visible_citations or not any(item.get("source_type") != "case" for item in visible_citations):
@@ -702,8 +785,33 @@ def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict
         reasoning_summary = _build_fallback_reasoning_summary(visible_citations)
 
     representative_case = next((citation for citation in visible_citations if citation.get("source_type") == "case"), None)
-    representative_case_notice = _build_representative_case_notice(representative_case)
-    precedent_note = "" if representative_case else "관련 판례는 더 확인 필요합니다."
+    representative_case_confidence = ""
+    representative_case_score = None
+    representative_case_mismatch_reasons = []
+    representative_case_notice = ""
+    precedent_screened_out = False
+    if representative_case:
+        representative_case_confidence = compact_text(representative_case.get("match_confidence")).lower()
+        if representative_case_confidence not in {"high", "medium", "low"}:
+            representative_case_confidence = "medium"
+        try:
+            representative_case_score = int(representative_case.get("match_score"))
+        except (TypeError, ValueError):
+            representative_case_score = None
+        representative_case_mismatch_reasons = _normalize_case_mismatch_reasons(
+            representative_case.get("match_mismatch_reasons") or []
+        )
+        representative_case_notice = _build_representative_case_notice(
+            representative_case,
+            confidence=representative_case_confidence,
+            mismatch_reasons=representative_case_mismatch_reasons,
+        )
+        precedent_note = ""
+    elif screened_case_match:
+        precedent_screened_out = True
+        precedent_note = _build_screened_precedent_note(screened_case_match)
+    else:
+        precedent_note = "관련 판례는 더 확인 필요합니다."
 
     return {
         "summary": summary,
@@ -723,8 +831,12 @@ def _normalize_answer_payload(answer: dict, citations: list[dict], profile: dict
         "clarify_questions": [],
         "missing_facts": [],
         "representative_case": representative_case,
+        "representative_case_confidence": representative_case_confidence,
+        "representative_case_score": representative_case_score,
+        "representative_case_mismatch_reasons": representative_case_mismatch_reasons,
         "representative_case_notice": representative_case_notice,
         "precedent_note": precedent_note,
+        "precedent_screened_out": precedent_screened_out,
     }
 
 
@@ -745,8 +857,12 @@ def _serialize_cache_payload(payload: dict) -> dict:
         "clarify_questions": list(payload.get("clarify_questions") or []),
         "missing_facts": list(payload.get("missing_facts") or []),
         "representative_case": payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None,
+        "representative_case_confidence": payload.get("representative_case_confidence") or "",
+        "representative_case_score": payload.get("representative_case_score"),
+        "representative_case_mismatch_reasons": list(payload.get("representative_case_mismatch_reasons") or []),
         "representative_case_notice": payload.get("representative_case_notice") or "",
         "precedent_note": payload.get("precedent_note") or "",
+        "precedent_screened_out": bool(payload.get("precedent_screened_out")),
     }
     for citation in payload.get("citations") or []:
         if not isinstance(citation, dict):
@@ -766,6 +882,9 @@ def _serialize_cache_payload(payload: dict) -> dict:
                 "source_url": citation.get("source_url") or "",
                 "provider": citation.get("provider") or get_law_provider(),
                 "fetched_at": citation.get("fetched_at") or "",
+                "match_score": citation.get("match_score"),
+                "match_confidence": citation.get("match_confidence") or "",
+                "match_mismatch_reasons": list(citation.get("match_mismatch_reasons") or []),
             }
         )
     return serialized
@@ -797,8 +916,14 @@ def _restore_cache_payload(raw_payload):
         "clarify_questions": [compact_text(item) for item in raw_payload.get("clarify_questions") or [] if compact_text(item)],
         "missing_facts": [compact_text(item) for item in raw_payload.get("missing_facts") or [] if compact_text(item)],
         "representative_case": raw_payload.get("representative_case") if isinstance(raw_payload.get("representative_case"), dict) else None,
+        "representative_case_confidence": compact_text(raw_payload.get("representative_case_confidence")).lower(),
+        "representative_case_score": raw_payload.get("representative_case_score"),
+        "representative_case_mismatch_reasons": _normalize_case_mismatch_reasons(
+            raw_payload.get("representative_case_mismatch_reasons") or []
+        ),
         "representative_case_notice": compact_text(raw_payload.get("representative_case_notice")),
         "precedent_note": compact_text(raw_payload.get("precedent_note")),
+        "precedent_screened_out": bool(raw_payload.get("precedent_screened_out")),
     }
 
 

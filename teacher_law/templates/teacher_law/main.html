@@ -857,25 +857,44 @@
                                     </div>
                                     {% endfor %}
                                     {% endif %}
-                                    {% if latest_pair.assistant_message.case_citations %}
-                                    <div class="teacher-law-section-title">참고 판례</div>
-                                    {% for citation in latest_pair.assistant_message.case_citations %}
+                                    {% if latest_pair.assistant_message.representative_case %}
+                                    <div class="teacher-law-section-title">대표 판례</div>
                                     <div class="teacher-law-citation">
-                                        <div class="teacher-law-citation-title">{{ citation.title }}{% if citation.reference_label %} · {{ citation.reference_label }}{% endif %}</div>
-                                        <p class="teacher-law-citation-quote">{{ citation.quote }}</p>
-                                        {% if citation.source_url %}
-                                        <a href="{{ citation.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">
+                                        <div class="teacher-law-citation-title">{{ latest_pair.assistant_message.representative_case.title }}{% if latest_pair.assistant_message.representative_case.reference_label %} · {{ latest_pair.assistant_message.representative_case.reference_label }}{% endif %}</div>
+                                        <p class="teacher-law-citation-quote">{{ latest_pair.assistant_message.representative_case.quote }}</p>
+                                        {% if latest_pair.assistant_message.representative_case.source_url %}
+                                        <a href="{{ latest_pair.assistant_message.representative_case.source_url }}" target="_blank" rel="noopener noreferrer" class="teacher-law-citation-link">
                                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                             공식 출처 보기
                                         </a>
                                         {% endif %}
                                     </div>
-                                    {% endfor %}
-                                    {% if latest_pair.assistant_message.representative_case_notice %}
+                                    {% if latest_pair.assistant_message.representative_case_confidence or latest_pair.assistant_message.representative_case_mismatch_reasons or latest_pair.assistant_message.representative_case_notice %}
                                     <div class="teacher-law-citation">
+                                        {% if latest_pair.assistant_message.representative_case_confidence == "high" %}
+                                        <p class="teacher-law-citation-quote">판례 신뢰도 · 높음</p>
+                                        {% elif latest_pair.assistant_message.representative_case_confidence == "medium" %}
+                                        <p class="teacher-law-citation-quote">판례 신뢰도 · 보통</p>
+                                        {% elif latest_pair.assistant_message.representative_case_confidence == "low" %}
+                                        <p class="teacher-law-citation-quote">판례 신뢰도 · 낮음</p>
+                                        {% endif %}
+                                        {% if latest_pair.assistant_message.representative_case_mismatch_reasons %}
+                                        <ul class="teacher-law-list">
+                                            {% for reason in latest_pair.assistant_message.representative_case_mismatch_reasons %}
+                                            <li>{{ reason }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% endif %}
+                                        {% if latest_pair.assistant_message.representative_case_notice %}
                                         <p class="teacher-law-citation-quote">{{ latest_pair.assistant_message.representative_case_notice }}</p>
+                                        {% endif %}
                                     </div>
                                     {% endif %}
+                                    {% elif latest_pair.assistant_message.precedent_note %}
+                                    <div class="teacher-law-section-title">대표 판례</div>
+                                    <div class="teacher-law-citation">
+                                        <p class="teacher-law-citation-quote">{{ latest_pair.assistant_message.precedent_note }}</p>
+                                    </div>
                                     {% endif %}
                                     {% if latest_pair.assistant_message.disclaimer %}
                                     <p class="teacher-law-disclaimer mt-4">{{ latest_pair.assistant_message.disclaimer }}</p>

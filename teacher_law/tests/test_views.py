@@ -165,6 +165,8 @@ class TeacherLawViewTests(TestCase):
                 "citations": [],
                 "risk_level": "medium",
                 "needs_human_help": False,
+                "representative_case_confidence": "medium",
+                "representative_case_mismatch_reasons": ["장면 차이"],
                 "representative_case_notice": "가장 가까운 판례 1건을 참고로 보여드리지만, 실제 사건과 사실관계 차이로 연관성이 많이 부족할 수 있습니다.",
                 "disclaimer": "",
                 "scope_supported": True,
@@ -224,9 +226,11 @@ class TeacherLawViewTests(TestCase):
 
         self.assertContains(response, "근거")
         self.assertContains(response, "기본 법령")
-        self.assertContains(response, "참고 판례")
+        self.assertContains(response, "대표 판례")
         self.assertContains(response, "학교안전사고 예방 및 보상에 관한 법률")
         self.assertContains(response, "학교안전사고 손해배상")
+        self.assertContains(response, "판례 신뢰도 · 보통")
+        self.assertContains(response, "장면 차이")
         self.assertContains(response, "가장 가까운 판례 1건을 참고로 보여드리지만")
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")

@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 
-ANSWER_POLICY_VERSION = "teacher-law-v4"
+ANSWER_POLICY_VERSION = "teacher-law-v5"
 
 QUESTION_REPLACEMENTS = (
     ("학폭", "학교폭력"),
@@ -268,6 +268,21 @@ RECORDING_ACTION_KEYWORDS = (
 RECORDING_INTENT_KEYWORDS = ("녹음하려", "녹취하려", "녹음하려고", "녹취하려고", "녹음 시도", "녹취 시도")
 RECORDING_DISCLOSURE_KEYWORDS = ("공개", "게시", "퍼뜨", "유포", "공유", "올렸", "전송")
 RECORDING_TARGET_KEYWORDS = ("교사", "선생님", "학생을", "친구", "학부모", "학급", "수업", "대화", "상담")
+DISCLOSURE_GROUP_KEYWORDS = ("단체방", "학급 밴드", "밴드", "카톡", "오픈채팅", "채팅방", "단톡방")
+DISCLOSURE_PUBLIC_KEYWORDS = (
+    "공개",
+    "게시",
+    "sns",
+    "홈페이지",
+    "커뮤니티",
+    "인터넷",
+    "인스타",
+    "페이스북",
+    "유튜브",
+    "블로그",
+)
+PHOTO_VIDEO_KEYWORDS = ("사진", "영상", "촬영", "녹화", "캡처")
+CONSENT_KEYWORDS = ("동의", "승낙", "허락", "사전 동의", "보호자 동의")
 
 QUICK_QUESTION_PRESETS = [
     {
@@ -540,6 +555,80 @@ def _build_clarify_bundle(
     return missing_facts, clarify_questions, summary
 
 
+def _detect_disclosure_scope(normalized_question: str) -> str:
+    if _has_any_keyword(normalized_question, DISCLOSURE_GROUP_KEYWORDS):
+        return "group"
+    if _has_any_keyword(normalized_question, DISCLOSURE_PUBLIC_KEYWORDS):
+        return "public"
+    return ""
+
+
+def _infer_case_conduct_stage(*, normalized_question: str, incident_key: str, legal_issues: list[str], goal_key: str) -> str:
+    if incident_key == "recording_defamation":
+        if _has_any_keyword(normalized_question, RECORDING_DISCLOSURE_KEYWORDS):
+            return "disclosed"
+        if _has_recording_execution_context(normalized_question):
+            return "executed"
+        if _has_recording_intent_context(normalized_question):
+            return "intent"
+        if _has_recording_device_context(normalized_question):
+            return "device_only"
+        return ""
+    if incident_key == "privacy_photo":
+        if _has_any_keyword(normalized_question, RECORDING_DISCLOSURE_KEYWORDS):
+            return "posted"
+        if _has_any_keyword(normalized_question, PHOTO_VIDEO_KEYWORDS):
+            return "capture"
+        if goal_key == "posting_allowed":
+            return "posted"
+        return ""
+    if incident_key == "school_safety":
+        return "injury"
+    if incident_key == "education_activity":
+        if _has_physical_violence_context(normalized_question, legal_issues):
+            return "assault"
+        return "verbal_abuse"
+    return ""
+
+
+def _infer_case_target_actor(*, counterpart_key: str, actors: list[str]) -> str:
+    counterpart_actor = COUNTERPART_MAP.get(counterpart_key, {}).get("actor", "")
+    if counterpart_actor:
+        return counterpart_actor
+    for actor in actors:
+        if actor != "교사":
+            return actor
+    return ""
+
+
+def _build_case_fact_profile(
+    *,
+    normalized_question: str,
+    incident_key: str,
+    goal_key: str,
+    scene_key: str,
+    actors: list[str],
+    legal_issues: list[str],
+    counterpart_key: str,
+) -> dict:
+    target_actor = _infer_case_target_actor(counterpart_key=counterpart_key, actors=actors)
+    return {
+        "incident_type": incident_key,
+        "conduct_stage": _infer_case_conduct_stage(
+            normalized_question=normalized_question,
+            incident_key=incident_key,
+            legal_issues=legal_issues,
+            goal_key=goal_key,
+        ),
+        "disclosure_scope": _detect_disclosure_scope(normalized_question),
+        "target_actor": target_actor,
+        "scene_label": SCENE_MAP.get(scene_key, {}).get("label", ""),
+        "school_context": _has_any_keyword(normalized_question, TEACHER_CONTEXT_KEYWORDS),
+        "requires_consent": incident_key == "privacy_photo" and goal_key == "posting_allowed",
+        "consent_mentioned": _has_any_keyword(normalized_question, CONSENT_KEYWORDS),
+    }
+
+
 def is_supported_question(question: str, *, incident_type: str) -> bool:
     normalized = normalize_for_matching(question)
     if incident_type:
@@ -789,6 +878,15 @@ def build_query_profile(
         scene=scene_key,
         counterpart=counterpart_key,
     )
+    case_fact_profile = _build_case_fact_profile(
+        normalized_question=normalized_question,
+        incident_key=incident_key,
+        goal_key=goal_key,
+        scene_key=scene_key,
+        actors=actors,
+        legal_issues=legal_issues,
+        counterpart_key=counterpart_key,
+    )
 
     return {
         "original_question": original_question,
@@ -832,4 +930,5 @@ def build_query_profile(
         "clarify_questions": clarify_questions,
         "missing_facts": missing_facts,
         "clarify_summary": clarify_summary,
+        "case_fact_profile": case_fact_profile,
     }

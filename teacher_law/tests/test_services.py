@@ -431,6 +431,30 @@ class BeopmangLawApiTests(SimpleTestCase):
         self.assertEqual(len(citations), 1)
         self.assertEqual(citations[0]["case_number"], "2024다11111")
 
+    def test_select_relevant_case_citations_filters_low_confidence_mismatch(self):
+        profile = build_query_profile(
+            "학생이 교사를 몰래 녹음했다. 처벌되나요?",
+            incident_type="recording_defamation",
+            legal_goal="legal_risk",
+            counterpart="student",
+        )
+        case_results = [
+            {
+                "case_id": "case-low",
+                "title": "학부모 명예훼손 사건",
+                "case_number": "2024다33333",
+                "quote": "학부모가 교사를 공개적으로 비난해 명예훼손을 판단했다.",
+                "law_id": "001695",
+            },
+        ]
+
+        ranked = law_api.rank_case_matches(case_results, profile, law_id="001695", article_ref="")
+        citations = law_api.select_relevant_case_citations(case_results, profile, limit=1, law_id="001695", article_ref="")
+
+        self.assertEqual(len(ranked), 1)
+        self.assertEqual(ranked[0]["confidence"], "low")
+        self.assertEqual(citations, [])
+
 
 @override_settings(
     TEACHER_LAW_ENABLED=True,
@@ -586,6 +610,9 @@ class TeacherLawCachingTests(TestCase):
             "source_url": "",
             "provider": "beopmang",
             "fetched_at": "2026-04-05T00:00:00+09:00",
+            "match_score": 16,
+            "match_confidence": "high",
+            "match_mismatch_reasons": [],
         }
         llm_answer = {
             "summary": "학교안전사고 법령과 관련 판례를 함께 확인해야 합니다.",
@@ -623,8 +650,168 @@ class TeacherLawCachingTests(TestCase):
         self.assertEqual(result["payload"]["citations"][0]["source_type"], "law")
         self.assertEqual(result["payload"]["citations"][1]["source_type"], "case")
         self.assertEqual(result["payload"]["representative_case"]["case_number"], case_citation["case_number"])
-        self.assertIn("가장 가까운 판례 1건", result["payload"]["representative_case_notice"])
+        self.assertEqual(result["payload"]["representative_case_confidence"], "high")
+        self.assertIn("보조 근거", result["payload"]["representative_case_notice"])
         self.assertTrue(any(item["source_type"] == "case" for item in result["audit"]["selected_laws_json"]))
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_screens_out_low_confidence_case_and_exposes_note(self):
+        law_citation = {
+            "citation_id": "law-1",
+            "source_type": "law",
+            "title": "형법",
+            "law_name": "형법",
+            "law_id": "001695",
+            "mst": "",
+            "reference_label": "제314조",
+            "article_label": "제314조",
+            "case_number": "",
+            "quote": "명예훼손과 관련된 기본 조문을 먼저 확인한다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        llm_answer = {
+            "summary": "형법과 사실관계를 먼저 확인해야 합니다.",
+            "action_items": ["녹음 경위와 공개 여부를 기록합니다."],
+            "citations": ["law-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+        low_match = {
+            "score": 6,
+            "confidence": "low",
+            "mismatch_reasons": ["행위 단계 차이", "대상 차이"],
+            "case_result": {
+                "case_id": "case-low",
+                "title": "학부모 녹음 공개 사건",
+                "case_number": "2024다30000",
+                "quote": "학부모가 교사를 녹음해 공개한 사안에서 명예훼손 여부를 검토했다.",
+            },
+        }
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "형법", "law_id": "001695", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
+            patch(
+                "teacher_law.services.chat.get_law_details",
+                return_value={"law_name": "형법", "law_id": "001695", "mst": "", "detail_link": "", "provider": "beopmang", "articles": [], "related_cases": []},
+            ),
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[law_citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[low_match["case_result"]]),
+            patch("teacher_law.services.chat.select_relevant_case_citations", return_value=[]),
+            patch("teacher_law.services.chat.rank_case_matches", side_effect=[[], [low_match], [low_match], [low_match]]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(
+                question="학생이 교사를 몰래 녹음하고 공개했다. 처벌되나요?",
+                incident_type="recording_defamation",
+                legal_goal="legal_risk",
+                counterpart="student",
+            )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertIsNone(result["payload"]["representative_case"])
+        self.assertTrue(result["payload"]["precedent_screened_out"])
+        self.assertIn("대표 판례로 쓰지 않았습니다", result["payload"]["precedent_note"])
+        self.assertIn("행위 단계 차이", result["payload"]["precedent_note"])
+
+    @override_settings(TEACHER_LAW_PROVIDER="beopmang")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_answer_question_exposes_medium_confidence_case_mismatch_reasons(self):
+        law_citation = {
+            "citation_id": "law-1",
+            "source_type": "law",
+            "title": "개인정보 보호법",
+            "law_name": "개인정보 보호법",
+            "law_id": "001111",
+            "mst": "",
+            "reference_label": "제15조",
+            "article_label": "제15조",
+            "case_number": "",
+            "quote": "학생 사진 게시와 동의 기준을 본다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+        }
+        case_citation = {
+            "citation_id": "case-1",
+            "source_type": "case",
+            "title": "학생 사진 단체방 게시 사건",
+            "law_name": "학생 사진 단체방 게시 사건",
+            "law_id": "001111",
+            "mst": "",
+            "reference_label": "2024다40000",
+            "article_label": "2024다40000",
+            "case_number": "2024다40000",
+            "quote": "학생 사진을 학급 밴드에 공유한 사안에서 동의 범위와 공개 범위를 함께 봤다.",
+            "source_url": "",
+            "provider": "beopmang",
+            "fetched_at": "2026-04-05T00:00:00+09:00",
+            "match_score": 11,
+            "match_confidence": "medium",
+            "match_mismatch_reasons": ["공개 범위 차이"],
+        }
+        medium_match = {
+            "score": 11,
+            "confidence": "medium",
+            "mismatch_reasons": ["공개 범위 차이"],
+            "case_result": {
+                "case_id": "case-1",
+                "title": case_citation["title"],
+                "case_number": case_citation["case_number"],
+                "quote": case_citation["quote"],
+            },
+        }
+        llm_answer = {
+            "summary": "개인정보 보호법 기준으로 게시 범위와 동의를 함께 확인해야 합니다.",
+            "action_items": ["게시 범위와 동의 여부를 기록합니다."],
+            "citations": ["law-1", "case-1"],
+            "risk_level": "medium",
+            "needs_human_help": False,
+            "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+            "scope_supported": True,
+        }
+
+        with (
+            patch("teacher_law.services.chat.is_llm_configured", return_value=True),
+            patch(
+                "teacher_law.services.chat.resolve_law_by_name",
+                side_effect=[
+                    {"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang"},
+                    {"law_name": "초ㆍ중등교육법", "law_id": "001222", "mst": "", "detail_link": "", "provider": "beopmang"},
+                ],
+            ),
+            patch(
+                "teacher_law.services.chat.get_law_details",
+                return_value={"law_name": "개인정보 보호법", "law_id": "001111", "mst": "", "detail_link": "", "provider": "beopmang", "articles": [], "related_cases": []},
+            ),
+            patch("teacher_law.services.chat.select_relevant_citations", return_value=[law_citation]),
+            patch("teacher_law.services.chat.search_cases", return_value=[medium_match["case_result"]]),
+            patch("teacher_law.services.chat.select_relevant_case_citations", return_value=[case_citation]),
+            patch("teacher_law.services.chat.rank_case_matches", side_effect=[[], [medium_match], [medium_match]]),
+            patch("teacher_law.services.chat.generate_legal_answer", return_value=llm_answer),
+        ):
+            result = answer_legal_question(
+                question="학생 사진을 공개 게시해도 되나요?",
+                incident_type="privacy_photo",
+                legal_goal="posting_allowed",
+                counterpart="student",
+            )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["payload"]["representative_case_confidence"], "medium")
+        self.assertEqual(result["payload"]["representative_case_mismatch_reasons"], ["공개 범위 차이"])
+        self.assertIn("연관성이 부족할 수 있습니다", result["payload"]["representative_case_notice"])
 
     @override_settings(TEACHER_LAW_PROVIDER="beopmang")
     @patch.dict("os.environ", {}, clear=True)

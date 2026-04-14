@@ -72,6 +72,7 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         reference_label = citation.article_label or citation.case_number
         citations.append(
             {
+                "citation_id": payload_citation.get("citation_id") or "",
                 "source_type": citation.source_type,
                 "title": title,
                 "law_name": citation.law_name,
@@ -84,6 +85,9 @@ def _serialize_message(message: LegalChatMessage) -> dict:
                 "source_url": citation.source_url,
                 "provider": payload_citation.get("provider") or "",
                 "fetched_at": citation.fetched_at.isoformat() if citation.fetched_at else "",
+                "match_score": payload_citation.get("match_score"),
+                "match_confidence": payload_citation.get("match_confidence") or "",
+                "match_mismatch_reasons": list(payload_citation.get("match_mismatch_reasons") or []),
             }
         )
     law_citations = [citation for citation in citations if citation.get("source_type") != "case"]
@@ -114,8 +118,12 @@ def _serialize_message(message: LegalChatMessage) -> dict:
         "clarify_questions": list(payload.get("clarify_questions") or []),
         "missing_facts": list(payload.get("missing_facts") or []),
         "representative_case": representative_case,
+        "representative_case_confidence": payload.get("representative_case_confidence") or "",
+        "representative_case_score": payload.get("representative_case_score"),
+        "representative_case_mismatch_reasons": list(payload.get("representative_case_mismatch_reasons") or []),
         "representative_case_notice": payload.get("representative_case_notice") or "",
         "precedent_note": payload.get("precedent_note") or "",
+        "precedent_screened_out": bool(payload.get("precedent_screened_out")),
     }
 
 

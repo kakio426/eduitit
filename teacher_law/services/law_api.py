@@ -10,7 +10,21 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from .query_normalizer import compact_text, normalize_for_matching
+from .query_normalizer import (
+    ACTOR_KEYWORDS,
+    CONSENT_KEYWORDS,
+    DISCLOSURE_GROUP_KEYWORDS,
+    DISCLOSURE_PUBLIC_KEYWORDS,
+    PHOTO_VIDEO_KEYWORDS,
+    PHYSICAL_VIOLENCE_KEYWORDS,
+    RECORDING_ACTION_KEYWORDS,
+    RECORDING_DEVICE_KEYWORDS,
+    RECORDING_DISCLOSURE_KEYWORDS,
+    RECORDING_INTENT_KEYWORDS,
+    SCENE_KEYWORDS,
+    compact_text,
+    normalize_for_matching,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +37,22 @@ DEFAULT_BEOPMANG_BASE_URL = "https://api.beopmang.org/api/v4"
 SUPPORTED_PROVIDERS = {"beopmang", "open_law"}
 SUBORDINATE_LAW_MARKERS = ("시행령", "시행규칙", "고시", "훈령", "예규")
 GENERIC_ARTICLE_MARKERS = ("목적", "정의", "적용 범위", "해석", "준용")
+CASE_MATCH_VISIBLE_THRESHOLD = 9
+CASE_MATCH_HIGH_THRESHOLD = 14
+VERBAL_ABUSE_KEYWORDS = ("폭언", "욕설", "모욕", "협박", "비난")
+CASE_SAFETY_KEYWORDS = ("다치", "부상", "사고", "안전사고", "추락", "골절", "응급")
+CASE_SCHOOL_CONTEXT_KEYWORDS = ("학교", "교실", "수업", "학생", "교사", "선생님", "학급")
+CASE_STAGE_LABELS = {
+    "device_only": "행위 단계 차이",
+    "intent": "행위 단계 차이",
+    "executed": "행위 단계 차이",
+    "disclosed": "행위 단계 차이",
+    "capture": "행위 단계 차이",
+    "posted": "행위 단계 차이",
+    "injury": "행위 단계 차이",
+    "assault": "행위 단계 차이",
+    "verbal_abuse": "행위 단계 차이",
+}
 
 
 class LawApiError(Exception):
@@ -776,6 +806,193 @@ def _build_case_citation(case_result: dict, *, index: int, law_id: str = "") -> 
     }
 
 
+def _has_case_keyword(haystack: str, keywords: tuple[str, ...] | list[str]) -> bool:
+    return any(keyword.lower() in haystack for keyword in keywords)
+
+
+def _detect_case_stage(haystack: str) -> str:
+    if _has_case_keyword(haystack, RECORDING_DISCLOSURE_KEYWORDS) and (
+        _has_case_keyword(haystack, RECORDING_ACTION_KEYWORDS) or "녹음" in haystack or "녹취" in haystack
+    ):
+        return "disclosed"
+    if _has_case_keyword(haystack, PHOTO_VIDEO_KEYWORDS) and _has_case_keyword(haystack, RECORDING_DISCLOSURE_KEYWORDS):
+        return "posted"
+    if _has_case_keyword(haystack, RECORDING_ACTION_KEYWORDS) or "녹음" in haystack or "녹취" in haystack:
+        return "executed"
+    if _has_case_keyword(haystack, PHOTO_VIDEO_KEYWORDS):
+        return "capture"
+    if _has_case_keyword(haystack, RECORDING_INTENT_KEYWORDS):
+        return "intent"
+    if _has_case_keyword(haystack, RECORDING_DEVICE_KEYWORDS):
+        return "device_only"
+    if _has_case_keyword(haystack, CASE_SAFETY_KEYWORDS):
+        return "injury"
+    if _has_case_keyword(haystack, PHYSICAL_VIOLENCE_KEYWORDS):
+        return "assault"
+    if _has_case_keyword(haystack, VERBAL_ABUSE_KEYWORDS):
+        return "verbal_abuse"
+    return ""
+
+
+def _detect_case_disclosure_scope(haystack: str) -> str:
+    if _has_case_keyword(haystack, DISCLOSURE_GROUP_KEYWORDS):
+        return "group"
+    if _has_case_keyword(haystack, DISCLOSURE_PUBLIC_KEYWORDS):
+        return "public"
+    return ""
+
+
+def _detect_case_actors(haystack: str) -> list[str]:
+    actors = []
+    for label, keywords in ACTOR_KEYWORDS.items():
+        if _has_case_keyword(haystack, keywords):
+            actors.append(label)
+    return actors
+
+
+def _detect_case_scenes(haystack: str) -> list[str]:
+    scenes = []
+    for label, keywords in SCENE_KEYWORDS.items():
+        if _has_case_keyword(haystack, keywords):
+            scenes.append(label)
+    return scenes
+
+
+def _extract_case_match_features(case_result: dict) -> dict:
+    haystack = normalize_for_matching(
+        f"{case_result.get('title')} {case_result.get('case_number')} {case_result.get('quote')}"
+    )
+    return {
+        "haystack": haystack,
+        "stage": _detect_case_stage(haystack),
+        "disclosure_scope": _detect_case_disclosure_scope(haystack),
+        "actors": _detect_case_actors(haystack),
+        "scenes": _detect_case_scenes(haystack),
+        "mentions_consent": _has_case_keyword(haystack, CONSENT_KEYWORDS),
+        "school_context": _has_case_keyword(haystack, CASE_SCHOOL_CONTEXT_KEYWORDS),
+    }
+
+
+def _case_match_confidence(score: int) -> str:
+    if score >= CASE_MATCH_HIGH_THRESHOLD:
+        return "high"
+    if score >= CASE_MATCH_VISIBLE_THRESHOLD:
+        return "medium"
+    if score > 0:
+        return "low"
+    return ""
+
+
+def _append_unique_reason(reasons: list[str], reason: str) -> None:
+    compact_reason = compact_text(reason)
+    if compact_reason and compact_reason not in reasons:
+        reasons.append(compact_reason)
+
+
+def _score_case_match(case_result: dict, profile: dict, *, law_id: str = "", article_ref: str = "") -> dict | None:
+    strong_terms = _build_strong_match_terms(profile)
+    weak_terms = _build_weak_match_terms(profile)
+    case_features = _extract_case_match_features(case_result)
+    haystack = case_features["haystack"]
+    strong_score = sum(4 for term in strong_terms if term and term in haystack)
+    weak_score = sum(1 for term in weak_terms if term and term in haystack)
+    if strong_score <= 0:
+        return None
+
+    score = strong_score + weak_score
+    mismatch_reasons = []
+    fact_profile = profile.get("case_fact_profile") or {}
+    conduct_stage = compact_text(fact_profile.get("conduct_stage"))
+    disclosure_scope = compact_text(fact_profile.get("disclosure_scope"))
+    target_actor = compact_text(fact_profile.get("target_actor"))
+    scene_label = compact_text(fact_profile.get("scene_label"))
+    quote = compact_text(case_result.get("quote"))
+
+    if law_id and compact_text(case_result.get("law_id")) == compact_text(law_id):
+        score += 6
+    case_article_ref = _extract_article_reference(
+        case_result.get("article") or case_result.get("article_no") or case_result.get("reference_label") or ""
+    )
+    if article_ref and case_article_ref and case_article_ref == compact_text(article_ref):
+        score += 4
+
+    if conduct_stage and case_features["stage"]:
+        if conduct_stage == case_features["stage"]:
+            score += 4
+        else:
+            score -= 6
+            _append_unique_reason(mismatch_reasons, CASE_STAGE_LABELS.get(conduct_stage, "행위 단계 차이"))
+
+    if disclosure_scope:
+        if disclosure_scope == case_features["disclosure_scope"]:
+            score += 3
+        elif case_features["disclosure_scope"]:
+            score -= 5
+            _append_unique_reason(mismatch_reasons, "공개 범위 차이")
+        elif conduct_stage in {"disclosed", "posted"}:
+            score -= 2
+            _append_unique_reason(mismatch_reasons, "공개 범위 확인 어려움")
+
+    if target_actor:
+        if target_actor in case_features["actors"]:
+            score += 3
+        elif case_features["actors"]:
+            score -= 4
+            _append_unique_reason(mismatch_reasons, "대상 차이")
+
+    if scene_label:
+        if scene_label in case_features["scenes"]:
+            score += 2
+        elif case_features["scenes"]:
+            score -= 3
+            _append_unique_reason(mismatch_reasons, "장면 차이")
+
+    if fact_profile.get("requires_consent") and fact_profile.get("consent_mentioned"):
+        if case_features["mentions_consent"]:
+            score += 2
+        else:
+            score -= 3
+            _append_unique_reason(mismatch_reasons, "동의 쟁점 차이")
+
+    if fact_profile.get("school_context") and not case_features["school_context"]:
+        score -= 2
+        _append_unique_reason(mismatch_reasons, "학교 맥락 차이")
+
+    if len(quote) < 20:
+        score -= 2
+        _append_unique_reason(mismatch_reasons, "판례 요지 정보가 짧음")
+
+    return {
+        "score": score,
+        "confidence": _case_match_confidence(score),
+        "mismatch_reasons": mismatch_reasons[:3],
+        "case_result": case_result,
+    }
+
+
+def rank_case_matches(
+    case_results: list[dict],
+    profile: dict,
+    *,
+    law_id: str = "",
+    article_ref: str = "",
+) -> list[dict]:
+    ranked = []
+    for case_result in case_results:
+        match = _score_case_match(case_result, profile, law_id=law_id, article_ref=article_ref)
+        if not match:
+            continue
+        ranked.append(match)
+
+    ranked.sort(
+        key=lambda item: (
+            -item["score"],
+            item["case_result"].get("case_number") or item["case_result"].get("title") or "",
+        )
+    )
+    return ranked
+
+
 def select_relevant_case_citations(
     case_results: list[dict],
     profile: dict,
@@ -784,40 +1001,22 @@ def select_relevant_case_citations(
     law_id: str = "",
     article_ref: str = "",
 ) -> list[dict]:
-    strong_terms = _build_strong_match_terms(profile)
-    weak_terms = _build_weak_match_terms(profile)
-    scored = []
-    for case_result in case_results:
-        haystack = normalize_for_matching(
-            f"{case_result.get('title')} {case_result.get('case_number')} {case_result.get('quote')}"
-        )
-        strong_score = sum(4 for term in strong_terms if term and term in haystack)
-        weak_score = sum(1 for term in weak_terms if term and term in haystack)
-        if strong_score <= 0:
+    ranked_matches = rank_case_matches(case_results, profile, law_id=law_id, article_ref=article_ref)
+    if not ranked_matches:
+        return []
+
+    citations = []
+    for index, match in enumerate(ranked_matches, start=1):
+        if match["score"] < CASE_MATCH_VISIBLE_THRESHOLD:
             continue
-        score = strong_score + weak_score
-        if law_id and compact_text(case_result.get("law_id")) == compact_text(law_id):
-            score += 6
-        case_article_ref = _extract_article_reference(
-            case_result.get("article") or case_result.get("article_no") or case_result.get("reference_label") or ""
-        )
-        if article_ref and case_article_ref and case_article_ref == compact_text(article_ref):
-            score += 4
-        scored.append((score, case_result))
-
-    if not scored:
-        return []
-
-    scored.sort(key=lambda item: (-item[0], item[1].get("case_number") or item[1].get("title") or ""))
-    selected_cases = [case_result for score, case_result in scored if score > 0][:limit]
-    if not selected_cases:
-        return []
-
-    return [
-        _build_case_citation(case_result, index=index, law_id=law_id)
-        for index, case_result in enumerate(selected_cases, start=1)
-        if compact_text(case_result.get("quote"))
-    ]
+        citation = _build_case_citation(match["case_result"], index=index, law_id=law_id)
+        citation["match_score"] = match["score"]
+        citation["match_confidence"] = match["confidence"]
+        citation["match_mismatch_reasons"] = list(match["mismatch_reasons"])
+        citations.append(citation)
+        if len(citations) >= limit:
+            break
+    return citations
 
 
 def build_retry_after_timeout_message() -> str:

@@ -90,6 +90,14 @@
         `;
     }
 
+    function formatCaseConfidenceLabel(confidence) {
+        const normalized = String(confidence || "").trim().toLowerCase();
+        if (normalized === "high") return "높음";
+        if (normalized === "medium") return "보통";
+        if (normalized === "low") return "낮음";
+        return "";
+    }
+
     function buildLatestPairHtml(pair) {
         if (!pair || !pair.user_message || !pair.assistant_message) {
             return buildLatestEmptyHtml();
@@ -105,6 +113,14 @@
         const caseCitations = partitioned.caseCitations;
         const reasoningSummary = String(assistantMessage.reasoning_summary || "").trim();
         const representativeCase = assistantMessage.representative_case || (caseCitations.length ? caseCitations[0] : null);
+        const representativeCaseConfidence = String(
+            assistantMessage.representative_case_confidence || (representativeCase && representativeCase.match_confidence) || ""
+        ).trim();
+        const representativeCaseMismatchReasons = Array.isArray(assistantMessage.representative_case_mismatch_reasons)
+            ? assistantMessage.representative_case_mismatch_reasons.filter(Boolean)
+            : (representativeCase && Array.isArray(representativeCase.match_mismatch_reasons)
+                ? representativeCase.match_mismatch_reasons.filter(Boolean)
+                : []);
         const representativeCaseNotice = String(assistantMessage.representative_case_notice || "").trim();
         const precedentNote = String(assistantMessage.precedent_note || "").trim();
         const overviewCases = representativeCase ? [representativeCase] : caseCitations;
@@ -137,13 +153,33 @@
                 ${lawCitations.map(buildCitationHtml).join("")}
             `
             : "";
+        const representativeCaseMetaHtml = representativeCase
+            ? (() => {
+                const parts = [];
+                const confidenceLabel = formatCaseConfidenceLabel(representativeCaseConfidence);
+                if (confidenceLabel) {
+                    parts.push(`<p class="teacher-law-citation-quote">판례 신뢰도 · ${escapeHtml(confidenceLabel)}</p>`);
+                }
+                if (representativeCaseMismatchReasons.length) {
+                    parts.push(`
+                        <ul class="teacher-law-list">
+                            ${representativeCaseMismatchReasons.map(function (item) {
+                                return `<li>${escapeHtml(item)}</li>`;
+                            }).join("")}
+                        </ul>
+                    `);
+                }
+                if (representativeCaseNotice) {
+                    parts.push(`<p class="teacher-law-citation-quote">${escapeHtml(representativeCaseNotice)}</p>`);
+                }
+                return parts.length ? `<div class="teacher-law-citation">${parts.join("")}</div>` : "";
+            })()
+            : "";
         const caseCitationHtml = representativeCase
             ? `
                 <div class="teacher-law-section-title">대표 판례</div>
                 ${buildCitationHtml(representativeCase)}
-                ${representativeCaseNotice
-                    ? `<div class="teacher-law-citation"><p class="teacher-law-citation-quote">${escapeHtml(representativeCaseNotice)}</p></div>`
-                    : ""}
+                ${representativeCaseMetaHtml}
             `
             : precedentNote
                 ? `
