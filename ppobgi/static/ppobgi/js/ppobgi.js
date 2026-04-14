@@ -42,12 +42,6 @@
         liveCard: document.querySelector(".ppb-live-card"),
         liveName: document.getElementById("ppb-live-name"),
         liveMeta: document.getElementById("ppb-live-meta"),
-        resultModal: document.getElementById("ppb-result-modal"),
-        resultPanel: document.getElementById("ppb-result-panel"),
-        resultName: document.getElementById("ppb-result-name"),
-        resultMeta: document.getElementById("ppb-result-meta"),
-        resultNextBtn: document.getElementById("ppb-result-next-btn"),
-        resultFortuneBtn: document.getElementById("ppb-result-fortune-btn"),
         editorOverlay: document.getElementById("ppb-editor-overlay"),
         editorDrawer: document.getElementById("ppb-editor-drawer"),
         editorInput: document.getElementById("ppb-editor-input"),
@@ -84,7 +78,6 @@
         selectedName: "",
         transitionLock: false,
         reduceMotion: false,
-        resultModalOpen: false,
         editorOpen: false,
         orbLayout: new Map(),
         audioContext: null,
@@ -188,10 +181,6 @@
     function getStarRosterKey() {
         return window.ppobgiShared?.buildScopedStorageKey?.(STAR_ROSTER_STORAGE_NAME)
             || `ppobgi:${STAR_ROSTER_STORAGE_NAME}`;
-    }
-
-    function isPresentationOpen() {
-        return Boolean(window.ppobgiShared?.isPresentationOpen?.());
     }
 
     function getAudioContext() {
@@ -579,11 +568,6 @@
     }
 
     function closeResultModal(shouldFocus = true) {
-        if (!isPresentationOpen()) {
-            return;
-        }
-        root.dispatchEvent(new CustomEvent("ppobgi:close-presentation"));
-        state.resultModalOpen = false;
         if (shouldFocus && state.appState === "universe") {
             focusFirstOrb();
         }
@@ -591,26 +575,13 @@
 
     function openResultModal(name, leftCount) {
         const pickedName = normalizeName(name) || "이름 없음";
-        state.resultModalOpen = true;
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: leftCount > 0 ? "오늘의 별빛 주인공" : "별빛 피날레 주인공",
-                celebration: leftCount > 0 ? "reveal" : "finale",
-                compliment: leftCount > 0
-                    ? "무대 조명이 이 학생에게 딱 멈추며 분위기가 환하게 살아났어요."
-                    : "마지막 별빛까지 환하게 마무리됐어요. 오늘 무대의 피날레를 크게 축하합니다.",
-                fortuneTarget: {
-                    sourceLabel: "별빛 추첨 결과",
-                    targetName: pickedName,
-                },
-                label: leftCount > 0 ? "방금 뽑힌 학생" : "오늘의 마지막 별빛",
-                meta: leftCount > 0 ? `남은 인원 ${leftCount}명` : "모든 학생 추첨 완료",
-                mode: "stars",
-                nextLabel: leftCount > 0 ? "다음 추첨 계속" : "닫기",
-                sourceLabel: "별빛 추첨 결과",
-                winnerName: pickedName,
-            },
-        }));
+        setLiveCard(
+            pickedName,
+            leftCount > 0
+                ? `남은 별 ${leftCount}개`
+                : "마지막 별까지 공개 완료",
+        );
+        dispatchSfx(leftCount > 0 ? "reveal" : "final");
     }
 
     function persistRoster(names) {
@@ -904,7 +875,7 @@
     }
 
     function drawByKeyboard() {
-        if (!isStarsModeActive() || state.appState !== "universe" || state.transitionLock || state.resultModalOpen) {
+        if (!isStarsModeActive() || state.appState !== "universe" || state.transitionLock) {
             return;
         }
         const choices = Array.from(els.orbGrid?.querySelectorAll(".ppb-orb") || []).filter((btn) => !btn.disabled);
@@ -957,13 +928,6 @@
         if (root.classList.contains("ppb-fortune-open")) {
             return;
         }
-        if (isPresentationOpen()) {
-            if (event.key === "Escape") {
-                event.preventDefault();
-                closeResultModal();
-            }
-            return;
-        }
         const tagName = String(event.target?.tagName || "").toUpperCase();
         const typing = tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || Boolean(event.target?.isContentEditable);
         if (typing) {
@@ -1003,12 +967,6 @@
         els.rerollBtn?.addEventListener("click", rerollCurrentRoster);
         els.undoBtn?.addEventListener("click", undoLastDraw);
         els.editRosterBtn?.addEventListener("click", openEditor);
-        root.addEventListener("ppobgi:presentation-closed", () => {
-            state.resultModalOpen = false;
-            if (state.appState === "universe" && isStarsModeActive()) {
-                focusFirstOrb();
-            }
-        });
 
         els.editorOverlay?.addEventListener("click", closeEditor);
         els.editorCloseBtn?.addEventListener("click", closeEditor);
@@ -1157,6 +1115,8 @@
         animating: false,
         autoRun: false,
         activePath: null,
+        currentTopIndex: -1,
+        currentBottomIndex: -1,
     };
 
     function isReducedMotion() {
@@ -1381,6 +1341,7 @@
             btn.type = "button";
             btn.className = "pbl-top-node";
             if (state.revealedTop.has(i)) btn.classList.add("is-revealed");
+            if (state.currentTopIndex === i) btn.classList.add("is-current");
             btn.dataset.index = String(i);
             btn.innerHTML = `<span class="pbl-node-index">${i + 1}번</span><span class="pbl-node-name">${name}</span>`;
             topFrag.appendChild(btn);
@@ -1397,6 +1358,7 @@
             } else {
                 div.classList.add("is-revealed");
                 if (outcome === "당첨") div.classList.add("is-prize");
+                if (state.currentBottomIndex === i) div.classList.add("is-current");
                 div.textContent = outcome;
             }
             bottomFrag.appendChild(div);
@@ -1464,6 +1426,7 @@
         if (els.liveName) els.liveName.textContent = name;
         if (els.liveRole) els.liveRole.textContent = outcome;
         els.liveCard?.classList.toggle("is-winner", outcome === "당첨");
+        els.liveCard?.classList.toggle("is-role-mode", state.mode === "roles");
 
         if (!els.liveSparks) return;
         els.liveSparks.replaceChildren();
@@ -1525,6 +1488,8 @@
         const outcome = scene.outcomes[map.end];
         state.revealedTop.add(index);
         state.revealedBottom.add(map.end);
+        state.currentTopIndex = index;
+        state.currentBottomIndex = map.end;
         state.feed.unshift({ step: state.revealedTop.size, name, outcome });
         if (state.feed.length > MAX_LADDER_NAMES) state.feed = state.feed.slice(0, MAX_LADDER_NAMES);
 
@@ -1533,27 +1498,7 @@
         renderFeed();
         showLive(name, outcome);
         setMessage(els.stageMessage, "", null);
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: outcome === "당첨"
-                    ? (unresolvedIndexes().length > 0 ? "사다리 결승 주인공" : "사다리 피날레 주인공")
-                    : `${outcome} 발표`,
-                celebration: unresolvedIndexes().length > 0 ? "reveal" : "finale",
-                compliment: outcome === "당첨"
-                    ? "끝까지 따라간 길이 이 학생에게 환하게 멈췄어요."
-                    : `${outcome} 결과가 또렷하게 공개되며 무대가 더 선명해졌어요.`,
-                fortuneTarget: {
-                    sourceLabel: "사다리 결과",
-                    targetName: name,
-                },
-                label: "사다리 결과 공개",
-                meta: outcome === "당첨" ? "오늘의 당첨이 발표되었습니다." : `${outcome} 결과가 공개되었습니다.`,
-                mode: "ladder",
-                nextLabel: unresolvedIndexes().length > 0 ? "다음 발표 계속" : "닫기",
-                sourceLabel: "사다리 결과",
-                winnerName: name,
-            },
-        }));
+        dispatchSfx(unresolvedIndexes().length > 0 ? "reveal" : "final");
 
         if (state.revealedTop.size === scene.participants.length) {
             state.autoRun = false;
@@ -1585,7 +1530,7 @@
             if (!state.autoRun) break;
             await reveal(idx, "auto");
             if (!state.autoRun) break;
-            await sleep(isReducedMotion() ? 120 : 520);
+            await sleep(isReducedMotion() ? 120 : 900);
         }
         state.autoRun = false;
         updateAutoButton();
@@ -1614,6 +1559,8 @@
         state.feed = [];
         state.animating = false;
         state.autoRun = false;
+        state.currentTopIndex = -1;
+        state.currentBottomIndex = -1;
 
         drawGrid();
         drawNodes();
@@ -1640,6 +1587,8 @@
         state.revealedBottom = new Set();
         state.feed = [];
         state.autoRun = false;
+        state.currentTopIndex = -1;
+        state.currentBottomIndex = -1;
         drawGrid();
         drawNodes();
         updateCounters();
@@ -1961,7 +1910,7 @@
         }
         const total = state.order.length;
         if (els.liveIndex) {
-            els.liveIndex.textContent = `${state.revealedCount}번째 순서`;
+            els.liveIndex.textContent = `${state.revealedCount}번째`;
         }
         if (els.liveName) {
             els.liveName.textContent = state.currentName;
@@ -2085,27 +2034,7 @@
         }
         syncStage();
         setStageMessage("", null);
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: order === 1 ? "첫 발표 스타" : (state.revealedCount < state.order.length ? "오늘의 발표 스타" : "순서 공개 피날레"),
-                celebration: state.revealedCount < state.order.length ? "reveal" : "finale",
-                compliment: order === 1
-                    ? "첫 순서가 힘 있게 열리면서 교실 무대가 자신 있게 시작됩니다."
-                    : (state.revealedCount < state.order.length
-                        ? "다음 순서가 또렷하게 드러나며 흐름이 더 쉬워졌어요."
-                        : "마지막 순서까지 환하게 정리되어 오늘 진행이 멋지게 완성됐어요."),
-                fortuneTarget: {
-                    sourceLabel: `${order}번째 순서 공개`,
-                    targetName: name,
-                },
-                label: "순서 발표",
-                meta: `전체 ${state.order.length}명 중 ${order}번째 순서입니다.`,
-                mode: "sequence",
-                nextLabel: state.revealedCount < state.order.length ? "다음 순서 계속" : "닫기",
-                sourceLabel: "순서 발표",
-                winnerName: name,
-            },
-        }));
+        dispatchSfx(state.revealedCount < state.order.length ? "reveal" : "final");
         if (state.revealedCount >= state.order.length) {
             state.autoRun = false;
             updateActionButtons();
@@ -2139,7 +2068,7 @@
             if (!state.autoRun || state.revealedCount >= state.order.length) {
                 break;
             }
-            await sleep(isReducedMotion() ? 120 : 520);
+            await sleep(isReducedMotion() ? 120 : 900);
         }
         state.autoRun = false;
         updateActionButtons();
@@ -2572,6 +2501,8 @@
             return;
         }
         const latest = state.assignedCount > 0 ? state.plan[state.assignedCount - 1] : null;
+        const currentTeamIndex = state.currentAssignment ? state.currentAssignment.teamIndex : -1;
+        const latestTeamIndex = latest ? latest.teamIndex : -1;
         const teams = buildTeamsSnapshot();
         els.teamGrid.innerHTML = teams.map((team) => {
             const members = team.members.length
@@ -2586,13 +2517,23 @@
                     return `<button type="button" class="${classes.join(" ")}" data-name="${escapeHtml(member.name)}" data-team-label="${escapeHtml(member.teamLabel)}">${escapeHtml(member.name)}</button>`;
                 }).join("")
                 : '<span class="ppt-member-empty">대기</span>';
+            const classes = ["ppt-team-card"];
+            let spotlight = "";
+            if (team.index === currentTeamIndex) {
+                classes.push("is-current");
+                spotlight = '<span class="ppt-team-spotlight">지금 발표</span>';
+            } else if (team.index === latestTeamIndex) {
+                classes.push("is-recent");
+                spotlight = '<span class="ppt-team-spotlight is-recent">방금 공개</span>';
+            }
             return `
-                <article class="ppt-team-card">
+                <article class="${classes.join(" ")}">
                     <div class="ppt-team-head">
                         <div>
                             <h3 class="ppt-team-title">${team.label}</h3>
                             <p class="ppt-team-size">${team.members.length}/${team.targetSize}명</p>
                         </div>
+                        ${spotlight}
                     </div>
                     <div class="ppt-member-list">${members}</div>
                 </article>
@@ -2689,25 +2630,7 @@
         }
         syncStage();
         setStageMessage("", null);
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: state.assignedCount < state.plan.length ? `${assignment.teamLabel} 합류 발표` : "팀 편성 피날레",
-                celebration: state.assignedCount < state.plan.length ? "reveal" : "finale",
-                compliment: state.assignedCount < state.plan.length
-                    ? `${assignment.teamLabel}의 분위기가 이 학생 합류로 더 또렷해졌어요.`
-                    : "마지막 배치까지 공개되며 팀 구성이 깔끔하게 완성됐어요.",
-                fortuneTarget: {
-                    sourceLabel: `${assignment.teamLabel} 배치 공개`,
-                    targetName: assignment.name,
-                },
-                label: "팀 배치 발표",
-                meta: `${assignment.teamLabel}에 새 멤버가 배치되었습니다.`,
-                mode: "teams",
-                nextLabel: state.assignedCount < state.plan.length ? "다음 팀 배치 계속" : "닫기",
-                sourceLabel: "팀 배치 발표",
-                winnerName: assignment.name,
-            },
-        }));
+        dispatchSfx(state.assignedCount < state.plan.length ? "reveal" : "final");
         if (state.assignedCount >= state.plan.length) {
             state.autoRun = false;
             updateActionButtons();
@@ -2741,7 +2664,7 @@
             if (!state.autoRun || state.assignedCount >= state.plan.length) {
                 break;
             }
-            await sleep(isReducedMotion() ? 120 : 520);
+            await sleep(isReducedMotion() ? 120 : 980);
         }
         state.autoRun = false;
         updateActionButtons();
@@ -2945,6 +2868,8 @@
         meteorLayout: new Map(),
         resizeTimer: 0,
         burstTimer: 0,
+        animating: false,
+        activeMeteorEffect: null,
     };
 
     function dispatchSfx(kind) {
@@ -3191,7 +3116,7 @@
         }
         const order = state.history.length;
         if (els.liveOrder) {
-            els.liveOrder.textContent = `${order}번째 유성`;
+            els.liveOrder.textContent = `${order}번째 충돌`;
         }
         if (els.liveName) {
             els.liveName.textContent = state.currentName;
@@ -3207,9 +3132,10 @@
     function updateActionButtons() {
         const total = state.sourceNames.length;
         const left = state.remainingNames.length;
+        const busy = state.animating;
         if (els.autoRandomBtn) {
-            els.autoRandomBtn.disabled = total === 0 || left === 0;
-            els.autoRandomBtn.textContent = left === 0 && total > 0 ? "완료" : "무작위 공개";
+            els.autoRandomBtn.disabled = total === 0 || left === 0 || busy;
+            els.autoRandomBtn.textContent = left === 0 && total > 0 ? "완료" : (busy ? "유성 진행 중" : "무작위 공개");
         }
         if (els.autoBtn) {
             if (!total) {
@@ -3219,12 +3145,12 @@
                 els.autoBtn.disabled = false;
                 els.autoBtn.textContent = "자동 중지";
             } else {
-                els.autoBtn.disabled = left === 0;
-                els.autoBtn.textContent = left === 0 ? "공개 완료" : "자동 공개";
+                els.autoBtn.disabled = left === 0 || busy;
+                els.autoBtn.textContent = left === 0 ? "공개 완료" : (busy ? "유성 진행 중" : "자동 공개");
             }
         }
         if (els.rerollBtn) {
-            els.rerollBtn.disabled = state.sourceNames.length === 0;
+            els.rerollBtn.disabled = state.sourceNames.length === 0 || busy;
         }
         if (els.fortuneBtn) {
             els.fortuneBtn.disabled = !state.currentName;
@@ -3242,6 +3168,40 @@
         state.burstTimer = window.setTimeout(() => {
             els.sky?.classList.remove("is-burst");
         }, isReducedMotion() ? 140 : 360);
+    }
+
+    function clearMeteorEffect() {
+        state.activeMeteorEffect?.remove();
+        state.activeMeteorEffect = null;
+    }
+
+    async function animateMeteorImpact(name) {
+        if (!els.sky) {
+            return;
+        }
+        clearMeteorEffect();
+        const actor = document.createElement("div");
+        const impactX = 52 + ((Math.random() * 12) - 6);
+        const impactY = 60 + ((Math.random() * 10) - 5);
+        actor.className = "ppm-impact-meteor";
+        actor.style.setProperty("--ppm-impact-start-x", `${112 + Math.random() * 8}%`);
+        actor.style.setProperty("--ppm-impact-start-y", `${-16 - Math.random() * 10}%`);
+        actor.style.setProperty("--ppm-impact-end-x", `${impactX}%`);
+        actor.style.setProperty("--ppm-impact-end-y", `${impactY}%`);
+        actor.innerHTML = `
+            <span class="ppm-impact-tail" aria-hidden="true"></span>
+            <span class="ppm-impact-core" aria-hidden="true"></span>
+            <span class="ppm-impact-name">${escapeHtml(name)}</span>
+        `;
+        els.sky.appendChild(actor);
+        state.activeMeteorEffect = actor;
+
+        const duration = isReducedMotion() ? 240 : 1050;
+        void actor.offsetWidth;
+        actor.classList.add("is-falling");
+        await sleep(duration);
+        actor.classList.add("is-impact");
+        await sleep(isReducedMotion() ? 80 : 220);
     }
 
     function renderSky() {
@@ -3299,6 +3259,8 @@
         state.autoRun = false;
         state.currentName = "";
         state.meteorLayout = buildMeteorLayout(state.sourceNames);
+        state.animating = false;
+        clearMeteorEffect();
         if (els.input) {
             els.input.value = names.join("\n");
         }
@@ -3318,8 +3280,8 @@
         buildMeteorShow(parsed.valid, `총 ${parsed.valid.length}명의 유성을 펼쳤습니다.`);
     }
 
-    function revealMeteorByName(name, source) {
-        if (!name) {
+    async function revealMeteorByName(name, source) {
+        if (!name || state.animating) {
             return false;
         }
         const index = state.remainingNames.indexOf(name);
@@ -3329,6 +3291,9 @@
             }
             return false;
         }
+        state.animating = true;
+        updateActionButtons();
+        await animateMeteorImpact(name);
         state.remainingNames.splice(index, 1);
         state.currentName = name;
         const order = state.history.length + 1;
@@ -3338,34 +3303,19 @@
         }
         syncStage();
         triggerBurst();
+        clearMeteorEffect();
         setStageMessage("", null);
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: state.remainingNames.length ? `${order}번째 유성 주인공` : "유성우 피날레 주인공",
-                celebration: state.remainingNames.length ? "reveal" : "finale",
-                compliment: state.remainingNames.length
-                    ? "밤하늘을 가르던 유성이 이 학생의 이름으로 환하게 완성됐어요."
-                    : "마지막 유성까지 화려하게 닿으며 오늘 무대가 시원하게 마무리됐어요.",
-                fortuneTarget: {
-                    sourceLabel: `${order}번째 유성 공개`,
-                    targetName: name,
-                },
-                label: "유성우 발표",
-                meta: state.remainingNames.length ? `남은 유성 ${state.remainingNames.length}개` : "모든 유성이 공개되었습니다.",
-                mode: "meteor",
-                nextLabel: state.remainingNames.length ? "다음 유성 계속" : "닫기",
-                sourceLabel: "유성우 발표",
-                winnerName: name,
-            },
-        }));
+        dispatchSfx(state.remainingNames.length ? "reveal" : "final");
         if (!state.remainingNames.length) {
             state.autoRun = false;
             updateActionButtons();
         }
+        state.animating = false;
+        updateActionButtons();
         return true;
     }
 
-    function revealRandomMeteor(source) {
+    async function revealRandomMeteor(source) {
         if (!state.remainingNames.length) {
             if (source !== "auto") {
                 setStageMessage("이미 모든 유성이 공개되었습니다.", "info");
@@ -3400,11 +3350,11 @@
         setStageMessage("", null);
         dispatchSfx("auto");
         while (state.autoRun && state.remainingNames.length) {
-            revealRandomMeteor("auto");
+            await revealRandomMeteor("auto");
             if (!state.autoRun || !state.remainingNames.length) {
                 break;
             }
-            await sleep(isReducedMotion() ? 140 : 560);
+            await sleep(isReducedMotion() ? 120 : 260);
         }
         state.autoRun = false;
         updateActionButtons();
@@ -3422,6 +3372,8 @@
         state.autoRun = false;
         state.currentName = "";
         state.meteorLayout = buildMeteorLayout(state.sourceNames);
+        state.animating = false;
+        clearMeteorEffect();
         setMeteorScreen("stage");
         syncStage();
         setStageMessage("", null);
@@ -3430,6 +3382,8 @@
     function resetToSetup() {
         state.autoRun = false;
         state.currentName = "";
+        state.animating = false;
+        clearMeteorEffect();
         setMeteorScreen("setup");
         updateActionButtons();
         updateSetupStats();
@@ -3493,7 +3447,7 @@
     }
 
     function handleResize() {
-        if (!state.sourceNames.length) {
+        if (!state.sourceNames.length || state.animating) {
             return;
         }
         window.clearTimeout(state.resizeTimer);
@@ -3570,6 +3524,7 @@
         refreshBtn: document.getElementById("ppr-refresh-btn"),
         autoBtn: document.getElementById("ppr-auto-btn"),
         liveRoleName: document.getElementById("ppr-live-role-name"),
+        liveSlot: document.getElementById("ppr-live-slot"),
         liveAssignee: document.getElementById("ppr-live-assignee"),
         fortuneBtn: document.getElementById("ppr-fortune-btn"),
         historyList: document.getElementById("ppr-history-list"),
@@ -3587,6 +3542,7 @@
         loading: false,
         loadedOnce: false,
         lastFortuneTarget: null,
+        currentIndex: -1,
     };
 
     function dispatchSfx(kind) {
@@ -3658,13 +3614,17 @@
     function renderLiveCard(role) {
         if (!role) {
             if (els.liveRoleName) els.liveRoleName.textContent = "역할";
+            if (els.liveSlot) els.liveSlot.textContent = "";
             if (els.liveAssignee) els.liveAssignee.textContent = "대기";
             if (els.fortuneBtn) els.fortuneBtn.disabled = true;
+            state.lastFortuneTarget = null;
             return;
         }
         const roleName = role.role_name || "이름 없는 역할";
         const assigneeName = role.assignee_name || "미배정";
+        const slotName = role.time_slot || "오늘";
         if (els.liveRoleName) els.liveRoleName.textContent = roleName;
+        if (els.liveSlot) els.liveSlot.textContent = slotName;
         if (els.liveAssignee) {
             els.liveAssignee.textContent = role.is_unassigned
                 ? "미배정"
@@ -3685,6 +3645,7 @@
         const revealed = state.revealed.has(index);
         const classes = ["ppr-card"];
         if (revealed) classes.push("is-revealed");
+        if (state.currentIndex === index) classes.push("is-current");
         if (role.is_completed) classes.push("is-completed");
         if (role.is_unassigned) classes.push("is-unassigned");
         const safeRoleName = escapeHtml(role.role_name || "이름 없는 역할");
@@ -3763,6 +3724,7 @@
         state.history = [];
         state.autoRun = false;
         state.lastFortuneTarget = null;
+        state.currentIndex = -1;
         state.loadedOnce = true;
         if (els.classroomBadge) {
             els.classroomBadge.textContent = payload.classroom_name || "기본 명단";
@@ -3808,6 +3770,7 @@
             state.revealed = new Set();
             state.history = [];
             state.lastFortuneTarget = null;
+            state.currentIndex = -1;
             renderCards();
             renderHistory();
             renderLiveCard(null);
@@ -3841,6 +3804,7 @@
         const roleName = role.role_name || "이름 없는 역할";
         const assigneeName = role.assignee_name || "미배정";
         state.revealed.add(index);
+        state.currentIndex = index;
         state.history.unshift({
             step: state.revealed.size,
             roleName,
@@ -3855,25 +3819,7 @@
         updateCounters();
         updateAutoButton();
         setMessage("", null);
-        root.dispatchEvent(new CustomEvent("ppobgi:present", {
-            detail: {
-                badge: role.is_unassigned ? `미배정 역할 · ${roleName}` : roleName,
-                celebration: unrevealedIndexes().length > 0 ? "reveal" : "finale",
-                compliment: role.is_unassigned
-                    ? "아직 담당 학생은 없지만, 이 역할도 오늘 무대의 중요한 장면으로 남겨 둘 수 있어요."
-                    : `${assigneeName} 학생이 오늘 맡을 임무가 메달처럼 또렷하게 공개됐어요.`,
-                fortuneTarget: role.is_unassigned ? null : {
-                    sourceLabel: `${roleName} 역할 공개`,
-                    targetName: assigneeName,
-                },
-                label: "역할 카드 발표",
-                meta: role.is_unassigned ? "아직 담당 학생이 정해지지 않았습니다." : `${assigneeName} 학생이 맡은 역할입니다.`,
-                mode: "roles",
-                nextLabel: unrevealedIndexes().length > 0 ? "다음 역할 계속" : "닫기",
-                sourceLabel: "역할 카드 발표",
-                winnerName: role.is_unassigned ? roleName : assigneeName,
-            },
-        }));
+        dispatchSfx(unrevealedIndexes().length > 0 ? "reveal" : "final");
         if (!unrevealedIndexes().length) {
             state.autoRun = false;
             updateAutoButton();
@@ -3917,7 +3863,7 @@
             if (!state.autoRun) {
                 break;
             }
-            await sleep(isReducedMotion() ? 120 : 520);
+            await sleep(isReducedMotion() ? 120 : 980);
         }
         state.autoRun = false;
         updateAutoButton();

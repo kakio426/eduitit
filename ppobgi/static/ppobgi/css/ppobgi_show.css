@@ -2312,3 +2312,413 @@
     text-align: left;
     line-height: 1.4;
 }
+
+.ppb-stage-topbar {
+    position: sticky;
+    top: clamp(0.55rem, 2vw, 1rem);
+    z-index: 18;
+    display: grid;
+    gap: 0.72rem;
+    margin-bottom: 0.9rem;
+    padding: 0.82rem 0.92rem;
+    border-radius: 1rem;
+    background:
+        linear-gradient(180deg, rgba(9, 23, 54, 0.94), rgba(6, 17, 42, 0.9)),
+        radial-gradient(circle at top right, rgba(110, 231, 255, 0.14), transparent 34%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 42px rgba(2, 6, 23, 0.28);
+    backdrop-filter: blur(16px);
+}
+
+.ppb-stage-topbar .ppb-chip-row {
+    gap: 0.42rem;
+}
+
+.ppb-stage-top-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ppb-stage-top-actions .ppb-primary-btn,
+.ppb-stage-top-actions .ppb-soft-btn,
+.ppb-stage-top-actions .ppb-ghost-btn {
+    width: auto;
+    min-width: 132px;
+    margin-top: 0;
+}
+
+.ppb-stage-layout,
+.pbl-stage-shell,
+.pps-stage-shell,
+.ppt-stage-shell,
+.ppm-stage-shell,
+.ppr-shell {
+    align-items: start;
+}
+
+.ppb-control-panel,
+.pbl-side-panel,
+.pps-side-panel,
+.ppt-side-panel,
+.ppm-side-panel,
+.ppr-side-panel {
+    position: sticky;
+    top: calc(clamp(0.55rem, 2vw, 1rem) + 5.8rem);
+}
+
+.ppb-stage-spotlight {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+}
+
+.ppb-stage-live-card {
+    min-height: 0;
+}
+
+.ppb-stage-result,
+.pbl-stage-result,
+.pps-stage-result,
+.ppt-stage-result,
+.ppm-stage-result,
+.ppr-stage-result {
+    position: relative;
+    overflow: hidden;
+}
+
+.ppb-stage-result::before,
+.pbl-stage-result::before,
+.pps-stage-result::before,
+.ppt-stage-result::before,
+.ppm-stage-result::before,
+.ppr-stage-result::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(255, 212, 92, 0), rgba(255, 212, 92, 0.9), rgba(110, 231, 255, 0));
+    opacity: 0.72;
+}
+
+.pbl-top-node.is-current {
+    border-color: rgba(250, 204, 21, 0.9);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.9), rgba(92, 33, 4, 0.76));
+    color: #fef3c7;
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 18px 34px rgba(92, 33, 4, 0.32);
+    transform: translateY(-2px);
+}
+
+.pbl-bottom-node.is-current {
+    border-color: rgba(250, 204, 21, 0.88);
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 16px 32px rgba(250, 204, 21, 0.18);
+    transform: translateY(-1px);
+}
+
+.pbl-live-card {
+    padding: 1.12rem 1.2rem;
+}
+
+.pbl-live-card.is-winner {
+    border-color: rgba(250, 204, 21, 0.7);
+    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.18), 0 20px 44px rgba(250, 204, 21, 0.12);
+}
+
+.pbl-live-card.is-role-mode .pbl-live-role {
+    order: -1;
+    font-size: clamp(1.16rem, 1.7vw, 1.52rem);
+    color: #fde68a;
+}
+
+.pbl-live-card.is-role-mode .pbl-live-name {
+    font-size: clamp(1.65rem, 2.4vw, 2.25rem);
+}
+
+.pps-stage-result {
+    display: grid;
+    justify-items: start;
+    gap: 0.35rem;
+    padding: 1.12rem 1.2rem;
+}
+
+.pps-live-label,
+.ppt-live-label,
+.ppm-live-label,
+.ppr-live-label {
+    margin: 0;
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.pps-live-index,
+.ppm-live-order,
+.ppr-live-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.36rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 212, 92, 0.14);
+    border: 1px solid rgba(255, 212, 92, 0.26);
+    color: rgba(255, 238, 176, 0.96);
+}
+
+.pps-live-name {
+    font-size: clamp(2.15rem, 3.5vw, 3.05rem);
+    line-height: 1.02;
+}
+
+.pps-fortune-btn,
+.ppt-fortune-btn,
+.ppm-fortune-btn,
+.ppr-fortune-btn {
+    width: 100%;
+    max-width: 280px;
+    margin-top: 0.32rem;
+}
+
+.ppt-stage-result {
+    display: grid;
+    justify-items: start;
+    gap: 0.32rem;
+    padding: 1.12rem 1.2rem;
+    border-color: rgba(96, 165, 250, 0.28);
+    background:
+        radial-gradient(circle at top right, rgba(250, 204, 21, 0.16), transparent 34%),
+        linear-gradient(180deg, rgba(9, 23, 54, 0.96), rgba(4, 16, 40, 0.92));
+}
+
+.ppt-live-team {
+    margin: 0;
+    font-size: clamp(2.05rem, 3.2vw, 2.95rem);
+    line-height: 1.02;
+    font-weight: 900;
+    color: #fde68a;
+}
+
+.ppt-live-name {
+    margin: 0;
+    font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+    line-height: 1.08;
+}
+
+.ppt-team-card.is-current {
+    border-color: rgba(250, 204, 21, 0.68);
+    background:
+        radial-gradient(circle at top right, rgba(250, 204, 21, 0.22), transparent 38%),
+        linear-gradient(180deg, rgba(53, 24, 8, 0.92), rgba(15, 23, 42, 0.86));
+    box-shadow: 0 22px 40px rgba(92, 33, 4, 0.28);
+    transform: translateY(-2px);
+}
+
+.ppt-team-card.is-current .ppt-team-title,
+.ppt-team-card.is-current .ppt-team-size {
+    color: #fef3c7;
+}
+
+.ppt-team-card.is-recent:not(.is-current) {
+    border-color: rgba(96, 165, 250, 0.45);
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.26);
+}
+
+.ppt-team-spotlight {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.34rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(250, 204, 21, 0.16);
+    border: 1px solid rgba(250, 204, 21, 0.32);
+    color: #fde68a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.ppt-team-spotlight.is-recent {
+    background: rgba(96, 165, 250, 0.14);
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #dbeafe;
+}
+
+.ppm-stage-result {
+    display: grid;
+    justify-items: start;
+    gap: 0.36rem;
+    padding: 1.12rem 1.2rem;
+}
+
+.ppm-live-name {
+    font-size: clamp(2.3rem, 3.8vw, 3.25rem);
+    line-height: 1.02;
+}
+
+.ppm-impact-meteor {
+    position: absolute;
+    left: var(--ppm-impact-start-x, 110%);
+    top: var(--ppm-impact-start-y, -18%);
+    width: 240px;
+    height: 88px;
+    pointer-events: none;
+    z-index: 4;
+    transform: translate(-50%, -50%) rotate(-28deg) scale(0.92);
+    filter: drop-shadow(0 0 18px rgba(125, 211, 252, 0.34));
+    transition:
+        left 1050ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        top 1050ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 1050ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        filter 1050ms ease;
+}
+
+.ppm-impact-meteor.is-falling {
+    left: var(--ppm-impact-end-x, 52%);
+    top: var(--ppm-impact-end-y, 60%);
+    transform: translate(-50%, -50%) rotate(-40deg) scale(1.08);
+    filter: drop-shadow(0 0 30px rgba(125, 211, 252, 0.54));
+}
+
+.ppm-impact-meteor.is-impact {
+    transform: translate(-50%, -50%) rotate(-12deg) scale(1.16);
+}
+
+.ppm-impact-core,
+.ppm-impact-tail,
+.ppm-impact-name {
+    position: absolute;
+}
+
+.ppm-impact-core {
+    top: 50%;
+    right: 18px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    background: radial-gradient(circle at 28% 30%, #fff, #fef08a 34%, #38bdf8 74%, rgba(56, 189, 248, 0.16) 100%);
+    box-shadow: 0 0 26px rgba(125, 211, 252, 0.88), 0 0 58px rgba(56, 189, 248, 0.42);
+}
+
+.ppm-impact-tail {
+    top: 50%;
+    left: 18px;
+    width: 170px;
+    height: 8px;
+    border-radius: 999px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, rgba(125, 211, 252, 0), rgba(125, 211, 252, 0.34) 26%, rgba(253, 224, 71, 0.96) 100%);
+    box-shadow: 0 0 26px rgba(125, 211, 252, 0.4);
+}
+
+.ppm-impact-name {
+    left: 50%;
+    top: calc(100% + 0.35rem);
+    transform: translate(-50%, 6px);
+    padding: 0.38rem 0.78rem;
+    border-radius: 999px;
+    background: rgba(8, 20, 48, 0.92);
+    border: 1px solid rgba(255, 212, 92, 0.34);
+    color: #fef3c7;
+    font-size: 0.94rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    opacity: 0;
+    transition: opacity 160ms ease, transform 160ms ease;
+    white-space: nowrap;
+}
+
+.ppm-impact-meteor.is-impact .ppm-impact-name {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.ppr-stage-result {
+    display: grid;
+    justify-items: start;
+    gap: 0.34rem;
+    padding: 1.12rem 1.2rem;
+    border-color: rgba(250, 204, 21, 0.28);
+    background:
+        radial-gradient(circle at top right, rgba(250, 204, 21, 0.18), transparent 34%),
+        linear-gradient(180deg, rgba(19, 35, 74, 0.96), rgba(7, 16, 40, 0.92));
+}
+
+.ppr-live-role-name {
+    margin: 0;
+    font-size: clamp(2.15rem, 3.5vw, 3.05rem) !important;
+    line-height: 1.02;
+    color: #fde68a !important;
+}
+
+.ppr-live-assignee {
+    margin: 0;
+    font-size: clamp(1.48rem, 2.3vw, 2.08rem);
+    line-height: 1.08;
+}
+
+.ppr-card.is-current .ppr-card-front,
+.ppr-card.is-current .ppr-card-back {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.22), 0 24px 44px rgba(250, 204, 21, 0.12);
+}
+
+.ppr-card.is-current .ppr-card-front {
+    border-color: rgba(250, 204, 21, 0.58);
+}
+
+.ppr-card.is-current .ppr-card-back {
+    border-color: rgba(250, 204, 21, 0.7);
+}
+
+.ppr-card.is-revealed .ppr-card-back-label {
+    font-size: 1.02rem;
+    color: #fff4bf;
+}
+
+.ppr-card-status {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    padding: 0.34rem 0.66rem;
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.24);
+}
+
+@media (max-width: 860px) {
+    .ppb-stage-topbar,
+    .ppb-control-panel,
+    .pbl-side-panel,
+    .pps-side-panel,
+    .ppt-side-panel,
+    .ppm-side-panel,
+    .ppr-side-panel {
+        position: static;
+        top: auto;
+    }
+
+    .ppb-stage-top-actions {
+        justify-content: stretch;
+    }
+
+    .ppb-stage-top-actions .ppb-primary-btn,
+    .ppb-stage-top-actions .ppb-soft-btn,
+    .ppb-stage-top-actions .ppb-ghost-btn {
+        flex: 1 1 calc(50% - 0.3rem);
+        min-width: 0;
+    }
+
+    .ppb-stage-spotlight {
+        grid-template-columns: 1fr;
+    }
+
+    .ppm-impact-meteor {
+        width: 176px;
+        height: 68px;
+    }
+
+    .ppm-impact-tail {
+        width: 122px;
+    }
+}
