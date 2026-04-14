@@ -1316,6 +1316,16 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('바로 실행', content)
         self.assertIn('바로전송', content)
         self.assertIn('TTS', content)
+        self.assertNotIn('home-v6-agent-eyebrow', content)
+        self.assertNotIn('home-v6-agent-toolbar-meta', content)
+        self.assertNotIn('home-v6-agent-open-link', content)
+        self.assertNotIn('home-v6-agent-preview-head', content)
+        self.assertNotIn('home-v6-agent-preview-foot', content)
+        notice_mode = next(
+            mode for mode in response.context['home_v7_agent_workspace']['modes']
+            if mode['key'] == 'notice'
+        )
+        self.assertEqual(notice_mode['submit_label'], '알림 문구 생성')
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')

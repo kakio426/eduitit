@@ -510,20 +510,39 @@
                 });
             },
 
+            previewResultLines: function () {
+                var preview = this.agentPreview && typeof this.agentPreview === 'object' ? this.agentPreview : {};
+                var sections = Array.isArray(preview.sections) ? preview.sections : [];
+                var lines = [];
+                var seen = new Set();
+
+                function pushLine(value) {
+                    var line = trimLine(value);
+                    if (!line || seen.has(line)) {
+                        return;
+                    }
+                    seen.add(line);
+                    lines.push(line);
+                }
+
+                if (sections[0] && Array.isArray(sections[0].items)) {
+                    sections[0].items.forEach(pushLine);
+                }
+                if (!lines.length) {
+                    pushLine(preview.summary);
+                }
+                return lines.slice(0, this.activeModeKey === 'notice' ? 6 : 8);
+            },
+
             buildIdlePreview: function () {
-                var mode = this.activeMode || {};
-                var examples = Array.isArray(mode.examples) ? mode.examples.slice(0, 2) : [];
                 return this.buildPreviewSkeleton({
-                    badge: mode.label || '서비스',
-                    title: (mode.label || '서비스') + ' 미리보기',
-                    summary: mode.helper || '내용을 넣으면 바로 결과를 확인합니다.',
-                    sections: [
-                        {
-                            title: '예시',
-                            items: examples.length ? examples : ['내용을 붙여넣고 보기 버튼을 누르세요.'],
-                        },
-                    ],
-                    note: '저장은 마지막 확인 뒤에 진행합니다.',
+                    badge: '',
+                    title: '',
+                    summary: '',
+                    sections: [],
+                    note: '',
+                    confirmHref: '',
+                    confirmLabel: '',
                 });
             },
 
@@ -642,21 +661,14 @@
             buildQuickdropPreview: function (text) {
                 return this.buildPreviewSkeleton({
                     title: '바로전송 준비 완료',
-                    summary: '지금 보내면 연결된 기기에서 바로 확인합니다.',
+                    summary: '',
                     sections: [
                         {
-                            title: '보낼 내용',
+                            title: '결과',
                             items: [text],
                         },
-                        {
-                            title: '전송 후',
-                            items: [
-                                '기기의 현재 내용이 새 텍스트로 바뀝니다.',
-                                '전송함에서 바로 다시 확인할 수 있습니다.',
-                            ],
-                        },
                     ],
-                    note: '바로 전송을 누르면 즉시 보냅니다.',
+                    note: '',
                 });
             },
 
@@ -664,21 +676,14 @@
                 var items = compactLines(text).slice(0, 4);
                 return this.buildPreviewSkeleton({
                     title: '읽을 문장을 정리했습니다.',
-                    summary: trimLine(text).slice(0, 90),
+                    summary: '',
                     sections: [
                         {
-                            title: '읽기 내용',
+                            title: '결과',
                             items: items.length ? items : [text],
                         },
-                        {
-                            title: '실행',
-                            items: [
-                                '바로 읽기를 누르면 이 브라우저에서 재생합니다.',
-                                '필요하면 TTS 화면에서 다시 다듬을 수 있습니다.',
-                            ],
-                        },
                     ],
-                    note: '교실 방송 문구를 빠르게 확인할 때 쓰기 좋습니다.',
+                    note: '',
                 });
             },
 
@@ -687,21 +692,14 @@
                 var keyPoints = sentences.slice(0, 3);
                 return this.buildPreviewSkeleton({
                     title: '알림장 초안',
-                    summary: keyPoints[0] || text,
+                    summary: '',
                     sections: [
                         {
-                            title: '핵심',
+                            title: '결과',
                             items: keyPoints.length ? keyPoints : [text],
                         },
-                        {
-                            title: '확인',
-                            items: [
-                                '준비물과 시간 변경을 첫 줄에 두기',
-                                '생활지도 문구는 마지막에 짧게 넣기',
-                            ],
-                        },
                     ],
-                    note: '보내기 전에 말투만 한 번 더 보면 됩니다.',
+                    note: '',
                 });
             },
 
@@ -715,25 +713,21 @@
                 });
                 var missing = [];
                 if (!/\d{1,2}월\s*\d{1,2}일|오늘|내일|모레|다음\s*주\s*[월화수목금토일]요일/.test(text)) {
-                    missing.push('날짜 표현이 부족합니다.');
+                    missing.push('날짜 입력 필요');
                 }
                 if (!/\d{1,2}:\d{2}|\d{1,2}교시/.test(text)) {
-                    missing.push('시간 또는 교시가 빠져 있습니다.');
+                    missing.push('시간 입력 필요');
                 }
                 return this.buildPreviewSkeleton({
                     title: '캘린더 등록 후보',
-                    summary: '붙여넣은 내용에서 일정 후보를 뽑았습니다.',
+                    summary: '',
                     sections: [
                         {
-                            title: '후보',
-                            items: candidates.length ? candidates : [text],
-                        },
-                        {
-                            title: '확인',
-                            items: missing.length ? missing : ['바로 캘린더에서 확인 가능한 형태입니다.'],
+                            title: '결과',
+                            items: (candidates.length ? candidates : [text]).concat(missing).slice(0, 5),
                         },
                     ],
-                    note: '캘린더에서 제목과 시간만 확인하면 됩니다.',
+                    note: '',
                 });
             },
 
@@ -751,22 +745,14 @@
                 }
                 return this.buildPreviewSkeleton({
                     title: '법률 검토 메모',
-                    summary: trimLine(text).slice(0, 90),
+                    summary: '',
                     sections: [
                         {
-                            title: '먼저',
+                            title: '결과',
                             items: checks.slice(0, 4),
                         },
-                        {
-                            title: '대응',
-                            items: [
-                                '사실관계와 학교 기준부터 정리',
-                                '회신은 기록과 절차 중심으로 작성',
-                                '관리자 공유 지점은 따로 표시',
-                            ],
-                        },
                     ],
-                    note: '최종 판단 전 확인 메모입니다.',
+                    note: '',
                 });
             },
 
@@ -785,26 +771,26 @@
                 if (!roomHint) {
                     missing.push('장소');
                 }
+                var reservationItems = [
+                    '날짜 · ' + (dateHint || '입력 필요'),
+                    '시간 · ' + (periodHint || timeHint || '입력 필요'),
+                    '장소 · ' + (roomHint || '입력 필요'),
+                ];
+                if (missing.length) {
+                    reservationItems = reservationItems.concat(missing.map(function (item) {
+                        return item + ' 입력 필요';
+                    }));
+                }
                 return this.buildPreviewSkeleton({
                     title: '예약 요청 후보',
-                    summary: '날짜, 시간, 장소를 먼저 정리했습니다.',
+                    summary: '',
                     sections: [
                         {
-                            title: '예약 값',
-                            items: [
-                                '날짜 · ' + (dateHint || '입력 필요'),
-                                '시간 · ' + (periodHint || timeHint || '입력 필요'),
-                                '장소 · ' + (roomHint || '입력 필요'),
-                            ],
-                        },
-                        {
-                            title: '확인',
-                            items: missing.length ? missing.map(function (item) {
-                                return item + '을 더 넣어 주세요.';
-                            }) : ['예약 화면에서 바로 확인 가능한 형태입니다.'],
+                            title: '결과',
+                            items: reservationItems.slice(0, 6),
                         },
                     ],
-                    note: '저장은 마지막 확인 뒤에 진행합니다.',
+                    note: '',
                 });
             },
 
@@ -812,22 +798,14 @@
                 var lines = compactSentences(text);
                 return this.buildPreviewSkeleton({
                     title: '문서 정리 초안',
-                    summary: trimLine(text).slice(0, 100),
+                    summary: '',
                     sections: [
                         {
-                            title: '핵심',
+                            title: '결과',
                             items: lines.slice(0, 3).length ? lines.slice(0, 3) : [text],
                         },
-                        {
-                            title: '다음',
-                            items: [
-                                '교사용 문장으로 다시 축약',
-                                '준비물, 일정, 제출 서류를 따로 추출',
-                                '필요하면 인포보드나 알림장으로 이어서 사용',
-                            ],
-                        },
                     ],
-                    note: '원문 확인 후 필요한 형식으로 옮기면 됩니다.',
+                    note: '',
                 });
             },
 

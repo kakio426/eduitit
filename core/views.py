@@ -1513,7 +1513,7 @@ def _build_home_v7_context_router_preview(
             'product_id': notice_tool.get('product_id'),
             'service_href': notice_tool.get('href', ''),
             'service_label': '알림장 열기',
-            'submit_label': '초안 보기',
+            'submit_label': '알림 문구 생성',
             'confirm_label': '알림장 열기',
             'icon_class': 'fa-solid fa-note-sticky',
             'helper': '알림장 초안',

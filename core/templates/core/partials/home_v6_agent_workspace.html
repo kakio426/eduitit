@@ -5,67 +5,27 @@
 >
     <div class="home-v6-card home-v6-agent-card">
         <div class="home-v6-agent-head">
-            <div class="home-v6-agent-head-copy">
-                <p class="home-v6-agent-eyebrow">실행 워크스페이스</p>
-                <div class="home-v6-agent-head-row">
-                    <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'바로 실행' }}</h2>
-                    {% if agent_workspace.selected_date_label %}
-                    <span class="home-v6-agent-date">{{ agent_workspace.selected_date_label }}</span>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="home-v6-agent-head-actions">
-                <button
-                    type="button"
-                    class="home-v6-agent-favorite"
-                    :class="{ 'is-active': isAgentModeFavorite() }"
-                    :disabled="!activeMode.product_id"
-                    :aria-pressed="isAgentModeFavorite() ? 'true' : 'false'"
-                    @click="toggleActiveModeFavorite()"
-                    aria-label="현재 서비스 즐겨찾기 토글"
-                >
-                    <i class="fa-solid fa-star" aria-hidden="true"></i>
-                    <span x-text="isAgentModeFavorite() ? '추가됨' : '추가'"></span>
-                </button>
-                <a
-                    x-cloak
-                    x-show="activeMode.service_href"
-                    :href="activeMode.service_href || '#'"
-                    class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-open-link"
-                    x-text="activeMode.service_label || '열기'"
-                ></a>
-            </div>
+            <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'바로 실행' }}</h2>
         </div>
 
         <div class="home-v6-agent-toolbar">
-            <label class="home-v6-agent-field">
-                <span class="home-v6-agent-field-label">{{ agent_workspace.workspace_selector_title|default:'서비스' }}</span>
-                <div class="home-v6-agent-select-wrap">
-                    <select
-                        class="home-v6-agent-select"
-                        data-home-v6-agent-mode-select="true"
-                        x-model="activeModeKey"
-                        @change="selectAgentMode($event.target.value)"
-                    >
-                        {% for mode in agent_workspace.modes %}
-                        <option value="{{ mode.key }}"{% if mode.key == agent_workspace.initial_mode %} selected{% endif %}>{{ mode.label }}</option>
-                        {% endfor %}
-                    </select>
-                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </div>
-            </label>
-            <div class="home-v6-agent-toolbar-meta">
-                <strong x-text="activeMode.label || '서비스'"></strong>
-                <span x-text="isAgentLoading ? '생성 중' : (agentPreviewMeta.providerLabel || activeMode.helper || '')"></span>
+            <div class="home-v6-agent-select-wrap">
+                <select
+                    class="home-v6-agent-select"
+                    data-home-v6-agent-mode-select="true"
+                    x-model="activeModeKey"
+                    @change="selectAgentMode($event.target.value)"
+                >
+                    {% for mode in agent_workspace.modes %}
+                    <option value="{{ mode.key }}"{% if mode.key == agent_workspace.initial_mode %} selected{% endif %}>{{ mode.label }}</option>
+                    {% endfor %}
+                </select>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
             </div>
         </div>
 
         <div class="home-v6-agent-grid">
             <section class="home-v6-agent-console" data-home-v6-agent-console="true">
-                <div class="home-v6-agent-console-head">
-                    <strong>입력</strong>
-                    <span x-text="activeMode.selector_hint || ''"></span>
-                </div>
                 <textarea
                     class="home-v6-agent-input"
                     data-home-v6-agent-input="true"
@@ -100,40 +60,10 @@
             </section>
 
             <section class="home-v6-agent-preview" data-home-v6-agent-preview="true">
-                <div class="home-v6-agent-preview-head">
-                    <div class="home-v6-agent-preview-title-group">
-                        <span class="home-v6-agent-chip home-v6-agent-chip--static" x-text="agentPreview.badge || activeMode.label || '미리보기'"></span>
-                        <h3 class="home-v6-agent-preview-title" x-text="agentPreview.title || ''"></h3>
-                    </div>
-                    <span
-                        class="home-v6-agent-preview-source"
-                        x-cloak
-                        x-show="isAgentLoading || agentPreviewMeta.providerLabel"
-                        x-text="isAgentLoading ? '생성 중' : agentPreviewMeta.providerLabel"
-                    ></span>
-                </div>
-                <p class="home-v6-agent-preview-summary" x-text="agentPreview.summary || ''"></p>
-                <div class="home-v6-agent-preview-sections">
-                    <template x-for="section in (agentPreview.sections || [])" :key="section.title">
-                        <section class="home-v6-agent-preview-section">
-                            <strong class="home-v6-agent-preview-section-title" x-text="section.title"></strong>
-                            <ul class="home-v6-agent-preview-list">
-                                <template x-for="item in (section.items || [])" :key="item">
-                                    <li x-text="item"></li>
-                                </template>
-                            </ul>
-                        </section>
+                <div class="home-v6-agent-preview-lines" x-show="previewResultLines().length">
+                    <template x-for="(line, index) in previewResultLines()" :key="activeModeKey + '-' + index + '-' + line">
+                        <p class="home-v6-agent-preview-line" x-text="line"></p>
                     </template>
-                </div>
-                <div class="home-v6-agent-preview-foot">
-                    <p class="home-v6-agent-note" x-text="agentPreview.note || ''"></p>
-                    <a
-                        x-cloak
-                        x-show="agentPreview.confirmHref"
-                        :href="agentPreview.confirmHref || '#'"
-                        class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-confirm"
-                        x-text="agentPreview.confirmLabel || ''"
-                    ></a>
                 </div>
             </section>
         </div>
