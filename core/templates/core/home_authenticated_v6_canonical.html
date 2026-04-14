@@ -27,6 +27,7 @@
                 data-home-v6-shell="true"
                 data-home-design-version="v6"
                 x-data="window.homeV6Shell()"
+                x-init="init && init()"
                 @keydown.escape.window="menuSheetOpen = false"
             >
                 <div class="home-v6-mobile-summary" data-home-v6-mobile-summary="true">
@@ -334,29 +335,7 @@
                                 </div>
                             </section>
 
-                            <section class="home-v6-representative-section" data-home-v6-representative-services="true">
-                                <div class="home-v6-card">
-                                    <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                                        <div>
-                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">대표 서비스</p>
-                                            <h2 class="mt-1 text-xl font-black text-slate-900">추천 도구</h2>
-                                        </div>
-                                    </div>
-
-                                    {% if representative_slots %}
-                                    <div class="home-v6-service-grid" data-home-v6-service-grid="true">
-                                        {% for slot in representative_slots %}
-                                        <div data-home-v6-slot-kind="{{ slot.slot_kind }}">
-                                            {% include 'core/partials/home_v6_mini_card.html' with product=slot.product %}
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    {% else %}
-                                    {% include 'core/partials/home_v6_action_board.html' with board=home_empty_action_board.recommendations surface_key='recommendations' %}
-                                    {% endif %}
-
-                                </div>
-                            </section>
+                            {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace %}
                         </div>
 
                         <div class="home-v6-side-stack">
@@ -474,4 +453,8 @@
 {% include 'core/partials/home_v6_student_games_qr_modal.html' %}
 {{ favorite_product_ids|json_script:"home-favorite-ids-data" }}
 {{ home_frontend_config|json_script:"home-frontend-config" }}
+{{ home_v7_signal_layer|json_script:"home-v7-signal-layer" }}
+{{ home_v7_agent_workspace|json_script:"home-v7-agent-workspace" }}
+{{ home_v7_tacit_registry|json_script:"home-v7-tacit-registry" }}
+{{ home_v7_workflow_registry|json_script:"home-v7-workflow-registry" }}
 {% endblock %}

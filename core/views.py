@@ -1,3 +1,5 @@
+import os
+
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -10,6 +12,11 @@ from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import UserProfileUpdateForm
 from .guide_links import SERVICE_GUIDE_PADLET_URL
+from .home_agent_runtime import (
+    HomeAgentConfigError,
+    HomeAgentProviderError,
+    generate_home_agent_preview,
+)
 from .home_surface_context import (
     HomeSurfaceProviderCards,
     HomeSurfaceProviderSpec,
@@ -161,6 +168,142 @@ ADMIN_PAGE_NAME_BY_ROUTE = {
     'settings': '설정',
     'policy': '정책',
 }
+
+HOME_V7_AGENT_TACIT_RULES = (
+    {
+        'rule_key': 'field_trip_bus_ratio',
+        'label': '현장학습 차량 비율',
+        'summary': '학생 수와 좌석 수를 먼저 맞춥니다.',
+        'scope': 'school',
+        'related_service_keys': ('classcalendar', 'reservations'),
+        'related_signal_types': ('calendar_day',),
+        'trigger_keywords': ('현장학습', '버스', '차량'),
+        'required_context': ('학생 수', '차량 좌석', '보조 인솔 여부'),
+        'decision_hints': ('학생 수와 좌석 수를 먼저 맞춥니다.', '학년 일정과 기사 배치를 같이 봅니다.'),
+        'examples': ('현장학습 이동 차량 수 확인',),
+    },
+    {
+        'rule_key': 'attendance_proof_required',
+        'label': '출결 증빙',
+        'summary': '결석 사유와 증빙 여부를 먼저 확인합니다.',
+        'scope': 'school',
+        'related_service_keys': ('classcalendar', 'noticegen'),
+        'related_signal_types': ('calendar_day',),
+        'trigger_keywords': ('출결', '증빙', '결석'),
+        'required_context': ('결석 사유', '제출 서류', '마감일'),
+        'decision_hints': ('증빙이 필요한 일정은 알림장 첫 줄에 둡니다.',),
+        'examples': ('체험학습 결석 증빙 체크',),
+    },
+    {
+        'rule_key': 'school_approval_chain',
+        'label': '학교 승인 순서',
+        'summary': '교사 단독 처리 전에 내부 승인 순서를 먼저 확인합니다.',
+        'scope': 'school',
+        'related_service_keys': ('teacher_law', 'reservations'),
+        'related_signal_types': ('calendar_day',),
+        'trigger_keywords': ('승인', '보고', '결재'),
+        'required_context': ('담당자', '관리자 공유 여부'),
+        'decision_hints': ('학교 내부 보고 순서를 먼저 정리합니다.',),
+        'examples': ('특별실 외부 행사 승인 절차',),
+    },
+    {
+        'rule_key': 'notice_priority_order',
+        'label': '알림장 우선순위',
+        'summary': '시간 변경과 준비물을 가장 먼저 둡니다.',
+        'scope': 'classroom',
+        'related_service_keys': ('noticegen',),
+        'related_signal_types': ('calendar_day',),
+        'trigger_keywords': ('알림장', '가정통신문', '준비물'),
+        'required_context': ('시간 변경', '준비물', '회신 여부'),
+        'decision_hints': ('시간 변경과 준비물을 첫 줄에 둡니다.', '생활지도 문구는 마지막에 짧게 둡니다.'),
+        'examples': ('준비물 안내가 있는 알림장 정리',),
+    },
+    {
+        'rule_key': 'classroom_broadcast_tone',
+        'label': '교실 방송 말투',
+        'summary': '짧고 또렷한 문장으로 끊어 읽습니다.',
+        'scope': 'classroom',
+        'related_service_keys': ('tts_announce', 'quickdrop'),
+        'related_signal_types': ('calendar_day',),
+        'trigger_keywords': ('방송', '읽어주기', '안내'),
+        'required_context': ('대상 학년', '방송 길이'),
+        'decision_hints': ('한 문장을 짧게 끊어 읽습니다.', '행동 지시는 마지막에 둡니다.'),
+        'examples': ('쉬는 시간 종료 방송',),
+    },
+)
+
+HOME_V7_AGENT_WORKFLOWS = (
+    {
+        'workflow_key': 'field_trip_preparation',
+        'label': '현장학습 준비',
+        'summary': '일정, 승인, 안내문을 한 번에 맞춥니다.',
+        'primary_service_key': 'classcalendar',
+        'related_service_keys': ('noticegen', 'reservations'),
+        'trigger_signals': ('calendar_day',),
+        'required_context_questions': ('언제 출발하나요?', '차량과 인솔 인원은 몇 명인가요?'),
+        'read_steps': ('오늘 일정 확인', '현장학습 메모 확인'),
+        'suggest_steps': ('준비물과 시간 안내 정리', '차량 비율 점검'),
+        'confirmable_write_steps': ('알림장 초안 열기', '예약 요청 값 정리'),
+        'emit_signals': ('calendar_day',),
+        'tacit_rule_keys': ('field_trip_bus_ratio', 'attendance_proof_required'),
+    },
+    {
+        'workflow_key': 'daily_notice_flow',
+        'label': '일일 알림장',
+        'summary': '오늘 일정에서 바로 안내문 초안을 만듭니다.',
+        'primary_service_key': 'noticegen',
+        'related_service_keys': ('classcalendar', 'quickdrop'),
+        'trigger_signals': ('calendar_day',),
+        'required_context_questions': ('오늘 꼭 안내할 일정이 있나요?',),
+        'read_steps': ('오늘 일정 확인',),
+        'suggest_steps': ('핵심 문장 2~3개로 정리'),
+        'confirmable_write_steps': ('알림장 열기',),
+        'emit_signals': ('calendar_day',),
+        'tacit_rule_keys': ('notice_priority_order',),
+    },
+    {
+        'workflow_key': 'reservation_request_flow',
+        'label': '예약 요청',
+        'summary': '날짜, 시간, 장소를 먼저 맞춥니다.',
+        'primary_service_key': 'reservations',
+        'related_service_keys': ('classcalendar',),
+        'trigger_signals': ('calendar_day',),
+        'required_context_questions': ('언제 사용하나요?', '어느 특별실이 필요한가요?'),
+        'read_steps': ('사용 날짜 확인',),
+        'suggest_steps': ('교시 또는 시간을 정리', '장소를 확정'),
+        'confirmable_write_steps': ('예약 화면 열기',),
+        'emit_signals': ('calendar_day',),
+        'tacit_rule_keys': ('school_approval_chain',),
+    },
+    {
+        'workflow_key': 'collect_signature_cycle',
+        'label': '서명 수합',
+        'summary': '안내문과 회수 순서를 먼저 맞춥니다.',
+        'primary_service_key': 'noticegen',
+        'related_service_keys': ('quickdrop',),
+        'trigger_signals': ('calendar_day',),
+        'required_context_questions': ('회수 마감일은 언제인가요?',),
+        'read_steps': ('안내문 핵심 정리',),
+        'suggest_steps': ('회수 문구를 분리',),
+        'confirmable_write_steps': ('알림장 초안 열기',),
+        'emit_signals': ('calendar_day',),
+        'tacit_rule_keys': ('attendance_proof_required',),
+    },
+    {
+        'workflow_key': 'student_activity_launch',
+        'label': '학생 활동 시작',
+        'summary': '교실 방송과 바로전송 문구를 함께 준비합니다.',
+        'primary_service_key': 'tts_announce',
+        'related_service_keys': ('quickdrop', 'classcalendar'),
+        'trigger_signals': ('calendar_day',),
+        'required_context_questions': ('학생에게 바로 전달할 문구가 있나요?',),
+        'read_steps': ('오늘 활동 시간 확인',),
+        'suggest_steps': ('방송 문구를 짧게 정리',),
+        'confirmable_write_steps': ('읽어주기 실행', '바로전송 실행'),
+        'emit_signals': ('calendar_day',),
+        'tacit_rule_keys': ('classroom_broadcast_tone',),
+    },
+)
 
 
 def _get_request_client_ip(request):
@@ -1156,6 +1299,410 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "icon_text": "↔",
         "composer_enabled": True,
         "primary_label": "바로 열기",
+    }
+
+
+def _build_home_v7_agent_signal_layer(calendar_summary):
+    calendar_summary = dict(calendar_summary or {})
+    today_workspace = dict(calendar_summary.get('today_workspace') or {})
+    date_key = str(today_workspace.get('date_key') or timezone.localdate().isoformat())
+    date_label = str(today_workspace.get('date_label') or '오늘')
+    signals = [{
+        'signal_key': f'calendar-day:{date_key}',
+        'service_key': 'classcalendar',
+        'signal_type': 'calendar_day',
+        'title': date_label,
+        'entity_key': 'calendar_day',
+        'surface_role': 'time',
+        'date': date_key,
+        'status': f"일정 {today_workspace.get('today_event_count', 0)}건",
+        'chip_label': '오늘',
+        'payload_summary': f"할 일 {today_workspace.get('today_task_count', 0)}건",
+    }]
+    return {
+        'signals': signals,
+        'signal_keys': tuple(signal['signal_key'] for signal in signals),
+        'service_keys': ('classcalendar',),
+        'signal_types': ('calendar_day',),
+        'entity_keys': ('calendar_day',),
+        'by_service_key': {'classcalendar': signals},
+        'by_signal_type': {'calendar_day': signals},
+        'by_entity_key': {'calendar_day': signals},
+        'by_surface_role': {'time': signals},
+    }
+
+
+def _build_home_v7_agent_tacit_registry():
+    rules = [dict(rule) for rule in HOME_V7_AGENT_TACIT_RULES]
+    by_rule_key = {}
+    by_service_key = {}
+    by_signal_type = {}
+    for rule in rules:
+        rule_key = str(rule.get('rule_key') or '').strip()
+        if rule_key:
+            by_rule_key[rule_key] = rule
+        for service_key in rule.get('related_service_keys', ()):
+            normalized = str(service_key or '').strip()
+            if normalized:
+                by_service_key.setdefault(normalized, []).append(rule)
+        for signal_type in rule.get('related_signal_types', ()):
+            normalized = str(signal_type or '').strip()
+            if normalized:
+                by_signal_type.setdefault(normalized, []).append(rule)
+    return {
+        'rules': rules,
+        'by_rule_key': by_rule_key,
+        'by_service_key': by_service_key,
+        'by_signal_type': by_signal_type,
+    }
+
+
+def _build_home_v7_agent_workflow_registry():
+    definitions = [dict(workflow) for workflow in HOME_V7_AGENT_WORKFLOWS]
+    by_workflow_key = {}
+    by_service_key = {}
+    by_signal_type = {}
+    by_tacit_rule = {}
+    for workflow in definitions:
+        workflow_key = str(workflow.get('workflow_key') or '').strip()
+        if workflow_key:
+            by_workflow_key[workflow_key] = workflow
+        service_keys = [workflow.get('primary_service_key')] + list(workflow.get('related_service_keys', ()))
+        for service_key in service_keys:
+            normalized = str(service_key or '').strip()
+            if normalized:
+                by_service_key.setdefault(normalized, []).append(workflow)
+        for signal_type in workflow.get('trigger_signals', ()):
+            normalized = str(signal_type or '').strip()
+            if normalized:
+                by_signal_type.setdefault(normalized, []).append(workflow)
+        for rule_key in workflow.get('tacit_rule_keys', ()):
+            normalized = str(rule_key or '').strip()
+            if normalized:
+                by_tacit_rule.setdefault(normalized, []).append(workflow)
+    return {
+        'definitions': definitions,
+        'by_workflow_key': by_workflow_key,
+        'by_service_key': by_service_key,
+        'by_signal_type': by_signal_type,
+        'by_tacit_rule': by_tacit_rule,
+    }
+
+
+def _build_home_v7_router_tool(
+    request,
+    product_list,
+    *,
+    title,
+    preferred_routes,
+    fallback_route='',
+    meta='바로 열기',
+):
+    route_names = []
+    for route_name in [*(preferred_routes or ()), fallback_route]:
+        normalized = str(route_name or '').strip().lower()
+        if normalized and normalized not in route_names:
+            route_names.append(normalized)
+    product_by_route = {
+        _product_route_name(product): product
+        for product in product_list
+        if _product_route_name(product)
+    }
+    product = next(
+        (product_by_route.get(route_name) for route_name in route_names if product_by_route.get(route_name) is not None),
+        None,
+    )
+    link_item = None
+    if product is not None:
+        link_items = _build_product_link_items([product], include_section_meta=True, user=request.user)
+        link_item = link_items[0] if link_items else None
+    href = ''
+    is_external = False
+    if link_item is not None:
+        href = link_item.get('href', '')
+        is_external = bool(link_item.get('is_external'))
+    elif fallback_route:
+        href = _safe_reverse(fallback_route) or ''
+    return {
+        'title': title,
+        'product_id': getattr(product, 'id', None),
+        'href': href,
+        'is_external': is_external,
+        'meta': meta,
+    }
+
+
+def _build_home_v7_context_router_preview(
+    request,
+    calendar_summary,
+    *,
+    product_list,
+    signal_layer=None,
+    tacit_registry=None,
+    workflow_registry=None,
+):
+    calendar_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='일정',
+        preferred_routes=('classcalendar:main',),
+        fallback_route='classcalendar:main',
+        meta='캘린더 열기',
+    )
+    notice_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='알림장',
+        preferred_routes=('noticegen:main',),
+        fallback_route='noticegen:main',
+        meta='초안 만들기',
+    )
+    law_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='교사 법률',
+        preferred_routes=('teacher_law:main',),
+        fallback_route='teacher_law:main',
+        meta='상황 질문하기',
+    )
+    reservation_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='특별실 예약',
+        preferred_routes=('reservations:dashboard_landing', 'reservations:landing'),
+        fallback_route='reservations:dashboard_landing',
+        meta='예약 요청 만들기',
+    )
+    pdf_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='PDF',
+        preferred_routes=('hwpxchat:main',),
+        fallback_route='hwpxchat:main',
+        meta='문서 요약',
+    )
+    tts_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='TTS',
+        preferred_routes=('tts_announce',),
+        fallback_route='tts_announce',
+        meta='방송 문구',
+    )
+    quickdrop_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='바로전송',
+        preferred_routes=('quickdrop:landing',),
+        fallback_route='quickdrop:landing',
+        meta='텍스트 보내기',
+    )
+    quickdrop_card = _build_home_quickdrop_card(request.user, [], product_list) or {}
+    tacit_registry = tacit_registry or _build_home_v7_agent_tacit_registry()
+    workflow_registry = workflow_registry or _build_home_v7_agent_workflow_registry()
+    calendar_summary = dict(calendar_summary or {})
+    today_workspace = dict(calendar_summary.get('today_workspace') or {})
+
+    modes = [
+        {
+            'key': 'notice',
+            'label': '알림장',
+            'selector_hint': '안내 문장',
+            'aliases': ('알림장', '알림', '가정통신문'),
+            'service_key': 'noticegen',
+            'product_id': notice_tool.get('product_id'),
+            'service_href': notice_tool.get('href', ''),
+            'service_label': '알림장 열기',
+            'submit_label': '초안 보기',
+            'confirm_label': '알림장 열기',
+            'icon_class': 'fa-solid fa-note-sticky',
+            'helper': '알림장 초안',
+            'placeholder': '예) 내일 비가 와요. 우산을 챙기고, 체육 대신 교실 활동을 합니다. 준비물은 색연필입니다.',
+            'examples': (
+                '내일 비가 와요. 우산 챙기기와 하굣길 안전 멘트를 넣고 싶어요.',
+                '오늘 과학 준비물이 빠진 학생이 많았어요. 준비물 안내를 다시 넣고 싶어요.',
+            ),
+        },
+        {
+            'key': 'schedule',
+            'label': '일정',
+            'selector_hint': '일정 읽기',
+            'aliases': ('일정', '캘린더', '시간표'),
+            'service_key': 'classcalendar',
+            'product_id': calendar_tool.get('product_id'),
+            'service_href': calendar_tool.get('href', ''),
+            'service_label': '캘린더 열기',
+            'submit_label': '후보 보기',
+            'confirm_label': '캘린더 열기',
+            'icon_class': 'fa-regular fa-calendar',
+            'helper': '일정 후보',
+            'placeholder': '예) 4월 18일 2교시 과학실 수업, 4월 19일 15:30 교직원 회의',
+            'examples': (
+                '4월 18일 2교시 과학실 실험 수업, 4월 18일 15:30 학년 회의',
+                '다음 주 화요일 3교시 방송실 사용, 금요일 14:00 학부모 상담',
+            ),
+        },
+        {
+            'key': 'teacher-law',
+            'label': '교사 법률',
+            'selector_hint': '상황 정리',
+            'aliases': ('교사 법률', '법률', '교권', '민원'),
+            'service_key': 'teacher_law',
+            'product_id': law_tool.get('product_id'),
+            'service_href': law_tool.get('href', ''),
+            'service_label': '법률 가이드 열기',
+            'submit_label': '답변 보기',
+            'confirm_label': '법률 가이드',
+            'icon_class': 'fa-solid fa-scale-balanced',
+            'helper': '대응 메모',
+            'placeholder': '예) 학부모가 수업 중 촬영 영상을 요구하고 있어요. 어디까지 응해야 하나요?',
+            'examples': (
+                '학생 생활지도 중 보호자가 항의 전화를 반복하고 있어요. 기록을 어떻게 남겨야 하나요?',
+                '교실 내 촬영 영상 제공 요구가 왔어요. 어떤 절차를 먼저 확인해야 하나요?',
+            ),
+        },
+        {
+            'key': 'reservation',
+            'label': '특별실 예약',
+            'selector_hint': '예약 값 정리',
+            'aliases': ('특별실 예약', '특별실', '예약'),
+            'service_key': 'reservations',
+            'product_id': reservation_tool.get('product_id'),
+            'service_href': reservation_tool.get('href', ''),
+            'service_label': '예약 화면 열기',
+            'submit_label': '요청 보기',
+            'confirm_label': '예약 화면',
+            'icon_class': 'fa-regular fa-clock',
+            'helper': '예약 후보',
+            'placeholder': '예) 4월 22일 3교시 과학실 예약, 5월 3일 2교시 컴퓨터실',
+            'examples': (
+                '4월 22일 3교시 과학실 예약',
+                '다음 주 목요일 2교시 컴퓨터실 사용',
+            ),
+        },
+        {
+            'key': 'quickdrop',
+            'label': '바로전송',
+            'selector_hint': '텍스트 보내기',
+            'aliases': ('바로전송', '전송', '링크 보내기'),
+            'service_key': 'quickdrop',
+            'product_id': quickdrop_tool.get('product_id'),
+            'service_href': quickdrop_card.get('manage_url', '') or quickdrop_tool.get('href', ''),
+            'service_label': '전송함 열기',
+            'submit_label': '내용 보기',
+            'confirm_label': '전송함 열기',
+            'after_action_label': '전송함 보기',
+            'after_action_href': quickdrop_card.get('history_url', '') or quickdrop_card.get('open_url', ''),
+            'action_label': '바로 전송',
+            'action_kind': 'quickdrop-send',
+            'direct_url': quickdrop_card.get('send_text_url', ''),
+            'icon_class': 'fa-solid fa-paper-plane',
+            'helper': '텍스트 전송',
+            'placeholder': '예) 회의 링크, 준비물 목록, 주소를 바로 보냅니다.',
+            'examples': (
+                '내일 학년 회의 링크 https://example.com 15:30 시작',
+                '현장체험학습 집합 장소와 준비물 목록을 바로 보내기',
+            ),
+        },
+        {
+            'key': 'pdf',
+            'label': 'PDF',
+            'selector_hint': '핵심 정리',
+            'aliases': ('PDF', '공문', '문서'),
+            'service_key': 'hwpxchat',
+            'product_id': pdf_tool.get('product_id'),
+            'service_href': pdf_tool.get('href', ''),
+            'service_label': 'PDF 화면 열기',
+            'submit_label': '정리 보기',
+            'confirm_label': 'PDF 열기',
+            'icon_class': 'fa-regular fa-file-pdf',
+            'helper': '문서 요약',
+            'placeholder': '예) 현장체험학습 안내 PDF에서 일정, 준비물, 제출 서류만 먼저 추려 주세요.',
+            'examples': (
+                '가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.',
+                '연수 자료 PDF에서 오늘 수업에 바로 쓸 내용만 정리해 주세요.',
+            ),
+        },
+        {
+            'key': 'tts',
+            'label': 'TTS',
+            'selector_hint': '읽을 문장',
+            'aliases': ('TTS', '읽어주기', '방송', '음성'),
+            'service_key': 'tts_announce',
+            'product_id': tts_tool.get('product_id'),
+            'service_href': tts_tool.get('href', ''),
+            'service_label': 'TTS 열기',
+            'submit_label': '문구 보기',
+            'confirm_label': 'TTS 열기',
+            'action_label': '바로 읽기',
+            'action_kind': 'tts-read',
+            'icon_class': 'fa-solid fa-volume-high',
+            'helper': '방송 문구',
+            'placeholder': '예) 2교시 과학 준비, 조용히 줄 맞춰 이동합니다.',
+            'examples': (
+                '지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다.',
+                '쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다.',
+            ),
+        },
+    ]
+    for mode in modes:
+        service_key = str(mode.get('service_key') or '').strip()
+        mode_workflows = workflow_registry.get('by_service_key', {}).get(service_key, [])
+        mode_rules = tacit_registry.get('by_service_key', {}).get(service_key, [])
+        mode['workflow_keys'] = tuple(
+            workflow.get('workflow_key')
+            for workflow in mode_workflows
+            if workflow.get('workflow_key')
+        )
+        mode['tacit_rule_keys'] = tuple(
+            rule.get('rule_key')
+            for rule in mode_rules
+            if rule.get('rule_key')
+        )
+
+    context_questions = []
+    seen_questions = set()
+    for workflow in workflow_registry.get('definitions', []):
+        for question in workflow.get('required_context_questions', ()):
+            normalized = str(question or '').strip()
+            if normalized and normalized not in seen_questions:
+                seen_questions.add(normalized)
+                context_questions.append(normalized)
+
+    signal_sources = list((signal_layer or {}).get('signal_types', ()))
+    signal_sources.extend(
+        f"tacit_rule:{rule_key}"
+        for rule_key in list(tacit_registry.get('by_rule_key', {}).keys())[:3]
+    )
+    signal_sources.extend(
+        f"workflow:{workflow_key}"
+        for workflow_key in list(workflow_registry.get('by_workflow_key', {}).keys())[:3]
+    )
+
+    return {
+        'workspace_title': '바로 실행',
+        'workspace_summary': '',
+        'workspace_selector_title': '서비스',
+        'initial_mode': 'notice',
+        'modes': modes,
+        'reason': '',
+        'signal_sources': tuple(signal_sources) or ('calendar_day',),
+        'selected_date_label': today_workspace.get('date_label', ''),
+        'agent_runtime': {
+            'provider': str(os.environ.get('HOME_AGENT_LLM_PROVIDER') or 'deepseek').strip().lower() or 'deepseek',
+            'fallback_provider': str(os.environ.get('HOME_AGENT_LLM_FALLBACK_PROVIDER') or 'openclaw').strip().lower() or 'openclaw',
+            'execution_mode': 'llm-preview+service-native',
+            'preview_url': reverse('home_agent_preview'),
+        },
+        'knowledge_summary': {
+            'tacit_rule_count': len(tacit_registry.get('rules', [])),
+            'workflow_count': len(workflow_registry.get('definitions', [])),
+        },
+        'tacit_rules': tacit_registry.get('rules', []),
+        'workflow_definitions': workflow_registry.get('definitions', []),
+        'tacit_rule_keys': tuple(tacit_registry.get('by_rule_key', {}).keys()),
+        'workflow_keys': tuple(workflow_registry.get('by_workflow_key', {}).keys()),
+        'context_questions': tuple(context_questions[:6]),
     }
 
 
@@ -4621,9 +5168,12 @@ def _build_home_surface_mobile_recommend_items(*, representative_recommendations
     ]
 
 
-def _build_home_surface_frontend_config():
+def _build_home_surface_frontend_config(*, favorite_product_ids=()):
     return {
         'toggleFavoriteUrl': reverse('toggle_product_favorite'),
+        'listFavoriteUrl': reverse('list_product_favorites'),
+        'reorderFavoriteUrl': reverse('reorder_product_favorites'),
+        'favoriteProductIds': list(favorite_product_ids or ()),
         'trackUsageUrl': reverse('track_product_usage'),
     }
 
@@ -4846,7 +5396,20 @@ def build_home_surface_context(
         representative_recommendations=representative_recommendations,
         discovery_items=discovery_items,
     )
-    home_frontend_config = _build_home_surface_frontend_config()
+    home_frontend_config = _build_home_surface_frontend_config(
+        favorite_product_ids=[product.id for product in favorite_products],
+    )
+    home_v7_signal_layer = _build_home_v7_agent_signal_layer(provider_cards.calendar)
+    home_v7_tacit_registry = _build_home_v7_agent_tacit_registry()
+    home_v7_workflow_registry = _build_home_v7_agent_workflow_registry()
+    home_v7_agent_workspace = _build_home_v7_context_router_preview(
+        request,
+        provider_cards.calendar,
+        product_list=product_list,
+        signal_layer=home_v7_signal_layer,
+        tacit_registry=home_v7_tacit_registry,
+        workflow_registry=home_v7_workflow_registry,
+    )
     home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
     slots = build_home_surface_slots(
         home_nav_sections=home_nav_sections,
@@ -4920,6 +5483,12 @@ def build_home_surface_context(
         )
     )
     template_context.update(provider_cards.teacher_buddy)
+    template_context.update({
+        'home_v7_signal_layer': home_v7_signal_layer,
+        'home_v7_tacit_registry': home_v7_tacit_registry,
+        'home_v7_workflow_registry': home_v7_workflow_registry,
+        'home_v7_agent_workspace': home_v7_agent_workspace,
+    })
     template_context.update(
         _build_home_surface_safe_value(
             request,
@@ -6618,6 +7187,43 @@ def track_product_usage(request):
     if buddy_payload:
         payload['buddy'] = buddy_payload
     return JsonResponse(payload)
+
+
+@require_POST
+@login_required
+def home_agent_preview(request):
+    data = _request_payload_data(request)
+    mode_key = str(data.get('mode_key') or '').strip()
+    text = str(data.get('text') or '').strip()
+    selected_date_label = str(data.get('selected_date_label') or '').strip()
+    preferred_provider = str(data.get('provider') or '').strip()
+    context_payload = data.get('context') if isinstance(data.get('context'), dict) else {}
+
+    if not mode_key:
+        return JsonResponse({'error': 'mode_key required'}, status=400)
+    if not text:
+        return JsonResponse({'error': 'text required'}, status=400)
+
+    try:
+        payload = generate_home_agent_preview(
+            mode_key=mode_key,
+            text=text,
+            selected_date_label=selected_date_label,
+            preferred_provider=preferred_provider,
+            context=context_payload,
+        )
+    except HomeAgentConfigError as exc:
+        return JsonResponse({'error': str(exc)}, status=503)
+    except HomeAgentProviderError as exc:
+        status_code = 400 if str(exc) in {'지원하지 않는 agent 모드입니다.', '내용을 먼저 입력해 주세요.'} else 503
+        return JsonResponse({'error': str(exc)}, status=status_code)
+
+    return JsonResponse({
+        'status': 'ok',
+        'preview': payload.get('preview', {}),
+        'provider': payload.get('provider', ''),
+        'model': payload.get('model', ''),
+    })
 
 
 @require_POST

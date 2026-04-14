@@ -39,6 +39,7 @@ urlpatterns = [
     path('feedback/', views.feedback_view, name='feedback'),
     path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path('api/track-usage/', views.track_product_usage, name='track_product_usage'),
+    path('api/home-agent/preview/', views.home_agent_preview, name='home_agent_preview'),
     path('api/buddy/draw/', views.teacher_buddy_draw, name='teacher_buddy_draw'),
     path('api/buddy/coupon/redeem/', views.teacher_buddy_redeem_coupon_view, name='teacher_buddy_redeem_coupon'),
     path('api/buddy/select/', views.teacher_buddy_select_view, name='teacher_buddy_select'),

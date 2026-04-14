@@ -14,6 +14,7 @@ from django.utils.html import escape
 from django.utils import timezone
 
 from classcalendar.models import CalendarCollaborator, CalendarEvent, CalendarTask, EventPageBlock
+from core.home_agent_runtime import HomeAgentConfigError
 from core.teacher_first_cards import build_favorite_service_title
 from core.mini_apps import (
     HOME_LAYOUT_EXCLUDED,
@@ -102,6 +103,10 @@ AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'reservation_home_card',
     'home_calendar_surface',
     'home_frontend_config',
+    'home_v7_signal_layer',
+    'home_v7_tacit_registry',
+    'home_v7_workflow_registry',
+    'home_v7_agent_workspace',
     'home_v2_frontend_config',
     'home_design_version',
     'community_summary',
@@ -307,6 +312,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-nav="mobile"', content)
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
         self.assertIn('data-home-v6-sns-panel="true"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
@@ -1288,25 +1294,28 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('data-track="show_all_toggle"', content)
         self.assertNotIn('전체 서비스 보기', content)
 
-    def test_v2_mini_card_has_data_product_id(self):
-        """V6 대표 카드와 작업대 카드에 data-product-id 속성 존재"""
+    def test_v2_agent_workspace_renders_mode_select_and_payload_scripts(self):
+        """V6 대표 영역은 agent 워크스페이스와 JSON payload를 렌더한다."""
         self._login('cardiduser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-service-grid="true"', content)
-        self.assertIn(f'data-product-id="{self.p1.id}"', content)
+        self.assertIn('data-home-v6-agent-mode-select="true"', content)
+        self.assertIn('id="home-v7-agent-workspace"', content)
+        self.assertIn('id="home-v7-signal-layer"', content)
+        self.assertIn('알림장', content)
+        self.assertIn('교사 법률', content)
 
-    def test_v2_mini_card_shows_normalized_home_summary(self):
-        """V6 대표 카드는 홈 전용 요약 한 줄 계약을 사용"""
+    def test_v2_agent_workspace_shows_mode_examples_and_actions(self):
+        """V6 agent 워크스페이스는 입력창과 실행 액션을 함께 보여준다."""
         self._login('cardsummaryuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('수업을 준비해요', content)
-        self.assertIn('data-home-v6-service-grid="true"', content)
-        self.assertIn('data-home-v6-service-title="true"', content)
-        self.assertIn('data-home-v6-service-icon="true"', content)
+        self.assertIn('data-home-v6-agent-input="true"', content)
+        self.assertIn('바로 실행', content)
+        self.assertIn('바로전송', content)
+        self.assertIn('TTS', content)
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')
@@ -2398,6 +2407,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-nav="mobile"', content)
         self.assertIn('data-home-v6-favorites-panel="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
         self.assertIn('data-home-v6-sns-panel="true"', content)
         self.assertNotIn('data-home-v4-shell="true"', content)
 
@@ -2568,7 +2578,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('최근 전송은', content)
         self.assertNotIn('오늘 1개가 남아 있습니다.', content)
 
-    def test_v4_messagebox_card_uses_compact_title_inside_representative_grid(self):
+    def test_v4_messagebox_product_keeps_compact_title_in_home_context(self):
         user = self._login('v4messageboxcompact')
         messagebox = Product.objects.create(
             title='업무 메시지 보관함',
@@ -2594,8 +2604,9 @@ class HomeV4ViewTest(TestCase):
             response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('메시지 보관', content)
-        self.assertIn('data-track-label="메시지 보관"', content)
+        self.assertEqual(response.context['representative_slots'][0]['product'].home_compact_title, '메시지 보관')
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
+        self.assertNotIn('data-home-v6-service-grid="true"', content)
 
     def test_v4_mobile_quickdrop_stays_visible_without_calendar_first_flag(self):
         user = self._login('v4mobilequickdropdefault')
@@ -3561,7 +3572,11 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v2-top-calendar="true"', content)
         self.assertNotIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
-        self.assertIn('data-home-v6-service-grid="true"', content)
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
+        self.assertIn('id="home-v7-agent-workspace"', content)
+        self.assertIn('id="home-v7-signal-layer"', content)
+        self.assertIn('id="home-v7-tacit-registry"', content)
+        self.assertIn('id="home-v7-workflow-registry"', content)
         self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
         self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)
@@ -3614,11 +3629,10 @@ class HomeV6ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('data-home-v6-empty-state="recommendations"', content)
-        self.assertIn('아직 띄울 추천 도구가 없습니다', content)
-        self.assertIn('첫 도구를 먼저 열면 다음에 이어질 흐름까지 맞춰 추천해 드립니다.', content)
-        self.assertIn('오늘 일정 추가', content)
-        self.assertNotIn('data-home-v6-service-grid="true"', content)
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
+        self.assertIn('id="home-v7-agent-workspace"', content)
+        self.assertNotIn('data-home-v6-empty-state="recommendations"', content)
+        self.assertNotIn('아직 띄울 추천 도구가 없습니다', content)
         self.assertIsNotNone(response.context['home_entry_panel'])
 
     @patch(
@@ -3639,8 +3653,68 @@ class HomeV6ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.context['representative_recommendations'][0]['title'], '숨겨져야 하는 추천 칩')
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
         self.assertNotIn('data-home-v6-recommendations="true"', content)
         self.assertNotIn('숨겨져야 하는 추천 칩', content)
+
+    @patch(
+        'core.views.generate_home_agent_preview',
+        return_value={
+            'preview': {
+                'badge': '알림장',
+                'title': '알림장 초안',
+                'summary': '준비물과 시간 변경을 먼저 정리했습니다.',
+                'sections': [
+                    {'title': '핵심', 'items': ['준비물 안내', '시간 변경']},
+                ],
+                'note': '말투만 마지막에 확인하면 됩니다.',
+            },
+            'provider': 'deepseek',
+            'model': 'deepseek-chat',
+        },
+    )
+    def test_v6_home_agent_preview_api_returns_llm_payload(self, mock_generate_preview):
+        self._login('v6agentpreview')
+
+        response = self.client.post(
+            reverse('home_agent_preview'),
+            data=json.dumps({
+                'mode_key': 'notice',
+                'text': '내일 준비물은 색연필입니다.',
+                'selected_date_label': '4월 15일',
+                'provider': 'deepseek',
+                'context': {
+                    'service_key': 'noticegen',
+                    'workflow_keys': ['daily_notice_flow'],
+                    'tacit_rule_keys': ['notice_priority_order'],
+                },
+            }),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'ok')
+        self.assertEqual(response.json()['provider'], 'deepseek')
+        self.assertEqual(response.json()['preview']['title'], '알림장 초안')
+        mock_generate_preview.assert_called_once()
+
+    @patch('core.views.generate_home_agent_preview', side_effect=HomeAgentConfigError('DeepSeek API 키가 없습니다.'))
+    def test_v6_home_agent_preview_api_returns_503_when_provider_missing(self, _mock_generate_preview):
+        self._login('v6agentpreviewerror')
+
+        response = self.client.post(
+            reverse('home_agent_preview'),
+            data=json.dumps({
+                'mode_key': 'notice',
+                'text': '내일 준비물은 색연필입니다.',
+            }),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()['error'], 'DeepSeek API 키가 없습니다.')
 
     @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))
     def test_v6_calendar_failure_shows_recovery_banner(self, _mock_calendar_surface):
@@ -3904,7 +3978,8 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v2-top-calendar="true"', content)
         self.assertNotIn('data-home-v2-calendar-surface="true"', content)
         self.assertIn('data-home-v6-representative-services="true"', content)
-        self.assertIn('data-home-v6-service-grid="true"', content)
+        self.assertIn('data-home-v6-agent-workspace="true"', content)
+        self.assertIn('id="home-v7-agent-workspace"', content)
         self.assertIn(f'data-home-v6-nav-section="{first_section_key}"', content)
         self.assertIn(f'data-home-v6-tool-list="{first_section_key}"', content)
         self.assertIn('home-v6-page', content)

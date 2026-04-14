@@ -158,7 +158,62 @@
         box.classList.remove('hidden');
     }
 
+    function escapeRegExp(value) {
+        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function trimLine(value) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function compactLines(value) {
+        return String(value || '')
+            .split(/\n+/)
+            .map(trimLine)
+            .filter(Boolean);
+    }
+
+    function compactSentences(value) {
+        return String(value || '')
+            .split(/[\n.!?]+/)
+            .map(trimLine)
+            .filter(Boolean);
+    }
+
+    function firstMatch(value, pattern) {
+        var match = String(value || '').match(pattern);
+        return match ? trimLine(match[0]) : '';
+    }
+
+    function normalizeIdList(values) {
+        if (!Array.isArray(values)) {
+            return [];
+        }
+        return values
+            .map(function (value) {
+                return parseInt(value, 10);
+            })
+            .filter(function (value, index, array) {
+                return !Number.isNaN(value) && array.indexOf(value) === index;
+            });
+    }
+
+    function providerLabel(provider) {
+        var normalized = String(provider || '').trim().toLowerCase();
+        if (normalized === 'deepseek') {
+            return 'DeepSeek';
+        }
+        if (normalized === 'openclaw' || normalized === 'local') {
+            return 'OpenClaw';
+        }
+        return normalized ? normalized : '';
+    }
+
     window.homeV6Shell = function () {
+        var frontendConfig = getHomeFrontendConfig();
+        var workspaceConfig = parseJsonScript('home-v7-agent-workspace', {}) || {};
         return {
             openSection: '',
             menuSheetOpen: false,
@@ -166,6 +221,47 @@
             quickdropHomeErrorText: '',
             quickdropHomeLastSentText: '',
             isSendingQuickdropHomeText: false,
+            workspaceInput: '',
+            activeModeKey: workspaceConfig.initial_mode || '',
+            agentModes: Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : [],
+            agentPreview: {
+                badge: '',
+                title: '',
+                summary: '',
+                sections: [],
+                note: '',
+                confirmHref: '',
+                confirmLabel: '',
+            },
+            agentPreviewMeta: {
+                source: '',
+                provider: '',
+                model: '',
+                providerLabel: '',
+            },
+            isAgentLoading: false,
+            favoriteIds: normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', [])),
+
+            init: function () {
+                frontendConfig = getHomeFrontendConfig();
+                workspaceConfig = parseJsonScript('home-v7-agent-workspace', workspaceConfig) || {};
+                this.agentModes = Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : this.agentModes;
+                this.favoriteIds = normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', []));
+                if (!this.activeModeKey && this.agentModes.length) {
+                    this.activeModeKey = this.agentModes[0].key;
+                }
+                this.showIdlePreview();
+                var self = this;
+                window.addEventListener('home-v6:favorites-updated', function (event) {
+                    self.favoriteIds = normalizeIdList(event && event.detail ? event.detail.productIds : []);
+                });
+            },
+
+            get activeMode() {
+                return this.agentModes.find(function (mode) {
+                    return mode.key === this.activeModeKey;
+                }, this) || this.agentModes[0] || {};
+            },
 
             focusQuickdropHomeDraftInput: function (form) {
                 var scopedInput = form && typeof form.querySelector === 'function'
@@ -258,6 +354,592 @@
                     this.isSendingQuickdropHomeText = false;
                 }
             },
+
+            focusWorkspace: function () {
+                var textarea = document.querySelector('[data-home-v6-agent-input="true"]');
+                if (textarea && typeof textarea.focus === 'function') {
+                    textarea.focus();
+                }
+            },
+
+            normalizeModeAlias: function (value) {
+                return String(value || '')
+                    .replace(/\s+/g, '')
+                    .toLowerCase();
+            },
+
+            modeAliases: function (mode) {
+                var seen = new Set();
+                return [mode.label, mode.service_key]
+                    .concat(Array.isArray(mode.aliases) ? mode.aliases : [])
+                    .map(trimLine)
+                    .filter(function (alias) {
+                        var normalized = this.normalizeModeAlias(alias);
+                        if (!normalized || seen.has(normalized)) {
+                            return false;
+                        }
+                        seen.add(normalized);
+                        return true;
+                    }, this);
+            },
+
+            parseModeCommand: function (value) {
+                var text = trimLine(value);
+                if (!text) {
+                    return { modeKey: '', remainder: '' };
+                }
+                var bestMatch = null;
+                this.agentModes.forEach(function (mode) {
+                    this.modeAliases(mode).forEach(function (alias) {
+                        var aliasText = trimLine(alias);
+                        if (!aliasText) {
+                            return;
+                        }
+                        var exactMatch = this.normalizeModeAlias(text) === this.normalizeModeAlias(aliasText);
+                        if (exactMatch) {
+                            if (!bestMatch || aliasText.length > bestMatch.score) {
+                                bestMatch = {
+                                    modeKey: mode.key,
+                                    remainder: '',
+                                    score: aliasText.length,
+                                };
+                            }
+                            return;
+                        }
+                        var aliasPattern = new RegExp(
+                            '^' + escapeRegExp(aliasText).replace(/\s+/g, '\\s*') + '(?:\\s*[:>\\-]\\s*|\\s+)',
+                            'i'
+                        );
+                        if (!aliasPattern.test(text)) {
+                            return;
+                        }
+                        var remainder = trimLine(text.replace(aliasPattern, ''));
+                        if (!bestMatch || aliasText.length > bestMatch.score) {
+                            bestMatch = {
+                                modeKey: mode.key,
+                                remainder: remainder,
+                                score: aliasText.length,
+                            };
+                        }
+                    }, this);
+                }, this);
+                return bestMatch || { modeKey: '', remainder: text };
+            },
+
+            isFavorite: function (productId) {
+                var normalized = parseInt(productId, 10);
+                return !Number.isNaN(normalized) && this.favoriteIds.indexOf(normalized) !== -1;
+            },
+
+            isAgentModeFavorite: function () {
+                return this.isFavorite(this.activeMode.product_id);
+            },
+
+            setFavoriteState: function (productId, isFavorite) {
+                var normalized = parseInt(productId, 10);
+                if (Number.isNaN(normalized)) {
+                    return;
+                }
+                var nextIds = this.favoriteIds.filter(function (value) {
+                    return value !== normalized;
+                });
+                if (isFavorite) {
+                    nextIds.push(normalized);
+                }
+                this.favoriteIds = nextIds;
+                window.dispatchEvent(new CustomEvent('home-v6:favorites-updated', {
+                    detail: { productIds: nextIds.slice() },
+                }));
+            },
+
+            previewProviderStatus: function (payload) {
+                var name = providerLabel(payload && payload.provider ? payload.provider : '');
+                return {
+                    source: payload && payload.provider ? 'ai' : '',
+                    provider: payload && payload.provider ? payload.provider : '',
+                    model: payload && payload.model ? payload.model : '',
+                    providerLabel: name ? name + ' 미리보기' : '',
+                };
+            },
+
+            buildPreviewSkeleton: function (overrides) {
+                var mode = this.activeMode || {};
+                return Object.assign({
+                    badge: mode.label || '미리보기',
+                    title: '',
+                    summary: '',
+                    sections: [],
+                    note: '',
+                    confirmHref: mode.after_action_href || mode.service_href || '',
+                    confirmLabel: mode.after_action_label || mode.confirm_label || '',
+                }, overrides || {});
+            },
+
+            normalizePreview: function (preview, meta) {
+                var base = this.buildPreviewSkeleton();
+                var payload = preview && typeof preview === 'object' ? preview : {};
+                var sections = Array.isArray(payload.sections) ? payload.sections : [];
+                var normalizedSections = sections
+                    .map(function (section) {
+                        if (!section || typeof section !== 'object') {
+                            return null;
+                        }
+                        var title = trimLine(section.title);
+                        var items = Array.isArray(section.items)
+                            ? section.items.map(trimLine).filter(Boolean).slice(0, 4)
+                            : [];
+                        if (!title || !items.length) {
+                            return null;
+                        }
+                        return {
+                            title: title,
+                            items: items,
+                        };
+                    })
+                    .filter(Boolean);
+                var note = trimLine(payload.note || base.note);
+                if (meta && meta.source === 'fallback' && note) {
+                    note = note + ' 규칙형 미리보기로 보여주고 있습니다.';
+                }
+                return Object.assign({}, base, {
+                    badge: trimLine(payload.badge || base.badge),
+                    title: trimLine(payload.title || base.title),
+                    summary: trimLine(payload.summary || base.summary),
+                    sections: normalizedSections.length ? normalizedSections : base.sections,
+                    note: note,
+                });
+            },
+
+            buildIdlePreview: function () {
+                var mode = this.activeMode || {};
+                var examples = Array.isArray(mode.examples) ? mode.examples.slice(0, 2) : [];
+                return this.buildPreviewSkeleton({
+                    badge: mode.label || '서비스',
+                    title: (mode.label || '서비스') + ' 미리보기',
+                    summary: mode.helper || '내용을 넣으면 바로 결과를 확인합니다.',
+                    sections: [
+                        {
+                            title: '예시',
+                            items: examples.length ? examples : ['내용을 붙여넣고 보기 버튼을 누르세요.'],
+                        },
+                    ],
+                    note: '저장은 마지막 확인 뒤에 진행합니다.',
+                });
+            },
+
+            showIdlePreview: function () {
+                this.agentPreview = this.buildIdlePreview();
+                this.agentPreviewMeta = {
+                    source: '',
+                    provider: '',
+                    model: '',
+                    providerLabel: '',
+                };
+            },
+
+            selectAgentMode: function (modeKey) {
+                this.activeModeKey = modeKey;
+                if (trimLine(this.workspaceInput)) {
+                    this.runAgentPreview();
+                    return;
+                }
+                this.showIdlePreview();
+            },
+
+            useExample: function (text) {
+                this.workspaceInput = trimLine(text);
+                this.runAgentPreview();
+            },
+
+            buildPreviewRequestPayload: function (text) {
+                return {
+                    mode_key: this.activeModeKey,
+                    text: text,
+                    selected_date_label: workspaceConfig.selected_date_label || '',
+                    provider: workspaceConfig.agent_runtime && workspaceConfig.agent_runtime.provider
+                        ? workspaceConfig.agent_runtime.provider
+                        : '',
+                    context: {
+                        service_key: this.activeMode.service_key || '',
+                        workflow_keys: Array.isArray(this.activeMode.workflow_keys) ? this.activeMode.workflow_keys : [],
+                        tacit_rule_keys: Array.isArray(this.activeMode.tacit_rule_keys) ? this.activeMode.tacit_rule_keys : [],
+                        context_questions: Array.isArray(workspaceConfig.context_questions) ? workspaceConfig.context_questions : [],
+                        signal_sources: Array.isArray(workspaceConfig.signal_sources) ? workspaceConfig.signal_sources : [],
+                    },
+                };
+            },
+
+            buildLocalPreview: function (text) {
+                if (this.activeModeKey === 'quickdrop') {
+                    return this.buildQuickdropPreview(text);
+                }
+                if (this.activeModeKey === 'tts') {
+                    return this.buildTtsPreview(text);
+                }
+                if (this.activeModeKey === 'schedule') {
+                    return this.buildSchedulePreview(text);
+                }
+                if (this.activeModeKey === 'teacher-law') {
+                    return this.buildTeacherLawPreview(text);
+                }
+                if (this.activeModeKey === 'reservation') {
+                    return this.buildReservationPreview(text);
+                }
+                if (this.activeModeKey === 'pdf') {
+                    return this.buildPdfPreview(text);
+                }
+                return this.buildNoticePreview(text);
+            },
+
+            runAgentPreview: async function () {
+                var text = trimLine(this.workspaceInput);
+                if (!text) {
+                    this.showIdlePreview();
+                    return;
+                }
+
+                var runtime = workspaceConfig.agent_runtime || {};
+                var csrfToken = getCsrfToken();
+                this.isAgentLoading = true;
+                try {
+                    if (!runtime.preview_url || !csrfToken) {
+                        throw new Error('AI preview 연결 정보가 없습니다.');
+                    }
+                    var response = await fetch(runtime.preview_url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify(this.buildPreviewRequestPayload(text)),
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'ok') {
+                        throw new Error(payload.error || 'AI 미리보기를 불러오지 못했습니다.');
+                    }
+                    this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));
+                    this.agentPreviewMeta = this.previewProviderStatus(payload);
+                } catch (error) {
+                    this.agentPreviewMeta = {
+                        source: 'fallback',
+                        provider: '',
+                        model: '',
+                        providerLabel: '규칙형 미리보기',
+                    };
+                    this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
+                    showFeedback(error && error.message ? error.message : 'AI 미리보기를 불러오지 못했습니다.', 'info');
+                } finally {
+                    this.isAgentLoading = false;
+                }
+            },
+
+            buildQuickdropPreview: function (text) {
+                return this.buildPreviewSkeleton({
+                    title: '바로전송 준비 완료',
+                    summary: '지금 보내면 연결된 기기에서 바로 확인합니다.',
+                    sections: [
+                        {
+                            title: '보낼 내용',
+                            items: [text],
+                        },
+                        {
+                            title: '전송 후',
+                            items: [
+                                '기기의 현재 내용이 새 텍스트로 바뀝니다.',
+                                '전송함에서 바로 다시 확인할 수 있습니다.',
+                            ],
+                        },
+                    ],
+                    note: '바로 전송을 누르면 즉시 보냅니다.',
+                });
+            },
+
+            buildTtsPreview: function (text) {
+                var items = compactLines(text).slice(0, 4);
+                return this.buildPreviewSkeleton({
+                    title: '읽을 문장을 정리했습니다.',
+                    summary: trimLine(text).slice(0, 90),
+                    sections: [
+                        {
+                            title: '읽기 내용',
+                            items: items.length ? items : [text],
+                        },
+                        {
+                            title: '실행',
+                            items: [
+                                '바로 읽기를 누르면 이 브라우저에서 재생합니다.',
+                                '필요하면 TTS 화면에서 다시 다듬을 수 있습니다.',
+                            ],
+                        },
+                    ],
+                    note: '교실 방송 문구를 빠르게 확인할 때 쓰기 좋습니다.',
+                });
+            },
+
+            buildNoticePreview: function (text) {
+                var sentences = compactSentences(text);
+                var keyPoints = sentences.slice(0, 3);
+                return this.buildPreviewSkeleton({
+                    title: '알림장 초안',
+                    summary: keyPoints[0] || text,
+                    sections: [
+                        {
+                            title: '핵심',
+                            items: keyPoints.length ? keyPoints : [text],
+                        },
+                        {
+                            title: '확인',
+                            items: [
+                                '준비물과 시간 변경을 첫 줄에 두기',
+                                '생활지도 문구는 마지막에 짧게 넣기',
+                            ],
+                        },
+                    ],
+                    note: '보내기 전에 말투만 한 번 더 보면 됩니다.',
+                });
+            },
+
+            buildSchedulePreview: function (text) {
+                var lines = compactLines(text);
+                var defaultDate = workspaceConfig.selected_date_label || '선택 날짜';
+                var candidates = lines.slice(0, 4).map(function (line, index) {
+                    var dateHint = firstMatch(line, /\d{1,2}월\s*\d{1,2}일|오늘|내일|모레|다음\s*주\s*[월화수목금토일]요일/);
+                    var timeHint = firstMatch(line, /\d{1,2}:\d{2}|\d{1,2}교시/);
+                    return (dateHint || defaultDate) + ' · ' + (timeHint || '시간 확인') + ' · ' + (line || ('일정 ' + (index + 1)));
+                });
+                var missing = [];
+                if (!/\d{1,2}월\s*\d{1,2}일|오늘|내일|모레|다음\s*주\s*[월화수목금토일]요일/.test(text)) {
+                    missing.push('날짜 표현이 부족합니다.');
+                }
+                if (!/\d{1,2}:\d{2}|\d{1,2}교시/.test(text)) {
+                    missing.push('시간 또는 교시가 빠져 있습니다.');
+                }
+                return this.buildPreviewSkeleton({
+                    title: '캘린더 등록 후보',
+                    summary: '붙여넣은 내용에서 일정 후보를 뽑았습니다.',
+                    sections: [
+                        {
+                            title: '후보',
+                            items: candidates.length ? candidates : [text],
+                        },
+                        {
+                            title: '확인',
+                            items: missing.length ? missing : ['바로 캘린더에서 확인 가능한 형태입니다.'],
+                        },
+                    ],
+                    note: '캘린더에서 제목과 시간만 확인하면 됩니다.',
+                });
+            },
+
+            buildTeacherLawPreview: function (text) {
+                var checks = [
+                    '발생 날짜와 당사자 정리',
+                    '문자, 통화, 촬영물 등 남은 기록 확인',
+                    '학교 내부 보고와 공유 범위 확인',
+                ];
+                if (/촬영|영상|사진/.test(text)) {
+                    checks.unshift('촬영 동의 범위와 제공 의무 여부 확인');
+                }
+                if (/학부모|보호자/.test(text)) {
+                    checks.unshift('학부모 요구 내용과 회신 시점을 기록');
+                }
+                return this.buildPreviewSkeleton({
+                    title: '법률 검토 메모',
+                    summary: trimLine(text).slice(0, 90),
+                    sections: [
+                        {
+                            title: '먼저',
+                            items: checks.slice(0, 4),
+                        },
+                        {
+                            title: '대응',
+                            items: [
+                                '사실관계와 학교 기준부터 정리',
+                                '회신은 기록과 절차 중심으로 작성',
+                                '관리자 공유 지점은 따로 표시',
+                            ],
+                        },
+                    ],
+                    note: '최종 판단 전 확인 메모입니다.',
+                });
+            },
+
+            buildReservationPreview: function (text) {
+                var dateHint = firstMatch(text, /\d{1,2}월\s*\d{1,2}일|오늘|내일|모레|다음\s*주\s*[월화수목금토일]요일/);
+                var periodHint = firstMatch(text, /\d{1,2}교시/);
+                var timeHint = firstMatch(text, /\d{1,2}:\d{2}/);
+                var roomHint = firstMatch(text, /(과학실|컴퓨터실|방송실|도서관|미술실|체육관|영어실|음악실|강당|특별실)/);
+                var missing = [];
+                if (!dateHint) {
+                    missing.push('날짜');
+                }
+                if (!periodHint && !timeHint) {
+                    missing.push('교시 또는 시간');
+                }
+                if (!roomHint) {
+                    missing.push('장소');
+                }
+                return this.buildPreviewSkeleton({
+                    title: '예약 요청 후보',
+                    summary: '날짜, 시간, 장소를 먼저 정리했습니다.',
+                    sections: [
+                        {
+                            title: '예약 값',
+                            items: [
+                                '날짜 · ' + (dateHint || '입력 필요'),
+                                '시간 · ' + (periodHint || timeHint || '입력 필요'),
+                                '장소 · ' + (roomHint || '입력 필요'),
+                            ],
+                        },
+                        {
+                            title: '확인',
+                            items: missing.length ? missing.map(function (item) {
+                                return item + '을 더 넣어 주세요.';
+                            }) : ['예약 화면에서 바로 확인 가능한 형태입니다.'],
+                        },
+                    ],
+                    note: '저장은 마지막 확인 뒤에 진행합니다.',
+                });
+            },
+
+            buildPdfPreview: function (text) {
+                var lines = compactSentences(text);
+                return this.buildPreviewSkeleton({
+                    title: '문서 정리 초안',
+                    summary: trimLine(text).slice(0, 100),
+                    sections: [
+                        {
+                            title: '핵심',
+                            items: lines.slice(0, 3).length ? lines.slice(0, 3) : [text],
+                        },
+                        {
+                            title: '다음',
+                            items: [
+                                '교사용 문장으로 다시 축약',
+                                '준비물, 일정, 제출 서류를 따로 추출',
+                                '필요하면 인포보드나 알림장으로 이어서 사용',
+                            ],
+                        },
+                    ],
+                    note: '원문 확인 후 필요한 형식으로 옮기면 됩니다.',
+                });
+            },
+
+            executeModeAction: async function () {
+                var text = trimLine(this.workspaceInput);
+                if (!text) {
+                    showFeedback('내용을 먼저 넣어 주세요.', 'info');
+                    this.focusWorkspace();
+                    return;
+                }
+
+                if (this.activeMode.action_kind === 'quickdrop-send') {
+                    if (!this.activeMode.direct_url) {
+                        showFeedback('바로전송 연결을 찾지 못했습니다.', 'error');
+                        return;
+                    }
+                    var quickdropResponse = await fetch(this.activeMode.direct_url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new URLSearchParams({ text: text }).toString(),
+                    });
+                    var quickdropPayload = await quickdropResponse.json().catch(function () {
+                        return {};
+                    });
+                    if (!quickdropResponse.ok) {
+                        showFeedback(
+                            quickdropPayload.detail || quickdropPayload.error || quickdropPayload.message || '전송하지 못했습니다.',
+                            'error'
+                        );
+                        return;
+                    }
+                    this.agentPreviewMeta = {
+                        source: 'direct',
+                        provider: 'quickdrop',
+                        model: '',
+                        providerLabel: '즉시 전송',
+                    };
+                    this.agentPreview = this.normalizePreview({
+                        badge: this.activeMode.label || '바로전송',
+                        title: '전송했습니다.',
+                        summary: trimLine(text).slice(0, 100),
+                        sections: [
+                            {
+                                title: '보낸 내용',
+                                items: [text],
+                            },
+                        ],
+                        note: '연결된 기기와 전송함에서 바로 확인할 수 있습니다.',
+                    }, this.agentPreviewMeta);
+                    showFeedback('바로전송으로 보냈습니다.', 'success');
+                    return;
+                }
+
+                if (this.activeMode.action_kind === 'tts-read') {
+                    if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
+                        showFeedback('이 브라우저에서는 읽어주기를 지원하지 않습니다.', 'error');
+                        return;
+                    }
+                    var utterance = new window.SpeechSynthesisUtterance(text);
+                    utterance.lang = 'ko-KR';
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                    this.agentPreviewMeta = {
+                        source: 'direct',
+                        provider: 'tts',
+                        model: '',
+                        providerLabel: '브라우저 TTS',
+                    };
+                    this.agentPreview = this.normalizePreview(this.buildTtsPreview(text), this.agentPreviewMeta);
+                    showFeedback('지금 읽고 있습니다.', 'success');
+                    return;
+                }
+
+                await this.runAgentPreview();
+            },
+
+            toggleActiveModeFavorite: async function () {
+                var productId = parseInt(this.activeMode.product_id, 10);
+                var csrfToken = getCsrfToken();
+                if (Number.isNaN(productId) || !frontendConfig.toggleFavoriteUrl) {
+                    return;
+                }
+                if (!csrfToken) {
+                    showFeedback('보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.', 'error');
+                    return;
+                }
+                try {
+                    var response = await fetch(frontendConfig.toggleFavoriteUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({ product_id: productId }),
+                    });
+                    var payload = await response.json().catch(function () {
+                        return {};
+                    });
+                    if (!response.ok || payload.status !== 'ok') {
+                        throw new Error(payload.error || '즐겨찾기 처리에 실패했습니다.');
+                    }
+                    this.setFavoriteState(productId, Boolean(payload.is_favorite));
+                    showFeedback(payload.is_favorite ? '즐겨찾기에 추가했습니다.' : '즐겨찾기에서 제거했습니다.', 'success');
+                } catch (error) {
+                    showFeedback(error && error.message ? error.message : '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
+                }
+            },
         };
     };
 
@@ -312,6 +994,21 @@
                 updateFavoriteButtonState(button, isFavorite);
             });
         }
+
+        function broadcastFavoriteIds() {
+            window.dispatchEvent(new CustomEvent('home-v6:favorites-updated', {
+                detail: { productIds: Array.from(favoriteIds) },
+            }));
+        }
+
+        window.addEventListener('home-v6:favorites-updated', function (event) {
+            var nextIds = normalizeIdList(event && event.detail ? event.detail.productIds : []);
+            favoriteIds.clear();
+            nextIds.forEach(function (value) {
+                favoriteIds.add(value);
+            });
+            syncFavoriteButtons();
+        });
 
         document.querySelectorAll('.product-card').forEach(function (card) {
             card.addEventListener('click', function (event) {
@@ -369,6 +1066,7 @@
                             showFeedback('즐겨찾기에서 제거했습니다.', 'success');
                         }
                         syncFavoriteButtons();
+                        broadcastFavoriteIds();
                     })
                     .catch(function (error) {
                         showFeedback(error.message || '즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
@@ -469,6 +1167,7 @@
         });
 
         syncFavoriteButtons();
+        broadcastFavoriteIds();
     }
 
     document.addEventListener('DOMContentLoaded', initHomeV6Interactions);
