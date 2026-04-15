@@ -612,8 +612,20 @@
 
             runAgentPreview: async function () {
                 var text = trimLine(this.workspaceInput);
+                var previewStrategy = String(this.activeMode.preview_strategy || 'llm').toLowerCase();
                 if (!text) {
                     this.showIdlePreview();
+                    return;
+                }
+
+                if (previewStrategy === 'direct') {
+                    this.agentPreviewMeta = {
+                        source: 'direct',
+                        provider: '',
+                        model: '',
+                        providerLabel: '',
+                    };
+                    this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
                     return;
                 }
 
@@ -645,13 +657,17 @@
                     this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));
                     this.agentPreviewMeta = this.previewProviderStatus(payload);
                 } catch (error) {
-                    this.agentPreviewMeta = {
-                        source: 'fallback',
-                        provider: '',
-                        model: '',
-                        providerLabel: '규칙형 미리보기',
-                    };
-                    this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
+                    if (previewStrategy === 'service') {
+                        this.showIdlePreview();
+                    } else {
+                        this.agentPreviewMeta = {
+                            source: 'fallback',
+                            provider: '',
+                            model: '',
+                            providerLabel: '규칙형 미리보기',
+                        };
+                        this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
+                    }
                     showFeedback(error && error.message ? error.message : 'AI 미리보기를 불러오지 못했습니다.', 'info');
                 } finally {
                     this.isAgentLoading = false;

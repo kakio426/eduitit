@@ -9,6 +9,11 @@ from dataclasses import dataclass
 
 from openai import OpenAI
 
+from .home_agent_service_bridge import (
+    HomeAgentServiceUnavailable,
+    generate_service_preview,
+)
+
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
@@ -117,6 +122,7 @@ def generate_home_agent_preview(
     selected_date_label: str = "",
     preferred_provider: str = "",
     context: dict | None = None,
+    request=None,
 ) -> dict:
     mode_spec = HOME_AGENT_MODE_SPECS.get(str(mode_key or "").strip())
     if mode_spec is None:
@@ -125,6 +131,20 @@ def generate_home_agent_preview(
     trimmed_text = str(text or "").strip()
     if not trimmed_text:
         raise HomeAgentProviderError("내용을 먼저 입력해 주세요.")
+
+    try:
+        service_payload = generate_service_preview(
+            request=request,
+            mode_key=mode_key,
+            mode_spec=mode_spec,
+            text=trimmed_text,
+            selected_date_label=selected_date_label,
+            context=context or {},
+        )
+    except HomeAgentServiceUnavailable as exc:
+        raise HomeAgentProviderError(str(exc)) from exc
+    if service_payload is not None:
+        return service_payload
 
     messages = _build_preview_messages(
         mode_key=mode_key,

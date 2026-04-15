@@ -1507,6 +1507,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'notice',
             'label': '알림장',
+            'preview_strategy': 'service',
             'selector_hint': '안내 문장',
             'aliases': ('알림장', '알림', '가정통신문'),
             'service_key': 'noticegen',
@@ -1526,6 +1527,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'schedule',
             'label': '일정',
+            'preview_strategy': 'service',
             'selector_hint': '일정 읽기',
             'aliases': ('일정', '캘린더', '시간표'),
             'service_key': 'classcalendar',
@@ -1545,6 +1547,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'teacher-law',
             'label': '교사 법률',
+            'preview_strategy': 'service',
             'selector_hint': '상황 정리',
             'aliases': ('교사 법률', '법률', '교권', '민원'),
             'service_key': 'teacher_law',
@@ -1564,6 +1567,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'reservation',
             'label': '특별실 예약',
+            'preview_strategy': 'service',
             'selector_hint': '예약 값 정리',
             'aliases': ('특별실 예약', '특별실', '예약'),
             'service_key': 'reservations',
@@ -1583,6 +1587,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'quickdrop',
             'label': '바로전송',
+            'preview_strategy': 'direct',
             'selector_hint': '텍스트 보내기',
             'aliases': ('바로전송', '전송', '링크 보내기'),
             'service_key': 'quickdrop',
@@ -1607,6 +1612,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'pdf',
             'label': 'PDF',
+            'preview_strategy': 'llm',
             'selector_hint': '핵심 정리',
             'aliases': ('PDF', '공문', '문서'),
             'service_key': 'hwpxchat',
@@ -1626,6 +1632,7 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'tts',
             'label': 'TTS',
+            'preview_strategy': 'direct',
             'selector_hint': '읽을 문장',
             'aliases': ('TTS', '읽어주기', '방송', '음성'),
             'service_key': 'tts_announce',
@@ -1691,7 +1698,7 @@ def _build_home_v7_context_router_preview(
         'agent_runtime': {
             'provider': str(os.environ.get('HOME_AGENT_LLM_PROVIDER') or 'deepseek').strip().lower() or 'deepseek',
             'fallback_provider': str(os.environ.get('HOME_AGENT_LLM_FALLBACK_PROVIDER') or 'openclaw').strip().lower() or 'openclaw',
-            'execution_mode': 'llm-preview+service-native',
+            'execution_mode': 'service-bridge+llm-fallback',
             'preview_url': reverse('home_agent_preview'),
         },
         'knowledge_summary': {
@@ -7211,6 +7218,7 @@ def home_agent_preview(request):
             selected_date_label=selected_date_label,
             preferred_provider=preferred_provider,
             context=context_payload,
+            request=request,
         )
     except HomeAgentConfigError as exc:
         return JsonResponse({'error': str(exc)}, status=503)

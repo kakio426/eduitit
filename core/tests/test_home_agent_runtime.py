@@ -1,12 +1,45 @@
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase
 
 from core.home_agent_runtime import generate_home_agent_preview, resolve_home_agent_provider
 
 
 class HomeAgentRuntimeTest(SimpleTestCase):
+    @patch(
+        'core.home_agent_runtime.generate_service_preview',
+        return_value={
+            'preview': {
+                'badge': '알림장',
+                'title': '알림장 결과',
+                'summary': '내일 우산을 챙겨 주세요.',
+                'sections': [{'title': '결과', 'items': ['내일 우산을 챙겨 주세요.']}],
+                'note': '',
+            },
+            'provider': 'noticegen',
+            'model': 'service-native',
+        },
+    )
+    @patch('core.home_agent_runtime.OpenAI')
+    def test_generate_home_agent_preview_prefers_service_bridge_when_request_is_present(self, mock_openai, mock_service_preview):
+        request = RequestFactory().post('/api/home-agent/preview/')
+        request.user = SimpleNamespace(is_authenticated=True)
+        request.session = {}
+
+        result = generate_home_agent_preview(
+            mode_key='notice',
+            text='내일 우산을 챙겨 주세요.',
+            request=request,
+        )
+
+        self.assertEqual(result['provider'], 'noticegen')
+        self.assertEqual(result['model'], 'service-native')
+        self.assertEqual(result['preview']['title'], '알림장 결과')
+        mock_service_preview.assert_called_once()
+        mock_openai.assert_not_called()
+
     @patch.dict(
         os.environ,
         {
