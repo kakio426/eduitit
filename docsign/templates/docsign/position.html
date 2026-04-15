@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}사인 위치{% endblock %}
+{% block title %}표시 위치{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -15,6 +15,8 @@
 
   #docsign-pdf-canvas {
     display: block;
+    position: relative;
+    z-index: 1;
   }
 
   .docsign-box {
@@ -23,10 +25,16 @@
     background: rgba(37, 99, 235, 0.12);
     cursor: move;
     touch-action: none;
+    z-index: 3;
   }
 
   .docsign-box.active {
     border-style: solid;
+  }
+
+  .docsign-box.docsign-box--check {
+    border-color: #020617;
+    background: rgba(2, 6, 23, 0.08);
   }
 
   .docsign-box-label {
@@ -39,6 +47,7 @@
     font-size: 11px;
     font-weight: 700;
     color: white;
+    z-index: 4;
   }
 
   .docsign-box-handle {
@@ -51,6 +60,27 @@
     background: #2563eb;
     cursor: nwse-resize;
   }
+
+  .docsign-box.docsign-box--check .docsign-box-label,
+  .docsign-box.docsign-box--check .docsign-box-handle {
+    background: #020617;
+  }
+
+  .docsign-box-mark {
+    position: absolute;
+    inset: 10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .docsign-box-mark svg {
+    width: 100%;
+    height: 100%;
+    color: #020617;
+  }
 </style>
 {% endblock %}
 
@@ -59,7 +89,7 @@
   <div class="mx-auto max-w-6xl space-y-6">
     <div class="space-y-2">
       <a href="{% url 'docsign:detail' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">문서 상세</a>
-      <h1 class="text-3xl font-black tracking-tight text-slate-900">2. 사인 위치</h1>
+      <h1 class="text-3xl font-black tracking-tight text-slate-900">2. 표시 위치</h1>
       <p class="text-sm font-medium text-slate-500">{{ document_file_name }} · {{ page_count }}쪽</p>
     </div>
 
@@ -79,6 +109,11 @@
         </div>
         <button type="button" id="nextPageBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">다음</button>
         <button type="button" id="resetBoxBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">기본 위치</button>
+        <div class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+          <span>표시</span>
+          <button type="button" id="markTypeSignatureBtn" class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">사인</button>
+          <button type="button" id="markTypeCheckBtn" class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">체크</button>
+        </div>
         <p id="positionStatus" class="ml-auto text-xs font-semibold text-slate-500">박스를 옮기고 크기를 맞춰 주세요.</p>
       </div>
 
@@ -117,7 +152,17 @@
   const prevPageBtn = document.getElementById("prevPageBtn");
   const nextPageBtn = document.getElementById("nextPageBtn");
   const resetBoxBtn = document.getElementById("resetBoxBtn");
+  const markTypeSignatureBtn = document.getElementById("markTypeSignatureBtn");
+  const markTypeCheckBtn = document.getElementById("markTypeCheckBtn");
   const positionStatus = document.getElementById("positionStatus");
+  const MARK_TYPES = {
+    signature: "사인",
+    checkmark: "체크",
+  };
+  const MARK_DEFAULTS = {
+    signature: { x_ratio: 0.58, y_ratio: 0.08, w_ratio: 0.28, h_ratio: 0.12 },
+    checkmark: { x_ratio: 0.58, y_ratio: 0.08, w_ratio: 0.12, h_ratio: 0.12 },
+  };
 
   const box = {
     page: Number(initialPayload.page || 1),
@@ -125,7 +170,12 @@
     y_ratio: Number(initialPayload.y_ratio ?? 0.08),
     w_ratio: Number(initialPayload.w_ratio ?? 0.28),
     h_ratio: Number(initialPayload.h_ratio ?? 0.12),
+    mark_type: String(initialPayload.mark_type || "{{ job.mark_type|escapejs }}" || "signature"),
   };
+
+  if (!MARK_DEFAULTS[box.mark_type]) {
+    box.mark_type = "signature";
+  }
 
   let pdfDoc = null;
   let pageWidth = 1;
@@ -154,12 +204,15 @@
     }
 
     const node = document.createElement("div");
-    node.className = "docsign-box active";
+    const isCheckmark = box.mark_type === "checkmark";
+    node.className = `docsign-box active${isCheckmark ? " docsign-box--check" : ""}`;
     node.style.left = `${box.x_ratio * pageWidth}px`;
     node.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
     node.style.width = `${box.w_ratio * pageWidth}px`;
     node.style.height = `${box.h_ratio * pageHeight}px`;
-    node.innerHTML = '<span class="docsign-box-label">사인</span><span class="docsign-box-handle"></span>';
+    node.innerHTML = isCheckmark
+      ? '<span class="docsign-box-label">체크</span><span class="docsign-box-mark" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M24 56 L44 76 L80 28" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="docsign-box-handle"></span>'
+      : '<span class="docsign-box-label">사인</span><span class="docsign-box-handle"></span>';
     stage.appendChild(node);
 
     node.addEventListener("pointerdown", (event) => {
@@ -196,7 +249,7 @@
       }
     });
 
-    node.addEventListener("pointerup", (event) => {
+    const finishDrag = (event) => {
       if (!dragState || dragState.pointerId !== event.pointerId) {
         return;
       }
@@ -212,7 +265,32 @@
       box.h_ratio = clamp(height / pageHeight, 0.03, 1);
       dragState = null;
       syncHidden();
-      setStatus(`${box.page}쪽에 저장했습니다.`);
+      setStatus(`${box.page}쪽 ${MARK_TYPES[box.mark_type] || "사인"} 위치를 저장했습니다.`);
+    };
+
+    node.addEventListener("pointerup", finishDrag);
+    node.addEventListener("pointercancel", finishDrag);
+  }
+
+  function applyMarkTypePreset(markType) {
+    const preset = MARK_DEFAULTS[markType] || MARK_DEFAULTS.signature;
+    box.mark_type = markType;
+    box.w_ratio = preset.w_ratio;
+    box.h_ratio = preset.h_ratio;
+    box.x_ratio = clamp(box.x_ratio, 0, 1 - box.w_ratio);
+    box.y_ratio = clamp(box.y_ratio, 0, 1 - box.h_ratio);
+  }
+
+  function updateMarkTypeButtons() {
+    const activeClasses = ["bg-slate-900", "text-white", "border-slate-900"];
+    const inactiveClasses = ["bg-white", "text-slate-700", "border-slate-200"];
+    [[markTypeSignatureBtn, "signature"], [markTypeCheckBtn, "checkmark"]].forEach(([button, markType]) => {
+      if (!button) {
+        return;
+      }
+      const active = box.mark_type === markType;
+      button.classList.remove(...activeClasses, ...inactiveClasses);
+      button.classList.add(...(active ? activeClasses : inactiveClasses));
     });
   }
 
@@ -243,13 +321,26 @@
 
   resetBoxBtn.addEventListener("click", () => {
     box.page = Number(pageInput.value || 1);
-    box.x_ratio = 0.58;
-    box.y_ratio = 0.08;
-    box.w_ratio = 0.28;
-    box.h_ratio = 0.12;
+    applyMarkTypePreset(box.mark_type);
     drawBox();
     syncHidden();
-    setStatus("기본 위치로 되돌렸습니다.");
+    setStatus(`${MARK_TYPES[box.mark_type] || "사인"} 기본 위치로 되돌렸습니다.`);
+  });
+
+  markTypeSignatureBtn.addEventListener("click", () => {
+    applyMarkTypePreset("signature");
+    updateMarkTypeButtons();
+    drawBox();
+    syncHidden();
+    setStatus("사인 위치로 바꿨습니다.");
+  });
+
+  markTypeCheckBtn.addEventListener("click", () => {
+    applyMarkTypePreset("checkmark");
+    updateMarkTypeButtons();
+    drawBox();
+    syncHidden();
+    setStatus("진한 체크 위치로 바꿨습니다.");
   });
 
   prevPageBtn.addEventListener("click", () => renderPage(Number(pageInput.value || 1) - 1));
@@ -260,6 +351,7 @@
   const pdfjsLib = await import(pdfModuleUrl);
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
+  updateMarkTypeButtons();
   await renderPage(box.page || 1);
 </script>
 {% endblock %}

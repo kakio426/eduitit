@@ -78,6 +78,12 @@
                     {% if session.description %}
                     <p class="mt-3 text-sm md:text-base text-gray-500">{{ session.description }}</p>
                     {% endif %}
+                    {% if session.require_consent_checkbox %}
+                    <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">체크 동의</p>
+                        <p class="mt-2 text-sm font-black text-slate-800">{{ session.resolved_consent_checkbox_text }}</p>
+                    </div>
+                    {% endif %}
                     {% if session.shared_roster_group %}
                     <div class="mt-3 flex flex-wrap items-center gap-2 text-xs md:text-sm">
                         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">
@@ -397,6 +403,9 @@
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">직위/학년반</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">이름</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm">서명</th>
+                            {% if show_consent_status %}
+                            <th class="py-2 px-2 md:px-4 text-xs md:text-sm">동의</th>
+                            {% endif %}
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">시간</th>
                             <th class="py-2 px-2 md:px-4 text-xs md:text-sm text-center">삭제</th>
                         </tr>
@@ -465,6 +474,15 @@
                             </td>
                             <td class="py-2 px-2 md:px-4 font-bold text-gray-700 text-xs md:text-sm truncate max-w-[80px] md:max-w-none">{{ sig.participant_name }}</td>
                             <td class="py-2 px-2 md:px-4"><img src="{{ sig.signature_data }}" alt="서명" class="h-6 md:h-10"></td>
+                            {% if show_consent_status %}
+                            <td class="py-2 px-2 md:px-4 text-xs md:text-sm">
+                                {% if sig.consent_checkbox_checked %}
+                                <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 font-bold text-emerald-700">완료</span>
+                                {% else %}
+                                <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 font-bold text-slate-500">없음</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
                             <td class="py-2 px-2 md:px-4 text-gray-500 text-xs md:text-sm hidden sm:table-cell">{{sig.created_at|date:"H:i" }}</td>
                             <td class="py-2 px-2 md:px-4 text-center">
                                 <button onclick="deleteSignature('{{ sig.pk }}')" class="text-red-400 hover:text-red-600 p-1">

@@ -241,11 +241,11 @@
                 </a>
             </div>
 
-            <details class="rounded-[1.75rem] border-2 border-indigo-200 bg-indigo-50/70 p-5 md:p-6" {% if form.errors or form.print_title.value or form.description.value or show_additional_options or attachment_reupload_notice %}open{% endif %}>
+            <details class="rounded-[1.75rem] border-2 border-indigo-200 bg-indigo-50/70 p-5 md:p-6" {% if form.errors or form.print_title.value or form.description.value or form.require_consent_checkbox.value or form.consent_checkbox_text.value or show_additional_options or attachment_reupload_notice %}open{% endif %}>
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
                     <div>
                         <p class="text-xs font-black uppercase tracking-[0.18em] text-indigo-500">추가 옵션</p>
-                        <p class="mt-2 text-xl font-black text-slate-800">첨부와 인쇄 제목이 필요하면 여기에 적으세요.</p>
+                        <p class="mt-2 text-xl font-black text-slate-800">첨부, 인쇄 제목, 체크 동의가 필요하면 여기에 적으세요.</p>
                     </div>
                     <span class="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-sm">
                         추가 옵션 열기
@@ -269,6 +269,19 @@
                         <div class="rounded-2xl bg-white p-4">
                             <label class="mb-2 block text-sm font-black text-slate-700">메모 (선택)</label>
                             {{ form.description }}
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl bg-white p-4 shadow-sm">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-500">체크 동의</p>
+                        <div class="mt-3 flex items-center gap-3">
+                            {{ form.require_consent_checkbox }}
+                            <label class="text-sm font-black text-slate-700">서명 전에 체크 받기</label>
+                        </div>
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-black text-slate-700">체크 문구</label>
+                            {{ form.consent_checkbox_text }}
+                            <p class="mt-2 text-xs font-bold text-slate-500">예: 개인정보 수집·이용에 동의합니다.</p>
                         </div>
                     </div>
 

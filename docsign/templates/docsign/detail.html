@@ -45,7 +45,7 @@
     </section>
     {% endif %}
 
-    <section class="grid gap-4 md:grid-cols-3">
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <p class="text-sm font-semibold text-slate-500">파일명</p>
         <p class="mt-2 break-all text-sm font-bold text-slate-900">{{ job.source_file_name_snapshot }}</p>
@@ -55,7 +55,7 @@
         <p class="mt-2 break-all text-xs font-bold text-slate-900">{{ job.source_file_sha256_snapshot }}</p>
       </article>
       <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <p class="text-sm font-semibold text-slate-500">사인 위치</p>
+        <p class="text-sm font-semibold text-slate-500">표시 위치</p>
         <p class="mt-2 text-sm font-bold text-slate-900">
           {% if job.is_position_configured %}
           {{ job.signature_page }}쪽
@@ -63,6 +63,10 @@
           아직 없음
           {% endif %}
         </p>
+      </article>
+      <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <p class="text-sm font-semibold text-slate-500">표시 방식</p>
+        <p class="mt-2 text-sm font-bold text-slate-900">{{ job.mark_type_label }}</p>
       </article>
     </section>
 

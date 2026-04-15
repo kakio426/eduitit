@@ -165,7 +165,9 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "숫자로 확인")
         self.assertContains(response, "저장된 명단 없음")
         self.assertContains(response, "추가 옵션 열기")
-        self.assertContains(response, "첨부와 인쇄 제목이 필요하면 여기에 적으세요.")
+        self.assertContains(response, "첨부, 인쇄 제목, 체크 동의가 필요하면 여기에 적으세요.")
+        self.assertContains(response, "체크 동의")
+        self.assertContains(response, "서명 전에 체크 받기")
         self.assertContains(response, "내 서명 보관함")
         self.assertContains(response, "이름 폰트 도구")
         self.assertContains(response, "서명이 필요하면 여기에서 열 수 있습니다.")
@@ -197,6 +199,8 @@ class SignatureTeacherFirstPagesTests(TestCase):
                 "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
                 "location": "시청각실",
                 "description": "첨부 포함",
+                "require_consent_checkbox": "on",
+                "consent_checkbox_text": "개인정보 수집·이용에 동의합니다.",
                 "expected_count": "24",
                 "is_active": "on",
                 "attachments": [
@@ -220,6 +224,11 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(restored_response, "첨부 파일은 명단 만들기 화면을 다녀오면 유지되지 않습니다.")
         self.assertEqual(restored_response.context["form"]["title"].value(), "첨부 후 명단 이동")
         self.assertEqual(str(restored_response.context["form"]["expected_count"].value()), "24")
+        self.assertTrue(restored_response.context["form"]["require_consent_checkbox"].value())
+        self.assertEqual(
+            restored_response.context["form"]["consent_checkbox_text"].value(),
+            "개인정보 수집·이용에 동의합니다.",
+        )
         self.assertTrue(restored_response.context["attachment_reupload_notice"])
 
     def test_prepare_roster_return_restores_draft_and_auto_selects_roster(self):
@@ -233,6 +242,8 @@ class SignatureTeacherFirstPagesTests(TestCase):
                 "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
                 "location": "시청각실",
                 "description": "명단 만들고 돌아옵니다.",
+                "require_consent_checkbox": "on",
+                "consent_checkbox_text": "개인정보 수집·이용에 동의합니다.",
                 "expected_count": "24",
                 "is_active": "on",
             },
@@ -255,6 +266,11 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(restored_response, "방금 만든 명단")
         self.assertEqual(restored_response.context["form"]["title"].value(), "복귀 테스트 요청")
         self.assertEqual(str(restored_response.context["form"]["expected_count"].value()), "24")
+        self.assertTrue(restored_response.context["form"]["require_consent_checkbox"].value())
+        self.assertEqual(
+            restored_response.context["form"]["consent_checkbox_text"].value(),
+            "개인정보 수집·이용에 동의합니다.",
+        )
         self.assertEqual(
             str(restored_response.context["form"]["shared_roster_group"].value()),
             str(roster.id),
@@ -268,6 +284,8 @@ class SignatureTeacherFirstPagesTests(TestCase):
             location="과학실",
             created_by=self.user,
             is_active=False,
+            require_consent_checkbox=True,
+            consent_checkbox_text="개인정보 수집·이용에 동의합니다.",
         )
         ExpectedParticipant.objects.create(training_session=source_session, name="김교사", affiliation="1-1")
         ExpectedParticipant.objects.create(training_session=source_session, name="이교사", affiliation="1-2")
@@ -280,6 +298,11 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "이전 요청")
         self.assertContains(response, "복제할 서명 요청")
         self.assertContains(response, "참석자 후보 2명")
+        self.assertTrue(response.context["form"]["require_consent_checkbox"].value())
+        self.assertEqual(
+            response.context["form"]["consent_checkbox_text"].value(),
+            "개인정보 수집·이용에 동의합니다.",
+        )
 
         session_dt = timezone.localtime(timezone.now() + timedelta(days=6)).replace(minute=0, second=0, microsecond=0)
         post_response = self.client.post(
@@ -292,6 +315,8 @@ class SignatureTeacherFirstPagesTests(TestCase):
                 "datetime": session_dt.strftime("%Y-%m-%dT%H:%M"),
                 "location": "과학실",
                 "description": "",
+                "require_consent_checkbox": "on",
+                "consent_checkbox_text": "개인정보 수집·이용에 동의합니다.",
                 "shared_roster_group": "",
                 "expected_count": "2",
                 "is_active": "on",
@@ -302,6 +327,8 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertEqual(post_response.status_code, 200)
         new_session = TrainingSession.objects.get(title="복제 후 새 요청", created_by=self.user)
         self.assertTrue(new_session.is_active)
+        self.assertTrue(new_session.require_consent_checkbox)
+        self.assertEqual(new_session.consent_checkbox_text, "개인정보 수집·이용에 동의합니다.")
         self.assertEqual(new_session.expected_participants.count(), 2)
         self.assertContains(post_response, "이전 요청 명단 2명도 복사했습니다.")
 

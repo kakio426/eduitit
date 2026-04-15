@@ -81,7 +81,7 @@
 
         <form method="post" id="signForm" class="clay-card rounded-[1.75rem] p-6 md:p-7">
             {% csrf_token %}
-            {% if form.non_field_errors or form.access_code.errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors %}
+            {% if form.non_field_errors or form.access_code.errors or form.participant_name.errors or form.participant_affiliation.errors or form.signature_data.errors or form.expected_participant_id.errors or form.consent_confirm.errors %}
             <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
                 <p class="font-black">입력 확인</p>
                 <ul class="mt-2 space-y-1">
@@ -98,6 +98,9 @@
                     <li>{{ error }}</li>
                     {% endfor %}
                     {% for error in form.expected_participant_id.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in form.consent_confirm.errors %}
                     <li>{{ error }}</li>
                     {% endfor %}
                     {% for error in form.signature_data.errors %}
@@ -127,7 +130,8 @@
                         {% elif access_code_state.is_expired %}
                         <p class="mt-1 text-sm text-red-700">코드 만료</p>
                         {% else %}
-                        <p class="mt-1 text-sm text-red-700">코드 대기 중</p>
+                        <p class="mt-1 text-sm text-red-700">담당 교사가 아직 현장 코드를 열지 않았습니다.</p>
+                        <p class="mt-2 text-xs text-slate-500">잠시 후 다시 확인</p>
                         {% endif %}
                     </div>
                 </div>
@@ -166,7 +170,7 @@
                         onclick="toggleWalkInMode()"
                         class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 font-bold text-indigo-700 hover:bg-indigo-100 transition"
                     >
-                        명단 외 제출
+                        명단에 이름이 없어요
                     </button>
                 </div>
             </div>
@@ -211,6 +215,16 @@
                 <p class="mt-2 text-sm text-slate-500">명단에 없으면 직접 입력</p>
                 {% endif %}
             </div>
+
+            {% if session.require_consent_checkbox %}
+            <div class="mb-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4 md:px-5">
+                <p class="text-sm font-black text-emerald-700">동의 확인</p>
+                <label for="{{ form.consent_confirm.id_for_label }}" class="mt-3 flex cursor-pointer items-start gap-3">
+                    {{ form.consent_confirm }}
+                    <span class="text-base font-bold leading-6 text-slate-800">{{ form.consent_confirm.label }}</span>
+                </label>
+            </div>
+            {% endif %}
 
             <div class="mb-6">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
@@ -436,6 +450,7 @@
     const participantNameInput = document.querySelector('input[name="participant_name"]');
     const participantAffiliationInput = document.querySelector('input[name="participant_affiliation"]');
     const accessCodeInput = document.querySelector('input[name="access_code"]');
+    const consentCheckboxInput = document.querySelector('input[name="consent_confirm"]');
     const walkInToggleBtn = document.getElementById('walkInToggleBtn');
     const accessCodeEnabled = {% if access_code_state.enabled %}true{% else %}false{% endif %};
     const accessCodeActive = {% if access_code_state.is_active %}true{% else %}false{% endif %};
@@ -458,7 +473,7 @@
             participantAffiliationInput.readOnly = !!rosterSelect && !isWalkInMode;
         }
         if (walkInToggleBtn) {
-            walkInToggleBtn.textContent = isWalkInMode ? '명단에서 선택하기' : '명단 외 제출';
+            walkInToggleBtn.textContent = isWalkInMode ? '명단에서 선택하기' : '명단에 이름이 없어요';
         }
 
         if (rosterSelect && !isWalkInMode) {
@@ -536,6 +551,13 @@
         if (signaturePad.isEmpty()) {
             e.preventDefault();
             alert('서명을 해 주세요.');
+            return;
+        }
+
+        if (consentCheckboxInput && !consentCheckboxInput.checked) {
+            e.preventDefault();
+            alert('동의 내용을 체크해 주세요.');
+            consentCheckboxInput.focus();
             return;
         }
 

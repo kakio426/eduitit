@@ -9,6 +9,7 @@ from django.utils import timezone
 SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".hwp", ".hwpx"}
 SIGNATURE_ATTACHMENT_MAX_FILES = 10
 SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES = 10 * 1024 * 1024
+DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT = "위 내용을 확인했고 서명 제출에 동의합니다."
 
 
 def training_session_attachment_upload_to(instance, filename):
@@ -49,6 +50,8 @@ class TrainingSession(models.Model):
     datetime = models.DateTimeField('연수 일시')
     location = models.CharField('장소', max_length=200)
     description = models.TextField('설명', blank=True)
+    require_consent_checkbox = models.BooleanField("체크 동의 받기", default=False)
+    consent_checkbox_text = models.CharField("체크 동의 문구", max_length=160, blank=True)
 
     # UUID for public access (prevents ID guessing)
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -159,6 +162,11 @@ class TrainingSession(models.Model):
             return "expired"
         return "pending"
 
+    @property
+    def resolved_consent_checkbox_text(self):
+        text = str(self.consent_checkbox_text or "").strip()
+        return text or DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT
+
 
 class TrainingSessionAttachment(models.Model):
     """서명 요청에 함께 전달하는 첨부 서류."""
@@ -237,6 +245,8 @@ class Signature(models.Model):
 
     # Store signature as Base64 - efficient for small images
     signature_data = models.TextField('서명 데이터 (Base64)')
+    consent_checkbox_checked = models.BooleanField("체크 동의 완료", default=False)
+    consent_checkbox_text = models.CharField("체크 동의 문구", max_length=160, blank=True)
     submission_mode = models.CharField('제출 방식', max_length=20, choices=SUBMISSION_MODE_CHOICES, default=SUBMISSION_MODE_OPEN)
     ip_address = models.GenericIPAddressField('제출 IP', blank=True, null=True)
     user_agent = models.TextField('제출 브라우저', blank=True)

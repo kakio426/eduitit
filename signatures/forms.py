@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from handoff.models import HandoffRosterGroup
 
 from .models import (
+    DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT,
     SIGNATURE_ATTACHMENT_ALLOWED_EXTENSIONS,
     SIGNATURE_ATTACHMENT_MAX_FILES,
     SIGNATURE_ATTACHMENT_MAX_TOTAL_BYTES,
@@ -92,6 +93,26 @@ class TrainingSessionForm(forms.ModelForm):
             }
         ),
     )
+    require_consent_checkbox = forms.BooleanField(
+        required=False,
+        label="체크 동의 받기",
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "w-5 h-5 rounded shadow-clay-inner accent-emerald-500",
+            }
+        ),
+    )
+    consent_checkbox_text = forms.CharField(
+        required=False,
+        label="체크 문구",
+        max_length=160,
+        widget=forms.TextInput(
+            attrs={
+                "class": "w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-emerald-300",
+                "placeholder": DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT,
+            }
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         owner = kwargs.pop("owner", None)
@@ -140,7 +161,19 @@ class TrainingSessionForm(forms.ModelForm):
 
     class Meta:
         model = TrainingSession
-        fields = ['title', 'print_title', 'instructor', 'datetime', 'location', 'description', 'shared_roster_group', 'expected_count', 'is_active']
+        fields = [
+            'title',
+            'print_title',
+            'instructor',
+            'datetime',
+            'location',
+            'description',
+            'require_consent_checkbox',
+            'consent_checkbox_text',
+            'shared_roster_group',
+            'expected_count',
+            'is_active',
+        ]
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-2xl shadow-clay-inner bg-bg-soft focus:outline-none focus:ring-2 focus:ring-purple-300',
@@ -177,6 +210,15 @@ class TrainingSessionForm(forms.ModelForm):
             }),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        require_consent_checkbox = bool(cleaned_data.get("require_consent_checkbox"))
+        consent_checkbox_text = str(cleaned_data.get("consent_checkbox_text") or "").strip()
+        if require_consent_checkbox and not consent_checkbox_text:
+            consent_checkbox_text = DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT
+        cleaned_data["consent_checkbox_text"] = consent_checkbox_text
+        return cleaned_data
+
     @property
     def attachment_limits(self):
         return {
@@ -207,6 +249,8 @@ class SignatureForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         use_roster_selection = kwargs.pop("use_roster_selection", False)
         use_access_code = kwargs.pop("use_access_code", False)
+        require_consent_checkbox = kwargs.pop("require_consent_checkbox", False)
+        consent_checkbox_text = kwargs.pop("consent_checkbox_text", "")
         super().__init__(*args, **kwargs)
         if use_roster_selection:
             self.fields["participant_name"].required = False
@@ -214,6 +258,17 @@ class SignatureForm(forms.ModelForm):
             self.fields["participant_affiliation"].widget.attrs["placeholder"] = "이름을 고르면 자동으로 채워집니다"
         if use_access_code:
             self.fields["access_code"].required = True
+        if require_consent_checkbox:
+            self.fields["consent_confirm"] = forms.BooleanField(
+                required=True,
+                label=str(consent_checkbox_text or DEFAULT_SIGNATURE_CONSENT_CHECKBOX_TEXT).strip(),
+                error_messages={"required": "동의 내용을 체크해 주세요."},
+                widget=forms.CheckboxInput(
+                    attrs={
+                        "class": "mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-400",
+                    }
+                ),
+            )
 
     def clean(self):
         cleaned_data = super().clean()

@@ -189,6 +189,8 @@ def _build_signature_share_package_text(session, share_link, attachment_count=0)
     ]
     if attachment_count:
         lines.append(f"첨부 파일 {attachment_count}개 확인 후 서명 부탁드립니다.")
+    if session.require_consent_checkbox:
+        lines.append("서명 전에 동의 체크를 먼저 해 주세요.")
     lines.append(share_link)
     return "\n".join(lines)
 
@@ -1259,6 +1261,8 @@ def _build_signature_create_draft_payload(data):
         "datetime": str(data.get("datetime") or "").strip()[:16],
         "location": str(data.get("location") or "").strip()[:200],
         "description": str(data.get("description") or "").strip()[:2000],
+        "require_consent_checkbox": _is_truthy_flag(data.get("require_consent_checkbox"), default=False),
+        "consent_checkbox_text": str(data.get("consent_checkbox_text") or "").strip()[:160],
         "shared_roster_group": str(data.get("shared_roster_group") or "").strip(),
         "expected_count": str(data.get("expected_count") or "").strip()[:10],
         "acting_for_user": str(data.get("acting_for_user") or "").strip(),
@@ -1286,6 +1290,8 @@ def _build_signature_create_initial_from_draft(draft_payload):
         "datetime": draft_payload.get("datetime", ""),
         "location": draft_payload.get("location", ""),
         "description": draft_payload.get("description", ""),
+        "require_consent_checkbox": bool(draft_payload.get("require_consent_checkbox", False)),
+        "consent_checkbox_text": draft_payload.get("consent_checkbox_text", ""),
         "is_active": bool(draft_payload.get("is_active", False)),
     }
     expected_count = str(draft_payload.get("expected_count") or "").strip()
@@ -1321,6 +1327,8 @@ def _build_copy_initial_from_session(session):
         "instructor": session.instructor,
         "location": session.location,
         "description": session.description,
+        "require_consent_checkbox": session.require_consent_checkbox,
+        "consent_checkbox_text": session.consent_checkbox_text,
         "datetime": _to_datetime_local_input_value(session.datetime),
         "expected_count": expected_count,
         "is_active": True,
@@ -1645,6 +1653,13 @@ def session_create(request):
             prefill_initial["expected_count"] = int(str(expected_count))
         elif seed_participants:
             prefill_initial["expected_count"] = len(seed_participants)
+        if "require_consent_checkbox" in seed_data:
+            prefill_initial["require_consent_checkbox"] = _is_truthy_flag(
+                seed_data.get("require_consent_checkbox"),
+                default=False,
+            )
+        if "consent_checkbox_text" in seed_data:
+            prefill_initial["consent_checkbox_text"] = str(seed_data.get("consent_checkbox_text") or "").strip()[:160]
     elif copy_source_session:
         prefill_initial = _build_copy_initial_from_session(copy_source_session)
     if is_proxy_mode:
@@ -1915,6 +1930,9 @@ def session_detail(request, uuid):
             "expected_participant",
         )[:20]
         access_code_state = _build_access_code_state(session)
+        show_consent_status = session.require_consent_checkbox or signatures.filter(
+            consent_checkbox_checked=True
+        ).exists()
         unmatched_expected_participants = (
             _sort_expected_participants_for_display(
                 expected.filter(matched_signature__isnull=True),
@@ -1962,6 +1980,7 @@ def session_detail(request, uuid):
             'attachment_rows': attachment_rows,
             'attachment_state': attachment_state,
             'access_code_state': access_code_state,
+            'show_consent_status': show_consent_status,
             'affiliation_suggestions': _build_affiliation_suggestions(session),
             'affiliation_correction_logs': correction_logs,
             'pending_participants_preview': unmatched_expected_participants[:5],
@@ -2106,6 +2125,8 @@ def sign(request, uuid):
             request.POST,
             use_roster_selection=show_roster_selection,
             use_access_code=access_code_state["is_active"],
+            require_consent_checkbox=session.require_consent_checkbox,
+            consent_checkbox_text=session.resolved_consent_checkbox_text,
         )
         if form.is_valid():
             selected_participant = None
@@ -2153,6 +2174,10 @@ def sign(request, uuid):
                             )
                         else:
                             signature.participant_affiliation = _normalize_affiliation_text(signature.participant_affiliation)
+                        signature.consent_checkbox_checked = bool(form.cleaned_data.get("consent_confirm"))
+                        signature.consent_checkbox_text = (
+                            session.resolved_consent_checkbox_text if session.require_consent_checkbox else ""
+                        )
                         signature.submission_mode = Signature.SUBMISSION_MODE_OPEN
                         signature.ip_address = _request_client_ip(request)
                         signature.user_agent = _request_user_agent(request)
@@ -2174,6 +2199,9 @@ def sign(request, uuid):
                                 'submission_mode': signature.submission_mode,
                                 'expected_participant_id': selected_participant.id if selected_participant else None,
                                 'walk_in_mode': bool(selected_participant is None),
+                                'consent_required': session.require_consent_checkbox,
+                                'consent_checked': signature.consent_checkbox_checked,
+                                'consent_text': signature.consent_checkbox_text,
                                 'access_code_required': access_code_state["enabled"],
                                 'access_code_verified': access_code_state["enabled"],
                                 'access_code_duration_minutes': access_code_state["duration_minutes"] or None,
@@ -2187,6 +2215,8 @@ def sign(request, uuid):
         form = SignatureForm(
             use_roster_selection=show_roster_selection,
             use_access_code=access_code_state["is_active"],
+            require_consent_checkbox=session.require_consent_checkbox,
+            consent_checkbox_text=session.resolved_consent_checkbox_text,
         )
 
     response = render(request, 'signatures/sign.html', {

@@ -28,9 +28,15 @@ def docsign_signed_upload_to(instance, filename: str) -> str:
 
 
 class DocumentSignJob(models.Model):
+    MARK_TYPE_SIGNATURE = "signature"
+    MARK_TYPE_CHECKMARK = "checkmark"
     FILE_TYPE_CHOICES = [
         (PDF_FILE_TYPE, "PDF"),
         (IMAGE_FILE_TYPE, "Image"),
+    ]
+    MARK_TYPE_CHOICES = [
+        (MARK_TYPE_SIGNATURE, "사인"),
+        (MARK_TYPE_CHECKMARK, "체크"),
     ]
 
     owner = models.ForeignKey(
@@ -48,6 +54,7 @@ class DocumentSignJob(models.Model):
     source_file_size_snapshot = models.PositiveBigIntegerField(blank=True, null=True)
     source_file_sha256_snapshot = models.CharField(max_length=64, blank=True, default="")
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default=PDF_FILE_TYPE)
+    mark_type = models.CharField(max_length=20, choices=MARK_TYPE_CHOICES, default=MARK_TYPE_SIGNATURE)
     signature_page = models.PositiveIntegerField(blank=True, null=True)
     x = models.FloatField(blank=True, null=True)
     y = models.FloatField(blank=True, null=True)
@@ -88,3 +95,7 @@ class DocumentSignJob(models.Model):
         if self.is_position_configured:
             return "sign"
         return "position"
+
+    @property
+    def mark_type_label(self) -> str:
+        return dict(self.MARK_TYPE_CHOICES).get(self.mark_type, "사인")

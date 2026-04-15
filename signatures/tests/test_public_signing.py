@@ -92,6 +92,48 @@ class SignaturePublicSigningTests(TestCase):
         self.assertTrue(log.event_meta.get("access_code_verified"))
         self.assertEqual(log.event_meta.get("access_code_duration_minutes"), 5)
 
+    def test_public_sign_submission_requires_checked_consent_when_enabled(self):
+        self.session.require_consent_checkbox = True
+        self.session.consent_checkbox_text = "개인정보 수집·이용에 동의합니다."
+        self.session.save(update_fields=["require_consent_checkbox", "consent_checkbox_text"])
+
+        response = self.client.post(
+            reverse("signatures:sign", kwargs={"uuid": self.session.uuid}),
+            data={
+                "participant_affiliation": "교사",
+                "participant_name": "홍길동",
+                "signature_data": "data:image/png;base64,SIG",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "동의 내용을 체크해 주세요.")
+        self.assertFalse(Signature.objects.filter(training_session=self.session, participant_name="홍길동").exists())
+
+    def test_public_sign_submission_stores_checked_consent(self):
+        self.session.require_consent_checkbox = True
+        self.session.consent_checkbox_text = "개인정보 수집·이용에 동의합니다."
+        self.session.save(update_fields=["require_consent_checkbox", "consent_checkbox_text"])
+
+        response = self.client.post(
+            reverse("signatures:sign", kwargs={"uuid": self.session.uuid}),
+            data={
+                "participant_affiliation": "교사",
+                "participant_name": "홍길동",
+                "signature_data": "data:image/png;base64,SIG",
+                "consent_confirm": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        signature = Signature.objects.get(training_session=self.session, participant_name="홍길동")
+        self.assertTrue(signature.consent_checkbox_checked)
+        self.assertEqual(signature.consent_checkbox_text, "개인정보 수집·이용에 동의합니다.")
+        log = SignatureAuditLog.objects.get(training_session=self.session, signature=signature)
+        self.assertTrue(log.event_meta.get("consent_required"))
+        self.assertTrue(log.event_meta.get("consent_checked"))
+        self.assertEqual(log.event_meta.get("consent_text"), "개인정보 수집·이용에 동의합니다.")
+
     def test_public_sign_page_blocks_when_access_code_not_ready(self):
         self.session.access_code_duration_minutes = TrainingSession.ACCESS_CODE_5_MINUTES
         self.session.save(update_fields=["access_code_duration_minutes"])

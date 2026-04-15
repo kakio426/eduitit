@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}문서 사인{% endblock %}
+{% block title %}문서 표시{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -11,6 +11,10 @@
     background: white;
     touch-action: none;
   }
+
+  .docsign-check-preview svg {
+    color: #020617;
+  }
 </style>
 {% endblock %}
 
@@ -18,9 +22,9 @@
 <main class="service-shell min-h-screen bg-slate-50 px-4 py-8">
   <div class="mx-auto max-w-6xl space-y-6">
     <div class="space-y-2">
-      <a href="{% url 'docsign:position' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">사인 위치</a>
-      <h1 class="text-3xl font-black tracking-tight text-slate-900">3. 사인</h1>
-      <p class="text-sm font-medium text-slate-500">{{ job.signature_page }}쪽에 들어갑니다.</p>
+      <a href="{% url 'docsign:position' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">표시 위치</a>
+      <h1 class="text-3xl font-black tracking-tight text-slate-900">3. 문서 표시</h1>
+      <p class="text-sm font-medium text-slate-500">{{ job.signature_page }}쪽 · {{ job.mark_type_label }}</p>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
@@ -53,21 +57,38 @@
       <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <form method="post" id="docsignForm" class="space-y-4">
           {% csrf_token %}
+          {{ form.signature_data }}
+          {% if job.mark_type == "checkmark" %}
+          <div class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">진한 체크</h2>
+            <div class="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <div class="docsign-check-preview mx-auto flex h-44 w-44 items-center justify-center rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+                <svg viewBox="0 0 100 100" class="h-28 w-28" fill="none" aria-hidden="true">
+                  <path d="M24 56 L44 76 L80 28" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </div>
+              <p class="mt-4 text-center text-sm font-semibold text-slate-600">문서 위에 진하게 올립니다.</p>
+            </div>
+            {% if form.non_field_errors %}
+            <p class="text-sm font-semibold text-red-600">{{ form.non_field_errors|join:", " }}</p>
+            {% endif %}
+          </div>
+          {% else %}
           <div class="space-y-2">
             <h2 class="text-lg font-bold text-slate-900">내 사인</h2>
             <canvas id="signaturePad" class="border border-slate-200 shadow-sm"></canvas>
-            {{ form.signature_data }}
             {% if form.signature_data.errors %}
             <p class="text-sm font-semibold text-red-600">{{ form.signature_data.errors|join:", " }}</p>
             {% endif %}
             <p id="signatureWarning" class="hidden text-sm font-semibold text-red-600">사인을 먼저 입력해 주세요.</p>
           </div>
+          {% endif %}
           <div class="flex gap-2">
-            <button type="button" id="clearBtn" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <button type="button" id="clearBtn" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50{% if job.mark_type == "checkmark" %} hidden{% endif %}">
               지우기
             </button>
             <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700">
-              PDF 만들기
+              {% if job.mark_type == "checkmark" %}체크 넣기{% else %}PDF 만들기{% endif %}
             </button>
           </div>
         </form>
@@ -79,6 +100,7 @@
 
 {% block extra_js %}
 <script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
+{% if job.mark_type == "signature" %}
 <script>
   const canvas = document.getElementById("signaturePad");
   const clearBtn = document.getElementById("clearBtn");
@@ -152,4 +174,5 @@
     }
   });
 </script>
+{% endif %}
 {% endblock %}

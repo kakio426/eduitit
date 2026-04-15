@@ -63,9 +63,13 @@ class DocumentSignPositionForm(forms.Form):
             h_ratio = float(payload.get("h_ratio"))
         except (TypeError, ValueError) as exc:
             raise forms.ValidationError("사인 위치 값이 올바르지 않습니다.") from exc
+        mark_type = str(payload.get("mark_type") or "signature").strip().lower()
 
         if page < 1:
             raise forms.ValidationError("사인 페이지를 다시 선택해 주세요.")
+
+        if mark_type not in {"signature", "checkmark"}:
+            raise forms.ValidationError("표시 방식을 다시 선택해 주세요.")
 
         for key, value, lower, upper in (
             ("x_ratio", x_ratio, 0.0, 1.0),
@@ -82,15 +86,26 @@ class DocumentSignPositionForm(forms.Form):
             "y_ratio": y_ratio,
             "w_ratio": w_ratio,
             "h_ratio": h_ratio,
+            "mark_type": mark_type,
         }
 
 
 class DocumentSignSignatureForm(forms.Form):
-    signature_data = forms.CharField(widget=forms.HiddenInput)
+    signature_data = forms.CharField(required=False, widget=forms.HiddenInput)
 
-    def clean_signature_data(self):
-        value = self.cleaned_data.get("signature_data")
+    def __init__(self, *args, **kwargs):
+        self.mark_type = str(kwargs.pop("mark_type", "signature") or "signature").strip().lower()
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.mark_type == "checkmark":
+            cleaned_data["signature_data"] = ""
+            return cleaned_data
+
+        value = cleaned_data.get("signature_data")
         try:
-            return clean_signature_data_url(value)
+            cleaned_data["signature_data"] = clean_signature_data_url(value)
         except ValueError as exc:
-            raise forms.ValidationError(str(exc)) from exc
+            self.add_error("signature_data", str(exc))
+        return cleaned_data

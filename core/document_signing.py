@@ -12,6 +12,8 @@ from django.core.files.storage import default_storage
 
 PDF_FILE_TYPE = "pdf"
 IMAGE_FILE_TYPE = "image"
+DOCUMENT_MARK_TYPE_SIGNATURE = "signature"
+DOCUMENT_MARK_TYPE_CHECKMARK = "checkmark"
 
 
 class PdfRuntimeUnavailable(RuntimeError):
@@ -313,7 +315,29 @@ def draw_signature_image(pdf_canvas, signature_data: str, *, x: float, y: float,
     pdf_canvas.restoreState()
 
 
-def _build_signature_overlay_pdf_bytes(
+def draw_checkmark(pdf_canvas, *, x: float, y: float, width: float, height: float):
+    pdf_canvas.saveState()
+    pdf_canvas.setStrokeColorRGB(0, 0, 0)
+    pdf_canvas.setLineWidth(max(min(width, height) * 0.125, 4.0))
+    pdf_canvas.setLineCap(1)
+    pdf_canvas.setLineJoin(1)
+
+    start_x = x + (width * 0.25)
+    start_y = y + (height * 0.45)
+    mid_x = x + (width * 0.45)
+    mid_y = y + (height * 0.20)
+    end_x = x + (width * 0.80)
+    end_y = y + (height * 0.75)
+
+    path = pdf_canvas.beginPath()
+    path.moveTo(start_x, start_y)
+    path.lineTo(mid_x, mid_y)
+    path.lineTo(end_x, end_y)
+    pdf_canvas.drawPath(path, stroke=1, fill=0)
+    pdf_canvas.restoreState()
+
+
+def _build_mark_overlay_pdf_bytes(
     *,
     page_width: float,
     page_height: float,
@@ -322,12 +346,16 @@ def _build_signature_overlay_pdf_bytes(
     width: float,
     height: float,
     signature_data: str,
+    mark_type: str,
 ) -> bytes:
     from reportlab.pdfgen import canvas
 
     packet = io.BytesIO()
     pdf = canvas.Canvas(packet, pagesize=(page_width, page_height))
-    draw_signature_image(pdf, signature_data, x=x, y=y, width=width, height=height)
+    if mark_type == DOCUMENT_MARK_TYPE_CHECKMARK:
+        draw_checkmark(pdf, x=x, y=y, width=width, height=height)
+    else:
+        draw_signature_image(pdf, signature_data, x=x, y=y, width=width, height=height)
     pdf.showPage()
     pdf.save()
     packet.seek(0)
@@ -343,6 +371,7 @@ def build_signed_pdf_bytes(
     width: float,
     height: float,
     signature_data: str,
+    mark_type: str = DOCUMENT_MARK_TYPE_SIGNATURE,
     pdf_title: str = "",
 ) -> bytes:
     ensure_pdf_runtime()
@@ -353,7 +382,12 @@ def build_signed_pdf_bytes(
         raise ValueError("서명 페이지가 문서 범위를 벗어났습니다.")
 
     target_page = reader.pages[page_number - 1]
-    overlay_bytes = _build_signature_overlay_pdf_bytes(
+    if mark_type not in {DOCUMENT_MARK_TYPE_SIGNATURE, DOCUMENT_MARK_TYPE_CHECKMARK}:
+        raise ValueError("지원하지 않는 표시 방식입니다.")
+    if mark_type == DOCUMENT_MARK_TYPE_SIGNATURE and not (signature_data or "").strip():
+        raise ValueError("서명 이미지가 없습니다.")
+
+    overlay_bytes = _build_mark_overlay_pdf_bytes(
         page_width=float(target_page.mediabox.width),
         page_height=float(target_page.mediabox.height),
         x=x,
@@ -361,6 +395,7 @@ def build_signed_pdf_bytes(
         width=width,
         height=height,
         signature_data=signature_data,
+        mark_type=mark_type,
     )
     overlay_reader = PdfReader(io.BytesIO(overlay_bytes))
 

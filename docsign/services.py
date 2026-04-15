@@ -51,6 +51,7 @@ def generate_signed_pdf(job, signature_data: str):
         width=job.width,
         height=job.height,
         signature_data=signature_data,
+        mark_type=job.mark_type,
         pdf_title=job.title,
     )
 

@@ -208,6 +208,7 @@ def job_position(request, job_id: int):
                 form.add_error(None, "문서 페이지 수를 다시 확인해 주세요.")
             else:
                 page_width, page_height = page_sizes[page_number - 1]
+                job.mark_type = payload["mark_type"]
                 job.signature_page = page_number
                 job.x = page_width * payload["x_ratio"]
                 job.y = page_height * payload["y_ratio"]
@@ -227,6 +228,7 @@ def job_position(request, job_id: int):
                         "signed_pdf",
                         "signed_at",
                         "updated_at",
+                        "mark_type",
                     ]
                 )
                 return redirect("docsign:sign", job_id=job.id)
@@ -242,6 +244,7 @@ def job_position(request, job_id: int):
             "y_ratio": round((job.y or 0.0) / page_height, 6),
             "w_ratio": round((job.width or 0.0) / page_width, 6),
             "h_ratio": round((job.height or 0.0) / page_height, 6),
+            "mark_type": job.mark_type,
         }
 
     context = {
@@ -260,17 +263,17 @@ def job_position(request, job_id: int):
 def job_sign(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
     if not job.is_position_configured:
-        messages.error(request, "사인 위치부터 잡아 주세요.")
+        messages.error(request, "표시 위치부터 잡아 주세요.")
         return redirect("docsign:position", job_id=job.id)
 
     if request.method == "POST":
-        form = DocumentSignSignatureForm(request.POST)
+        form = DocumentSignSignatureForm(request.POST, mark_type=job.mark_type)
         if form.is_valid():
             generate_signed_pdf(job, form.cleaned_data["signature_data"])
-            messages.success(request, "사인된 PDF를 만들었습니다.")
+            messages.success(request, "표시된 PDF를 만들었습니다.")
             return redirect(f'{reverse("docsign:detail", kwargs={"job_id": job.id})}?download=1')
     else:
-        form = DocumentSignSignatureForm()
+        form = DocumentSignSignatureForm(mark_type=job.mark_type)
 
     context = {
         "job": job,
