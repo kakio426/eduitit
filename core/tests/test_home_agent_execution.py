@@ -176,3 +176,27 @@ class HomeAgentExecutionTests(TestCase):
         self.assertEqual(LegalChatMessage.objects.count(), 2)
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.USER).count(), 1)
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.ASSISTANT).count(), 1)
+
+    def test_home_agent_execute_returns_teacher_law_field_errors(self):
+        response = self.client.post(
+            reverse("home_agent_execute"),
+            data=json.dumps(
+                {
+                    "mode_key": "teacher-law",
+                    "data": {
+                        "question": "학부모가 수업 중에 녹음을 요구합니다. 어디까지 응해야하나요",
+                        "incident_type": "recording_defamation",
+                        "legal_goal": "",
+                        "scene": "",
+                        "counterpart": "",
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "필수 항목을 먼저 선택해 주세요.")
+        self.assertEqual(response.json()["field_errors"]["legal_goal"], "지금 궁금한 것을 먼저 골라 주세요.")
+        self.assertEqual(response.json()["field_errors"]["counterpart"], "상대를 하나 골라 주세요.")

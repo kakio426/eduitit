@@ -211,6 +211,28 @@
         return normalized ? normalized : '';
     }
 
+    function appendQueryParams(href, params) {
+        var baseHref = trimLine(href);
+        if (!baseHref) {
+            return '';
+        }
+        try {
+            var url = new URL(baseHref, window.location.origin);
+            Object.keys(params || {}).forEach(function (key) {
+                var value = trimLine(params[key]);
+                if (value) {
+                    url.searchParams.set(key, value);
+                }
+            });
+            if (url.origin === window.location.origin) {
+                return url.pathname + url.search + url.hash;
+            }
+            return url.toString();
+        } catch (error) {
+            return baseHref;
+        }
+    }
+
     window.homeV6Shell = function () {
         var frontendConfig = getHomeFrontendConfig();
         var workspaceConfig = parseJsonScript('home-v7-agent-workspace', {}) || {};
@@ -241,6 +263,7 @@
             },
             agentExecution: null,
             agentExecutionDraft: {},
+            agentExecutionFieldErrors: {},
             isAgentLoading: false,
             isAgentExecuting: false,
             favoriteIds: normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', [])),
@@ -465,6 +488,30 @@
                 };
             },
 
+            buildModeContinueHref: function (mode) {
+                var targetMode = mode || this.activeMode || {};
+                var href = trimLine(targetMode.after_action_href || targetMode.service_href || '');
+                if (!href) {
+                    return '';
+                }
+                if (targetMode.key === 'notice') {
+                    return appendQueryParams(href, {
+                        keywords: this.workspaceInput,
+                    });
+                }
+                if (targetMode.key === 'schedule') {
+                    return appendQueryParams(href, {
+                        date: String(this.agentExecutionDraft.start_time || '').slice(0, 10),
+                    });
+                }
+                if (targetMode.key === 'reservation') {
+                    return appendQueryParams(href, {
+                        date: this.agentExecutionDraft.date,
+                    });
+                }
+                return href;
+            },
+
             buildPreviewSkeleton: function (overrides) {
                 var mode = this.activeMode || {};
                 return Object.assign({
@@ -473,7 +520,7 @@
                     summary: '',
                     sections: [],
                     note: '',
-                    confirmHref: mode.after_action_href || mode.service_href || '',
+                    confirmHref: this.buildModeContinueHref(mode),
                     confirmLabel: mode.after_action_label || mode.confirm_label || '',
                 }, overrides || {});
             },
@@ -510,6 +557,8 @@
                     summary: trimLine(payload.summary || base.summary),
                     sections: normalizedSections.length ? normalizedSections : base.sections,
                     note: note,
+                    confirmHref: trimLine(payload.confirmHref || base.confirmHref),
+                    confirmLabel: trimLine(payload.confirmLabel || base.confirmLabel),
                 });
             },
 
@@ -548,6 +597,61 @@
             clearExecution: function () {
                 this.agentExecution = null;
                 this.agentExecutionDraft = {};
+                this.agentExecutionFieldErrors = {};
+            },
+
+            normalizeFieldErrors: function (fieldErrors) {
+                var source = fieldErrors && typeof fieldErrors === 'object' ? fieldErrors : {};
+                var normalized = {};
+                Object.keys(source).forEach(function (fieldName) {
+                    var message = trimLine(source[fieldName]);
+                    if (message) {
+                        normalized[String(fieldName)] = message;
+                    }
+                });
+                return normalized;
+            },
+
+            setExecutionFieldErrors: function (fieldErrors) {
+                this.agentExecutionFieldErrors = this.normalizeFieldErrors(fieldErrors);
+            },
+
+            executionFieldError: function (fieldName) {
+                return trimLine(this.agentExecutionFieldErrors && this.agentExecutionFieldErrors[fieldName]);
+            },
+
+            clearExecutionFieldError: function (fieldName) {
+                if (!this.agentExecutionFieldErrors || !this.agentExecutionFieldErrors[fieldName]) {
+                    return;
+                }
+                var nextErrors = Object.assign({}, this.agentExecutionFieldErrors);
+                delete nextErrors[fieldName];
+                this.agentExecutionFieldErrors = nextErrors;
+            },
+
+            firstExecutionErrorField: function () {
+                var fieldOrder = ['question', 'incident_type', 'legal_goal', 'scene', 'counterpart'];
+                for (var index = 0; index < fieldOrder.length; index += 1) {
+                    if (this.executionFieldError(fieldOrder[index])) {
+                        return fieldOrder[index];
+                    }
+                }
+                return '';
+            },
+
+            focusAgentExecutionField: function (fieldName) {
+                var target = fieldName
+                    ? document.querySelector('[data-home-v6-agent-field="' + String(fieldName) + '"]')
+                    : null;
+                if (!target) {
+                    return;
+                }
+                if (typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                if (typeof target.focus === 'function') {
+                    target.focus();
+                }
             },
 
             normalizeExecution: function (execution) {
@@ -643,6 +747,7 @@
                 }
                 this.agentExecution = normalized;
                 this.agentExecutionDraft = this.clonePayload(normalized.draft);
+                this.agentExecutionFieldErrors = {};
                 if (normalized.kind === 'schedule' && normalized.choices.length) {
                     this.selectScheduleExecutionChoice(
                         this.agentExecutionDraft.choice_id || normalized.choices[0].id,
@@ -744,6 +849,29 @@
                 return Boolean(incident && incident.requires === 'counterpart');
             },
 
+            validateExecutionDraft: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'teacher-law') {
+                    return {};
+                }
+                var errors = {};
+                if (!trimLine(this.agentExecutionDraft.question || '')) {
+                    errors.question = '질문을 입력해 주세요.';
+                }
+                if (!trimLine(this.agentExecutionDraft.incident_type || '')) {
+                    errors.incident_type = '사건 유형을 먼저 골라 주세요.';
+                }
+                if (!trimLine(this.agentExecutionDraft.legal_goal || '')) {
+                    errors.legal_goal = '궁금한 것을 먼저 골라 주세요.';
+                }
+                if (this.teacherLawNeedsScene() && !trimLine(this.agentExecutionDraft.scene || '')) {
+                    errors.scene = '장면을 하나 골라 주세요.';
+                }
+                if (this.teacherLawNeedsCounterpart() && !trimLine(this.agentExecutionDraft.counterpart || '')) {
+                    errors.counterpart = '상대를 하나 골라 주세요.';
+                }
+                return errors;
+            },
+
             normalizeExecutionDraft: function () {
                 if (!this.agentExecution) {
                     return;
@@ -807,6 +935,14 @@
                     return;
                 }
                 this.normalizeExecutionDraft();
+                var localFieldErrors = this.validateExecutionDraft();
+                if (Object.keys(localFieldErrors).length) {
+                    this.setExecutionFieldErrors(localFieldErrors);
+                    showFeedback(localFieldErrors[this.firstExecutionErrorField()] || '입력을 먼저 확인해 주세요.', 'error');
+                    this.focusAgentExecutionField(this.firstExecutionErrorField());
+                    return;
+                }
+                this.agentExecutionFieldErrors = {};
                 var runtime = workspaceConfig.agent_runtime || {};
                 var csrfToken = getCsrfToken();
                 if (!runtime.execute_url || !csrfToken) {
@@ -834,6 +970,8 @@
                         payload = {};
                     }
                     if (!response.ok || payload.status !== 'ok') {
+                        this.setExecutionFieldErrors(payload.field_errors);
+                        this.focusAgentExecutionField(this.firstExecutionErrorField());
                         throw new Error(payload.error || '저장하지 못했습니다.');
                     }
                     this.agentPreviewMeta = {

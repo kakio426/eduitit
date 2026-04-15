@@ -222,48 +222,83 @@
                     <div class="home-v6-agent-form-grid">
                         <label class="home-v6-agent-field">
                             <span class="home-v6-agent-field-label">질문</span>
-                            <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.question"></textarea>
+                            <textarea
+                                class="home-v6-agent-form-textarea"
+                                :class="{ 'home-v6-agent-form-input--error': executionFieldError('question') }"
+                                data-home-v6-agent-field="question"
+                                x-model="agentExecutionDraft.question"
+                                @input="clearExecutionFieldError('question')"
+                            ></textarea>
+                            <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('question')" x-text="executionFieldError('question')"></span>
                         </label>
 
                         <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
                             <label class="home-v6-agent-field">
                                 <span class="home-v6-agent-field-label">사건 유형</span>
-                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.incident_type" @change="normalizeExecutionDraft()">
+                                <select
+                                    class="home-v6-agent-form-input"
+                                    :class="{ 'home-v6-agent-form-input--error': executionFieldError('incident_type') }"
+                                    data-home-v6-agent-field="incident_type"
+                                    x-model="agentExecutionDraft.incident_type"
+                                    @change="normalizeExecutionDraft(); clearExecutionFieldError('incident_type'); clearExecutionFieldError('scene'); clearExecutionFieldError('counterpart')"
+                                >
                                     <option value="">선택</option>
                                     <template x-for="item in teacherLawIncidentOptions()" :key="item.value">
                                         <option :value="item.value" x-text="item.label"></option>
                                     </template>
                                 </select>
+                                <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('incident_type')" x-text="executionFieldError('incident_type')"></span>
                             </label>
                             <label class="home-v6-agent-field">
                                 <span class="home-v6-agent-field-label">궁금한 것</span>
-                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.legal_goal">
+                                <select
+                                    class="home-v6-agent-form-input"
+                                    :class="{ 'home-v6-agent-form-input--error': executionFieldError('legal_goal') }"
+                                    data-home-v6-agent-field="legal_goal"
+                                    x-model="agentExecutionDraft.legal_goal"
+                                    @change="clearExecutionFieldError('legal_goal')"
+                                >
                                     <option value="">선택</option>
                                     <template x-for="item in teacherLawGoalOptions()" :key="item.value">
                                         <option :value="item.value" x-text="item.label"></option>
                                     </template>
                                 </select>
+                                <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('legal_goal')" x-text="executionFieldError('legal_goal')"></span>
                             </label>
                         </div>
 
                         <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsScene()">
                             <span class="home-v6-agent-field-label">장면</span>
-                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.scene">
+                            <select
+                                class="home-v6-agent-form-input"
+                                :class="{ 'home-v6-agent-form-input--error': executionFieldError('scene') }"
+                                data-home-v6-agent-field="scene"
+                                x-model="agentExecutionDraft.scene"
+                                @change="clearExecutionFieldError('scene')"
+                            >
                                 <option value="">선택</option>
                                 <template x-for="item in teacherLawSceneOptions()" :key="item.value">
                                     <option :value="item.value" x-text="item.label"></option>
                                 </template>
                             </select>
+                            <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('scene')" x-text="executionFieldError('scene')"></span>
                         </label>
 
                         <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsCounterpart()">
                             <span class="home-v6-agent-field-label">상대</span>
-                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.counterpart">
+                            <select
+                                class="home-v6-agent-form-input"
+                                :class="{ 'home-v6-agent-form-input--error': executionFieldError('counterpart') }"
+                                data-home-v6-agent-field="counterpart"
+                                x-model="agentExecutionDraft.counterpart"
+                                @change="clearExecutionFieldError('counterpart')"
+                            >
                                 <option value="">선택</option>
                                 <template x-for="item in teacherLawCounterpartOptions()" :key="item.value">
                                     <option :value="item.value" x-text="item.label"></option>
                                 </template>
                             </select>
+                            <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('counterpart')" x-text="executionFieldError('counterpart')"></span>
                         </label>
                     </div>
 
@@ -274,6 +309,14 @@
                         @click="executeAgentService()"
                         x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
                     ></button>
+                </div>
+
+                <div class="home-v6-agent-preview-foot" x-cloak x-show="!agentExecution && agentPreview.confirmHref && agentPreview.confirmLabel">
+                    <a
+                        class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-open-link"
+                        :href="agentPreview.confirmHref"
+                        x-text="agentPreview.confirmLabel"
+                    ></a>
                 </div>
             </section>
         </div>

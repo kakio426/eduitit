@@ -1318,9 +1318,9 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('TTS', content)
         self.assertNotIn('home-v6-agent-eyebrow', content)
         self.assertNotIn('home-v6-agent-toolbar-meta', content)
-        self.assertNotIn('home-v6-agent-open-link', content)
+        self.assertIn('home-v6-agent-open-link', content)
         self.assertNotIn('home-v6-agent-preview-head', content)
-        self.assertNotIn('home-v6-agent-preview-foot', content)
+        self.assertIn('home-v6-agent-preview-foot', content)
         notice_mode = next(
             mode for mode in response.context['home_v7_agent_workspace']['modes']
             if mode['key'] == 'notice'

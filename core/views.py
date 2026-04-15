@@ -7264,7 +7264,13 @@ def home_agent_execute(request):
             data=action_data,
         )
     except HomeAgentExecutionError as exc:
-        return JsonResponse({'error': str(exc)}, status=getattr(exc, 'status_code', 400))
+        return JsonResponse(
+            {
+                'error': str(exc),
+                'field_errors': getattr(exc, 'field_errors', {}) or {},
+            },
+            status=getattr(exc, 'status_code', 400),
+        )
 
     return JsonResponse({
         'status': 'ok',

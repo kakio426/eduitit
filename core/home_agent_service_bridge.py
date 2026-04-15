@@ -18,9 +18,10 @@ class HomeAgentServiceUnavailable(Exception):
 class HomeAgentExecutionError(Exception):
     """Raised when a native service cannot complete the requested write action."""
 
-    def __init__(self, message: str, *, status_code: int = 400):
+    def __init__(self, message: str, *, status_code: int = 400, field_errors: dict | None = None):
         super().__init__(message)
         self.status_code = status_code
+        self.field_errors = field_errors or {}
 
 
 _PERIOD_RE = re.compile(r"(\d{1,2})\s*교시")
@@ -547,6 +548,7 @@ def _execute_teacher_law_action(*, request, mode_spec: dict, data: dict) -> dict
             or _extract_first_error_text(response_payload.get("field_errors"))
             or "법률 대화에 남기지 못했습니다.",
             status_code=response.status_code,
+            field_errors=response_payload.get("field_errors") if isinstance(response_payload.get("field_errors"), dict) else {},
         )
 
     assistant_message = response_payload.get("assistant_message") if isinstance(response_payload.get("assistant_message"), dict) else {}

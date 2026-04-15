@@ -981,6 +981,20 @@ outline: none;
         0 12px 24px rgba(15, 23, 42, 0.06);
 }
 
+.home-v6-page .home-v6-agent-form-input--error {
+border-color: rgba(220, 38, 38, 0.32);
+    box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.12);
+}
+
+.home-v6-page .home-v6-agent-field-error {
+display: block;
+    margin-top: 0.28rem;
+    color: #b91c1c;
+    font-size: 0.83rem;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
 .home-v6-page .home-v6-agent-form-textarea {
 min-height: 5.8rem;
     resize: vertical;
