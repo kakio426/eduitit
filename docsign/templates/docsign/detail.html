@@ -58,15 +58,15 @@
         <p class="text-sm font-semibold text-slate-500">표시 위치</p>
         <p class="mt-2 text-sm font-bold text-slate-900">
           {% if job.is_position_configured %}
-          {{ job.signature_page }}쪽
+          {{ job.page_summary }}
           {% else %}
           아직 없음
           {% endif %}
         </p>
       </article>
       <article class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <p class="text-sm font-semibold text-slate-500">표시 방식</p>
-        <p class="mt-2 text-sm font-bold text-slate-900">{{ job.mark_type_label }}</p>
+        <p class="text-sm font-semibold text-slate-500">표시 개수</p>
+        <p class="mt-2 text-sm font-bold text-slate-900">{{ job.mark_summary }}</p>
       </article>
     </section>
 

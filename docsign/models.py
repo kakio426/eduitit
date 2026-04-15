@@ -60,6 +60,7 @@ class DocumentSignJob(models.Model):
     y = models.FloatField(blank=True, null=True)
     width = models.FloatField(blank=True, null=True)
     height = models.FloatField(blank=True, null=True)
+    marks = models.JSONField(blank=True, default=list)
     signed_pdf = models.FileField(
         upload_to=docsign_signed_upload_to,
         storage=get_raw_storage,
@@ -78,11 +79,58 @@ class DocumentSignJob(models.Model):
         return self.title
 
     @property
-    def is_position_configured(self) -> bool:
-        return all(
+    def configured_marks(self) -> list[dict]:
+        marks = []
+        raw_marks = self.marks if isinstance(self.marks, list) else []
+        for index, item in enumerate(raw_marks):
+            if not isinstance(item, dict):
+                continue
+            try:
+                page = int(item.get("page", 0))
+                x = float(item.get("x"))
+                y = float(item.get("y"))
+                width = float(item.get("width"))
+                height = float(item.get("height"))
+            except (TypeError, ValueError):
+                continue
+            mark_type = str(item.get("mark_type") or self.MARK_TYPE_SIGNATURE).strip().lower()
+            if page < 1 or width <= 0 or height <= 0:
+                continue
+            if mark_type not in {self.MARK_TYPE_SIGNATURE, self.MARK_TYPE_CHECKMARK}:
+                mark_type = self.MARK_TYPE_SIGNATURE
+            marks.append(
+                {
+                    "page": page,
+                    "x": x,
+                    "y": y,
+                    "width": width,
+                    "height": height,
+                    "mark_type": mark_type,
+                    "index": index,
+                }
+            )
+        if marks:
+            return marks
+        if all(
             value is not None
             for value in (self.signature_page, self.x, self.y, self.width, self.height)
-        )
+        ):
+            return [
+                {
+                    "page": int(self.signature_page),
+                    "x": float(self.x),
+                    "y": float(self.y),
+                    "width": float(self.width),
+                    "height": float(self.height),
+                    "mark_type": self.mark_type or self.MARK_TYPE_SIGNATURE,
+                    "index": 0,
+                }
+            ]
+        return []
+
+    @property
+    def is_position_configured(self) -> bool:
+        return bool(self.configured_marks)
 
     @property
     def is_signed(self) -> bool:
@@ -97,5 +145,49 @@ class DocumentSignJob(models.Model):
         return "position"
 
     @property
+    def mark_count(self) -> int:
+        return len(self.configured_marks)
+
+    @property
+    def signature_mark_count(self) -> int:
+        return sum(1 for mark in self.configured_marks if mark["mark_type"] == self.MARK_TYPE_SIGNATURE)
+
+    @property
+    def checkmark_mark_count(self) -> int:
+        return sum(1 for mark in self.configured_marks if mark["mark_type"] == self.MARK_TYPE_CHECKMARK)
+
+    @property
+    def requires_signature_input(self) -> bool:
+        return self.signature_mark_count > 0
+
+    @property
+    def page_summary(self) -> str:
+        pages = sorted({mark["page"] for mark in self.configured_marks})
+        if not pages:
+            return "위치 없음"
+        if len(pages) == 1:
+            return f"{pages[0]}쪽"
+        return ", ".join(str(page) for page in pages) + "쪽"
+
+    @property
+    def mark_summary(self) -> str:
+        if not self.configured_marks:
+            return "표시 없음"
+        parts = []
+        if self.signature_mark_count:
+            parts.append(
+                "사인"
+                if self.signature_mark_count == 1
+                else f"사인 {self.signature_mark_count}개"
+            )
+        if self.checkmark_mark_count:
+            parts.append(
+                "체크"
+                if self.checkmark_mark_count == 1
+                else f"체크 {self.checkmark_mark_count}개"
+            )
+        return " · ".join(parts)
+
+    @property
     def mark_type_label(self) -> str:
-        return dict(self.MARK_TYPE_CHOICES).get(self.mark_type, "사인")
+        return self.mark_summary

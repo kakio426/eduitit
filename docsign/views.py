@@ -93,6 +93,26 @@ def _page_sizes(job: DocumentSignJob):
     return get_pdf_page_sizes(_source_pdf_bytes(job))
 
 
+def _mark_payload_from_job(job: DocumentSignJob, page_sizes: list[tuple[float, float]]) -> list[dict]:
+    payload = []
+    for mark in job.configured_marks:
+        page_number = mark["page"]
+        if page_number < 1 or page_number > len(page_sizes):
+            continue
+        page_width, page_height = page_sizes[page_number - 1]
+        payload.append(
+            {
+                "page": page_number,
+                "x_ratio": round(mark["x"] / page_width, 6),
+                "y_ratio": round(mark["y"] / page_height, 6),
+                "w_ratio": round(mark["width"] / page_width, 6),
+                "h_ratio": round(mark["height"] / page_height, 6),
+                "mark_type": mark["mark_type"],
+            }
+        )
+    return payload
+
+
 @login_required
 @_docsign_runtime_guard
 def job_list(request):
@@ -202,18 +222,36 @@ def job_position(request, job_id: int):
     if request.method == "POST":
         form = DocumentSignPositionForm(request.POST)
         if form.is_valid():
-            payload = form.cleaned_data["position_json"]
-            page_number = payload["page"]
-            if page_number > len(page_sizes):
+            payload = form.cleaned_data["marks_json"]
+            invalid_page = next(
+                (item["page"] for item in payload if item["page"] > len(page_sizes)),
+                None,
+            )
+            if invalid_page is not None:
                 form.add_error(None, "문서 페이지 수를 다시 확인해 주세요.")
             else:
-                page_width, page_height = page_sizes[page_number - 1]
-                job.mark_type = payload["mark_type"]
-                job.signature_page = page_number
-                job.x = page_width * payload["x_ratio"]
-                job.y = page_height * payload["y_ratio"]
-                job.width = page_width * payload["w_ratio"]
-                job.height = page_height * payload["h_ratio"]
+                resolved_marks = []
+                for item in payload:
+                    page_number = item["page"]
+                    page_width, page_height = page_sizes[page_number - 1]
+                    resolved_marks.append(
+                        {
+                            "page": page_number,
+                            "x": page_width * item["x_ratio"],
+                            "y": page_height * item["y_ratio"],
+                            "width": page_width * item["w_ratio"],
+                            "height": page_height * item["h_ratio"],
+                            "mark_type": item["mark_type"],
+                        }
+                    )
+                primary_mark = resolved_marks[0]
+                job.marks = resolved_marks
+                job.mark_type = primary_mark["mark_type"]
+                job.signature_page = primary_mark["page"]
+                job.x = primary_mark["x"]
+                job.y = primary_mark["y"]
+                job.width = primary_mark["width"]
+                job.height = primary_mark["height"]
                 if job.signed_pdf:
                     job.signed_pdf.delete(save=False)
                     job.signed_pdf = None
@@ -225,6 +263,7 @@ def job_position(request, job_id: int):
                         "y",
                         "width",
                         "height",
+                        "marks",
                         "signed_pdf",
                         "signed_at",
                         "updated_at",
@@ -235,25 +274,16 @@ def job_position(request, job_id: int):
     else:
         form = DocumentSignPositionForm()
 
-    initial_payload = {}
-    if job.is_position_configured and job.signature_page and job.signature_page <= len(page_sizes):
-        page_width, page_height = page_sizes[job.signature_page - 1]
-        initial_payload = {
-            "page": job.signature_page,
-            "x_ratio": round((job.x or 0.0) / page_width, 6),
-            "y_ratio": round((job.y or 0.0) / page_height, 6),
-            "w_ratio": round((job.width or 0.0) / page_width, 6),
-            "h_ratio": round((job.height or 0.0) / page_height, 6),
-            "mark_type": job.mark_type,
-        }
-
     context = {
         "job": job,
         "form": form,
         "document_preview_url": reverse("docsign:source_document", kwargs={"job_id": job.id}),
         "document_file_name": job.source_file_name_snapshot or basename(job.source_file.name),
         "page_count": len(page_sizes),
-        "initial_position_json": json.dumps(initial_payload, ensure_ascii=False),
+        "initial_marks_json": json.dumps(
+            _mark_payload_from_job(job, page_sizes),
+            ensure_ascii=False,
+        ),
     }
     return render(request, "docsign/position.html", context)
 
@@ -267,13 +297,16 @@ def job_sign(request, job_id: int):
         return redirect("docsign:position", job_id=job.id)
 
     if request.method == "POST":
-        form = DocumentSignSignatureForm(request.POST, mark_type=job.mark_type)
+        form = DocumentSignSignatureForm(
+            request.POST,
+            requires_signature=job.requires_signature_input,
+        )
         if form.is_valid():
             generate_signed_pdf(job, form.cleaned_data["signature_data"])
             messages.success(request, "표시된 PDF를 만들었습니다.")
             return redirect(f'{reverse("docsign:detail", kwargs={"job_id": job.id})}?download=1')
     else:
-        form = DocumentSignSignatureForm(mark_type=job.mark_type)
+        form = DocumentSignSignatureForm(requires_signature=job.requires_signature_input)
 
     context = {
         "job": job,

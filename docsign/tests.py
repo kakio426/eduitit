@@ -34,6 +34,22 @@ def build_test_pdf_bytes(label: str = "docsign-source", *, page_size=(612, 792))
     return packet.getvalue()
 
 
+def build_multi_page_pdf_bytes(labels, *, page_size=(612, 792)) -> bytes:
+    try:
+        from reportlab.pdfgen import canvas
+    except ModuleNotFoundError as exc:
+        raise unittest.SkipTest("reportlab unavailable") from exc
+
+    packet = io.BytesIO()
+    pdf = canvas.Canvas(packet, pagesize=page_size)
+    for label in labels:
+        pdf.drawString(72, page_size[1] - 80, label)
+        pdf.showPage()
+    pdf.save()
+    packet.seek(0)
+    return packet.getvalue()
+
+
 def build_signature_data_url() -> str:
     try:
         from PIL import Image, ImageDraw
@@ -153,7 +169,7 @@ class DocumentSignFlowTests(TestCase):
         position_response = self.client.post(
             reverse("docsign:position", kwargs={"job_id": job.id}),
             {
-                "position_json": '{"page":1,"x_ratio":0.5,"y_ratio":0.1,"w_ratio":0.3,"h_ratio":0.12}',
+                "marks_json": '[{"page":1,"x_ratio":0.5,"y_ratio":0.1,"w_ratio":0.3,"h_ratio":0.12,"mark_type":"signature"}]',
             },
         )
         self.assertRedirects(position_response, reverse("docsign:sign", kwargs={"job_id": job.id}))
@@ -174,15 +190,16 @@ class DocumentSignFlowTests(TestCase):
             raw_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
         self.assertRegex(raw_stream, r"204(?:\.0+)? 44(?:\.0+)? 112(?:\.0+)? 40(?:\.0+)? re")
         self.assertRegex(raw_stream, r"80(?:\.0+)? 0 0 40(?:\.0+)? 220(?:\.0+)? 44(?:\.0+)? cm")
+        self.assertEqual(len(job.configured_marks), 1)
 
-    def test_position_step_can_store_checkmark_mode(self):
+    def test_position_step_can_store_multiple_marks(self):
         self.client.force_login(self.teacher)
         job = DocumentSignJob.objects.create(
             owner=self.teacher,
-            title="체크 위치",
+            title="복수 위치",
             source_file=SimpleUploadedFile(
                 "source.pdf",
-                build_test_pdf_bytes(page_size=(400, 400)),
+                build_multi_page_pdf_bytes(["first", "second"], page_size=(400, 400)),
                 content_type="application/pdf",
             ),
             source_file_name_snapshot="source.pdf",
@@ -194,7 +211,7 @@ class DocumentSignFlowTests(TestCase):
         response = self.client.post(
             reverse("docsign:position", kwargs={"job_id": job.id}),
             {
-                "position_json": '{"page":1,"x_ratio":0.4,"y_ratio":0.2,"w_ratio":0.2,"h_ratio":0.2,"mark_type":"checkmark"}',
+                "marks_json": '[{"page":1,"x_ratio":0.4,"y_ratio":0.2,"w_ratio":0.2,"h_ratio":0.2,"mark_type":"checkmark"},{"page":2,"x_ratio":0.1,"y_ratio":0.12,"w_ratio":0.3,"h_ratio":0.1,"mark_type":"signature"}]',
             },
         )
 
@@ -206,8 +223,32 @@ class DocumentSignFlowTests(TestCase):
         self.assertEqual(job.y, 80)
         self.assertEqual(job.width, 80)
         self.assertEqual(job.height, 80)
+        self.assertEqual(
+            job.marks,
+            [
+                {
+                    "page": 1,
+                    "x": 160.0,
+                    "y": 80.0,
+                    "width": 80.0,
+                    "height": 80.0,
+                    "mark_type": "checkmark",
+                },
+                {
+                    "page": 2,
+                    "x": 40.0,
+                    "y": 48.0,
+                    "width": 120.0,
+                    "height": 40.0,
+                    "mark_type": "signature",
+                },
+            ],
+        )
+        self.assertEqual(job.mark_count, 2)
+        self.assertEqual(job.page_summary, "1, 2쪽")
+        self.assertEqual(job.mark_summary, "사인 · 체크")
 
-    def test_checkmark_sign_generates_dark_overlay_at_expected_position(self):
+    def test_multiple_marks_across_pages_generate_expected_overlays(self):
         try:
             from pypdf import PdfReader
         except ModuleNotFoundError:
@@ -216,27 +257,45 @@ class DocumentSignFlowTests(TestCase):
         self.client.force_login(self.teacher)
         job = DocumentSignJob.objects.create(
             owner=self.teacher,
-            title="체크 테스트",
+            title="복수 표시 테스트",
             source_file=SimpleUploadedFile(
                 "source.pdf",
-                build_test_pdf_bytes(page_size=(400, 400)),
+                build_multi_page_pdf_bytes(["first", "second"], page_size=(400, 400)),
                 content_type="application/pdf",
             ),
             source_file_name_snapshot="source.pdf",
             source_file_size_snapshot=0,
             source_file_sha256_snapshot="abc",
             file_type="pdf",
-            mark_type=DocumentSignJob.MARK_TYPE_CHECKMARK,
+            mark_type=DocumentSignJob.MARK_TYPE_SIGNATURE,
             signature_page=1,
-            x=160,
-            y=80,
-            width=80,
-            height=80,
+            x=160.0,
+            y=80.0,
+            width=80.0,
+            height=80.0,
+            marks=[
+                {
+                    "page": 1,
+                    "x": 160.0,
+                    "y": 80.0,
+                    "width": 80.0,
+                    "height": 80.0,
+                    "mark_type": "checkmark",
+                },
+                {
+                    "page": 2,
+                    "x": 40.0,
+                    "y": 48.0,
+                    "width": 120.0,
+                    "height": 40.0,
+                    "mark_type": "signature",
+                },
+            ],
         )
 
         response = self.client.post(
             reverse("docsign:sign", kwargs={"job_id": job.id}),
-            {"signature_data": ""},
+            {"signature_data": build_signature_data_url()},
         )
 
         self.assertRedirects(response, f'{reverse("docsign:detail", kwargs={"job_id": job.id})}?download=1')
@@ -245,14 +304,18 @@ class DocumentSignFlowTests(TestCase):
 
         with job.signed_pdf.open("rb") as handle:
             reader = PdfReader(handle)
-            raw_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
+            self.assertEqual(len(reader.pages), 2)
+            first_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
+            second_stream = reader.pages[1].get_contents().get_data().decode("latin-1", errors="ignore")
 
-        self.assertRegex(raw_stream, r"0 0 0 RG")
-        self.assertRegex(raw_stream, r"10(?:\.0+)? w")
+        self.assertRegex(first_stream, r"0 0 0 RG")
+        self.assertRegex(first_stream, r"10(?:\.0+)? w")
         self.assertRegex(
-            raw_stream,
+            first_stream,
             r"180(?:\.0+)? 116(?:\.0+)? m\s+196(?:\.0+)? 96(?:\.0+)? l\s+224(?:\.0+)? 140(?:\.0+)? l",
         )
+        self.assertRegex(second_stream, r"44(?:\.0+)? 52(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
+        self.assertRegex(second_stream, r"64(?:\.0+)? 0 0 32(?:\.0+)? 68(?:\.0+)? 52(?:\.0+)? cm")
 
     def test_checkmark_sign_page_uses_preview_instead_of_canvas(self):
         self.client.force_login(self.teacher)
@@ -274,6 +337,16 @@ class DocumentSignFlowTests(TestCase):
             y=80,
             width=80,
             height=80,
+            marks=[
+                {
+                    "page": 1,
+                    "x": 160.0,
+                    "y": 80.0,
+                    "width": 80.0,
+                    "height": 80.0,
+                    "mark_type": "checkmark",
+                }
+            ],
         )
 
         response = self.client.get(reverse("docsign:sign", kwargs={"job_id": job.id}))
@@ -282,6 +355,53 @@ class DocumentSignFlowTests(TestCase):
         self.assertContains(response, "진한 체크")
         self.assertContains(response, "문서 위에 진하게 올립니다.")
         self.assertNotContains(response, 'id="signaturePad"', html=False)
+
+    def test_mixed_sign_page_keeps_signature_canvas(self):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="혼합 미리보기",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                build_test_pdf_bytes(page_size=(400, 400)),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="source.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+            mark_type=DocumentSignJob.MARK_TYPE_SIGNATURE,
+            signature_page=1,
+            x=40,
+            y=48,
+            width=120,
+            height=40,
+            marks=[
+                {
+                    "page": 1,
+                    "x": 160.0,
+                    "y": 80.0,
+                    "width": 80.0,
+                    "height": 80.0,
+                    "mark_type": "checkmark",
+                },
+                {
+                    "page": 1,
+                    "x": 40.0,
+                    "y": 48.0,
+                    "width": 120.0,
+                    "height": 40.0,
+                    "mark_type": "signature",
+                },
+            ],
+        )
+
+        response = self.client.get(reverse("docsign:sign", kwargs={"job_id": job.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "사인 한 번")
+        self.assertContains(response, "사인 1개 · 체크 1개")
+        self.assertContains(response, 'id="signaturePad"', html=False)
 
     def test_only_owner_can_access_job(self):
         self.client.force_login(self.teacher)

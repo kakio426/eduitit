@@ -34,8 +34,9 @@ def build_signed_storage_name(job) -> str:
 
 
 def generate_signed_pdf(job, signature_data: str):
-    if not job.is_position_configured:
-        raise ValueError("서명 위치가 아직 없습니다.")
+    marks = job.configured_marks
+    if not marks:
+        raise ValueError("표시 위치가 아직 없습니다.")
 
     source_pdf_bytes = get_pdf_bytes_from_file_field(
         job.source_file,
@@ -45,13 +46,8 @@ def generate_signed_pdf(job, signature_data: str):
     source_pdf_bytes = normalize_pdf_bytes(source_pdf_bytes)
     signed_pdf_bytes = build_signed_pdf_bytes(
         source_pdf_bytes,
-        page_number=job.signature_page,
-        x=job.x,
-        y=job.y,
-        width=job.width,
-        height=job.height,
+        marks=marks,
         signature_data=signature_data,
-        mark_type=job.mark_type,
         pdf_title=job.title,
     )
 

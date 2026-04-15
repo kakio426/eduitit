@@ -30,11 +30,16 @@
 
   .docsign-box.active {
     border-style: solid;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
   }
 
   .docsign-box.docsign-box--check {
     border-color: #020617;
     background: rgba(2, 6, 23, 0.08);
+  }
+
+  .docsign-box.docsign-box--check.active {
+    box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.16);
   }
 
   .docsign-box-label {
@@ -81,6 +86,12 @@
     height: 100%;
     color: #020617;
   }
+
+  .docsign-chip.active {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: white;
+  }
 </style>
 {% endblock %}
 
@@ -98,6 +109,11 @@
       {{ form.non_field_errors }}
     </div>
     {% endif %}
+    {% if form.marks_json.errors %}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+      {{ form.marks_json.errors|join:", " }}
+    </div>
+    {% endif %}
 
     <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
       <div class="flex flex-wrap items-center gap-2">
@@ -108,14 +124,14 @@
           <span>/ {{ page_count }}</span>
         </div>
         <button type="button" id="nextPageBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">다음</button>
-        <button type="button" id="resetBoxBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">기본 위치</button>
-        <div class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
-          <span>표시</span>
-          <button type="button" id="markTypeSignatureBtn" class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">사인</button>
-          <button type="button" id="markTypeCheckBtn" class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">체크</button>
-        </div>
-        <p id="positionStatus" class="ml-auto text-xs font-semibold text-slate-500">박스를 옮기고 크기를 맞춰 주세요.</p>
+        <button type="button" id="addSignatureBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">사인 추가</button>
+        <button type="button" id="addCheckBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">체크 추가</button>
+        <button type="button" id="resetBoxBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">크기 초기화</button>
+        <button type="button" id="deleteBoxBtn" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">선택 삭제</button>
+        <p id="positionStatus" class="ml-auto text-xs font-semibold text-slate-500">표시를 놓고 맞춰 주세요.</p>
       </div>
+
+      <div id="markList" class="mt-3 flex flex-wrap gap-2"></div>
 
       <div class="mt-4 overflow-auto rounded-3xl bg-slate-50 p-3">
         <div id="docsign-stage">
@@ -126,7 +142,7 @@
 
     <form method="post" class="flex flex-wrap gap-3">
       {% csrf_token %}
-      {{ form.position_json }}
+      {{ form.marks_json }}
       <a href="{% url 'docsign:create' %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
         다시 올리기
       </a>
@@ -143,17 +159,19 @@
   const pdfModuleUrl = "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}";
   const pdfWorkerUrl = "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}";
   const documentUrl = "{{ document_preview_url|escapejs }}";
-  const initialPayload = {{ initial_position_json|safe }};
+  const initialMarks = {{ initial_marks_json|safe }};
   const stage = document.getElementById("docsign-stage");
   const canvas = document.getElementById("docsign-pdf-canvas");
   const context = canvas.getContext("2d");
-  const hidden = document.getElementById("id_position_json");
+  const hidden = document.getElementById("id_marks_json");
   const pageInput = document.getElementById("pageInput");
   const prevPageBtn = document.getElementById("prevPageBtn");
   const nextPageBtn = document.getElementById("nextPageBtn");
+  const addSignatureBtn = document.getElementById("addSignatureBtn");
+  const addCheckBtn = document.getElementById("addCheckBtn");
   const resetBoxBtn = document.getElementById("resetBoxBtn");
-  const markTypeSignatureBtn = document.getElementById("markTypeSignatureBtn");
-  const markTypeCheckBtn = document.getElementById("markTypeCheckBtn");
+  const deleteBoxBtn = document.getElementById("deleteBoxBtn");
+  const markList = document.getElementById("markList");
   const positionStatus = document.getElementById("positionStatus");
   const MARK_TYPES = {
     signature: "사인",
@@ -164,140 +182,215 @@
     checkmark: { x_ratio: 0.58, y_ratio: 0.08, w_ratio: 0.12, h_ratio: 0.12 },
   };
 
-  const box = {
-    page: Number(initialPayload.page || 1),
-    x_ratio: Number(initialPayload.x_ratio ?? 0.58),
-    y_ratio: Number(initialPayload.y_ratio ?? 0.08),
-    w_ratio: Number(initialPayload.w_ratio ?? 0.28),
-    h_ratio: Number(initialPayload.h_ratio ?? 0.12),
-    mark_type: String(initialPayload.mark_type || "{{ job.mark_type|escapejs }}" || "signature"),
-  };
-
-  if (!MARK_DEFAULTS[box.mark_type]) {
-    box.mark_type = "signature";
-  }
-
   let pdfDoc = null;
   let pageWidth = 1;
   let pageHeight = 1;
   let dragState = null;
+  let activeMarkId = null;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const makeClientId = () =>
+    (window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : `mark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  function safeMarkType(value) {
+    return MARK_DEFAULTS[value] ? value : "signature";
+  }
+
+  function normalizeMark(mark, index) {
+    const markType = safeMarkType(String(mark?.mark_type || "").trim().toLowerCase());
+    return {
+      client_id: String(mark?.client_id || `mark-${index + 1}` || makeClientId()),
+      page: Math.max(1, Number(mark?.page || 1)),
+      x_ratio: Number(mark?.x_ratio ?? MARK_DEFAULTS[markType].x_ratio),
+      y_ratio: Number(mark?.y_ratio ?? MARK_DEFAULTS[markType].y_ratio),
+      w_ratio: Number(mark?.w_ratio ?? MARK_DEFAULTS[markType].w_ratio),
+      h_ratio: Number(mark?.h_ratio ?? MARK_DEFAULTS[markType].h_ratio),
+      mark_type: markType,
+    };
+  }
+
+  function createMark(markType, pageNumber) {
+    const safeType = safeMarkType(markType);
+    return normalizeMark(
+      {
+        client_id: makeClientId(),
+        page: pageNumber,
+        ...MARK_DEFAULTS[safeType],
+        mark_type: safeType,
+      },
+      0,
+    );
+  }
+
+  const marks = Array.isArray(initialMarks) && initialMarks.length
+    ? initialMarks.map((mark, index) => normalizeMark(mark, index))
+    : [createMark("signature", 1)];
+  activeMarkId = marks[0]?.client_id || null;
+
+  function activeMark() {
+    return marks.find((mark) => mark.client_id === activeMarkId) || null;
+  }
 
   function syncHidden() {
-    hidden.value = JSON.stringify(box);
+    hidden.value = JSON.stringify(
+      marks.map((mark) => ({
+        page: mark.page,
+        x_ratio: mark.x_ratio,
+        y_ratio: mark.y_ratio,
+        w_ratio: mark.w_ratio,
+        h_ratio: mark.h_ratio,
+        mark_type: mark.mark_type,
+      })),
+    );
   }
 
   function setStatus(text) {
     positionStatus.textContent = text;
   }
 
-  function removeBox() {
+  function labelForMark(mark, index) {
+    return `${index + 1}. ${mark.page}쪽 ${MARK_TYPES[mark.mark_type] || "사인"}`;
+  }
+
+  function removeBoxes() {
     stage.querySelectorAll(".docsign-box").forEach((node) => node.remove());
   }
 
-  function drawBox() {
-    removeBox();
-    if (box.page !== Number(pageInput.value || 1)) {
-      syncHidden();
+  function renderMarkList() {
+    markList.innerHTML = "";
+    if (!marks.length) {
+      const empty = document.createElement("p");
+      empty.className = "text-xs font-semibold text-slate-400";
+      empty.textContent = "표시 없음";
+      markList.appendChild(empty);
       return;
     }
+    marks.forEach((mark, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `docsign-chip inline-flex min-h-10 items-center justify-center rounded-full border px-3 py-2 text-xs font-bold ${
+        mark.client_id === activeMarkId
+          ? "active"
+          : "border-slate-200 bg-white text-slate-600"
+      }`;
+      button.textContent = labelForMark(mark, index);
+      button.addEventListener("click", async () => {
+        activeMarkId = mark.client_id;
+        pageInput.value = mark.page;
+        await renderPage(mark.page);
+        setStatus(`${mark.page}쪽 ${MARK_TYPES[mark.mark_type]} 선택`);
+      });
+      markList.appendChild(button);
+    });
+  }
 
-    const node = document.createElement("div");
-    const isCheckmark = box.mark_type === "checkmark";
-    node.className = `docsign-box active${isCheckmark ? " docsign-box--check" : ""}`;
-    node.style.left = `${box.x_ratio * pageWidth}px`;
-    node.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
-    node.style.width = `${box.w_ratio * pageWidth}px`;
-    node.style.height = `${box.h_ratio * pageHeight}px`;
-    node.innerHTML = isCheckmark
-      ? '<span class="docsign-box-label">체크</span><span class="docsign-box-mark" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M24 56 L44 76 L80 28" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="docsign-box-handle"></span>'
-      : '<span class="docsign-box-label">사인</span><span class="docsign-box-handle"></span>';
-    stage.appendChild(node);
+  function drawBoxes() {
+    removeBoxes();
+    const currentPage = Number(pageInput.value || 1);
+    const visibleMarks = marks.filter((mark) => mark.page === currentPage);
+    visibleMarks.forEach((mark) => {
+      const globalIndex = marks.indexOf(mark);
+      const isCheckmark = mark.mark_type === "checkmark";
+      const isActive = mark.client_id === activeMarkId;
+      const node = document.createElement("div");
+      node.className = `docsign-box${isActive ? " active" : ""}${isCheckmark ? " docsign-box--check" : ""}`;
+      node.style.left = `${mark.x_ratio * pageWidth}px`;
+      node.style.top = `${(1 - mark.y_ratio - mark.h_ratio) * pageHeight}px`;
+      node.style.width = `${mark.w_ratio * pageWidth}px`;
+      node.style.height = `${mark.h_ratio * pageHeight}px`;
+      node.innerHTML = isCheckmark
+        ? `<span class="docsign-box-label">${labelForMark(mark, globalIndex)}</span><span class="docsign-box-mark" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><path d="M24 56 L44 76 L80 28" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span class="docsign-box-handle"></span>`
+        : `<span class="docsign-box-label">${labelForMark(mark, globalIndex)}</span><span class="docsign-box-handle"></span>`;
+      stage.appendChild(node);
 
-    node.addEventListener("pointerdown", (event) => {
-      dragState = {
-        pointerId: event.pointerId,
-        mode: event.target.classList.contains("docsign-box-handle") ? "resize" : "move",
-        startX: event.clientX,
-        startY: event.clientY,
-        left: parseFloat(node.style.left),
-        top: parseFloat(node.style.top),
-        width: parseFloat(node.style.width),
-        height: parseFloat(node.style.height),
+      node.addEventListener("pointerdown", (event) => {
+        activeMarkId = mark.client_id;
+        renderMarkList();
+        stage.querySelectorAll(".docsign-box").forEach((boxNode) => boxNode.classList.remove("active"));
+        node.classList.add("active");
+        dragState = {
+          pointerId: event.pointerId,
+          mode: event.target.classList.contains("docsign-box-handle") ? "resize" : "move",
+          startX: event.clientX,
+          startY: event.clientY,
+          left: parseFloat(node.style.left),
+          top: parseFloat(node.style.top),
+          width: parseFloat(node.style.width),
+          height: parseFloat(node.style.height),
+          mark,
+        };
+        node.setPointerCapture(event.pointerId);
+      });
+
+      node.addEventListener("pointermove", (event) => {
+        if (!dragState || dragState.pointerId !== event.pointerId) {
+          return;
+        }
+
+        const dx = event.clientX - dragState.startX;
+        const dy = event.clientY - dragState.startY;
+        if (dragState.mode === "move") {
+          const nextLeft = clamp(dragState.left + dx, 0, pageWidth - dragState.width);
+          const nextTop = clamp(dragState.top + dy, 0, pageHeight - dragState.height);
+          node.style.left = `${nextLeft}px`;
+          node.style.top = `${nextTop}px`;
+        } else {
+          const nextWidth = clamp(dragState.width + dx, 80, pageWidth - dragState.left);
+          const nextHeight = clamp(dragState.height + dy, 36, pageHeight - dragState.top);
+          node.style.width = `${nextWidth}px`;
+          node.style.height = `${nextHeight}px`;
+        }
+      });
+
+      const finishDrag = (event) => {
+        if (!dragState || dragState.pointerId !== event.pointerId) {
+          return;
+        }
+
+        const left = parseFloat(node.style.left);
+        const top = parseFloat(node.style.top);
+        const width = parseFloat(node.style.width);
+        const height = parseFloat(node.style.height);
+        dragState.mark.page = currentPage;
+        dragState.mark.x_ratio = clamp(left / pageWidth, 0, 1);
+        dragState.mark.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
+        dragState.mark.w_ratio = clamp(width / pageWidth, 0.05, 1);
+        dragState.mark.h_ratio = clamp(height / pageHeight, 0.03, 1);
+        dragState = null;
+        syncHidden();
+        renderMarkList();
+        setStatus(`${currentPage}쪽 ${MARK_TYPES[mark.mark_type]} 위치 저장`);
       };
-      node.setPointerCapture(event.pointerId);
+
+      node.addEventListener("pointerup", finishDrag);
+      node.addEventListener("pointercancel", finishDrag);
     });
-
-    node.addEventListener("pointermove", (event) => {
-      if (!dragState || dragState.pointerId !== event.pointerId) {
-        return;
-      }
-
-      const dx = event.clientX - dragState.startX;
-      const dy = event.clientY - dragState.startY;
-      if (dragState.mode === "move") {
-        const nextLeft = clamp(dragState.left + dx, 0, pageWidth - dragState.width);
-        const nextTop = clamp(dragState.top + dy, 0, pageHeight - dragState.height);
-        node.style.left = `${nextLeft}px`;
-        node.style.top = `${nextTop}px`;
-      } else {
-        const nextWidth = clamp(dragState.width + dx, 80, pageWidth - dragState.left);
-        const nextHeight = clamp(dragState.height + dy, 36, pageHeight - dragState.top);
-        node.style.width = `${nextWidth}px`;
-        node.style.height = `${nextHeight}px`;
-      }
-    });
-
-    const finishDrag = (event) => {
-      if (!dragState || dragState.pointerId !== event.pointerId) {
-        return;
-      }
-
-      const left = parseFloat(node.style.left);
-      const top = parseFloat(node.style.top);
-      const width = parseFloat(node.style.width);
-      const height = parseFloat(node.style.height);
-      box.page = Number(pageInput.value || 1);
-      box.x_ratio = clamp(left / pageWidth, 0, 1);
-      box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
-      box.w_ratio = clamp(width / pageWidth, 0.05, 1);
-      box.h_ratio = clamp(height / pageHeight, 0.03, 1);
-      dragState = null;
-      syncHidden();
-      setStatus(`${box.page}쪽 ${MARK_TYPES[box.mark_type] || "사인"} 위치를 저장했습니다.`);
-    };
-
-    node.addEventListener("pointerup", finishDrag);
-    node.addEventListener("pointercancel", finishDrag);
   }
 
-  function applyMarkTypePreset(markType) {
-    const preset = MARK_DEFAULTS[markType] || MARK_DEFAULTS.signature;
-    box.mark_type = markType;
-    box.w_ratio = preset.w_ratio;
-    box.h_ratio = preset.h_ratio;
-    box.x_ratio = clamp(box.x_ratio, 0, 1 - box.w_ratio);
-    box.y_ratio = clamp(box.y_ratio, 0, 1 - box.h_ratio);
-  }
-
-  function updateMarkTypeButtons() {
-    const activeClasses = ["bg-slate-900", "text-white", "border-slate-900"];
-    const inactiveClasses = ["bg-white", "text-slate-700", "border-slate-200"];
-    [[markTypeSignatureBtn, "signature"], [markTypeCheckBtn, "checkmark"]].forEach(([button, markType]) => {
-      if (!button) {
-        return;
-      }
-      const active = box.mark_type === markType;
-      button.classList.remove(...activeClasses, ...inactiveClasses);
-      button.classList.add(...(active ? activeClasses : inactiveClasses));
-    });
+  function resetActiveMark() {
+    const mark = activeMark();
+    if (!mark) {
+      return;
+    }
+    const preset = MARK_DEFAULTS[mark.mark_type] || MARK_DEFAULTS.signature;
+    mark.w_ratio = preset.w_ratio;
+    mark.h_ratio = preset.h_ratio;
+    mark.x_ratio = clamp(mark.x_ratio, 0, 1 - mark.w_ratio);
+    mark.y_ratio = clamp(mark.y_ratio, 0, 1 - mark.h_ratio);
+    syncHidden();
+    drawBoxes();
+    renderMarkList();
+    setStatus(`${mark.page}쪽 ${MARK_TYPES[mark.mark_type]} 크기 초기화`);
   }
 
   async function renderPage(pageNumber) {
+    if (!pdfDoc) {
+      return;
+    }
     const safePage = clamp(pageNumber, 1, pdfDoc.numPages);
     pageInput.value = safePage;
-    box.page = box.page || safePage;
 
     const page = await pdfDoc.getPage(safePage);
     const maxWidth = Math.min(window.innerWidth - 96, 980);
@@ -313,34 +406,52 @@
     stage.style.height = `${viewport.height}px`;
 
     await page.render({ canvasContext: context, viewport }).promise;
-    drawBox();
+    drawBoxes();
+    renderMarkList();
     syncHidden();
     prevPageBtn.disabled = safePage <= 1;
     nextPageBtn.disabled = safePage >= pdfDoc.numPages;
   }
 
-  resetBoxBtn.addEventListener("click", () => {
-    box.page = Number(pageInput.value || 1);
-    applyMarkTypePreset(box.mark_type);
-    drawBox();
+  addSignatureBtn.addEventListener("click", async () => {
+    const pageNumber = Number(pageInput.value || 1);
+    const mark = createMark("signature", pageNumber);
+    marks.push(mark);
+    activeMarkId = mark.client_id;
     syncHidden();
-    setStatus(`${MARK_TYPES[box.mark_type] || "사인"} 기본 위치로 되돌렸습니다.`);
+    renderMarkList();
+    await renderPage(pageNumber);
+    setStatus(`${pageNumber}쪽 사인 추가`);
   });
 
-  markTypeSignatureBtn.addEventListener("click", () => {
-    applyMarkTypePreset("signature");
-    updateMarkTypeButtons();
-    drawBox();
+  addCheckBtn.addEventListener("click", async () => {
+    const pageNumber = Number(pageInput.value || 1);
+    const mark = createMark("checkmark", pageNumber);
+    marks.push(mark);
+    activeMarkId = mark.client_id;
     syncHidden();
-    setStatus("사인 위치로 바꿨습니다.");
+    renderMarkList();
+    await renderPage(pageNumber);
+    setStatus(`${pageNumber}쪽 체크 추가`);
   });
 
-  markTypeCheckBtn.addEventListener("click", () => {
-    applyMarkTypePreset("checkmark");
-    updateMarkTypeButtons();
-    drawBox();
+  resetBoxBtn.addEventListener("click", resetActiveMark);
+
+  deleteBoxBtn.addEventListener("click", async () => {
+    if (!activeMarkId) {
+      return;
+    }
+    const currentPage = Number(pageInput.value || 1);
+    const index = marks.findIndex((mark) => mark.client_id === activeMarkId);
+    if (index < 0) {
+      return;
+    }
+    marks.splice(index, 1);
+    activeMarkId = marks[index]?.client_id || marks[index - 1]?.client_id || marks[0]?.client_id || null;
     syncHidden();
-    setStatus("진한 체크 위치로 바꿨습니다.");
+    renderMarkList();
+    await renderPage(currentPage);
+    setStatus(marks.length ? "선택 표시 삭제" : "표시를 하나 이상 추가해 주세요.");
   });
 
   prevPageBtn.addEventListener("click", () => renderPage(Number(pageInput.value || 1) - 1));
@@ -351,7 +462,7 @@
   const pdfjsLib = await import(pdfModuleUrl);
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
-  updateMarkTypeButtons();
-  await renderPage(box.page || 1);
+  pageInput.value = clamp(activeMark()?.page || 1, 1, pdfDoc.numPages);
+  await renderPage(Number(pageInput.value || 1));
 </script>
 {% endblock %}

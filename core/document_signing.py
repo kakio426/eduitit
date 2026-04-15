@@ -341,21 +341,31 @@ def _build_mark_overlay_pdf_bytes(
     *,
     page_width: float,
     page_height: float,
-    x: float,
-    y: float,
-    width: float,
-    height: float,
+    marks: list[dict],
     signature_data: str,
-    mark_type: str,
 ) -> bytes:
     from reportlab.pdfgen import canvas
 
     packet = io.BytesIO()
     pdf = canvas.Canvas(packet, pagesize=(page_width, page_height))
-    if mark_type == DOCUMENT_MARK_TYPE_CHECKMARK:
-        draw_checkmark(pdf, x=x, y=y, width=width, height=height)
-    else:
-        draw_signature_image(pdf, signature_data, x=x, y=y, width=width, height=height)
+    for mark in marks:
+        if mark["mark_type"] == DOCUMENT_MARK_TYPE_CHECKMARK:
+            draw_checkmark(
+                pdf,
+                x=mark["x"],
+                y=mark["y"],
+                width=mark["width"],
+                height=mark["height"],
+            )
+        else:
+            draw_signature_image(
+                pdf,
+                signature_data,
+                x=mark["x"],
+                y=mark["y"],
+                width=mark["width"],
+                height=mark["height"],
+            )
     pdf.showPage()
     pdf.save()
     packet.seek(0)
@@ -365,11 +375,12 @@ def _build_mark_overlay_pdf_bytes(
 def build_signed_pdf_bytes(
     source_pdf_bytes: bytes,
     *,
-    page_number: int,
-    x: float,
-    y: float,
-    width: float,
-    height: float,
+    marks: list[dict] | None = None,
+    page_number: int | None = None,
+    x: float | None = None,
+    y: float | None = None,
+    width: float | None = None,
+    height: float | None = None,
     signature_data: str,
     mark_type: str = DOCUMENT_MARK_TYPE_SIGNATURE,
     pdf_title: str = "",
@@ -378,31 +389,77 @@ def build_signed_pdf_bytes(
     from pypdf import PdfReader, PdfWriter
 
     reader = PdfReader(io.BytesIO(source_pdf_bytes))
-    if page_number < 1 or page_number > len(reader.pages):
-        raise ValueError("서명 페이지가 문서 범위를 벗어났습니다.")
+    if marks is None:
+        marks = [
+            {
+                "page": page_number,
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "mark_type": mark_type,
+            }
+        ]
 
-    target_page = reader.pages[page_number - 1]
-    if mark_type not in {DOCUMENT_MARK_TYPE_SIGNATURE, DOCUMENT_MARK_TYPE_CHECKMARK}:
-        raise ValueError("지원하지 않는 표시 방식입니다.")
-    if mark_type == DOCUMENT_MARK_TYPE_SIGNATURE and not (signature_data or "").strip():
+    normalized_marks = []
+    for item in marks:
+        if not isinstance(item, dict):
+            raise ValueError("표시 값이 올바르지 않습니다.")
+        try:
+            normalized_page = int(item.get("page", 0))
+            normalized_x = float(item.get("x"))
+            normalized_y = float(item.get("y"))
+            normalized_width = float(item.get("width"))
+            normalized_height = float(item.get("height"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("표시 값이 올바르지 않습니다.") from exc
+        normalized_mark_type = str(
+            item.get("mark_type") or DOCUMENT_MARK_TYPE_SIGNATURE
+        ).strip().lower()
+        if normalized_page < 1 or normalized_page > len(reader.pages):
+            raise ValueError("표시 페이지가 문서 범위를 벗어났습니다.")
+        if normalized_width <= 0 or normalized_height <= 0:
+            raise ValueError("표시 크기가 올바르지 않습니다.")
+        if normalized_mark_type not in {
+            DOCUMENT_MARK_TYPE_SIGNATURE,
+            DOCUMENT_MARK_TYPE_CHECKMARK,
+        }:
+            raise ValueError("지원하지 않는 표시 방식입니다.")
+        normalized_marks.append(
+            {
+                "page": normalized_page,
+                "x": normalized_x,
+                "y": normalized_y,
+                "width": normalized_width,
+                "height": normalized_height,
+                "mark_type": normalized_mark_type,
+            }
+        )
+
+    if not normalized_marks:
+        raise ValueError("표시 위치가 없습니다.")
+    if any(mark["mark_type"] == DOCUMENT_MARK_TYPE_SIGNATURE for mark in normalized_marks) and not (
+        signature_data or ""
+    ).strip():
         raise ValueError("서명 이미지가 없습니다.")
 
-    overlay_bytes = _build_mark_overlay_pdf_bytes(
-        page_width=float(target_page.mediabox.width),
-        page_height=float(target_page.mediabox.height),
-        x=x,
-        y=y,
-        width=width,
-        height=height,
-        signature_data=signature_data,
-        mark_type=mark_type,
-    )
-    overlay_reader = PdfReader(io.BytesIO(overlay_bytes))
+    overlays_by_page = {}
+    for index, page in enumerate(reader.pages, start=1):
+        page_marks = [mark for mark in normalized_marks if mark["page"] == index]
+        if not page_marks:
+            continue
+        overlay_bytes = _build_mark_overlay_pdf_bytes(
+            page_width=float(page.mediabox.width),
+            page_height=float(page.mediabox.height),
+            marks=page_marks,
+            signature_data=signature_data,
+        )
+        overlays_by_page[index] = PdfReader(io.BytesIO(overlay_bytes)).pages[0]
 
     writer = PdfWriter()
     for index, page in enumerate(reader.pages, start=1):
-        if index == page_number:
-            page.merge_page(overlay_reader.pages[0])
+        if index in overlays_by_page:
+            page.merge_page(overlays_by_page[index])
         writer.add_page(page)
 
     metadata = {"/Producer": "Eduitit Docsign"}

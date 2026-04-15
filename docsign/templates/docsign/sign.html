@@ -24,7 +24,7 @@
     <div class="space-y-2">
       <a href="{% url 'docsign:position' job_id=job.id %}" class="text-sm font-semibold text-slate-500 hover:text-slate-700">표시 위치</a>
       <h1 class="text-3xl font-black tracking-tight text-slate-900">3. 문서 표시</h1>
-      <p class="text-sm font-medium text-slate-500">{{ job.signature_page }}쪽 · {{ job.mark_type_label }}</p>
+      <p class="text-sm font-medium text-slate-500">{{ job.page_summary }} · {{ job.mark_summary }}</p>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
@@ -58,7 +58,7 @@
         <form method="post" id="docsignForm" class="space-y-4">
           {% csrf_token %}
           {{ form.signature_data }}
-          {% if job.mark_type == "checkmark" %}
+          {% if not job.requires_signature_input %}
           <div class="space-y-3">
             <h2 class="text-lg font-bold text-slate-900">진한 체크</h2>
             <div class="rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -75,7 +75,10 @@
           </div>
           {% else %}
           <div class="space-y-2">
-            <h2 class="text-lg font-bold text-slate-900">내 사인</h2>
+            <h2 class="text-lg font-bold text-slate-900">사인 한 번</h2>
+            <p class="text-sm font-medium text-slate-500">
+              사인 {{ job.signature_mark_count }}개{% if job.checkmark_mark_count %} · 체크 {{ job.checkmark_mark_count }}개{% endif %}
+            </p>
             <canvas id="signaturePad" class="border border-slate-200 shadow-sm"></canvas>
             {% if form.signature_data.errors %}
             <p class="text-sm font-semibold text-red-600">{{ form.signature_data.errors|join:", " }}</p>
@@ -84,11 +87,11 @@
           </div>
           {% endif %}
           <div class="flex gap-2">
-            <button type="button" id="clearBtn" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50{% if job.mark_type == "checkmark" %} hidden{% endif %}">
+            <button type="button" id="clearBtn" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50{% if not job.requires_signature_input %} hidden{% endif %}">
               지우기
             </button>
             <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700">
-              {% if job.mark_type == "checkmark" %}체크 넣기{% else %}PDF 만들기{% endif %}
+              {% if not job.requires_signature_input %}체크 넣기{% else %}PDF 만들기{% endif %}
             </button>
           </div>
         </form>
@@ -100,7 +103,7 @@
 
 {% block extra_js %}
 <script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
-{% if job.mark_type == "signature" %}
+{% if job.requires_signature_input %}
 <script>
   const canvas = document.getElementById("signaturePad");
   const clearBtn = document.getElementById("clearBtn");
