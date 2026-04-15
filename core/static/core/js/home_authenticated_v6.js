@@ -239,7 +239,10 @@
                 model: '',
                 providerLabel: '',
             },
+            agentExecution: null,
+            agentExecutionDraft: {},
             isAgentLoading: false,
+            isAgentExecuting: false,
             favoriteIds: normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', [])),
 
             init: function () {
@@ -534,6 +537,321 @@
                 return lines.slice(0, this.activeModeKey === 'notice' ? 6 : 8);
             },
 
+            clonePayload: function (value) {
+                try {
+                    return JSON.parse(JSON.stringify(value || {}));
+                } catch (error) {
+                    return {};
+                }
+            },
+
+            clearExecution: function () {
+                this.agentExecution = null;
+                this.agentExecutionDraft = {};
+            },
+
+            normalizeExecution: function (execution) {
+                var payload = execution && typeof execution === 'object' ? execution : {};
+                var kind = trimLine(payload.kind);
+                if (!kind) {
+                    return null;
+                }
+                return {
+                    kind: kind,
+                    title: trimLine(payload.title),
+                    submitLabel: trimLine(payload.submit_label || '저장'),
+                    draft: payload.draft && typeof payload.draft === 'object' ? this.clonePayload(payload.draft) : {},
+                    choices: Array.isArray(payload.choices) ? payload.choices.map(function (choice) {
+                        if (!choice || typeof choice !== 'object') {
+                            return null;
+                        }
+                        return {
+                            id: String(choice.id || ''),
+                            label: trimLine(choice.label),
+                            values: choice.values && typeof choice.values === 'object' ? this.clonePayload(choice.values) : {},
+                        };
+                    }, this).filter(Boolean) : [],
+                    schoolOptions: Array.isArray(payload.school_options) ? payload.school_options.map(function (school) {
+                        if (!school || typeof school !== 'object') {
+                            return null;
+                        }
+                        return {
+                            slug: trimLine(school.slug),
+                            name: trimLine(school.name),
+                            reservationUrl: trimLine(school.reservation_url),
+                            rooms: Array.isArray(school.rooms) ? school.rooms.map(function (room) {
+                                return {
+                                    id: String(room && room.id ? room.id : ''),
+                                    name: trimLine(room && room.name ? room.name : ''),
+                                };
+                            }).filter(function (room) {
+                                return room.id && room.name;
+                            }) : [],
+                            periods: Array.isArray(school.periods) ? school.periods.map(function (period) {
+                                return {
+                                    id: String(period && period.id ? period.id : ''),
+                                    label: trimLine(period && period.label ? period.label : ''),
+                                    displayLabel: trimLine(period && period.display_label ? period.display_label : ''),
+                                };
+                            }).filter(function (period) {
+                                return period.id;
+                            }) : [],
+                        };
+                    }).filter(Boolean) : [],
+                    incidentOptions: Array.isArray(payload.incident_options) ? payload.incident_options.map(function (item) {
+                        return {
+                            value: trimLine(item && item.value ? item.value : ''),
+                            label: trimLine(item && item.label ? item.label : ''),
+                            requires: trimLine(item && item.requires ? item.requires : ''),
+                        };
+                    }).filter(function (item) {
+                        return item.value && item.label;
+                    }) : [],
+                    goalOptions: Array.isArray(payload.goal_options) ? payload.goal_options.map(function (item) {
+                        return {
+                            value: trimLine(item && item.value ? item.value : ''),
+                            label: trimLine(item && item.label ? item.label : ''),
+                        };
+                    }).filter(function (item) {
+                        return item.value && item.label;
+                    }) : [],
+                    sceneOptions: Array.isArray(payload.scene_options) ? payload.scene_options.map(function (item) {
+                        return {
+                            value: trimLine(item && item.value ? item.value : ''),
+                            label: trimLine(item && item.label ? item.label : ''),
+                        };
+                    }).filter(function (item) {
+                        return item.value && item.label;
+                    }) : [],
+                    counterpartOptions: Array.isArray(payload.counterpart_options) ? payload.counterpart_options.map(function (item) {
+                        return {
+                            value: trimLine(item && item.value ? item.value : ''),
+                            label: trimLine(item && item.label ? item.label : ''),
+                        };
+                    }).filter(function (item) {
+                        return item.value && item.label;
+                    }) : [],
+                    warnings: Array.isArray(payload.warnings) ? payload.warnings.map(trimLine).filter(Boolean).slice(0, 3) : [],
+                };
+            },
+
+            setExecution: function (execution) {
+                var normalized = this.normalizeExecution(execution);
+                if (!normalized) {
+                    this.clearExecution();
+                    return;
+                }
+                this.agentExecution = normalized;
+                this.agentExecutionDraft = this.clonePayload(normalized.draft);
+                if (normalized.kind === 'schedule' && normalized.choices.length) {
+                    this.selectScheduleExecutionChoice(
+                        this.agentExecutionDraft.choice_id || normalized.choices[0].id,
+                        normalized
+                    );
+                    return;
+                }
+                this.normalizeExecutionDraft();
+            },
+
+            selectScheduleExecutionChoice: function (choiceId, executionOverride) {
+                var execution = executionOverride || this.agentExecution;
+                if (!execution || execution.kind !== 'schedule') {
+                    return;
+                }
+                if (executionOverride) {
+                    this.agentExecution = executionOverride;
+                }
+                var targetId = String(choiceId || '');
+                var choice = execution.choices.find(function (item) {
+                    return String(item.id) === targetId;
+                }) || execution.choices[0];
+                if (!choice) {
+                    this.agentExecutionDraft = {};
+                    return;
+                }
+                this.agentExecutionDraft = Object.assign({}, this.clonePayload(choice.values), {
+                    choice_id: String(choice.id),
+                });
+            },
+
+            reservationSchoolOptions: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'reservation') {
+                    return [];
+                }
+                return Array.isArray(this.agentExecution.schoolOptions) ? this.agentExecution.schoolOptions : [];
+            },
+
+            selectedReservationSchool: function () {
+                var schoolSlug = trimLine(this.agentExecutionDraft.school_slug || '');
+                var options = this.reservationSchoolOptions();
+                return options.find(function (school) {
+                    return school.slug === schoolSlug;
+                }) || options[0] || null;
+            },
+
+            reservationRoomOptions: function () {
+                var school = this.selectedReservationSchool();
+                return school && Array.isArray(school.rooms) ? school.rooms : [];
+            },
+
+            reservationPeriodOptions: function () {
+                var school = this.selectedReservationSchool();
+                return school && Array.isArray(school.periods) ? school.periods : [];
+            },
+
+            teacherLawIncidentOptions: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'teacher-law') {
+                    return [];
+                }
+                return Array.isArray(this.agentExecution.incidentOptions) ? this.agentExecution.incidentOptions : [];
+            },
+
+            teacherLawGoalOptions: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'teacher-law') {
+                    return [];
+                }
+                return Array.isArray(this.agentExecution.goalOptions) ? this.agentExecution.goalOptions : [];
+            },
+
+            teacherLawSceneOptions: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'teacher-law') {
+                    return [];
+                }
+                return Array.isArray(this.agentExecution.sceneOptions) ? this.agentExecution.sceneOptions : [];
+            },
+
+            teacherLawCounterpartOptions: function () {
+                if (!this.agentExecution || this.agentExecution.kind !== 'teacher-law') {
+                    return [];
+                }
+                return Array.isArray(this.agentExecution.counterpartOptions) ? this.agentExecution.counterpartOptions : [];
+            },
+
+            selectedTeacherLawIncident: function () {
+                var incidentType = trimLine(this.agentExecutionDraft.incident_type || '');
+                return this.teacherLawIncidentOptions().find(function (item) {
+                    return item.value === incidentType;
+                }) || null;
+            },
+
+            teacherLawNeedsScene: function () {
+                var incident = this.selectedTeacherLawIncident();
+                return Boolean(incident && incident.requires === 'scene');
+            },
+
+            teacherLawNeedsCounterpart: function () {
+                var incident = this.selectedTeacherLawIncident();
+                return Boolean(incident && incident.requires === 'counterpart');
+            },
+
+            normalizeExecutionDraft: function () {
+                if (!this.agentExecution) {
+                    return;
+                }
+                if (this.agentExecution.kind === 'teacher-law') {
+                    if (!this.teacherLawNeedsScene()) {
+                        this.agentExecutionDraft.scene = '';
+                    }
+                    if (!this.teacherLawNeedsCounterpart()) {
+                        this.agentExecutionDraft.counterpart = '';
+                    }
+                    return;
+                }
+                if (this.agentExecution.kind !== 'reservation') {
+                    return;
+                }
+                var schoolOptions = this.reservationSchoolOptions();
+                var school = this.selectedReservationSchool() || schoolOptions[0] || null;
+                if (school && !trimLine(this.agentExecutionDraft.school_slug)) {
+                    this.agentExecutionDraft.school_slug = school.slug;
+                }
+                if (!school) {
+                    return;
+                }
+
+                var roomId = String(this.agentExecutionDraft.room_id || '');
+                var roomExists = this.reservationRoomOptions().some(function (room) {
+                    return String(room.id) === roomId;
+                });
+                if (!roomExists) {
+                    this.agentExecutionDraft.room_id = this.reservationRoomOptions().length === 1
+                        ? String(this.reservationRoomOptions()[0].id)
+                        : '';
+                }
+
+                var periodId = String(this.agentExecutionDraft.period || '');
+                var periodExists = this.reservationPeriodOptions().some(function (period) {
+                    return String(period.id) === periodId;
+                });
+                if (!periodExists) {
+                    this.agentExecutionDraft.period = '';
+                }
+
+                var ownerType = trimLine(this.agentExecutionDraft.owner_type || '');
+                if (ownerType !== 'class' && ownerType !== 'custom') {
+                    ownerType = trimLine(this.agentExecutionDraft.grade || '') && trimLine(this.agentExecutionDraft.class_no || '')
+                        ? 'class'
+                        : 'custom';
+                }
+                this.agentExecutionDraft.owner_type = ownerType;
+                if (ownerType === 'class') {
+                    this.agentExecutionDraft.target_label = '';
+                    return;
+                }
+                this.agentExecutionDraft.grade = '';
+                this.agentExecutionDraft.class_no = '';
+            },
+
+            executeAgentService: async function () {
+                if (!this.agentExecution) {
+                    return;
+                }
+                this.normalizeExecutionDraft();
+                var runtime = workspaceConfig.agent_runtime || {};
+                var csrfToken = getCsrfToken();
+                if (!runtime.execute_url || !csrfToken) {
+                    showFeedback('저장 연결 정보가 없습니다.', 'error');
+                    return;
+                }
+                this.isAgentExecuting = true;
+                try {
+                    var response = await fetch(runtime.execute_url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            mode_key: this.activeModeKey,
+                            data: this.agentExecutionDraft,
+                        }),
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'ok') {
+                        throw new Error(payload.error || '저장하지 못했습니다.');
+                    }
+                    this.agentPreviewMeta = {
+                        source: 'direct',
+                        provider: payload.provider || this.activeMode.service_key || '',
+                        model: payload.model || '',
+                        providerLabel: '',
+                    };
+                    this.agentPreview = this.normalizePreview(payload.preview, this.agentPreviewMeta);
+                    this.clearExecution();
+                    showFeedback(payload.message || '저장했습니다.', 'success');
+                } catch (error) {
+                    showFeedback(error && error.message ? error.message : '저장하지 못했습니다.', 'error');
+                } finally {
+                    this.isAgentExecuting = false;
+                }
+            },
+
             buildIdlePreview: function () {
                 return this.buildPreviewSkeleton({
                     badge: '',
@@ -554,6 +872,7 @@
                     model: '',
                     providerLabel: '',
                 };
+                this.clearExecution();
             },
 
             selectAgentMode: function (modeKey) {
@@ -619,6 +938,7 @@
                 }
 
                 if (previewStrategy === 'direct') {
+                    this.clearExecution();
                     this.agentPreviewMeta = {
                         source: 'direct',
                         provider: '',
@@ -656,6 +976,7 @@
                     }
                     this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));
                     this.agentPreviewMeta = this.previewProviderStatus(payload);
+                    this.setExecution(payload.execution);
                 } catch (error) {
                     if (previewStrategy === 'service') {
                         this.showIdlePreview();
@@ -826,6 +1147,16 @@
             },
 
             executeModeAction: async function () {
+                if (this.activeMode.action_kind === 'open-service') {
+                    var targetUrl = trimLine(this.activeMode.direct_url || this.activeMode.service_href || '');
+                    if (!targetUrl) {
+                        showFeedback('서비스 화면을 찾지 못했습니다.', 'error');
+                        return;
+                    }
+                    window.location.href = targetUrl;
+                    return;
+                }
+
                 var text = trimLine(this.workspaceInput);
                 if (!text) {
                     showFeedback('내용을 먼저 넣어 주세요.', 'info');
@@ -834,6 +1165,7 @@
                 }
 
                 if (this.activeMode.action_kind === 'quickdrop-send') {
+                    this.clearExecution();
                     if (!this.activeMode.direct_url) {
                         showFeedback('바로전송 연결을 찾지 못했습니다.', 'error');
                         return;
@@ -880,6 +1212,7 @@
                 }
 
                 if (this.activeMode.action_kind === 'tts-read') {
+                    this.clearExecution();
                     if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
                         showFeedback('이 브라우저에서는 읽어주기를 지원하지 않습니다.', 'error');
                         return;

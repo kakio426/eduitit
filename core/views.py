@@ -13,9 +13,14 @@ from products.models import Product, ServiceManual
 from .forms import UserProfileUpdateForm
 from .guide_links import SERVICE_GUIDE_PADLET_URL
 from .home_agent_runtime import (
+    HOME_AGENT_MODE_SPECS,
     HomeAgentConfigError,
     HomeAgentProviderError,
     generate_home_agent_preview,
+)
+from .home_agent_service_bridge import (
+    HomeAgentExecutionError,
+    execute_service_action,
 )
 from .home_surface_context import (
     HomeSurfaceProviderCards,
@@ -1519,10 +1524,7 @@ def _build_home_v7_context_router_preview(
             'icon_class': 'fa-solid fa-note-sticky',
             'helper': '알림장 초안',
             'placeholder': '예) 내일 비가 와요. 우산을 챙기고, 체육 대신 교실 활동을 합니다. 준비물은 색연필입니다.',
-            'examples': (
-                '내일 비가 와요. 우산 챙기기와 하굣길 안전 멘트를 넣고 싶어요.',
-                '오늘 과학 준비물이 빠진 학생이 많았어요. 준비물 안내를 다시 넣고 싶어요.',
-            ),
+            'examples': (),
         },
         {
             'key': 'schedule',
@@ -1534,7 +1536,7 @@ def _build_home_v7_context_router_preview(
             'product_id': calendar_tool.get('product_id'),
             'service_href': calendar_tool.get('href', ''),
             'service_label': '캘린더 열기',
-            'submit_label': '후보 보기',
+            'submit_label': '일정 확인',
             'confirm_label': '캘린더 열기',
             'icon_class': 'fa-regular fa-calendar',
             'helper': '일정 후보',
@@ -1574,7 +1576,7 @@ def _build_home_v7_context_router_preview(
             'product_id': reservation_tool.get('product_id'),
             'service_href': reservation_tool.get('href', ''),
             'service_label': '예약 화면 열기',
-            'submit_label': '요청 보기',
+            'submit_label': '예약 확인',
             'confirm_label': '예약 화면',
             'icon_class': 'fa-regular fa-clock',
             'helper': '예약 후보',
@@ -1612,15 +1614,18 @@ def _build_home_v7_context_router_preview(
         {
             'key': 'pdf',
             'label': 'PDF',
-            'preview_strategy': 'llm',
+            'preview_strategy': 'service',
             'selector_hint': '핵심 정리',
             'aliases': ('PDF', '공문', '문서'),
             'service_key': 'hwpxchat',
             'product_id': pdf_tool.get('product_id'),
             'service_href': pdf_tool.get('href', ''),
             'service_label': 'PDF 화면 열기',
-            'submit_label': '정리 보기',
+            'submit_label': '업로드 안내',
             'confirm_label': 'PDF 열기',
+            'action_label': 'PDF 열기',
+            'action_kind': 'open-service',
+            'direct_url': pdf_tool.get('href', ''),
             'icon_class': 'fa-regular fa-file-pdf',
             'helper': '문서 요약',
             'placeholder': '예) 현장체험학습 안내 PDF에서 일정, 준비물, 제출 서류만 먼저 추려 주세요.',
@@ -1687,7 +1692,7 @@ def _build_home_v7_context_router_preview(
     )
 
     return {
-        'workspace_title': '바로 실행',
+        'workspace_title': 'AI 교무비서',
         'workspace_summary': '',
         'workspace_selector_title': '서비스',
         'initial_mode': 'notice',
@@ -1700,6 +1705,7 @@ def _build_home_v7_context_router_preview(
             'fallback_provider': str(os.environ.get('HOME_AGENT_LLM_FALLBACK_PROVIDER') or 'openclaw').strip().lower() or 'openclaw',
             'execution_mode': 'service-bridge+llm-fallback',
             'preview_url': reverse('home_agent_preview'),
+            'execute_url': reverse('home_agent_execute'),
         },
         'knowledge_summary': {
             'tacit_rule_count': len(tacit_registry.get('rules', [])),
@@ -7229,6 +7235,41 @@ def home_agent_preview(request):
     return JsonResponse({
         'status': 'ok',
         'preview': payload.get('preview', {}),
+        'execution': payload.get('execution', {}),
+        'message': payload.get('message', ''),
+        'provider': payload.get('provider', ''),
+        'model': payload.get('model', ''),
+    })
+
+
+@require_POST
+@login_required
+def home_agent_execute(request):
+    data = _request_payload_data(request)
+    mode_key = str(data.get('mode_key') or '').strip()
+    action_data = data.get('data') if isinstance(data.get('data'), dict) else {}
+
+    if not mode_key:
+        return JsonResponse({'error': 'mode_key required'}, status=400)
+
+    mode_spec = HOME_AGENT_MODE_SPECS.get(mode_key)
+    if mode_spec is None:
+        return JsonResponse({'error': '지원하지 않는 agent 모드입니다.'}, status=400)
+
+    try:
+        payload = execute_service_action(
+            request=request,
+            mode_key=mode_key,
+            mode_spec=mode_spec,
+            data=action_data,
+        )
+    except HomeAgentExecutionError as exc:
+        return JsonResponse({'error': str(exc)}, status=getattr(exc, 'status_code', 400))
+
+    return JsonResponse({
+        'status': 'ok',
+        'preview': payload.get('preview', {}),
+        'message': payload.get('message', ''),
         'provider': payload.get('provider', ''),
         'model': payload.get('model', ''),
     })

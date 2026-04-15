@@ -5,7 +5,7 @@
 >
     <div class="home-v6-card home-v6-agent-card">
         <div class="home-v6-agent-head">
-            <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'바로 실행' }}</h2>
+            <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</h2>
         </div>
 
         <div class="home-v6-agent-toolbar">
@@ -35,7 +35,7 @@
                     @keydown.ctrl.enter.prevent="runAgentPreview()"
                     @keydown.meta.enter.prevent="runAgentPreview()"
                 ></textarea>
-                <div class="home-v6-agent-chip-list">
+                <div class="home-v6-agent-chip-list" x-cloak x-show="(activeMode.examples || []).length">
                     <template x-for="example in (activeMode.examples || [])" :key="example">
                         <button type="button" class="home-v6-agent-chip" @click="useExample(example)" x-text="example"></button>
                     </template>
@@ -64,6 +64,216 @@
                     <template x-for="(line, index) in previewResultLines()" :key="activeModeKey + '-' + index + '-' + line">
                         <p class="home-v6-agent-preview-line" x-text="line"></p>
                     </template>
+                </div>
+
+                <div class="home-v6-agent-execution-warning-list" x-cloak x-show="agentExecution && (agentExecution.warnings || []).length">
+                    <template x-for="warning in (agentExecution ? agentExecution.warnings : [])" :key="warning">
+                        <p class="home-v6-agent-execution-warning" x-text="warning"></p>
+                    </template>
+                </div>
+
+                <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'schedule'">
+                    <div class="home-v6-agent-form-grid">
+                        <label class="home-v6-agent-field" x-cloak x-show="agentExecution && (agentExecution.choices || []).length > 1">
+                            <span class="home-v6-agent-field-label">일정</span>
+                            <select
+                                class="home-v6-agent-form-input"
+                                :value="agentExecutionDraft.choice_id || ''"
+                                @change="selectScheduleExecutionChoice($event.target.value)"
+                            >
+                                <template x-for="choice in (agentExecution ? agentExecution.choices : [])" :key="choice.id">
+                                    <option :value="choice.id" x-text="choice.label"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">이름</span>
+                            <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.title">
+                        </label>
+
+                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">시작</span>
+                                <input type="datetime-local" class="home-v6-agent-form-input" x-model="agentExecutionDraft.start_time">
+                            </label>
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">종료</span>
+                                <input type="datetime-local" class="home-v6-agent-form-input" x-model="agentExecutionDraft.end_time">
+                            </label>
+                        </div>
+
+                        <label class="home-v6-agent-checkbox">
+                            <input
+                                type="checkbox"
+                                :checked="Boolean(agentExecutionDraft.is_all_day)"
+                                @change="agentExecutionDraft.is_all_day = $event.target.checked"
+                            >
+                            <span>하루 종일</span>
+                        </label>
+
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">메모</span>
+                            <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.note"></textarea>
+                        </label>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
+                        :disabled="isAgentExecuting"
+                        @click="executeAgentService()"
+                        x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
+                    ></button>
+                </div>
+
+                <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'reservation'">
+                    <div class="home-v6-agent-form-grid">
+                        <label class="home-v6-agent-field" x-cloak x-show="reservationSchoolOptions().length > 1">
+                            <span class="home-v6-agent-field-label">예약판</span>
+                            <select
+                                class="home-v6-agent-form-input"
+                                x-model="agentExecutionDraft.school_slug"
+                                @change="normalizeExecutionDraft()"
+                            >
+                                <template x-for="school in reservationSchoolOptions()" :key="school.slug">
+                                    <option :value="school.slug" x-text="school.name"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">날짜</span>
+                                <input type="date" class="home-v6-agent-form-input" x-model="agentExecutionDraft.date">
+                            </label>
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">교시</span>
+                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.period">
+                                    <option value="">선택</option>
+                                    <template x-for="period in reservationPeriodOptions()" :key="period.id">
+                                        <option :value="period.id" x-text="period.displayLabel || period.label"></option>
+                                    </template>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">장소</span>
+                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.room_id">
+                                <option value="">선택</option>
+                                <template x-for="room in reservationRoomOptions()" :key="room.id">
+                                    <option :value="room.id" x-text="room.name"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">대상</span>
+                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.owner_type" @change="normalizeExecutionDraft()">
+                                <option value="class">학급</option>
+                                <option value="custom">기타</option>
+                            </select>
+                        </label>
+
+                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split" x-cloak x-show="agentExecutionDraft.owner_type === 'class'">
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">학년</span>
+                                <input type="number" min="1" class="home-v6-agent-form-input" x-model="agentExecutionDraft.grade">
+                            </label>
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">반</span>
+                                <input type="number" min="1" class="home-v6-agent-form-input" x-model="agentExecutionDraft.class_no">
+                            </label>
+                        </div>
+
+                        <label class="home-v6-agent-field" x-cloak x-show="agentExecutionDraft.owner_type === 'custom'">
+                            <span class="home-v6-agent-field-label">이용 대상</span>
+                            <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.target_label" placeholder="예) 동아리, 방송부">
+                        </label>
+
+                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">이름</span>
+                                <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.name">
+                            </label>
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">수정 코드</span>
+                                <input type="text" maxlength="4" inputmode="numeric" class="home-v6-agent-form-input" x-model="agentExecutionDraft.edit_code">
+                            </label>
+                        </div>
+
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">메모</span>
+                            <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.memo"></textarea>
+                        </label>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
+                        :disabled="isAgentExecuting"
+                        @click="executeAgentService()"
+                        x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
+                    ></button>
+                </div>
+
+                <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'teacher-law'">
+                    <div class="home-v6-agent-form-grid">
+                        <label class="home-v6-agent-field">
+                            <span class="home-v6-agent-field-label">질문</span>
+                            <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.question"></textarea>
+                        </label>
+
+                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">사건 유형</span>
+                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.incident_type" @change="normalizeExecutionDraft()">
+                                    <option value="">선택</option>
+                                    <template x-for="item in teacherLawIncidentOptions()" :key="item.value">
+                                        <option :value="item.value" x-text="item.label"></option>
+                                    </template>
+                                </select>
+                            </label>
+                            <label class="home-v6-agent-field">
+                                <span class="home-v6-agent-field-label">궁금한 것</span>
+                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.legal_goal">
+                                    <option value="">선택</option>
+                                    <template x-for="item in teacherLawGoalOptions()" :key="item.value">
+                                        <option :value="item.value" x-text="item.label"></option>
+                                    </template>
+                                </select>
+                            </label>
+                        </div>
+
+                        <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsScene()">
+                            <span class="home-v6-agent-field-label">장면</span>
+                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.scene">
+                                <option value="">선택</option>
+                                <template x-for="item in teacherLawSceneOptions()" :key="item.value">
+                                    <option :value="item.value" x-text="item.label"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsCounterpart()">
+                            <span class="home-v6-agent-field-label">상대</span>
+                            <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.counterpart">
+                                <option value="">선택</option>
+                                <template x-for="item in teacherLawCounterpartOptions()" :key="item.value">
+                                    <option :value="item.value" x-text="item.label"></option>
+                                </template>
+                            </select>
+                        </label>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
+                        :disabled="isAgentExecuting"
+                        @click="executeAgentService()"
+                        x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
+                    ></button>
                 </div>
             </section>
         </div>

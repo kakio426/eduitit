@@ -53,6 +53,8 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         self.assertEqual(result["preview"]["title"], "법률 답변")
         self.assertIn("기록을 먼저 남기고 관리자와 공유하세요.", result["preview"]["sections"][0]["items"])
         self.assertIn("통화 내용과 시간을 남기세요.", result["preview"]["sections"][0]["items"])
+        self.assertEqual(result["execution"]["kind"], "teacher-law")
+        self.assertTrue(result["execution"]["incident_options"])
 
     def test_schedule_mode_uses_classcalendar_parser_candidates(self):
         result = generate_service_preview(
@@ -63,6 +65,20 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         )
 
         self.assertEqual(result["provider"], "classcalendar")
-        self.assertEqual(result["preview"]["title"], "캘린더 후보")
+        self.assertEqual(result["preview"]["title"], "캘린더 확인")
         self.assertIn("3월 19일", result["preview"]["sections"][0]["items"][0])
         self.assertIn("학부모총회", result["preview"]["sections"][0]["items"][0])
+        self.assertEqual(result["execution"]["kind"], "schedule")
+        self.assertTrue(result["execution"]["choices"])
+
+    def test_pdf_mode_shows_native_upload_entry(self):
+        result = generate_service_preview(
+            request=self._request(),
+            mode_key="pdf",
+            mode_spec={"badge": "PDF", "default_title": "문서 정리 초안"},
+            text="체험학습 PDF를 정리해 주세요.",
+        )
+
+        self.assertEqual(result["provider"], "hwpxchat")
+        self.assertEqual(result["preview"]["title"], "문서 업로드")
+        self.assertEqual(result["preview"]["sections"][0]["items"], ["문서는 PDF 화면에서 올립니다."])
