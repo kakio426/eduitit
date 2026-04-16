@@ -244,6 +244,7 @@
             quickdropHomeLastSentText: '',
             isSendingQuickdropHomeText: false,
             workspaceInput: '',
+            agentModeMenuOpen: false,
             activeModeKey: workspaceConfig.initial_mode || '',
             agentModes: Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : [],
             agentPreview: {
@@ -592,6 +593,16 @@
                 } catch (error) {
                     return {};
                 }
+            },
+
+            buildIdempotencyKey: function (prefix, value) {
+                var text = String(value || '');
+                var hash = 0;
+                for (var index = 0; index < text.length; index += 1) {
+                    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+                    hash |= 0;
+                }
+                return [prefix || 'home-agent', Math.abs(hash), text.length].join(':');
             },
 
             clearExecution: function () {
@@ -1015,6 +1026,7 @@
 
             selectAgentMode: function (modeKey) {
                 this.activeModeKey = modeKey;
+                this.agentModeMenuOpen = false;
                 if (trimLine(this.workspaceInput)) {
                     this.runAgentPreview();
                     return;
@@ -1063,6 +1075,9 @@
                 }
                 if (this.activeModeKey === 'pdf') {
                     return this.buildPdfPreview(text);
+                }
+                if (this.activeModeKey === 'message-save') {
+                    return this.buildMessageSavePreview(text);
                 }
                 return this.buildNoticePreview(text);
             },
@@ -1284,6 +1299,21 @@
                 });
             },
 
+            buildMessageSavePreview: function (text) {
+                var lines = compactLines(text).slice(0, 4);
+                return this.buildPreviewSkeleton({
+                    title: '보관할 메시지',
+                    summary: '',
+                    sections: [
+                        {
+                            title: '결과',
+                            items: lines.length ? lines : [text],
+                        },
+                    ],
+                    note: '',
+                });
+            },
+
             executeModeAction: async function () {
                 if (this.activeMode.action_kind === 'open-service') {
                     var targetUrl = trimLine(this.activeMode.direct_url || this.activeMode.service_href || '');
@@ -1367,6 +1397,62 @@
                     };
                     this.agentPreview = this.normalizePreview(this.buildTtsPreview(text), this.agentPreviewMeta);
                     showFeedback('지금 읽고 있습니다.', 'success');
+                    return;
+                }
+
+                if (this.activeMode.action_kind === 'message-capture-save') {
+                    this.clearExecution();
+                    var saveCsrfToken = getCsrfToken();
+                    if (!this.activeMode.direct_url) {
+                        showFeedback('메시지 저장 연결을 찾지 못했습니다.', 'error');
+                        return;
+                    }
+                    if (!saveCsrfToken) {
+                        showFeedback('보안 토큰을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.', 'error');
+                        return;
+                    }
+                    var saveResponse = await fetch(this.activeMode.direct_url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-CSRFToken': saveCsrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new URLSearchParams({
+                            raw_text: text,
+                            source_hint: 'home-agent-workspace',
+                            idempotency_key: this.buildIdempotencyKey('message-save', text),
+                        }).toString(),
+                    });
+                    var savePayload = await saveResponse.json().catch(function () {
+                        return {};
+                    });
+                    if (!saveResponse.ok) {
+                        showFeedback(
+                            savePayload.detail || savePayload.error || savePayload.message || '메시지를 저장하지 못했습니다.',
+                            'error'
+                        );
+                        return;
+                    }
+                    this.agentPreviewMeta = {
+                        source: 'direct',
+                        provider: 'messagebox',
+                        model: '',
+                        providerLabel: '메시지 보관',
+                    };
+                    this.agentPreview = this.normalizePreview({
+                        badge: this.activeMode.label || '메시지 저장',
+                        title: '보관했습니다.',
+                        summary: trimLine(savePayload.summary_text || ''),
+                        sections: [
+                            {
+                                title: '결과',
+                                items: compactLines(savePayload.preview_text || text).slice(0, 4),
+                            },
+                        ],
+                        note: '',
+                    }, this.agentPreviewMeta);
+                    showFeedback(savePayload.message || '메시지를 보관함에 저장했어요.', 'success');
                     return;
                 }
 

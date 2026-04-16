@@ -476,7 +476,7 @@ def _get_home_layout_version():
     if raw_version in {'v1', 'v2', 'v4', 'v5', 'v6'}:
         return raw_version
 
-    fallback_version = 'v2' if getattr(settings, 'HOME_V2_ENABLED', False) else 'v1'
+    fallback_version = 'v6'
     if raw_version:
         logger.warning(
             "[HomeLayout] Invalid HOME_LAYOUT_VERSION=%r; falling back to %s",
@@ -1502,6 +1502,14 @@ def _build_home_v7_context_router_preview(
         fallback_route='quickdrop:landing',
         meta='텍스트 보내기',
     )
+    messagebox_tool = _build_home_v7_router_tool(
+        request,
+        product_list,
+        title='메시지 저장',
+        preferred_routes=('messagebox:main',),
+        fallback_route='messagebox:main',
+        meta='보관함 열기',
+    )
     quickdrop_card = _build_home_quickdrop_card(request.user, [], product_list) or {}
     tacit_registry = tacit_registry or _build_home_v7_agent_tacit_registry()
     workflow_registry = workflow_registry or _build_home_v7_agent_workflow_registry()
@@ -1523,7 +1531,7 @@ def _build_home_v7_context_router_preview(
             'confirm_label': '알림장 열기',
             'icon_class': 'fa-solid fa-note-sticky',
             'helper': '알림장 초안',
-            'placeholder': '예) 내일 비가 와요. 우산을 챙기고, 체육 대신 교실 활동을 합니다. 준비물은 색연필입니다.',
+            'placeholder': '보낼 내용을 적으세요.',
             'examples': (),
         },
         {
@@ -1538,9 +1546,11 @@ def _build_home_v7_context_router_preview(
             'service_label': '캘린더 열기',
             'submit_label': '일정 확인',
             'confirm_label': '캘린더 열기',
+            'secondary_link_label': '받은 메시지',
+            'secondary_link_href': reverse('messagebox:main'),
             'icon_class': 'fa-regular fa-calendar',
             'helper': '일정 후보',
-            'placeholder': '예) 4월 18일 2교시 과학실 수업, 4월 19일 15:30 교직원 회의',
+            'placeholder': '일정 문장을 적으세요.',
             'examples': (
                 '4월 18일 2교시 과학실 실험 수업, 4월 18일 15:30 학년 회의',
                 '다음 주 화요일 3교시 방송실 사용, 금요일 14:00 학부모 상담',
@@ -1560,7 +1570,7 @@ def _build_home_v7_context_router_preview(
             'confirm_label': '법률 가이드',
             'icon_class': 'fa-solid fa-scale-balanced',
             'helper': '대응 메모',
-            'placeholder': '예) 학부모가 수업 중 촬영 영상을 요구하고 있어요. 어디까지 응해야 하나요?',
+            'placeholder': '상황을 적으세요.',
             'examples': (
                 '학생 생활지도 중 보호자가 항의 전화를 반복하고 있어요. 기록을 어떻게 남겨야 하나요?',
                 '교실 내 촬영 영상 제공 요구가 왔어요. 어떤 절차를 먼저 확인해야 하나요?',
@@ -1580,7 +1590,7 @@ def _build_home_v7_context_router_preview(
             'confirm_label': '예약 화면',
             'icon_class': 'fa-regular fa-clock',
             'helper': '예약 후보',
-            'placeholder': '예) 4월 22일 3교시 과학실 예약, 5월 3일 2교시 컴퓨터실',
+            'placeholder': '예약할 내용을 적으세요.',
             'examples': (
                 '4월 22일 3교시 과학실 예약',
                 '다음 주 목요일 2교시 컴퓨터실 사용',
@@ -1588,10 +1598,10 @@ def _build_home_v7_context_router_preview(
         },
         {
             'key': 'quickdrop',
-            'label': '바로전송',
+            'label': '바로 전송',
             'preview_strategy': 'direct',
             'selector_hint': '텍스트 보내기',
-            'aliases': ('바로전송', '전송', '링크 보내기'),
+            'aliases': ('바로 전송', '바로전송', '전송', '링크 보내기'),
             'service_key': 'quickdrop',
             'product_id': quickdrop_tool.get('product_id'),
             'service_href': quickdrop_card.get('manage_url', '') or quickdrop_tool.get('href', ''),
@@ -1600,12 +1610,14 @@ def _build_home_v7_context_router_preview(
             'confirm_label': '전송함 열기',
             'after_action_label': '전송함 보기',
             'after_action_href': quickdrop_card.get('history_url', '') or quickdrop_card.get('open_url', ''),
+            'secondary_link_label': '오늘 보낸 내용',
+            'secondary_link_href': quickdrop_card.get('history_url', '') or quickdrop_card.get('open_url', ''),
             'action_label': '바로 전송',
             'action_kind': 'quickdrop-send',
             'direct_url': quickdrop_card.get('send_text_url', ''),
             'icon_class': 'fa-solid fa-paper-plane',
             'helper': '텍스트 전송',
-            'placeholder': '예) 회의 링크, 준비물 목록, 주소를 바로 보냅니다.',
+            'placeholder': '보낼 내용을 적으세요.',
             'examples': (
                 '내일 학년 회의 링크 https://example.com 15:30 시작',
                 '현장체험학습 집합 장소와 준비물 목록을 바로 보내기',
@@ -1628,7 +1640,7 @@ def _build_home_v7_context_router_preview(
             'direct_url': pdf_tool.get('href', ''),
             'icon_class': 'fa-regular fa-file-pdf',
             'helper': '문서 요약',
-            'placeholder': '예) 현장체험학습 안내 PDF에서 일정, 준비물, 제출 서류만 먼저 추려 주세요.',
+            'placeholder': '정리할 내용을 적으세요.',
             'examples': (
                 '가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.',
                 '연수 자료 PDF에서 오늘 수업에 바로 쓸 내용만 정리해 주세요.',
@@ -1650,11 +1662,35 @@ def _build_home_v7_context_router_preview(
             'action_kind': 'tts-read',
             'icon_class': 'fa-solid fa-volume-high',
             'helper': '방송 문구',
-            'placeholder': '예) 2교시 과학 준비, 조용히 줄 맞춰 이동합니다.',
+            'placeholder': '읽을 문장을 적으세요.',
             'examples': (
                 '지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다.',
                 '쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다.',
             ),
+        },
+        {
+            'key': 'message-save',
+            'label': '메시지 저장',
+            'preview_strategy': 'direct',
+            'selector_hint': '메시지 보관',
+            'aliases': ('메시지 저장', '메시지 보관', '보관함', '받은 메시지'),
+            'service_key': 'messagebox',
+            'product_id': messagebox_tool.get('product_id'),
+            'service_href': messagebox_tool.get('href', ''),
+            'service_label': '보관함 열기',
+            'submit_label': '내용 보기',
+            'confirm_label': '보관함 열기',
+            'after_action_label': '보관함 보기',
+            'after_action_href': messagebox_tool.get('href', ''),
+            'secondary_link_label': '보관함 보기',
+            'secondary_link_href': messagebox_tool.get('href', ''),
+            'action_label': '메시지 저장',
+            'action_kind': 'message-capture-save',
+            'direct_url': reverse('classcalendar:api_message_capture_save'),
+            'icon_class': 'fa-regular fa-folder-open',
+            'helper': '메시지 보관',
+            'placeholder': '저장할 메시지를 적으세요.',
+            'examples': (),
         },
     ]
     for mode in modes:
