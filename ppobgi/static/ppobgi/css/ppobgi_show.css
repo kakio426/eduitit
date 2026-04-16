@@ -841,6 +841,10 @@
     filter: none;
 }
 
+.ppb-result-panel.is-celebrating .ppb-result-compliment {
+    display: block !important;
+}
+
 .ppb-result-panel.is-celebrating .ppb-result-name {
     text-shadow:
         0 0 34px rgba(255, 212, 92, 0.24),
@@ -1999,7 +2003,7 @@
 .ppt-stage-shell,
 .ppm-stage-shell,
 .ppr-shell {
-    grid-template-columns: minmax(0, 1.96fr) minmax(248px, 312px);
+    grid-template-columns: minmax(0, 2.08fr) minmax(228px, 280px);
 }
 
 .pbl-stage-main,
@@ -2015,7 +2019,7 @@
 .ppt-live-card,
 .ppm-live-card,
 .ppr-live-card {
-    min-height: clamp(9.6rem, 18vh, 11.2rem);
+    min-height: clamp(7.8rem, 14vh, 9rem);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2056,31 +2060,31 @@
 }
 
 .pbl-svg-wrap {
-    min-height: clamp(520px, 64vh, 760px);
+    min-height: clamp(308px, 39vh, 360px);
 }
 
 .pbl-svg {
-    height: clamp(520px, 64vh, 760px);
+    height: clamp(308px, 39vh, 360px);
 }
 
 .pbl-node-name,
 .pbl-bottom-node {
-    font-size: clamp(0.92rem, 0.92vw, 1.08rem);
+    font-size: clamp(0.74rem, 0.78vw, 0.9rem);
 }
 
 .pps-order-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
+    gap: 0.58rem;
 }
 
 .pps-order-card {
-    min-height: clamp(178px, 24vh, 220px);
-    padding: 1.08rem;
+    min-height: clamp(74px, 10.5vh, 92px);
+    padding: 0.58rem;
 }
 
 .pps-order-name {
-    font-size: clamp(1.5rem, 1.95vw, 2rem);
-    line-height: 1.12;
+    font-size: clamp(0.92rem, 1.08vw, 1.16rem);
+    line-height: 1.08;
 }
 
 .ppt-team-grid {
@@ -2108,12 +2112,12 @@
 }
 
 .ppm-stage-shell {
-    grid-template-columns: minmax(0, 2.2fr) minmax(248px, 300px);
+    grid-template-columns: minmax(0, 2.32fr) minmax(228px, 276px);
 }
 
 .ppm-sky {
-    min-height: clamp(560px, 70vh, 860px);
-    margin-top: 0.9rem;
+    min-height: clamp(360px, 45vh, 430px);
+    margin-top: 0.68rem;
 }
 
 .ppm-sky::before {
@@ -2125,12 +2129,12 @@
 }
 
 .ppm-empty {
-    min-height: clamp(420px, 56vh, 680px);
+    min-height: clamp(260px, 34vh, 320px);
 }
 
 .ppm-meteor {
-    width: 188px;
-    height: 58px;
+    width: 144px;
+    height: 44px;
     filter: drop-shadow(0 0 16px rgba(125, 211, 252, 0.26));
 }
 
@@ -2141,14 +2145,14 @@
 
 .ppm-meteor-core {
     right: 14px;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     box-shadow: 0 0 26px rgba(125, 211, 252, 0.92), 0 0 52px rgba(56, 189, 248, 0.42);
 }
 
 .ppm-meteor-tail {
     left: 12px;
-    width: 142px;
+    width: 106px;
     height: 5px;
     box-shadow: 0 0 24px rgba(125, 211, 252, 0.38);
 }
@@ -2156,7 +2160,7 @@
 .ppm-meteor-hint {
     left: 10px;
     bottom: -4px;
-    font-size: 0.82rem;
+    font-size: 0.72rem;
 }
 
 @media (max-width: 1180px) {
@@ -2419,7 +2423,7 @@
 }
 
 .pbl-live-card {
-    padding: 1.12rem 1.2rem;
+    padding: 0.96rem 1rem;
 }
 
 .pbl-live-card.is-winner {
