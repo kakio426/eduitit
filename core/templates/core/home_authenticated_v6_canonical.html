@@ -20,15 +20,14 @@
 
 {% block content %}
 <div class="min-h-screen home-v6-page" data-home-layout-version="v6">
-    <div class="service-shell--compact mx-auto max-w-[1600px]">
-        <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-6 lg:px-7 xl:px-8 2xl:px-10">
+    <div class="mx-auto max-w-[1760px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+        <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-5 lg:px-5 xl:px-6 2xl:px-6">
             <div
                 class="home-v6-shell"
                 data-home-v6-shell="true"
                 data-home-design-version="v6"
                 x-data="window.homeV6Shell()"
-                x-init="init && init()"
-                @keydown.escape.window="menuSheetOpen = false"
+                @keydown.escape.window="menuSheetOpen = false; openSection = ''"
             >
                 <div class="home-v6-mobile-summary" data-home-v6-mobile-summary="true">
                     <div class="home-v6-mobile-summary-scroll" data-home-v6-mobile-summary-scroll="true">
@@ -127,7 +126,7 @@
                     <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
                         <div class="home-v6-mobile-panel-head">
                             <div>
-                                <h2 class="home-v6-mobile-panel-title">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}내 작업대{% endif %}</h2>
+                                <h2 class="home-v6-mobile-panel-title">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
                             </div>
                         </div>
                         {% if home_mobile_workbench_items %}
@@ -254,12 +253,6 @@
                         </div>
                     </article>
                     {% endif %}
-                    {% elif mobile_section == 'buddy' %}
-                    {% if home_user_mode == 'authenticated' and teacher_buddy_panel %}
-                    <article data-home-v6-teacher-buddy-slot="mobile">
-                        {% include 'core/partials/home_v6_teacher_buddy_panel_mobile.html' %}
-                    </article>
-                    {% endif %}
                     {% elif mobile_section == 'sns' %}
                     <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true">
                         {% include 'core/partials/home_v6_sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
@@ -269,31 +262,14 @@
                 </section>
 
                 <div class="home-v6-layout" data-home-v6-layout="true">
-                    <aside class="home-v6-nav-shell">
-                        <div class="home-v6-nav-stack">
-                            <div class="home-v6-card home-v6-nav-card" data-home-v6-nav-card="true">
-                                <div class="home-v6-nav-header">
-                                    <h2 class="mt-1 text-xl font-black text-slate-900">전체 도구</h2>
-                                </div>
-
+                    <aside class="home-v6-nav-shell" data-home-v6-nav-shell="desktop">
+                        <div class="home-v6-nav-stack home-v6-nav-stack--rail">
+                            <div class="home-v6-card home-v6-nav-card home-v6-nav-card--rail" data-home-v6-nav-card="rail">
+                                <h2 class="sr-only">전체 도구</h2>
                                 <div data-home-v6-nav="desktop">
                                     {% include 'core/partials/home_v6_nav_sections.html' with panel_name='desktop' %}
                                 </div>
                             </div>
-
-                            {% if home_user_mode == 'authenticated' and teacher_buddy_panel %}
-                            <section data-home-v6-teacher-buddy-slot="rail">
-                                {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
-                            </section>
-                            {% endif %}
-
-                            {% if home_user_mode == 'authenticated' and schoolcomm_home_card %}
-                            {% include 'core/partials/home_v6_schoolcomm_card.html' %}
-                            {% endif %}
-
-                            {% if home_user_mode == 'authenticated' %}
-                            {% include 'core/partials/home_v6_developer_chat_card.html' with card_variant='desktop' %}
-                            {% endif %}
                         </div>
                     </aside>
 
@@ -336,13 +312,14 @@
                             </section>
 
                             {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace %}
+
                         </div>
 
                         <div class="home-v6-side-stack">
                             <article class="home-v6-card home-v6-favorites-panel" data-home-v6-favorites-panel="true" data-home-v6-rail-card="true">
                                 <div class="mb-4 flex items-center gap-2">
                                     <i class="fa-solid fa-star home-v6-favorites-icon text-amber-500"></i>
-                                    <h2 class="text-lg font-black text-slate-900">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}내 작업대{% endif %}</h2>
+                                    <h2 class="text-lg font-black text-slate-900">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
                                 </div>
 
                                 {% if favorite_items %}
@@ -408,32 +385,26 @@
                                     </a>
                                 </div>
 
-                                <div class="space-y-3">
+                                <div class="home-v6-rail-button-list">
                                     {% for item in reservation_home_card.items %}
                                     <a
                                         href="{{ item.href }}"
-                                        class="home-v6-reservation-item flex items-start justify-between gap-3 rounded-[1.25rem] border border-slate-200 bg-white/90 px-4 py-3.5 transition"
+                                        class="home-v6-reservation-button"
                                         data-home-reservations-item="true"
                                         data-home-v6-rail-item="true"
                                     >
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <p class="text-sm font-black text-slate-900">{{ item.school_name }}</p>
-                                                <span class="home-v6-reservation-role-chip inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold">
-                                                    {{ item.role_label }}
-                                                </span>
-                                            </div>
-                                            {% if item.summary %}
-                                            <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
-                                            {% endif %}
-                                        </div>
-                                        <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
+                                        <span class="home-v6-reservation-button-title">{{ item.school_name }}</span>
+                                        <span class="home-v6-reservation-button-arrow" data-home-v6-rail-arrow="true">
                                             <i class="fa-solid fa-arrow-right"></i>
                                         </span>
                                     </a>
                                     {% endfor %}
                                 </div>
                             </section>
+                            {% endif %}
+
+                            {% if home_user_mode == 'authenticated' and schoolcomm_home_card %}
+                            {% include 'core/partials/home_v6_schoolcomm_card.html' %}
                             {% endif %}
 
                             {% if home_user_mode == 'authenticated' and quickdrop_home_card %}

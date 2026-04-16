@@ -30,7 +30,7 @@
     }
 
     .classcalendar-day-cell {
-        min-height: 76px;
+        min-height: 112px;
     }
 
     .classcalendar-day-head {
@@ -56,6 +56,382 @@
         font-weight: 800;
         letter-spacing: -0.01em;
         box-shadow: inset 0 0 0 1px #bfdbfe;
+    }
+
+    .classcalendar-day-preview {
+        display: flex;
+        flex: 1 1 auto;
+        min-height: 0;
+        margin-top: 0.55rem;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .classcalendar-day-range-row {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+        min-height: 1.1rem;
+        padding: 0 0.55rem;
+        border-width: 1px;
+        font-size: 0.65rem;
+        line-height: 1.15;
+        font-weight: 800;
+        color: #334155;
+    }
+
+    .classcalendar-day-range-label {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .classcalendar-day-preview-row {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.38rem 0.45rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.8rem;
+        background: #f8fafc;
+        text-align: left;
+    }
+
+    .classcalendar-day-preview-badge {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        max-width: 4.25rem;
+        padding: 0.12rem 0.38rem;
+        border-radius: 9999px;
+        border: 1px solid transparent;
+        font-size: 0.6rem;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+
+    .classcalendar-day-preview-title {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.71rem;
+        line-height: 1.15;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .classcalendar-day-preview-overflow {
+        padding-left: 0.15rem;
+        font-size: 0.68rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #64748b;
+    }
+
+    .classcalendar-home-workweek-scroll {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-radius: 0.9rem;
+    }
+
+    .classcalendar-home-workweek-surface {
+        min-width: 1120px;
+        border: 1px solid #e4e7eb;
+        border-radius: 0.9rem;
+        background: #ffffff;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+    }
+
+    .classcalendar-home-workweek-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+        padding: 0.18rem 0.1rem 0.9rem;
+        background: transparent;
+    }
+
+    .classcalendar-home-workweek-month-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+
+    .classcalendar-home-workweek-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid #d7dde5;
+        border-radius: 9999px;
+        background: #ffffff;
+        color: #64748b;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .classcalendar-home-workweek-nav-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .classcalendar-home-workweek-title {
+        min-width: 0;
+        margin: 0;
+        font-size: 1.22rem;
+        line-height: 1.1;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        color: #1f2937;
+        white-space: nowrap;
+    }
+
+    .classcalendar-home-workweek-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.45rem;
+    }
+
+    .classcalendar-home-workweek-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2rem;
+        padding: 0.3rem 0.78rem;
+        border: 1px solid #d7dde5;
+        border-radius: 9999px;
+        background: #ffffff;
+        color: #475569;
+        font-size: 0.74rem;
+        line-height: 1;
+        font-weight: 800;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .classcalendar-home-workweek-action:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    .classcalendar-home-workweek-action--primary {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    .classcalendar-home-workweek-action--primary:hover {
+        background: #ffffff;
+        border-color: #bfc9d4;
+        color: #020617;
+    }
+
+    .classcalendar-home-workweek-header {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        border-bottom: 1px solid #e4e7eb;
+        background: #fcfcfd;
+    }
+
+    .classcalendar-home-workweek-header-day {
+        padding: 0.72rem 0.4rem 0.68rem;
+        text-align: center;
+        font-size: 0.76rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #9aa3af;
+        letter-spacing: -0.01em;
+    }
+
+    .classcalendar-home-workweek-row {
+        position: relative;
+        background: #ffffff;
+        border-bottom: 1px solid #e4e7eb;
+    }
+
+    .classcalendar-home-workweek-row:last-child {
+        border-bottom: 0;
+    }
+
+    .classcalendar-home-workweek-hitgrid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        z-index: 0;
+    }
+
+    .classcalendar-home-workweek-hitcell {
+        position: relative;
+        min-height: 100%;
+        border-right: 1px solid #e4e7eb;
+        background: transparent;
+        transition: background-color 0.2s ease;
+    }
+
+    .classcalendar-home-workweek-hitcell:last-child {
+        border-right: 0;
+    }
+
+    .classcalendar-home-workweek-hitcell:hover {
+        background: rgba(15, 23, 42, 0.018);
+    }
+
+    .classcalendar-home-workweek-hitcell.is-selected {
+        background: rgba(59, 130, 246, 0.035);
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.08);
+    }
+
+    .classcalendar-home-workweek-hitcell.is-highlighted {
+        box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.22);
+    }
+
+    .classcalendar-home-workweek-date {
+        position: absolute;
+        top: 0.72rem;
+        right: 0.82rem;
+        font-size: 0.92rem;
+        line-height: 1;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+    }
+
+    .classcalendar-home-workweek-date.is-muted {
+        color: #c0c6cf;
+    }
+
+    .classcalendar-home-workweek-date.is-today {
+        color: #111827;
+    }
+
+    .classcalendar-home-workweek-content {
+        position: relative;
+        z-index: 1;
+        padding: 2.28rem 0.4rem 0.62rem;
+    }
+
+    .classcalendar-home-workweek-day-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .classcalendar-home-workweek-day-grid--secondary {
+        margin-top: 0.24rem;
+    }
+
+    .classcalendar-home-workweek-day-stack {
+        min-width: 0;
+        padding: 0 0.22rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.24rem;
+    }
+
+    .classcalendar-home-workweek-day-stack--primary {
+        min-height: 2.04rem;
+    }
+
+    .classcalendar-home-workweek-day-stack--secondary {
+        min-height: 4.32rem;
+    }
+
+    .classcalendar-home-workweek-range-grid {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        margin-top: 0.18rem;
+        padding: 0 0.22rem;
+        pointer-events: none;
+    }
+
+    .classcalendar-home-workweek-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        min-width: 0;
+        width: 100%;
+        min-height: 1.96rem;
+        padding: 0.22rem 0.62rem;
+        border: 1px solid #e3e7ec;
+        border-radius: 0.78rem;
+        background: #ffffff;
+        color: #1f2937;
+        text-align: left;
+        font-size: 0.74rem;
+        line-height: 1.08;
+        font-weight: 800;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .classcalendar-home-workweek-item:hover {
+        background: #fbfcfe;
+        border-color: #d2dae3;
+    }
+
+    .classcalendar-home-workweek-item--range {
+        pointer-events: auto;
+        margin: 0 0.22rem 0.24rem;
+    }
+
+    .classcalendar-home-workweek-item.is-hub {
+        background: #f8fafc;
+        border-color: #dbe4ee;
+    }
+
+    .classcalendar-home-workweek-item.is-warning {
+        border-color: #f2dfc7;
+        background: #fff7ed;
+    }
+
+    .classcalendar-home-workweek-item.is-done {
+        border-color: #cfe9d7;
+        background: #f0fdf4;
+    }
+
+    .classcalendar-home-workweek-item.is-range {
+        background: #f8fafc;
+        border-color: #dbe4ee;
+    }
+
+    .classcalendar-home-workweek-item-icon {
+        flex: 0 0 auto;
+        color: #94a3b8;
+        font-size: 0.8rem;
+    }
+
+    .classcalendar-home-workweek-item-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .classcalendar-home-workweek-more {
+        padding-left: 0.2rem;
+        font-size: 0.7rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #94a3b8;
     }
 
     .classcalendar-main-toolbar-scroll {
@@ -328,7 +704,7 @@
 
     @media (min-width: 640px) {
         .classcalendar-day-cell {
-            min-height: 92px;
+            min-height: 156px;
         }
 
         .classcalendar-day-head {
@@ -342,6 +718,69 @@
             min-width: 1.7rem;
             padding: 0.125rem 0.5rem;
             font-size: 0.75rem;
+        }
+
+        .classcalendar-day-preview {
+            margin-top: 0.65rem;
+            gap: 0.45rem;
+        }
+
+        .classcalendar-day-range-row {
+            min-height: 1.35rem;
+            padding: 0 0.65rem;
+            font-size: 0.68rem;
+        }
+
+        .classcalendar-day-preview-row {
+            gap: 0.42rem;
+            padding: 0.46rem 0.58rem;
+            border-radius: 0.9rem;
+        }
+
+        .classcalendar-day-preview-badge {
+            max-width: 4.8rem;
+            font-size: 0.64rem;
+        }
+
+        .classcalendar-day-preview-title {
+            font-size: 0.76rem;
+        }
+
+        .classcalendar-home-workweek-toolbar {
+            padding: 0.78rem 0.92rem;
+        }
+
+        .classcalendar-home-workweek-title {
+            font-size: 1.32rem;
+        }
+
+        .classcalendar-home-workweek-action {
+            font-size: 0.76rem;
+        }
+
+        .classcalendar-home-workweek-header-day {
+            font-size: 0.78rem;
+        }
+
+        .classcalendar-home-workweek-date {
+            font-size: 0.96rem;
+        }
+
+        .classcalendar-home-workweek-content {
+            padding: 2.38rem 0.46rem 0.68rem;
+        }
+
+        .classcalendar-home-workweek-day-stack--primary {
+            min-height: 2.16rem;
+        }
+
+        .classcalendar-home-workweek-day-stack--secondary {
+            min-height: 4.48rem;
+        }
+
+        .classcalendar-home-workweek-item {
+            min-height: 2rem;
+            font-size: 0.76rem;
         }
 
         .classcalendar-main-toolbar {
@@ -401,6 +840,34 @@
     }
 
     @media (max-width: 639px) {
+        .classcalendar-home-workweek-surface {
+            min-width: 900px;
+        }
+
+        .classcalendar-home-workweek-toolbar {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .classcalendar-home-workweek-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .classcalendar-home-workweek-day-stack--primary {
+            min-height: 3.1rem;
+        }
+
+        .classcalendar-home-workweek-day-stack--secondary {
+            min-height: 3.2rem;
+        }
+
+        .classcalendar-home-workweek-item {
+            min-height: 2.35rem;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.72rem;
+        }
+
         #home-calendar .classcalendar-main-toolbar-scroll {
             overflow-x: visible;
             padding-bottom: 0;
@@ -440,7 +907,7 @@
 
     @media (min-width: 1280px) {
         .classcalendar-day-cell {
-            min-height: 104px;
+            min-height: 176px;
         }
 
         .classcalendar-center-layout {
@@ -504,15 +971,15 @@
 </style>
 
 <section
-    class="{% if is_compact_surface %}pt-0 pb-0 px-0 min-h-0{% else %}service-shell--compact pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell"
+    class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}pt-0 pb-0 px-0 min-h-0{% else %}pt-24 md:pt-28 pb-6 md:pb-12 px-3 sm:px-6 lg:px-8 min-h-screen{% endif %} ui-pilot-calendar-shell"
     data-classcalendar-surface="true"
     data-classcalendar-page-variant="{{ calendar_page_variant }}"
     data-classcalendar-embed-mode="{{ calendar_embed_mode|default:'page' }}"
     x-data="calendarApp()"
     x-effect="syncCalendarSurfaceScrollLock()"
 >
-    <div class="{% if is_compact_surface %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
-        {% if calendar_page_variant == "today" and not is_compact_surface %}
+    <div class="{% if is_embedded_in_sheetbook or is_embedded_on_home %}max-w-none mx-0{% else %}max-w-7xl mx-auto{% endif %}">
+        {% if calendar_page_variant == "today" and not is_embedded_in_sheetbook and not is_embedded_on_home %}
         <div class="mb-3 sm:mb-4 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
             <div class="min-w-0">
                 <p class="classcalendar-eyebrow font-semibold text-slate-400">메인 캘린더</p>
@@ -568,7 +1035,7 @@
         {% endif %}
 
         <div
-            class="{% if is_embedded_on_home %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-sm p-3 sm:p-5{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}"
+            class="{% if is_embedded_in_sheetbook %}bg-white rounded-none border-0 shadow-none p-0{% elif is_embedded_on_home %}bg-transparent rounded-none border-0 shadow-none p-0{% else %}bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 shadow-xl p-2.5 sm:p-5{% endif %}"
             {% if is_embedded_on_home %}data-classcalendar-home-card="true"{% endif %}
         >
             {% if calendar_page_variant == "today" %}
@@ -588,7 +1055,7 @@
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-events="true">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="classcalendar-eyebrow font-black text-slate-400">일정</p>
+                                <p class="classcalendar-eyebrow font-black text-slate-400">오늘 일정</p>
                                 <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 확인할 일정</h3>
                             </div>
                             <a href="{{ main_url }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600">
@@ -629,8 +1096,8 @@
                     <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="classcalendar-eyebrow font-black text-slate-400">메모</p>
-                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정 메모</h3>
+                                <p class="classcalendar-eyebrow font-black text-slate-400">오늘의 메모</p>
+                                <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
                             </div>
                             <a href="{{ today_memo_url }}" class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100">
                                 오늘의 메모
@@ -664,8 +1131,8 @@
                 {% elif today_focus == "memos" and today_workspace.today_memos %}
                 <section class="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5" data-classcalendar-today-memos="true">
                     <div>
-                        <p class="classcalendar-eyebrow font-black text-slate-400">메모</p>
-                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정 메모</h3>
+                        <p class="classcalendar-eyebrow font-black text-slate-400">오늘의 메모</p>
+                        <h3 class="mt-1 text-lg font-extrabold text-slate-900">오늘 일정에 붙은 메모</h3>
                     </div>
                     <div class="mt-4 space-y-3">
                         {% for item in today_workspace.today_memos %}
@@ -736,7 +1203,7 @@
                 {% endif %}
             </div>
             {% else %}
-            {% if not is_compact_surface %}
+            {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
             <div class="space-y-5" data-classcalendar-center="true">
                 <section class="classcalendar-center-hero p-5 sm:p-6">
                     <div class="min-w-0">
@@ -749,9 +1216,54 @@
                     data-classcalendar-search-priority="{{ initial_focus_search|yesno:'true,false' }}"
                 >
                     <div class="classcalendar-center-month-wrap space-y-4">
-                        <div class="classcalendar-center-month-panel p-4 sm:p-5">
+                        <div class="classcalendar-center-month-panel {% if is_embedded_on_home %}p-0{% else %}p-4 sm:p-5{% endif %}">
             {% endif %}
             <div class="mb-2.5 sm:mb-3" data-classcalendar-main-view="true">
+                {% if is_embedded_on_home %}
+                <div class="classcalendar-home-workweek-toolbar" data-classcalendar-home-toolbar="true">
+                    <div class="classcalendar-home-workweek-month-group">
+                        <button type="button" @click="prevMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="이전 달">
+                            <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <h2 class="classcalendar-home-workweek-title" x-text="currentMonthText"></h2>
+                        <button type="button" @click="nextMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="다음 달">
+                            <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="classcalendar-home-workweek-actions">
+                        <button
+                            type="button"
+                            @click="selectToday()"
+                            class="classcalendar-home-workweek-action"
+                        >
+                            오늘
+                        </button>
+                        <a
+                            href="{{ calendar_center_url }}?focus_search=1#calendar-search"
+                            class="classcalendar-home-workweek-action"
+                        >
+                            일정 찾기
+                        </a>
+                        <a
+                            href="{{ calendar_center_url }}"
+                            class="classcalendar-home-workweek-action"
+                        >
+                            전체 일정
+                        </a>
+                        <button
+                            type="button"
+                            @click="openCreateModalForSelectedDate()"
+                            class="classcalendar-home-workweek-action classcalendar-home-workweek-action--primary"
+                        >
+                            새 일정
+                        </button>
+                    </div>
+                </div>
+                {% else %}
                 <div class="classcalendar-main-toolbar-scroll">
                     <div class="classcalendar-main-toolbar">
                         <div class="classcalendar-main-month-group">
@@ -807,6 +1319,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
 
             <div
@@ -816,6 +1329,105 @@
                 style="padding-bottom: 0.5rem;"
                 {% endif %}
             >
+                {% if is_embedded_on_home %}
+                <div class="classcalendar-home-workweek-scroll" data-classcalendar-home-workweek-board="true">
+                    <div class="classcalendar-home-workweek-surface">
+                        <div class="classcalendar-home-workweek-header">
+                            <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']" :key="day">
+                                <div class="classcalendar-home-workweek-header-day" x-text="day"></div>
+                            </template>
+                        </div>
+                        <div>
+                            <template x-for="week in homeWorkweekModels" :key="week.id">
+                                <section class="classcalendar-home-workweek-row">
+                                    <div class="classcalendar-home-workweek-hitgrid">
+                                        <template x-for="date in week.dates" :key="date.toISOString()">
+                                            <button
+                                                type="button"
+                                                class="classcalendar-home-workweek-hitcell"
+                                                :class="[
+                                                    isSelectedDate(date) ? 'is-selected' : '',
+                                                    isHighlightedDate(date) ? 'is-highlighted' : ''
+                                                ]"
+                                                @click="handleDayCellClick(date, $event)"
+                                                :title="getDayTooltip(date)"
+                                            >
+                                                <span
+                                                    class="classcalendar-home-workweek-date"
+                                                    :class="getHomeWorkweekDateClass(date)"
+                                                    x-text="formatHomeWorkweekDateLabel(date)"
+                                                ></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                    <div class="classcalendar-home-workweek-content">
+                                        <div class="classcalendar-home-workweek-day-grid">
+                                            <template x-for="date in week.dates" :key="`primary-${date.toISOString()}`">
+                                                <div class="classcalendar-home-workweek-day-stack classcalendar-home-workweek-day-stack--primary">
+                                                    <template x-for="item in week.dayBuckets[dateKey(date)].primary" :key="item.id">
+                                                        <button
+                                                            type="button"
+                                                            @click.stop="openHomeWorkweekItem(item, $event)"
+                                                            class="classcalendar-home-workweek-item"
+                                                            :class="item.itemClass"
+                                                            :title="item.title"
+                                                        >
+                                                            <i x-show="item.iconClass" class="classcalendar-home-workweek-item-icon" :class="item.iconClass"></i>
+                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.title"></span>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div
+                                            x-show="week.rangeItems.length > 0"
+                                            class="classcalendar-home-workweek-range-grid"
+                                            :style="week.rangeGridStyle"
+                                        >
+                                            <template x-for="item in week.rangeItems" :key="item.id">
+                                                <button
+                                                    type="button"
+                                                    @click.stop="openHomeWorkweekItem(item, $event)"
+                                                    class="classcalendar-home-workweek-item classcalendar-home-workweek-item--range"
+                                                    :class="item.itemClass"
+                                                    :style="item.style"
+                                                    :title="item.title"
+                                                >
+                                                    <i x-show="item.iconClass" class="classcalendar-home-workweek-item-icon" :class="item.iconClass"></i>
+                                                    <span class="classcalendar-home-workweek-item-title" x-text="item.title"></span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                        <div class="classcalendar-home-workweek-day-grid classcalendar-home-workweek-day-grid--secondary">
+                                            <template x-for="date in week.dates" :key="`secondary-${date.toISOString()}`">
+                                                <div class="classcalendar-home-workweek-day-stack classcalendar-home-workweek-day-stack--secondary">
+                                                    <template x-for="item in week.dayBuckets[dateKey(date)].secondary" :key="item.id">
+                                                        <button
+                                                            type="button"
+                                                            @click.stop="openHomeWorkweekItem(item, $event)"
+                                                            class="classcalendar-home-workweek-item"
+                                                            :class="item.itemClass"
+                                                            :title="item.title"
+                                                        >
+                                                            <i x-show="item.iconClass" class="classcalendar-home-workweek-item-icon" :class="item.iconClass"></i>
+                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.title"></span>
+                                                        </button>
+                                                    </template>
+                                                    <span
+                                                        x-show="week.dayBuckets[dateKey(date)].overflow > 0"
+                                                        class="classcalendar-home-workweek-more"
+                                                        x-text="`+${week.dayBuckets[dateKey(date)].overflow}`"
+                                                    ></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </section>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
                 <div class="grid grid-cols-7 gap-px bg-slate-200 rounded-xl overflow-hidden border border-slate-200">
                     <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']">
                         <div class="bg-slate-100 py-2 sm:py-3 text-center text-xs sm:text-sm font-bold text-slate-600" x-text="day"></div>
@@ -851,11 +1463,40 @@
                                     x-text="formatDayItemCount(date)"
                                 ></span>
                             </div>
+                            <div class="classcalendar-day-preview" data-classcalendar-day-preview="true">
+                                <template x-for="row in getDayPreviewRows(date)" :key="row.id">
+                                    <div
+                                        class="min-w-0"
+                                        :class="row.kind === 'range' ? `classcalendar-day-range-row ${row.rowClass}` : `classcalendar-day-preview-row ${row.rowClass}`"
+                                        :title="row.title"
+                                    >
+                                        <template x-if="row.kind === 'range'">
+                                            <span
+                                                x-show="row.showLabel"
+                                                class="classcalendar-day-range-label"
+                                                x-text="row.title"
+                                            ></span>
+                                        </template>
+                                        <template x-if="row.kind !== 'range'">
+                                            <div class="flex min-w-0 items-center gap-1.5">
+                                                <span class="classcalendar-day-preview-badge" :class="row.badgeClass" x-text="row.badge"></span>
+                                                <span class="classcalendar-day-preview-title" x-text="row.title"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <span
+                                    x-show="getDayPreviewOverflowCount(date) > 0"
+                                    class="classcalendar-day-preview-overflow"
+                                    x-text="`+${getDayPreviewOverflowCount(date)}`"
+                                ></span>
+                            </div>
                         </button>
                     </template>
                 </div>
+                {% endif %}
             </div>
-            {% if not is_compact_surface %}
+            {% if not is_embedded_on_home and not is_embedded_in_sheetbook %}
                         </div>
                     </div>
 
@@ -1019,16 +1660,27 @@
                     </template>
                 </div>
             </div>
+            <div
+                x-show="selectedEvent && selectedEvent.source_sheetbook_title"
+                class="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+            >
+                <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
+                <p class="mt-1 text-sm text-slate-700">
+                    <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
+                    <span class="mx-1 text-slate-400">/</span>
+                    <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
+                </p>
+            </div>
             <a
                 x-show="selectedEvent && selectedEvent.source_url"
                 :href="selectedEvent ? selectedEvent.source_url : '#'"
-                target="_blank"
-                rel="noopener noreferrer"
+                :target="embeddedSheetbookContext ? '_top' : '_blank'"
+                :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'"
                 class="mb-4 inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100 transition"
             >
                 <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                 <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
-                <span class="ml-1">(새 탭)</span>
+                <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
             </a>
             <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="mb-4 flex flex-wrap items-center gap-2">
                 <button
@@ -1302,12 +1954,20 @@
                             </template>
                         </div>
                     </div>
+                    <div x-show="selectedEvent && selectedEvent.source_sheetbook_title" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <p class="text-xs font-bold text-slate-700">연결된 수첩</p>
+                        <p class="mt-1 text-sm text-slate-700">
+                            <span x-text="selectedEvent ? selectedEvent.source_sheetbook_title : ''"></span>
+                            <span class="mx-1 text-slate-400">/</span>
+                            <span x-text="selectedEvent ? selectedEvent.source_tab_name : ''"></span>
+                        </p>
+                    </div>
                     <p x-show="getReadonlyEventHint()" class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-semibold text-amber-900" x-text="getReadonlyEventHint()"></p>
                     <div x-show="selectedEvent && selectedEvent.source_url" class="flex flex-wrap gap-2">
-                        <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" target="_blank" rel="noopener noreferrer" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
+                        <a x-show="selectedEvent && selectedEvent.source_url" :href="selectedEvent ? selectedEvent.source_url : '#'" :target="embeddedSheetbookContext ? '_top' : '_blank'" :rel="embeddedSheetbookContext ? null : 'noopener noreferrer'" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-sm font-bold text-indigo-800 transition hover:bg-indigo-100">
                             <i class="fa-solid fa-arrow-up-right-from-square mr-1.5"></i>
                             <span x-text="selectedEvent && selectedEvent.source_label ? selectedEvent.source_label : '원본 서비스로 이동'"></span>
-                            <span class="ml-1">(새 탭)</span>
+                            <span x-show="!embeddedSheetbookContext" class="ml-1">(새 탭)</span>
                         </a>
                     </div>
                     <div x-show="selectedEvent && hasSelectedItemMessageCapture()" class="flex flex-wrap items-center gap-2">
@@ -1405,8 +2065,12 @@
 {{ calendar_owner_options_json|json_script:"calendar-owner-options-data" }}
 {{ message_capture_limits_json|json_script:"message-capture-limits-data" }}
 {{ message_capture_urls_json|json_script:"message-capture-urls-data" }}
+{{ embedded_sheetbook_context_json|json_script:"calendar-embed-context-data" }}
+
 <script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
 <script>
+const CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
+
 function ensureCalendarToastBridge() {
     if (typeof window.showToast === 'function') return;
     const rootId = 'calendar-toast-root';
@@ -1437,9 +2101,12 @@ function ensureCalendarToastBridge() {
 ensureCalendarToastBridge();
 
 function notifyEmbeddedCalendarHeight() {
+    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
 }
 
 function dispatchCalendarHostEvent(type, payload = {}) {
+    if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
+    document.dispatchEvent(new CustomEvent(type, { detail: payload }));
 }
 
 function copyCalendarShareUrl() {
@@ -1517,6 +2184,7 @@ function calendarApp() {
         messageArchiveLoadedOnce: false,
         messageCaptureEnabled: {{ message_capture_enabled|yesno:"true,false" }},
         messageCaptureItemTypesEnabled: {{ message_capture_item_types_enabled|yesno:"true,false" }},
+        embeddedSheetbookContext: null,
         calendarOwnerOptions: [],
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
@@ -1614,6 +2282,7 @@ function calendarApp() {
 
         init() {
             this.loadCalendarOwnerOptions();
+            this.loadEmbeddedSheetbookContext();
             this.loadIntegrationSettingsFromScript();
             this.loadMessageCaptureLimitsFromScript();
             this.initializeCalendarMessageHub();
@@ -1694,6 +2363,15 @@ function calendarApp() {
             } catch (e) {
                 this.calendarOwnerOptions = [];
                 this.defaultCalendarOwnerId = '';
+            }
+        },
+
+        loadEmbeddedSheetbookContext() {
+            try {
+                const raw = JSON.parse(document.getElementById('calendar-embed-context-data').textContent || '{}');
+                this.embeddedSheetbookContext = raw && raw.sheetbook_id ? raw : null;
+            } catch (e) {
+                this.embeddedSheetbookContext = null;
             }
         },
 
@@ -1882,6 +2560,11 @@ function calendarApp() {
             return this.tasks.find((task) => String(task.id) === targetId) || null;
         },
 
+        findHubItemById(itemId) {
+            const targetId = String(itemId || '');
+            return this.hubItems.find((item) => String(item.id) === targetId) || null;
+        },
+
         openEventDetailById(eventId) {
             const event = this.findEventById(eventId);
             if (!event) {
@@ -1905,7 +2588,37 @@ function calendarApp() {
         },
 
         registerEmbeddedActionBridge() {
-            return;
+            if (!CALENDAR_EMBEDDED_IN_SHEETBOOK) return;
+            const self = this;
+            window.sheetbookCalendarBridge = {
+                openMessageCapture() {
+                    if (!self.messageCaptureEnabled) {
+                        const message = '메시지 기능이 아직 열리지 않았습니다.';
+                        self.notifyEmbeddedHost('classcalendar:action-blocked', {
+                            action: 'message-capture',
+                            message,
+                        });
+                        return { ok: false, message };
+                    }
+                    self.openMessageHub({ currentTarget: document.activeElement }, 'capture', { resetCapture: true });
+                    self.$nextTick(() => notifyEmbeddedCalendarHeight());
+                    self.notifyEmbeddedHost('classcalendar:action-opened', { action: 'message-capture' });
+                    return { ok: true };
+                },
+                openCreateEvent() {
+                    self.openCreateModalForSelectedDate();
+                    self.$nextTick(() => notifyEmbeddedCalendarHeight());
+                    self.notifyEmbeddedHost('classcalendar:action-opened', { action: 'create-event' });
+                    return { ok: true };
+                },
+                refreshEvents(options = {}) {
+                    return self.refreshEvents(options);
+                },
+            };
+            self.notifyEmbeddedHost('classcalendar:ready', {
+                sheetbook_id: self.embeddedSheetbookContext ? self.embeddedSheetbookContext.sheetbook_id : null,
+                tab_id: self.embeddedSheetbookContext ? self.embeddedSheetbookContext.tab_id : null,
+            });
         },
 
         getCsrfToken() {
@@ -2078,7 +2791,7 @@ function calendarApp() {
         },
 
         syncPageState(overrides = {}) {
-            if (this.calendarEmbedMode !== 'page' || !window.history || typeof window.history.replaceState !== 'function') {
+            if (this.calendarEmbedMode === 'sheetbook' || !window.history || typeof window.history.replaceState !== 'function') {
                 return;
             }
             const nextUrl = this.buildPageStateUrl({
@@ -2760,6 +3473,10 @@ function calendarApp() {
                 selected_candidates: selectedCandidates,
                 selected_attachment_ids: this.messageCaptureServerAttachments.map((attachment) => attachment.id),
             };
+            if (this.embeddedSheetbookContext) {
+                body.source_sheetbook_id = this.embeddedSheetbookContext.sheetbook_id;
+                body.source_tab_id = this.embeddedSheetbookContext.tab_id;
+            }
 
             this.isCommittingMessageCapture = true;
             this.messageCaptureErrorText = '';
@@ -3376,6 +4093,10 @@ function calendarApp() {
             body.set('title', this.createForm.title);
             body.set('note', this.createForm.note || '');
             if (this.createForm.calendar_owner_id) body.set('calendar_owner_id', this.createForm.calendar_owner_id);
+            if (this.embeddedSheetbookContext) {
+                body.set('source_sheetbook_id', String(this.embeddedSheetbookContext.sheetbook_id || ''));
+                body.set('source_tab_id', String(this.embeddedSheetbookContext.tab_id || ''));
+            }
             body.set('start_time', eventTimes.start_time);
             body.set('end_time', eventTimes.end_time);
             body.set('color', this.createForm.color);
@@ -3796,6 +4517,264 @@ function calendarApp() {
             for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) dates.push(new Date(cursor));
             return dates;
         },
+        get homeWorkweekModels() {
+            const dates = this.calendarDates;
+            const weeks = [];
+            for (let offset = 0; offset < dates.length; offset += 7) {
+                weeks.push(this.buildHomeWorkweekModel(dates.slice(offset, offset + 7)));
+            }
+            return weeks;
+        },
+        getHomeWorkweekTopLimit() {
+            return this.isCompactMobileViewport() ? 1 : 1;
+        },
+        getHomeWorkweekBottomLimit() {
+            return this.isCompactMobileViewport() ? 1 : 2;
+        },
+        getHomeWorkweekRangeLimit() {
+            return this.isCompactMobileViewport() ? 1 : 1;
+        },
+        getHomeWorkweekDateClass(date) {
+            if (this.isToday(date)) return 'is-today';
+            if (!this.isCurrentMonth(date)) return 'is-muted';
+            return '';
+        },
+        formatHomeWorkweekDateLabel(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+            if (date.getDate() === 1) {
+                return `${date.getMonth() + 1}월 ${date.getDate()}`;
+            }
+            return String(date.getDate());
+        },
+        buildHomeWorkweekSpanMeta(startValue, endValue, weekDates) {
+            if (!startValue || !weekDates || weekDates.length === 0) return null;
+            const rawStart = new Date(startValue);
+            const rawEnd = endValue ? new Date(endValue) : new Date(startValue);
+            if (Number.isNaN(rawStart.getTime()) || Number.isNaN(rawEnd.getTime())) return null;
+
+            const weekStart = new Date(weekDates[0]);
+            const weekEnd = new Date(weekDates[weekDates.length - 1]);
+            weekStart.setHours(0, 0, 0, 0);
+            weekEnd.setHours(0, 0, 0, 0);
+
+            const sourceStart = new Date(rawStart.getFullYear(), rawStart.getMonth(), rawStart.getDate());
+            const sourceEnd = new Date(rawEnd.getFullYear(), rawEnd.getMonth(), rawEnd.getDate());
+            if (sourceEnd.getTime() < weekStart.getTime() || sourceStart.getTime() > weekEnd.getTime()) {
+                return null;
+            }
+
+            const visibleStart = new Date(Math.max(sourceStart.getTime(), weekStart.getTime()));
+            const visibleEnd = new Date(Math.min(sourceEnd.getTime(), weekEnd.getTime()));
+            const dayMs = 24 * 60 * 60 * 1000;
+            const maxColumn = weekDates.length;
+            const colStart = Math.max(1, Math.min(maxColumn, Math.round((visibleStart.getTime() - weekStart.getTime()) / dayMs) + 1));
+            const colEnd = Math.max(colStart, Math.min(maxColumn, Math.round((visibleEnd.getTime() - weekStart.getTime()) / dayMs) + 1));
+
+            return {
+                colStart,
+                colEnd,
+                colSpan: colEnd - colStart + 1,
+                focusDateKey: this.dateKey(visibleStart),
+                sourceRange: this.dateKey(sourceStart) !== this.dateKey(sourceEnd),
+            };
+        },
+        getHomeWorkweekEventIconClass(event) {
+            if (!event) return '';
+            if ((event.attachments || []).length > 0 || this.hasEventNote(event) || event.message_capture_id) {
+                return 'fa-regular fa-file-lines';
+            }
+            return '';
+        },
+        getHomeWorkweekEventItemClass(event, isRange = false) {
+            const classes = [];
+            const statusCode = this.getEventStatusCode(event);
+            if (isRange) classes.push('is-range');
+            if (statusCode === 'done') {
+                classes.push('is-done');
+            } else if (statusCode === 'today' || statusCode === 'live') {
+                classes.push('is-warning');
+            }
+            return classes.join(' ');
+        },
+        getHomeWorkweekHubIconClass(item) {
+            if (!item) return '';
+            if (item.item_kind === 'message') return 'fa-regular fa-envelope';
+            if (item.item_kind === 'reservation') return 'fa-regular fa-calendar-check';
+            return 'fa-regular fa-file-lines';
+        },
+        getHomeWorkweekHubItemClass(item, isRange = false) {
+            const classes = ['is-hub'];
+            if (isRange) classes.push('is-range');
+            if (item && item.tone === 'warning') {
+                classes.push('is-warning');
+            } else if (item && item.tone === 'done') {
+                classes.push('is-done');
+            }
+            return classes.join(' ');
+        },
+        buildHomeWorkweekEventItem(event, weekDates) {
+            const spanMeta = this.buildHomeWorkweekSpanMeta(event.start_time, event.end_time, weekDates);
+            if (!spanMeta) return null;
+            const isRange = spanMeta.sourceRange;
+            return {
+                id: `home-week-event-${event.id}-${spanMeta.focusDateKey}`,
+                sourceKind: 'event',
+                sourceId: String(event.id),
+                title: event.title,
+                focusDateKey: spanMeta.focusDateKey,
+                colStart: spanMeta.colStart,
+                colEnd: spanMeta.colEnd,
+                colSpan: spanMeta.colSpan,
+                isRange,
+                sortValue: event.start_time ? event.start_time.getTime() : 0,
+                iconClass: this.getHomeWorkweekEventIconClass(event),
+                itemClass: this.getHomeWorkweekEventItemClass(event, isRange),
+            };
+        },
+        buildHomeWorkweekHubItem(item, weekDates) {
+            const startValue = item.start_at || item.sort_at || (item.date_key ? this.parseDateKey(item.date_key) : null);
+            const endValue = item.end_at || item.start_at || item.sort_at || startValue;
+            const spanMeta = this.buildHomeWorkweekSpanMeta(startValue, endValue, weekDates);
+            if (!spanMeta) return null;
+            const isRange = spanMeta.sourceRange;
+            const sortValue = item.sort_at ? item.sort_at.getTime() : (startValue ? new Date(startValue).getTime() : 0);
+            return {
+                id: `home-week-hub-${item.id}-${spanMeta.focusDateKey}`,
+                sourceKind: 'hub',
+                sourceId: String(item.id),
+                title: item.title,
+                focusDateKey: spanMeta.focusDateKey,
+                colStart: spanMeta.colStart,
+                colEnd: spanMeta.colEnd,
+                colSpan: spanMeta.colSpan,
+                isRange,
+                sortValue,
+                iconClass: this.getHomeWorkweekHubIconClass(item),
+                itemClass: this.getHomeWorkweekHubItemClass(item, isRange),
+            };
+        },
+        buildHomeWorkweekModel(weekDates) {
+            const dayBuckets = {};
+            weekDates.forEach((date) => {
+                dayBuckets[this.dateKey(date)] = {
+                    primary: [],
+                    secondary: [],
+                    overflow: 0,
+                };
+            });
+
+            const topLimit = this.getHomeWorkweekTopLimit();
+            const bottomLimit = this.getHomeWorkweekBottomLimit();
+            const rangeLimit = this.getHomeWorkweekRangeLimit();
+            const singleDayItems = [];
+            const rangeItems = [];
+
+            this.events.forEach((event) => {
+                const item = this.buildHomeWorkweekEventItem(event, weekDates);
+                if (!item) return;
+                if (item.isRange) {
+                    rangeItems.push(item);
+                    return;
+                }
+                singleDayItems.push(item);
+            });
+
+            this.hubItems
+                .filter((item) => item.item_kind !== 'task' && item.item_kind !== 'event')
+                .sort((left, right) => this.sortHubItems(left, right))
+                .forEach((item) => {
+                    const weekItem = this.buildHomeWorkweekHubItem(item, weekDates);
+                    if (!weekItem) return;
+                    if (weekItem.isRange) {
+                        rangeItems.push(weekItem);
+                        return;
+                    }
+                    singleDayItems.push(weekItem);
+                });
+
+            singleDayItems
+                .sort((left, right) => (
+                    left.colStart - right.colStart
+                    || left.sortValue - right.sortValue
+                    || String(left.title || '').localeCompare(String(right.title || ''), 'ko')
+                ))
+                .forEach((item) => {
+                    const bucket = dayBuckets[item.focusDateKey];
+                    if (!bucket) return;
+                    if (bucket.primary.length < topLimit) {
+                        bucket.primary.push(item);
+                        return;
+                    }
+                    if (bucket.secondary.length < bottomLimit) {
+                        bucket.secondary.push(item);
+                        return;
+                    }
+                    bucket.overflow += 1;
+                });
+
+            const placedRangeItems = [];
+            const lanes = [];
+            rangeItems
+                .sort((left, right) => (
+                    left.colStart - right.colStart
+                    || left.sortValue - right.sortValue
+                    || (right.colSpan - left.colSpan)
+                    || String(left.title || '').localeCompare(String(right.title || ''), 'ko')
+                ))
+                .forEach((item) => {
+                    let laneIndex = lanes.findIndex((lane) => lane.every((existing) => item.colStart > existing.colEnd || item.colEnd < existing.colStart));
+                    if (laneIndex === -1) {
+                        laneIndex = lanes.length;
+                    }
+                    if (laneIndex >= rangeLimit) {
+                        for (let column = item.colStart; column <= item.colEnd; column += 1) {
+                            const date = weekDates[column - 1];
+                            if (!date) continue;
+                            dayBuckets[this.dateKey(date)].overflow += 1;
+                        }
+                        return;
+                    }
+                    if (!lanes[laneIndex]) {
+                        lanes[laneIndex] = [];
+                    }
+                    lanes[laneIndex].push(item);
+                    placedRangeItems.push({
+                        ...item,
+                        style: `grid-column: ${item.colStart} / span ${item.colSpan}; grid-row: ${laneIndex + 1};`,
+                    });
+                });
+
+            return {
+                id: `workweek-${this.dateKey(weekDates[0])}`,
+                dates: weekDates,
+                dayBuckets,
+                rangeItems: placedRangeItems,
+                rangeGridStyle: `grid-template-rows: repeat(${Math.max(lanes.length, 1)}, 2.05rem);`,
+            };
+        },
+        openHomeWorkweekItem(item, triggerEvent = null) {
+            if (!item) return;
+            if (item.focusDateKey) {
+                this.setSelectedDateContext(this.parseDateKey(item.focusDateKey));
+            }
+            if (item.sourceKind === 'event') {
+                const event = this.findEventById(item.sourceId);
+                if (event) {
+                    this.openEventDetail(event, triggerEvent);
+                    return;
+                }
+            }
+            if (item.sourceKind === 'hub') {
+                const hubItem = this.findHubItemById(item.sourceId);
+                if (hubItem) {
+                    this.openSelectedDateHubItem(hubItem, triggerEvent);
+                    return;
+                }
+            }
+            if (item.focusDateKey) {
+                this.handleDayCellClick(this.parseDateKey(item.focusDateKey), triggerEvent);
+            }
+        },
         prevMonth() {
             this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
             this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
@@ -3849,6 +4828,8 @@ function calendarApp() {
                 can_edit: false,
                 is_shared_calendar: false,
                 attachments: [],
+                source_sheetbook_title: '',
+                source_tab_name: '',
                 source_url: '',
                 source_label: '',
                 message_capture_id: '',
@@ -4003,6 +4984,89 @@ function calendarApp() {
                 .filter((item) => item.item_kind !== 'task' && item.item_kind !== 'event')
                 .filter((item) => this.hubItemOverlapsDate(item, date))
                 .sort((left, right) => this.sortHubItems(left, right));
+        },
+        getDayPreviewRowLimit() {
+            return this.isCompactMobileViewport() ? 2 : 4;
+        },
+        shouldShowRangePreviewLabel(event, date) {
+            const dateKey = this.dateKey(date);
+            const startKey = this.dateKey(event.start_time);
+            if (startKey === dateKey) return true;
+            return date.getDay() === 1 || date.getDate() === 1;
+        },
+        getDayEventPreviewClass(event) {
+            const map = {
+                holiday: 'border-rose-200 bg-rose-50/70',
+                done: 'border-emerald-200 bg-emerald-50/70',
+                past: 'border-slate-200 bg-slate-100',
+                live: 'border-rose-200 bg-rose-50/80',
+                today: 'border-amber-200 bg-amber-50/80',
+                scheduled: 'border-slate-200 bg-slate-50',
+            };
+            return map[this.getEventStatusCode(event)] || map.scheduled;
+        },
+        getDayHubPreviewClass(item) {
+            const map = {
+                warning: 'border-amber-200 bg-amber-50/70',
+                done: 'border-emerald-200 bg-emerald-50/70',
+                neutral: 'border-slate-200 bg-slate-50',
+            };
+            return map[item.tone || 'neutral'] || map.neutral;
+        },
+        getDayHubPreviewBadgeClass(item) {
+            const map = {
+                collect: 'bg-amber-100 text-amber-800 border-amber-200',
+                signature: 'bg-sky-100 text-sky-800 border-sky-200',
+                consent: 'bg-rose-100 text-rose-800 border-rose-200',
+                reservation: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                message: 'bg-slate-100 text-slate-700 border-slate-200',
+            };
+            return map[item.item_kind || 'message'] || 'bg-slate-100 text-slate-700 border-slate-200';
+        },
+        getDayPreviewRows(date) {
+            const rowLimit = this.getDayPreviewRowLimit();
+            const rows = [];
+
+            this.getRangeEventsForDate(date).forEach((event) => {
+                rows.push({
+                    id: `range-${event.id}-${this.dateKey(date)}`,
+                    kind: 'range',
+                    title: event.title,
+                    rowClass: this.getRangeStrokeClass(event, date),
+                    showLabel: this.shouldShowRangePreviewLabel(event, date),
+                });
+            });
+
+            this.getEventsForDate(date)
+                .filter((event) => !this.isRangeEvent(event))
+                .forEach((event) => {
+                    rows.push({
+                        id: `event-${event.id}`,
+                        kind: 'event',
+                        title: event.title,
+                        badge: this.getEventSourceLabel(event),
+                        badgeClass: this.getEventSourceBadgeClass(event),
+                        rowClass: this.getDayEventPreviewClass(event),
+                    });
+                });
+
+            this.getVisibleHubItemsForDate(date).forEach((item) => {
+                rows.push({
+                    id: `hub-${item.id}`,
+                    kind: 'hub',
+                    title: item.title,
+                    badge: item.serviceLabel,
+                    badgeClass: this.getDayHubPreviewBadgeClass(item),
+                    rowClass: this.getDayHubPreviewClass(item),
+                });
+            });
+
+            return rows.slice(0, rowLimit);
+        },
+        getDayPreviewOverflowCount(date) {
+            const visibleCount = this.getDayPreviewRows(date).length;
+            const totalCount = this.getDayItemCount(date);
+            return totalCount > visibleCount ? totalCount - visibleCount : 0;
         },
         getTasksForSelectedDate() {
             if (!this.selectedDateKey) return [];

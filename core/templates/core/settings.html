@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="service-shell pb-20 px-6 min-h-screen">
+<section class="pt-32 pb-20 px-6 min-h-screen">
     <div class="max-w-5xl mx-auto">
         <div class="max-w-3xl mb-10" data-aos="fade-right">
             <h1 class="text-5xl font-bold text-gray-700 mb-3 font-round">내 정보와 공용 명부</h1>
@@ -40,7 +40,7 @@
 
         <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_380px] gap-8">
             <div class="space-y-8" data-aos="fade-up" data-aos-delay="200">
-                <form method="post" class="clay-card p-10 space-y-8 bg-white/60">
+                <form id="settings-profile" method="post" class="clay-card p-10 space-y-8 bg-white/60">
                     {% csrf_token %}
 
                     <div class="space-y-6">
@@ -96,7 +96,63 @@
                 {% include 'core/partials/teacher_buddy_settings_panel.html' %}
                 {% endif %}
 
-                <div class="clay-card p-8 bg-white/80">
+                <div id="settings-support" class="clay-card p-8 bg-white/80" data-settings-support-card="true">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                                <i class="fa-regular fa-comments text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-700 font-round">문의 · 채팅</h2>
+                                <p class="text-sm text-gray-400 mt-1">{% if developer_chat_home_card.summary %}{{ developer_chat_home_card.summary }}{% else %}막히는 점 바로 남기기{% endif %}</p>
+                            </div>
+                        </div>
+                        <span class="shrink-0 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-600">
+                            {% if developer_chat_home_card.unread_count %}
+                            안읽음 {{ developer_chat_home_card.unread_count }}건
+                            {% elif developer_chat_home_card.is_admin %}
+                            관리자 보기
+                            {% else %}
+                            1:1 채팅
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    {% if developer_chat_home_card.preview_threads %}
+                    <div class="mt-5 space-y-3">
+                        {% for thread in developer_chat_home_card.preview_threads|slice:":3" %}
+                        <a href="{{ thread.detail_url }}" class="group flex items-start justify-between gap-4 rounded-3xl border border-slate-100 bg-white px-5 py-4 transition hover:border-slate-200 hover:bg-slate-50">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-black text-slate-800">{{ thread.title }}</p>
+                                <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{{ thread.last_message_preview }}</p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-[11px] font-bold text-slate-400">{{ thread.status_label }}</p>
+                                {% if thread.unread_count %}
+                                <span class="mt-2 inline-flex min-w-7 items-center justify-center rounded-full bg-slate-900 px-2 py-1 text-[11px] font-black text-white">{{ thread.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-5 rounded-3xl border border-slate-100 bg-white px-5 py-4 text-sm font-bold text-slate-500">
+                        {% if developer_chat_home_card.is_admin %}
+                        새 문의 없음
+                        {% else %}
+                        문의 내역 없음
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-5 flex flex-wrap gap-3">
+                        <a href="{{ developer_chat_home_card.url }}" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800">
+                            {{ developer_chat_home_card.cta_label|default:'채팅 열기' }}
+                        </a>
+                    </div>
+                </div>
+
+                <div id="settings-roster" class="clay-card p-8 bg-white/80">
                     <div class="flex items-center gap-3 mb-6">
                         <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
                             <i class="fa-solid fa-users-rectangle text-xl"></i>

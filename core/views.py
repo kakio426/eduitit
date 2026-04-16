@@ -6689,6 +6689,7 @@ def settings_view(request):
         request.user,
         source='settings view',
     )
+    developer_chat_home_card = _build_home_surface_developer_chat_provider(request.user)
     if buddy_settings:
         buddy_settings = {
             **buddy_settings,
@@ -6710,6 +6711,7 @@ def settings_view(request):
                 request.user,
                 source='settings view',
             ),
+            'developer_chat_home_card': developer_chat_home_card,
             'kakao_js_key': getattr(settings, 'KAKAO_JS_KEY', ''),
         },
     )

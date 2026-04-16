@@ -1,11 +1,11 @@
 {% if board %}
 <div
-    class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center sm:px-5"
+    class="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 sm:px-5 {% if surface_key == 'mobile-workbench' or surface_key == 'desktop-workbench' %}home-v6-empty-state--compact text-left{% else %}text-center{% endif %}"
     {% if surface_key %}data-home-v6-empty-state="{{ surface_key }}"{% endif %}
 >
     <p class="text-sm font-black text-slate-900">{{ board.title }}</p>
     <p class="mt-2 text-sm font-semibold leading-6 text-slate-500">{{ board.description }}</p>
-    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap {% if surface_key == 'mobile-workbench' or surface_key == 'desktop-workbench' %}home-v6-empty-state-actions--compact{% else %}sm:justify-center{% endif %}">
         {% if board.primary_action %}
         <a
             href="{{ board.primary_action.href }}"

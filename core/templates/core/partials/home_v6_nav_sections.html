@@ -1,3 +1,221 @@
+{% url 'settings' as settings_url %}
+
+{% if panel_name|default:'desktop' == 'desktop' %}
+<nav
+    class="home-v6-nav-rail"
+    data-home-v6-nav="desktop"
+    data-home-v6-nav-rail="true"
+    aria-label="전체 도구"
+>
+    {% for section in home_nav_sections %}
+    <div
+        class="home-v6-nav-rail-group"
+        data-home-v6-nav-section="{{ section.key }}"
+        data-home-accent="{{ section.home_accent_token|default:'external' }}"
+        @mouseenter="openSection = '{{ section.key }}'"
+        @mouseleave="if (openSection === '{{ section.key }}') openSection = ''"
+        @focusin="openSection = '{{ section.key }}'"
+        @focusout="if (!$el.contains($event.relatedTarget)) openSection = ''"
+        @click.outside="if (openSection === '{{ section.key }}') openSection = ''"
+    >
+        {% if section.is_direct %}
+        <a
+            href="{{ section.href }}"
+            class="home-v6-nav-rail-button home-v6-nav-rail-button--direct"
+            data-home-v6-nav-direct-link="{{ section.key }}"
+            aria-label="{{ section.title }}"
+            title="{{ section.title }}"
+            {% if section.is_external %}target="_blank" rel="noopener"{% endif %}
+        >
+            <span class="home-v6-nav-icon" data-home-accent="{{ section.home_accent_token|default:'external' }}">
+                <i class="{{ section.home_icon_class|default:'fa-solid fa-star' }}"></i>
+            </span>
+            <span class="sr-only">{{ section.title }}</span>
+        </a>
+        <div
+            class="home-v6-nav-rail-tooltip"
+            x-cloak
+            x-show="openSection === '{{ section.key }}'"
+            x-transition.opacity
+            x-transition.scale.origin.left
+            data-home-v6-nav-tooltip="{{ section.key }}"
+        >
+            <p class="home-v6-nav-rail-tooltip-title">{{ section.title }}</p>
+            {% if section.subtitle %}
+            <p class="home-v6-nav-rail-tooltip-subtitle">{{ section.subtitle }}</p>
+            {% endif %}
+        </div>
+        {% else %}
+        <button
+            type="button"
+            class="home-v6-nav-rail-button"
+            @click="openSection = openSection === '{{ section.key }}' ? '' : '{{ section.key }}'"
+            :aria-expanded="openSection === '{{ section.key }}' ? 'true' : 'false'"
+            aria-controls="home-v6-nav-flyout-{{ section.key }}"
+            aria-label="{{ section.title }}"
+            title="{{ section.title }}"
+        >
+            <span class="home-v6-nav-icon" data-home-accent="{{ section.home_accent_token|default:'external' }}">
+                <i class="{{ section.home_icon_class|default:'fa-solid fa-star' }}"></i>
+            </span>
+            <span class="sr-only">{{ section.title }}</span>
+        </button>
+
+        <section
+            id="home-v6-nav-flyout-{{ section.key }}"
+            class="home-v6-nav-flyout"
+            x-cloak
+            x-show="openSection === '{{ section.key }}'"
+            x-transition.opacity
+            x-transition.scale.origin.left
+            data-home-v6-nav-flyout="{{ section.key }}"
+        >
+            <div class="home-v6-nav-flyout-head">
+                <p class="home-v6-nav-flyout-title">{{ section.title }}</p>
+                {% if section.subtitle %}
+                <p class="home-v6-nav-flyout-subtitle">{{ section.subtitle }}</p>
+                {% endif %}
+            </div>
+
+            <div
+                class="home-v6-tool-list home-v6-tool-list--flyout"
+                data-home-v6-tool-list="{{ section.key }}"
+            >
+                {% if section.key == 'games' and request.user.is_authenticated and student_games_issue_url %}
+                <div
+                    class="home-v6-tool-item"
+                    data-home-v6-tool-item="games-student-link"
+                >
+                    <button
+                        type="button"
+                        class="home-v6-tool-link home-v6-tool-link--flyout w-full text-left"
+                        data-home-v6-tool-link="games-student-link"
+                        data-home-v6-student-games-link="true"
+                        data-student-games-open="studentGamesQrModal"
+                    >
+                        <span class="home-v6-tool-leading">
+                            <span class="home-v6-tool-icon" data-home-accent="games">
+                                <i class="fa-solid fa-link"></i>
+                            </span>
+                        </span>
+                        <span class="home-v6-tool-copy min-w-0 flex-1">
+                            <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">학생 링크</span>
+                            <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">학생이 게임 목록으로 바로 들어가는 링크와 QR을 엽니다.</span>
+                        </span>
+                    </button>
+                </div>
+                {% endif %}
+
+                {% for product in section.products %}
+                <div
+                    class="home-v6-tool-item"
+                    data-home-v6-tool-item="{{ section.key }}"
+                >
+                    <a
+                        href="{{ product.launch_href }}"
+                        class="home-v6-tool-link home-v6-tool-link--flyout"
+                        data-home-v6-tool-link="{{ section.key }}"
+                        {% if product.launch_is_external %}target="_blank" rel="noopener"{% endif %}
+                    >
+                        <span class="home-v6-tool-leading">
+                            <span class="home-v6-tool-icon" data-home-accent="{{ product.home_accent_token|default:'external' }}">
+                                <i class="{{ product.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                            </span>
+                        </span>
+                        <span class="home-v6-tool-copy min-w-0 flex-1">
+                            <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">{{ product.public_service_name|default:product.title }}</span>
+                            <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">{{ product.home_card_summary|default:product.description }}</span>
+                        </span>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div
+        class="home-v6-nav-rail-group home-v6-nav-rail-group--settings"
+        data-home-v6-nav-section="settings"
+        data-home-accent="external"
+        @mouseenter="openSection = 'settings'"
+        @mouseleave="if (openSection === 'settings') openSection = ''"
+        @focusin="openSection = 'settings'"
+        @focusout="if (!$el.contains($event.relatedTarget)) openSection = ''"
+        @click.outside="if (openSection === 'settings') openSection = ''"
+    >
+        <button
+            type="button"
+            class="home-v6-nav-rail-button"
+            @click="openSection = openSection === 'settings' ? '' : 'settings'"
+            :aria-expanded="openSection === 'settings' ? 'true' : 'false'"
+            aria-controls="home-v6-nav-flyout-settings"
+            aria-label="설정"
+            title="설정"
+        >
+            <span class="home-v6-nav-icon" data-home-accent="external">
+                <i class="fa-solid fa-gear"></i>
+            </span>
+            <span class="sr-only">설정</span>
+        </button>
+
+        <section
+            id="home-v6-nav-flyout-settings"
+            class="home-v6-nav-flyout home-v6-nav-flyout--settings"
+            x-cloak
+            x-show="openSection === 'settings'"
+            x-transition.opacity
+            x-transition.scale.origin.left
+            data-home-v6-nav-flyout="settings"
+        >
+            <div class="home-v6-nav-flyout-head">
+                <p class="home-v6-nav-flyout-title">설정</p>
+                <p class="home-v6-nav-flyout-subtitle">프로필 · 메이트 · 문의</p>
+            </div>
+
+            <div class="home-v6-nav-settings-links">
+                <a href="{{ settings_url }}#settings-profile" class="home-v6-nav-settings-link">
+                    <span class="home-v6-nav-settings-copy">
+                        <span class="home-v6-nav-settings-title">내 정보</span>
+                        <span class="home-v6-nav-settings-summary">이름 · 역할</span>
+                    </span>
+                    <span class="home-v6-nav-settings-arrow">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </a>
+                <a href="{{ settings_url }}#teacher-buddy-settings" class="home-v6-nav-settings-link">
+                    <span class="home-v6-nav-settings-copy">
+                        <span class="home-v6-nav-settings-title">교실 메이트</span>
+                        <span class="home-v6-nav-settings-summary">대표 메이트 · 보관함</span>
+                    </span>
+                    <span class="home-v6-nav-settings-arrow">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </a>
+                <a href="{{ settings_url }}#settings-support" class="home-v6-nav-settings-link">
+                    <span class="home-v6-nav-settings-copy">
+                        <span class="home-v6-nav-settings-title">개발자 채팅</span>
+                        <span class="home-v6-nav-settings-summary">문의 · 답변</span>
+                    </span>
+                    <span class="home-v6-nav-settings-arrow">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </a>
+                <a href="{{ settings_url }}#settings-roster" class="home-v6-nav-settings-link">
+                    <span class="home-v6-nav-settings-copy">
+                        <span class="home-v6-nav-settings-title">공용 명부</span>
+                        <span class="home-v6-nav-settings-summary">학생 · 보호자</span>
+                    </span>
+                    <span class="home-v6-nav-settings-arrow">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </a>
+            </div>
+        </section>
+    </div>
+</nav>
+{% else %}
 <nav
     class="home-v6-nav-list"
     data-home-v6-nav="{{ panel_name|default:'desktop' }}"
@@ -136,4 +354,33 @@
         {% endif %}
     </div>
     {% endfor %}
+
+    <div
+        class="home-v6-nav-group"
+        data-home-v6-nav-section="settings"
+        data-home-accent="external"
+    >
+        <a
+            href="{{ settings_url }}"
+            class="home-v6-nav-item home-v6-nav-item--section"
+            data-home-v6-nav-direct-link="settings"
+            {% if close_action %}@click="{{ close_action }}"{% endif %}
+        >
+            <span class="home-v6-nav-item-main">
+                <span class="home-v6-nav-icon" data-home-accent="external">
+                    <i class="fa-solid fa-gear"></i>
+                </span>
+                <span class="home-v6-nav-copy min-w-0 flex-1">
+                    <span class="block truncate home-v6-nav-title">설정</span>
+                    <span class="block truncate home-v6-nav-subtitle">프로필 · 메이트 · 문의</span>
+                </span>
+            </span>
+            <span class="home-v6-nav-item-side">
+                <span class="home-v6-nav-chevron">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </span>
+            </span>
+        </a>
+    </div>
 </nav>
+{% endif %}
