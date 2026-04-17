@@ -4,23 +4,25 @@
 
 :root {
     color-scheme: light;
-    --color-page: #f4f7fb;
+    --color-page: #f8f6fb;
     --color-surface: #ffffff;
-    --color-surface-alt: #f7f9fc;
-    --color-border: #e4e7ec;
-    --color-border-strong: #cfd5df;
-    --color-text-strong: #101828;
-    --color-text: #344054;
-    --color-text-muted: #667085;
+    --color-surface-alt: #faf7fd;
+    --color-border: #ebe3f4;
+    --color-border-strong: #d7cbe5;
+    --color-text-strong: #221a36;
+    --color-text: #483f5f;
+    --color-text-muted: #796f90;
     --color-text-inverse: #ffffff;
     /*
-     * Global shell aligns with the corrected home system: neutral surfaces first,
-     * restrained blue accents second, no purple-dominant chrome.
+     * Global shell follows the requested plum palette: quiet ivory surfaces,
+     * deep eggplant anchors, and bright violet actions.
      */
-    --color-brand-900: #173b67;
-    --color-brand-700: #2457c5;
-    --color-brand-500: #4f7bd9;
-    --color-brand-100: #e7efff;
+    --color-brand-900: #1f1538;
+    --color-brand-800: #34255f;
+    --color-brand-700: #6844c6;
+    --color-brand-500: #8758f2;
+    --color-brand-300: #c7a8fb;
+    --color-brand-100: #f2ebff;
     --color-accent-champagne: #c6a56b;
     --color-success: #2f8f73;
     --color-success-soft: #eaf7f1;
@@ -33,38 +35,38 @@
      * palette screen-by-screen without rewriting layout selectors.
      */
     --color-canvas: var(--color-page);
-    --color-canvas-subtle: #eef2f7;
+    --color-canvas-subtle: #f1ecf7;
     --color-surface-base: var(--color-surface);
     --color-surface-subtle: var(--color-surface-alt);
-    --color-surface-elevated: rgba(255, 255, 255, 0.96);
-    --color-surface-glass: rgba(255, 255, 255, 0.88);
-    --color-surface-glass-border: rgba(255, 255, 255, 0.72);
+    --color-surface-elevated: rgba(255, 255, 255, 0.97);
+    --color-surface-glass: rgba(255, 255, 255, 0.9);
+    --color-surface-glass-border: rgba(255, 255, 255, 0.74);
     --color-line-default: var(--color-border);
     --color-line-strong: var(--color-border-strong);
-    --color-line-soft: rgba(15, 23, 42, 0.08);
+    --color-line-soft: rgba(31, 21, 56, 0.08);
     --color-ink-primary: var(--color-text-strong);
     --color-ink-secondary: var(--color-text);
     --color-ink-tertiary: var(--color-text-muted);
     --color-ink-inverse: var(--color-text-inverse);
-    --color-ink-brand: #17314f;
-    --color-ink-brand-muted: rgba(23, 49, 79, 0.58);
+    --color-ink-brand: #2d2348;
+    --color-ink-brand-muted: rgba(45, 35, 72, 0.62);
     --color-accent-primary: var(--color-brand-700);
-    --color-accent-strong: var(--color-brand-900);
-    --color-accent-muted: rgba(36, 87, 197, 0.52);
+    --color-accent-strong: var(--color-brand-800);
+    --color-accent-muted: rgba(104, 68, 198, 0.56);
     --color-accent-soft: var(--color-brand-100);
-    --color-accent-tint: #f4f8ff;
-    --color-focus-ring: rgba(36, 87, 197, 0.18);
-    --color-focus-ring-strong: rgba(36, 87, 197, 0.28);
-    --color-accent-shadow-soft: rgba(23, 59, 103, 0.1);
-    --color-shell-surface: rgba(241, 244, 250, 0.92);
-    --color-shell-surface-strong: rgba(241, 244, 250, 0.96);
-    --color-shell-surface-border: rgba(255, 255, 255, 0.58);
+    --color-accent-tint: #f7f2ff;
+    --color-focus-ring: rgba(104, 68, 198, 0.18);
+    --color-focus-ring-strong: rgba(104, 68, 198, 0.28);
+    --color-accent-shadow-soft: rgba(52, 37, 95, 0.14);
+    --color-shell-surface: rgba(247, 243, 252, 0.92);
+    --color-shell-surface-strong: rgba(247, 243, 252, 0.96);
+    --color-shell-surface-border: rgba(255, 255, 255, 0.66);
     --color-shell-pill-bg: rgba(255, 255, 255, 0.82);
     --color-shell-pill-bg-strong: rgba(255, 255, 255, 0.9);
     --color-shell-pill-bg-hover: rgba(255, 255, 255, 0.98);
-    --color-shell-pill-soft: rgba(241, 244, 250, 0.76);
-    --color-shell-accent-surface: rgba(231, 239, 255, 0.92);
-    --color-shell-accent-surface-strong: rgba(223, 233, 251, 0.98);
+    --color-shell-pill-soft: rgba(242, 235, 255, 0.76);
+    --color-shell-accent-surface: rgba(242, 235, 255, 0.92);
+    --color-shell-accent-surface-strong: rgba(235, 225, 255, 0.98);
     --space-shell-nav-outer-x: 0.5rem;
     --space-shell-nav-outer-y: 0.9rem;
     --space-shell-nav-inner-x: 1rem;
@@ -716,7 +718,7 @@ h4,
 }
 
 .shell-modal-panel {
-    border-color: rgba(36, 87, 197, 0.12);
+    border-color: rgba(104, 68, 198, 0.14);
     padding: var(--space-shell-modal-padding);
     transform-origin: center top;
 }

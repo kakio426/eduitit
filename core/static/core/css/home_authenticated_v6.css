@@ -2,62 +2,62 @@
     position: relative;
     isolation: isolate;
     overflow-x: hidden;
-    /* Keep the home shell neutral first, then add restrained accents only where the UI needs emphasis. */
-    --home-v6-focus-ring: 0 0 0 3px rgba(36, 87, 197, 0.14);
+    /* Keep the home shell soft and legible, then layer the requested plum accent where action matters. */
+    --home-v6-focus-ring: 0 0 0 3px rgba(104, 68, 198, 0.14);
     background:
-        radial-gradient(circle at 14% 10%, rgba(36, 87, 197, 0.07), transparent 34%),
-        radial-gradient(circle at 86% 14%, rgba(148, 163, 184, 0.12), transparent 28%),
-        linear-gradient(180deg, #f4f7fa 0%, #edf2f7 50%, #f8fafc 100%);
-    --home-v6-brand-rgb: 36, 87, 197;
-    --home-v6-brand: #2457c5;
-    --home-v6-brand-strong: #173b67;
-    --home-v6-brand-soft: rgba(240, 244, 255, 0.9);
-    --home-v6-brand-soft-strong: rgba(246, 249, 255, 0.96);
-    --home-v6-ink: #172033;
-    --home-v6-ink-soft: #5f6c81;
-    --home-v6-border: rgba(100, 116, 139, 0.14);
-    --home-v6-border-strong: rgba(100, 116, 139, 0.2);
-    --home-v6-border-soft: rgba(100, 116, 139, 0.08);
-    --home-v6-star-border: rgba(148, 163, 184, 0.26);
-    --home-v6-star-border-strong: rgba(36, 87, 197, 0.24);
+        radial-gradient(circle at 14% 10%, rgba(135, 88, 242, 0.09), transparent 34%),
+        radial-gradient(circle at 86% 14%, rgba(199, 168, 251, 0.18), transparent 28%),
+        linear-gradient(180deg, #f8f6fb 0%, #f2eef8 50%, #fbf9fd 100%);
+    --home-v6-brand-rgb: 104, 68, 198;
+    --home-v6-brand: #6844c6;
+    --home-v6-brand-strong: #34255f;
+    --home-v6-brand-soft: rgba(242, 235, 255, 0.92);
+    --home-v6-brand-soft-strong: rgba(248, 244, 255, 0.97);
+    --home-v6-ink: #241c39;
+    --home-v6-ink-soft: #6f6787;
+    --home-v6-border: rgba(104, 68, 198, 0.14);
+    --home-v6-border-strong: rgba(104, 68, 198, 0.22);
+    --home-v6-border-soft: rgba(52, 37, 95, 0.08);
+    --home-v6-star-border: rgba(199, 168, 251, 0.28);
+    --home-v6-star-border-strong: rgba(104, 68, 198, 0.24);
     --home-v6-star-bg: rgba(255, 255, 255, 0.96);
     --home-v6-star-bg-hover:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(242, 247, 255, 0.96) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(245, 239, 255, 0.97) 100%);
     --home-v6-star-bg-active:
         linear-gradient(135deg, var(--home-v6-brand-strong) 0%, var(--home-v6-brand) 100%);
     --home-v6-star-text: #64748b;
     --home-v6-star-text-strong: #ffffff;
     --home-v6-surface-hero:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.995) 0%, rgba(246, 248, 251, 0.985) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.995) 0%, rgba(248, 244, 255, 0.985) 100%);
     --home-v6-surface-primary:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(247, 249, 252, 0.976) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(249, 245, 255, 0.978) 100%);
     --home-v6-surface-secondary:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(248, 250, 252, 0.968) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(250, 247, 255, 0.97) 100%);
     --home-v6-surface-tile:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(246, 248, 251, 0.972) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.992) 0%, rgba(248, 244, 255, 0.974) 100%);
     --home-v6-shadow-hero:
-        0 24px 56px rgba(15, 23, 42, 0.08),
-        0 6px 18px rgba(51, 65, 85, 0.035),
+        0 24px 56px rgba(31, 21, 56, 0.08),
+        0 6px 18px rgba(52, 37, 95, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-panel:
-        0 18px 40px rgba(15, 23, 42, 0.075),
-        0 5px 14px rgba(51, 65, 85, 0.026),
+        0 18px 40px rgba(31, 21, 56, 0.075),
+        0 5px 14px rgba(52, 37, 95, 0.03),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-shadow-tile:
-        0 12px 24px rgba(15, 23, 42, 0.06),
-        0 4px 12px rgba(51, 65, 85, 0.02),
+        0 12px 24px rgba(31, 21, 56, 0.06),
+        0 4px 12px rgba(52, 37, 95, 0.024),
         inset 0 1px 0 rgba(255, 255, 255, 0.76);
     --home-v6-rail-item-border: rgba(148, 163, 184, 0.18);
     --home-v6-rail-item-border-strong: rgba(148, 163, 184, 0.3);
     --home-v6-rail-item-bg:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(247, 249, 252, 0.966) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(249, 245, 255, 0.968) 100%);
     --home-v6-rail-item-bg-hover:
-        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(245, 248, 251, 0.986) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(246, 240, 255, 0.988) 100%);
     --home-v6-rail-item-shadow:
-        0 14px 28px rgba(15, 23, 42, 0.065),
+        0 14px 28px rgba(31, 21, 56, 0.065),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
     --home-v6-rail-item-shadow-hover:
-        0 18px 34px rgba(15, 23, 42, 0.085),
+        0 18px 34px rgba(31, 21, 56, 0.085),
         inset 0 1px 0 rgba(255, 255, 255, 0.86);
     --home-v6-radius-hero: 1rem;
     --home-v6-radius-panel: 0.95rem;
@@ -81,7 +81,7 @@
     left: -5rem;
     width: 18rem;
     height: 18rem;
-    background: radial-gradient(circle, rgba(36, 87, 197, 0.09) 0%, rgba(36, 87, 197, 0) 74%);
+    background: radial-gradient(circle, rgba(135, 88, 242, 0.12) 0%, rgba(135, 88, 242, 0) 74%);
 }
 
 .home-v6-page::after {
@@ -89,7 +89,7 @@
     right: -5rem;
     width: 16rem;
     height: 16rem;
-    background: radial-gradient(circle, rgba(198, 165, 107, 0.14) 0%, rgba(198, 165, 107, 0) 76%);
+    background: radial-gradient(circle, rgba(199, 168, 251, 0.2) 0%, rgba(199, 168, 251, 0) 76%);
 }
 
 .home-v6-page > .mx-auto,
@@ -250,16 +250,16 @@
 .home-v6-nav-group {
     gap: 0.4rem;
     --home-v6-nav-accent: #475569;
-    --home-v6-nav-accent-soft: #f8fafc;
-    --home-v6-nav-accent-border: #dbe4ee;
+    --home-v6-nav-accent-soft: #faf7fd;
+    --home-v6-nav-accent-border: #e8e0f1;
     --home-v6-accent-rgb: 71, 85, 105;
 }
 
 .home-v6-page [data-home-accent="collect_sign"] {
-    --home-v6-nav-accent: #2457c5;
-    --home-v6-nav-accent-soft: rgba(240, 244, 255, 0.94);
-    --home-v6-nav-accent-border: rgba(36, 87, 197, 0.16);
-    --home-v6-accent-rgb: 36, 87, 197;
+    --home-v6-nav-accent: #6844c6;
+    --home-v6-nav-accent-soft: rgba(242, 235, 255, 0.94);
+    --home-v6-nav-accent-border: rgba(104, 68, 198, 0.18);
+    --home-v6-accent-rgb: 104, 68, 198;
 }
 
 .home-v6-page [data-home-accent="doc_write"] {

@@ -50,7 +50,7 @@
 }
 
 .bg-indigo-500\/15 {
-    background-color: rgb(99 102 241 / 0.15);
+    background-color: rgb(135 88 242 / 0.15);
 }
 
 .bg-slate-100\/10 {
@@ -91,7 +91,7 @@
 }
 
 .border-indigo-400\/30 {
-    border-color: rgb(129 140 248 / 0.3);
+    border-color: rgb(164 125 246 / 0.3);
 }
 
 .ring-slate-200 {
@@ -259,11 +259,11 @@
 }
 
 .hover\:bg-indigo-50\/60:hover {
-    background-color: rgb(238 242 255 / 0.6);
+    background-color: rgb(251 249 255 / 0.6);
 }
 
 .hover\:bg-indigo-50\/70:hover {
-    background-color: rgb(238 242 255 / 0.7);
+    background-color: rgb(251 249 255 / 0.7);
 }
 
 .hover\:bg-sky-50:hover {
@@ -296,7 +296,7 @@
 }
 
 .hover\:bg-indigo-500\/25:hover {
-    background-color: rgb(99 102 241 / 0.25);
+    background-color: rgb(135 88 242 / 0.25);
 }
 
 .hover\:bg-slate-100\/20:hover {
@@ -324,7 +324,7 @@
 
 .hover\:border-violet-300:hover {
     --tw-border-opacity: 1;
-    border-color: rgb(196 181 253 / var(--tw-border-opacity));
+    border-color: rgb(199 168 251 / var(--tw-border-opacity));
 }
 
 .hover\:border-cyan-400:hover {

@@ -8,9 +8,9 @@
 {% endblock %}
 
 {% block content %}
-<main class="auth-shell-page auth-shell-main">
+<main class="auth-shell-page auth-shell-page--login-spectrum auth-shell-main">
     <div class="auth-shell-wrap">
-        <section class="auth-shell-card">
+        <section class="auth-shell-card auth-shell-card--login-spectrum">
             <div class="auth-shell-header">
                 <a href="/" class="auth-shell-brand">
                     <span class="auth-shell-brand-icon">
@@ -18,6 +18,14 @@
                     </span>
                     <span>EDUITIT</span>
                 </a>
+                <div class="auth-shell-spectrum" aria-hidden="true">
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--darkest"></span>
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--darker"></span>
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--dark"></span>
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--default"></span>
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--light"></span>
+                    <span class="auth-shell-spectrum-swatch auth-shell-spectrum-swatch--lighter"></span>
+                </div>
                 <p class="auth-shell-kicker">기존 계정</p>
                 <h1 class="auth-shell-title auth-shell-title--compact">기존 계정으로 계속합니다</h1>
                 <p class="auth-shell-summary">아이디와 비밀번호로 로그인하세요.</p>

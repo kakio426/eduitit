@@ -2,7 +2,7 @@
 <div
     class="teacher-buddy-avatar{% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %} is-buddy{% endif %}{% if avatar and avatar.cosmetic_tier %} teacher-buddy-avatar--{{ avatar.cosmetic_tier }}{% endif %}{% if avatar and avatar.rarity %} teacher-buddy-avatar--{{ avatar.rarity }}{% endif %}{% if render_mode == 'badge' %} teacher-buddy-avatar--badge{% endif %} {{ size_class|default:'h-10 w-10' }} {{ extra_class|default:'' }}"
     {% if avatar and avatar.is_buddy or avatar and avatar.avatar_mark and not avatar.is_locked %}
-    style="--buddy-avatar-start: {{ avatar.palette_tokens.bg_start|default:'#dbeafe' }}; --buddy-avatar-end: {{ avatar.palette_tokens.bg_end|default:'#e0e7ff' }}; --buddy-avatar-text: {{ avatar.palette_tokens.text|default:'#0f172a' }}; --buddy-avatar-accent: {{ avatar.palette_tokens.accent|default:'#4f46e5' }};"
+    style="--buddy-avatar-start: {{ avatar.palette_tokens.bg_start|default:'#f2ebff' }}; --buddy-avatar-end: {{ avatar.palette_tokens.bg_end|default:'#e6d8fc' }}; --buddy-avatar-text: {{ avatar.palette_tokens.text|default:'#221a36' }}; --buddy-avatar-accent: {{ avatar.palette_tokens.accent|default:'#8758f2' }};"
     {% endif %}
     title="{% if avatar and avatar.title %}{{ avatar.title }}{% elif avatar and avatar.name %}{{ avatar.name }} 프로필{% else %}프로필{% endif %}"
 >

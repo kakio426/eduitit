@@ -11,14 +11,14 @@
     --buddy-surface: rgba(255, 255, 255, 0.92);
     --buddy-surface-strong: rgba(255, 255, 255, 0.98);
     --buddy-line: rgba(148, 163, 184, 0.18);
-    --buddy-line-strong: rgba(99, 102, 241, 0.22);
-    --buddy-text: #0f172a;
-    --buddy-muted: #475569;
-    --buddy-soft: #64748b;
-    --buddy-primary: #2563eb;
-    --buddy-primary-strong: #4338ca;
+    --buddy-line-strong: rgba(104, 68, 198, 0.22);
+    --buddy-text: #221a36;
+    --buddy-muted: #5a516f;
+    --buddy-soft: #7a7092;
+    --buddy-primary: #6844c6;
+    --buddy-primary-strong: #4d358d;
     --buddy-accent: #14b8a6;
-    --buddy-shadow: 0 24px 56px rgba(15, 23, 42, 0.1);
+    --buddy-shadow: 0 24px 56px rgba(31, 21, 56, 0.1);
 }
 
 .teacher-buddy-card,
@@ -259,8 +259,8 @@
 }
 
 .teacher-buddy-rarity--rare {
-    background: rgba(224, 231, 255, 0.96);
-    color: #4338ca;
+    background: rgba(242, 235, 255, 0.96);
+    color: #4d358d;
 }
 
 .teacher-buddy-rarity--epic {
@@ -376,8 +376,8 @@
 
 .teacher-buddy-status-card--home {
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.95)),
-        linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(129, 140, 248, 0.08));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 242, 255, 0.95)),
+        linear-gradient(135deg, rgba(104, 68, 198, 0.1), rgba(164, 125, 246, 0.08));
 }
 
 .teacher-buddy-status-label,
@@ -447,7 +447,7 @@
 }
 
 .teacher-buddy-progress-step.is-active {
-    background: linear-gradient(90deg, #22c55e, #2563eb);
+    background: linear-gradient(90deg, #8758f2, #6844c6);
 }
 
 .teacher-buddy-panel[data-panel-variant="v4"] .teacher-buddy-head,
@@ -775,9 +775,9 @@
 .teacher-buddy-share-button--primary,
 .teacher-buddy-mode-button.is-active {
     border: 1px solid transparent;
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    background: linear-gradient(135deg, #6844c6, #8758f2);
     color: #fff;
-    box-shadow: 0 14px 28px rgba(59, 130, 246, 0.22);
+    box-shadow: 0 14px 28px rgba(104, 68, 198, 0.22);
 }
 
 .teacher-buddy-primary:hover,
@@ -991,13 +991,13 @@ body.teacher-buddy-modal-open {
 }
 
 .teacher-buddy-result-dialog[data-result-theme="rare"] {
-    --teacher-buddy-result-accent: #4f46e5;
-    --teacher-buddy-result-glow: rgba(129, 140, 248, 0.34);
-    --teacher-buddy-result-spark: rgba(199, 210, 254, 0.92);
-    --teacher-buddy-result-title-glow: rgba(99, 102, 241, 0.18);
+    --teacher-buddy-result-accent: #8758f2;
+    --teacher-buddy-result-glow: rgba(164, 125, 246, 0.34);
+    --teacher-buddy-result-spark: rgba(230, 216, 252, 0.92);
+    --teacher-buddy-result-title-glow: rgba(104, 68, 198, 0.18);
     background:
-        radial-gradient(circle at top, rgba(199, 210, 254, 0.38), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(238, 242, 255, 0.98));
+        radial-gradient(circle at top, rgba(230, 216, 252, 0.38), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 242, 255, 0.98));
 }
 
 .teacher-buddy-result-dialog[data-result-theme="epic"] {
@@ -1066,14 +1066,14 @@ body.teacher-buddy-modal-open {
 }
 
 .teacher-buddy-result-envelope-core {
-    background: linear-gradient(135deg, #dbeafe, #c7d2fe);
-    border: 1px solid rgba(99, 102, 241, 0.18);
+    background: linear-gradient(135deg, #f2ebff, #e6d8fc);
+    border: 1px solid rgba(104, 68, 198, 0.18);
 }
 
 .teacher-buddy-result-envelope-flap {
     height: 58%;
     top: 0;
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    background: linear-gradient(135deg, #6844c6, #8758f2);
     clip-path: polygon(0 0, 100% 0, 50% 100%);
     animation: teacherBuddyEnvelope 0.9s ease-in-out infinite alternate;
 }
@@ -1544,7 +1544,7 @@ body.teacher-buddy-modal-open {
     height: 0.52rem;
     border-radius: 999px;
     border: 2px solid #fff;
-    background: var(--buddy-avatar-accent, #4f46e5);
+    background: var(--buddy-avatar-accent, #8758f2);
 }
 
 .teacher-buddy-avatar--hero .teacher-buddy-avatar-dot {
@@ -1715,8 +1715,8 @@ body.teacher-buddy-modal-open {
 
 .teacher-buddy-coupon-input:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.6);
-    box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.55);
+    border-color: rgba(104, 68, 198, 0.6);
+    box-shadow: 0 0 0 4px rgba(230, 216, 252, 0.55);
 }
 
 .teacher-buddy-settings-grid {
@@ -1883,8 +1883,8 @@ body.teacher-buddy-modal-open {
     min-height: 2.35rem;
     padding: 0.56rem 0.82rem;
     border-radius: 999px;
-    background: rgba(224, 231, 255, 0.96);
-    color: #4338ca;
+    background: rgba(242, 235, 255, 0.96);
+    color: #4d358d;
     font-size: 0.78rem;
     font-weight: 900;
 }
@@ -2093,7 +2093,7 @@ body.teacher-buddy-modal-open {
     margin: 0;
     font-size: 0.78rem;
     font-weight: 700;
-    color: #6366f1;
+    color: #6844c6;
 }
 
 .teacher-buddy-activity-stats {

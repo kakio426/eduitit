@@ -1,4 +1,18 @@
 /** @type {import('tailwindcss').Config} */
+const plumScale = {
+    50: '#fbf9ff',
+    100: '#f2ebff',
+    200: '#e6d8fc',
+    300: '#c7a8fb',
+    400: '#a47df6',
+    500: '#8758f2',
+    600: '#6844c6',
+    700: '#4d358d',
+    800: '#34255f',
+    900: '#1f1538',
+    950: '#140d24',
+};
+
 module.exports = {
     content: [
         "./templates/**/*.html",
@@ -10,6 +24,9 @@ module.exports = {
             colors: {
                 'bg-soft': '#E0E5EC',
                 'clay-text': '#495057',
+                indigo: plumScale,
+                purple: plumScale,
+                violet: plumScale,
             },
             fontFamily: {
                 'sans': ['NanumSquareRound', 'Inter', 'sans-serif'],

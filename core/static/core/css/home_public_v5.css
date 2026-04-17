@@ -1,26 +1,26 @@
 .home-public-v5-page,
 .home-public-v6-page {
-    /* Public home keeps neutral surfaces first and uses accent only for CTA and icon guidance. */
-    --home-public-accent: #2457c5;
-    --home-public-accent-strong: #173b67;
-    --home-public-accent-soft: rgba(240, 244, 255, 0.9);
-    --home-public-accent-soft-strong: rgba(246, 249, 255, 0.96);
-    --home-public-border: rgba(148, 163, 184, 0.24);
-    --home-public-border-strong: rgba(100, 116, 139, 0.18);
-    --home-public-focus-ring: 0 0 0 3px rgba(36, 87, 197, 0.14);
+    /* Public home keeps the surface calm, then uses one plum accent family for recognition and CTA. */
+    --home-public-accent: #6844c6;
+    --home-public-accent-strong: #34255f;
+    --home-public-accent-soft: rgba(242, 235, 255, 0.9);
+    --home-public-accent-soft-strong: rgba(248, 244, 255, 0.96);
+    --home-public-border: rgba(125, 110, 160, 0.2);
+    --home-public-border-strong: rgba(104, 68, 198, 0.18);
+    --home-public-focus-ring: 0 0 0 3px rgba(104, 68, 198, 0.14);
     --home-public-surface: rgba(255, 255, 255, 0.97);
-    --home-public-surface-raised: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
-    --home-public-shadow-panel: 0 12px 26px rgba(15, 23, 42, 0.055);
-    --home-public-shadow-card: 0 10px 20px rgba(15, 23, 42, 0.055);
-    --home-public-item-accent: #475569;
+    --home-public-surface-raised: linear-gradient(180deg, #ffffff 0%, #faf7fd 100%);
+    --home-public-shadow-panel: 0 12px 26px rgba(31, 21, 56, 0.055);
+    --home-public-shadow-card: 0 10px 20px rgba(31, 21, 56, 0.055);
+    --home-public-item-accent: #5f5873;
     --home-public-item-accent-border: rgba(71, 85, 105, 0.18);
 }
 
 .home-public-v5-page {
     background:
-        radial-gradient(circle at top left, rgba(36, 87, 197, 0.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(148, 163, 184, 0.12), transparent 22%),
-        linear-gradient(180deg, #f4f7fa 0%, #eef3f8 52%, #fafcfe 100%);
+        radial-gradient(circle at top left, rgba(135, 88, 242, 0.1), transparent 28%),
+        radial-gradient(circle at top right, rgba(199, 168, 251, 0.18), transparent 22%),
+        linear-gradient(180deg, #f8f6fb 0%, #f3effa 52%, #fbf9fd 100%);
 }
 
 .home-public-v5-title,
@@ -66,7 +66,7 @@
 
 .home-public-kicker-dot {
     background: var(--home-public-accent);
-    box-shadow: 0 0 0 4px rgba(36, 87, 197, 0.12);
+    box-shadow: 0 0 0 4px rgba(104, 68, 198, 0.12);
 }
 
 .home-public-v5-title {
@@ -170,8 +170,8 @@
 }
 
 .home-public-service-icon-tone[data-home-accent="collect_sign"] {
-    --home-public-item-accent: #2457c5;
-    --home-public-item-accent-border: rgba(36, 87, 197, 0.18);
+    --home-public-item-accent: #6844c6;
+    --home-public-item-accent-border: rgba(104, 68, 198, 0.18);
 }
 
 .home-public-service-icon-tone[data-home-accent="doc_write"] {
@@ -244,27 +244,27 @@
 
 .home-public-v5-primary-link {
     width: 100%;
-    border: 1px solid rgba(36, 87, 197, 0.08);
-    background: linear-gradient(135deg, var(--home-public-accent) 0%, #3d74df 100%);
+    border: 1px solid rgba(104, 68, 198, 0.1);
+    background: linear-gradient(135deg, var(--home-public-accent) 0%, #8758f2 100%);
     color: #ffffff;
     box-shadow:
-        0 14px 28px rgba(36, 87, 197, 0.18),
+        0 14px 28px rgba(104, 68, 198, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .home-public-v5-primary-link:hover,
 .home-public-v5-primary-link:focus-visible {
-    background: var(--home-public-accent-strong);
+    background: linear-gradient(135deg, var(--home-public-accent-strong) 0%, var(--home-public-accent) 100%);
     color: #ffffff;
     transform: translateY(-1px);
     box-shadow:
-        0 16px 30px rgba(36, 87, 197, 0.2),
+        0 16px 30px rgba(104, 68, 198, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .home-public-v5-primary-link:focus-visible {
     outline: none;
-    box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(36, 87, 197, 0.16);
+    box-shadow: var(--home-public-focus-ring), 0 12px 24px rgba(104, 68, 198, 0.16);
 }
 
 .home-public-v5-primary-link:active,
@@ -392,8 +392,8 @@
 
 .home-public-v4-shell {
     background:
-        radial-gradient(circle at top, rgba(36, 87, 197, 0.08), transparent 28%),
-        linear-gradient(180deg, #f4f7fa 0%, #eef3f8 52%, #fafcfe 100%);
+        radial-gradient(circle at top, rgba(135, 88, 242, 0.1), transparent 28%),
+        linear-gradient(180deg, #f8f6fb 0%, #f3effa 52%, #fbf9fd 100%);
 }
 
 .home-public-v4-stage {
@@ -441,8 +441,8 @@
 }
 
 .home-public-v4-primary-link {
-    background: linear-gradient(135deg, var(--home-public-accent) 0%, #3d74df 100%);
-    box-shadow: 0 14px 28px rgba(36, 87, 197, 0.18);
+    background: linear-gradient(135deg, var(--home-public-accent) 0%, #8758f2 100%);
+    box-shadow: 0 14px 28px rgba(104, 68, 198, 0.18);
 }
 
 .home-public-v4-primary-link:hover {
