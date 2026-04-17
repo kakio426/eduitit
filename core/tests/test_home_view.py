@@ -4168,6 +4168,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('grid-column: 1 / -1;', public_css)
         self.assertIn('html[data-home-mobile-chrome="minimal"] #mainNav', public_css)
         self.assertIn('html[data-home-mobile-chrome="minimal"] .home-public-v6-header', public_css)
+        self.assertIn('html[data-home-mobile-chrome="minimal"] .home-public-v6-hero', public_css)
+        self.assertIn('min-height: calc(100svh - var(--global-banner-height, 0px) - env(safe-area-inset-top) - 1.4rem);', public_css)
         self.assertIn('html[data-home-mobile-chrome="minimal"] #mainNav', _read_home_v6_css_bundle())
 
     def test_v6_home_shows_shared_school_reservation_card(self):

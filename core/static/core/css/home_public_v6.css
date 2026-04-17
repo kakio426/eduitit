@@ -1484,6 +1484,12 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
         padding-top: 0;
     }
 
+    html[data-home-mobile-chrome="minimal"] .home-public-v6-hero {
+        min-height: calc(100vh - var(--global-banner-height, 0px) - env(safe-area-inset-top) - 1.4rem);
+        min-height: calc(100svh - var(--global-banner-height, 0px) - env(safe-area-inset-top) - 1.4rem);
+        padding-bottom: clamp(1.25rem, 7vh, 2.4rem);
+    }
+
     .home-public-v6-header {
         width: 100%;
         border-radius: 1.5rem;
