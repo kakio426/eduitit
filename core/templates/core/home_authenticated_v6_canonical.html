@@ -26,7 +26,8 @@
                 class="home-v6-shell"
                 data-home-v6-shell="true"
                 data-home-design-version="v6"
-                x-data="window.homeV6Shell()"
+                x-data="window.homeV6Shell ? window.homeV6Shell() : { openSection: '', menuSheetOpen: false }"
+                x-init="if ($data && typeof $data.init === 'function') $data.init()"
                 @keydown.escape.window="menuSheetOpen = false; openSection = ''"
             >
                 <div class="home-v6-mobile-summary" data-home-v6-mobile-summary="true">
