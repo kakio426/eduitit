@@ -66,7 +66,10 @@ def generate_service_preview(
             selected_date_label=selected_date_label,
         )
     if normalized_mode == "pdf":
-        return _generate_pdf_preview(mode_spec=mode_spec)
+        return _generate_pdf_preview(
+            mode_spec=mode_spec,
+            text=text,
+        )
     return None
 
 
@@ -219,13 +222,14 @@ def _generate_teacher_law_preview(*, mode_spec: dict, text: str) -> dict:
     )
 
 
-def _generate_pdf_preview(*, mode_spec: dict) -> dict:
+def _generate_pdf_preview(*, mode_spec: dict, text: str) -> dict:
+    items = _build_pdf_preview_items(text)
     return _build_service_response(
         provider="hwpxchat",
         preview=_build_preview(
             mode_spec=mode_spec,
-            title="문서 업로드",
-            items=["문서는 PDF 화면에서 올립니다."],
+            title="문서 정리 초안",
+            items=items or ["문서 정리 초안"],
         ),
     )
 
@@ -465,9 +469,11 @@ def _execute_reservation_action(*, request, mode_spec: dict, data: dict) -> dict
     response = create_reservation(subrequest, school_slug)
     if response.status_code >= 400 or response.headers.get("HX-Refresh") != "true":
         status_code = response.status_code if response.status_code >= 400 else 400
+        message = _extract_response_message(response) or "예약하지 못했습니다."
         raise HomeAgentExecutionError(
-            _extract_response_message(response) or "예약하지 못했습니다.",
+            message,
             status_code=status_code,
+            field_errors=_build_reservation_field_errors(message),
         )
 
     school = School.objects.filter(slug=school_slug).first()
@@ -756,6 +762,25 @@ def _build_preview(*, mode_spec: dict, title: str, items: list[str]) -> dict:
     }
 
 
+def _build_pdf_preview_items(text: str) -> list[str]:
+    raw_text = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    pieces = re.split(r"\n+|(?<=[.!?])\s+", raw_text)
+    items = []
+    seen = set()
+    for piece in pieces:
+        compact = _compact_text(piece)
+        if not compact or compact in seen:
+            continue
+        seen.add(compact)
+        items.append(compact)
+        if len(items) >= 3:
+            break
+    if items:
+        return items
+    compact_text = _compact_text(raw_text)
+    return [compact_text] if compact_text else []
+
+
 def _decode_json_response(response) -> dict:
     try:
         return json.loads((response.content or b"").decode("utf-8") or "{}")
@@ -795,6 +820,33 @@ def _extract_response_message(response) -> str:
         return _compact_text(match.group("message"))
     cleaned = re.sub(r"<[^>]+>", " ", raw_text)
     return _compact_text(cleaned)
+
+
+def _build_reservation_field_errors(message: str) -> dict:
+    text = _compact_text(message)
+    if not text:
+        return {}
+    if "예약판" in text:
+        return {"school_slug": text}
+    if "수정 코드" in text:
+        return {"edit_code": text}
+    if "이름" in text:
+        return {"name": text}
+    if "예약이 불가능한 날짜" in text or "예약이 아직 열리지 않았습니다" in text:
+        return {"date": text}
+    if "고정 수업" in text or "이미 예약된 시간" in text:
+        return {"period": text}
+    if "고정입니다" in text and "예외" in text:
+        return {"override_grade_lock": text}
+    if "장소" in text:
+        return {"room_id": text}
+    if "학년/반" in text or "기타 대상" in text:
+        return {
+            "grade": text,
+            "class_no": text,
+            "target_label": text,
+        }
+    return {}
 
 
 def _compact_text(value) -> str:

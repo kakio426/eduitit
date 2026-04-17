@@ -1325,7 +1325,26 @@ class HomeV2ViewTest(TestCase):
             mode for mode in response.context['home_v7_agent_workspace']['modes']
             if mode['key'] == 'notice'
         )
+        quickdrop_mode = next(
+            mode for mode in response.context['home_v7_agent_workspace']['modes']
+            if mode['key'] == 'quickdrop'
+        )
+        message_save_mode = next(
+            mode for mode in response.context['home_v7_agent_workspace']['modes']
+            if mode['key'] == 'message-save'
+        )
         self.assertEqual(notice_mode['submit_label'], '알림 문구 생성')
+        self.assertTrue(quickdrop_mode['direct_url'])
+        self.assertTrue(quickdrop_mode['send_file_url'])
+        self.assertIn('__capture_id__', message_save_mode['parse_saved_template'])
+        self.assertIn('__capture_id__', message_save_mode['commit_template'])
+        self.assertIn('home-v6-agent-quickdrop-chat', content)
+        self.assertIn('home-v6-agent-pdf-chat', content)
+        self.assertIn('home-v6-agent-tts-chat', content)
+        self.assertIn('home-v6-agent-message-save-chat', content)
+        self.assertIn('data-home-v6-agent-quickdrop-file-input="true"', content)
+        self.assertIn('quickdropQuickExamples()', content)
+        self.assertIn('messageSaveQuickExamples()', content)
 
     def test_v2_authenticated_favorite_cards_show_compact_body(self):
         user = self._login('favoritebodyuser')
