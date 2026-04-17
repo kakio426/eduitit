@@ -369,6 +369,7 @@
         gap: 0.42rem;
         min-width: 0;
         width: 100%;
+        box-sizing: border-box;
         min-height: 1.96rem;
         padding: 0.22rem 0.62rem;
         border: 1px solid #e3e7ec;
@@ -390,7 +391,9 @@
 
     .classcalendar-home-workweek-item--range {
         pointer-events: auto;
-        margin: 0 0.22rem 0.24rem;
+        width: calc(100% - 0.44rem);
+        justify-self: center;
+        margin: 0 0 0.24rem;
     }
 
     .classcalendar-home-workweek-item.is-hub {
