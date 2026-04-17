@@ -260,6 +260,21 @@ gap: 0.55rem;
     overflow: visible;
 }
 
+.home-v6-page .home-v6-nav-portal-root {
+position: fixed;
+    inset: 0;
+    z-index: 500;
+    pointer-events: none;
+}
+
+.home-v6-page .home-v6-nav-portal-root.is-active::before {
+content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(241, 245, 249, 0.26);
+    backdrop-filter: blur(2px);
+}
+
 .home-v6-page .home-v6-nav-rail {
 display: grid;
     justify-items: center;
@@ -324,17 +339,23 @@ position: absolute;
     backdrop-filter: blur(18px);
 }
 
+.home-v6-page .home-v6-nav-portal-root .home-v6-nav-flyout,
+.home-v6-page .home-v6-nav-portal-root .home-v6-nav-rail-tooltip {
+pointer-events: auto;
+}
+
 .home-v6-page .home-v6-nav-rail-tooltip {
-width: 14rem;
-    padding: 0.95rem 1rem;
+width: 11.5rem;
+    padding: 0.85rem 0.95rem;
 }
 
 .home-v6-page .home-v6-nav-flyout {
-padding: 1rem;
+width: 17rem;
+    padding: 0.82rem;
 }
 
 .home-v6-page .home-v6-nav-flyout-head {
-padding-bottom: 0.8rem;
+padding-bottom: 0.5rem;
 }
 
 .home-v6-page .home-v6-nav-flyout-title,
@@ -363,15 +384,25 @@ margin-left: 0;
     padding: 0;
     border: 0;
     background: transparent;
-    gap: 0.45rem;
+    gap: 0.38rem;
 }
 
 .home-v6-page .home-v6-tool-link--flyout {
 border: 1px solid rgba(148, 163, 184, 0.14);
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.9);
-    padding: 0.78rem 0.92rem;
+    min-height: 2.9rem;
+    padding: 0.7rem 0.82rem;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+.home-v6-page .home-v6-nav-flyout .home-v6-tool-summary {
+display: none;
+}
+
+.home-v6-page .home-v6-nav-flyout .home-v6-tool-title {
+font-size: 0.86rem;
+    line-height: 1.3;
 }
 
 .home-v6-page .home-v6-tool-link--flyout:hover,
@@ -383,7 +414,7 @@ border-color: rgba(var(--home-v6-brand-rgb), 0.2);
 
 .home-v6-page .home-v6-nav-settings-links {
 display: grid;
-    gap: 0.45rem;
+    gap: 0.38rem;
 }
 
 .home-v6-page .home-v6-nav-settings-link {
@@ -391,8 +422,8 @@ display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.8rem;
-    min-height: 3.25rem;
-    padding: 0.82rem 0.9rem;
+    min-height: 2.9rem;
+    padding: 0.7rem 0.82rem;
     border: 1px solid rgba(148, 163, 184, 0.14);
     border-radius: 1rem;
     background: rgba(255, 255, 255, 0.9);
@@ -414,7 +445,6 @@ border-color: rgba(var(--home-v6-brand-rgb), 0.2);
 
 .home-v6-page .home-v6-nav-settings-copy {
 display: grid;
-    gap: 0.18rem;
     min-width: 0;
 }
 
@@ -424,13 +454,6 @@ color: #0f172a;
     font-weight: 900;
     line-height: 1.3;
     letter-spacing: -0.016em;
-}
-
-.home-v6-page .home-v6-nav-settings-summary {
-color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1.4;
 }
 
 .home-v6-page .home-v6-nav-settings-arrow {

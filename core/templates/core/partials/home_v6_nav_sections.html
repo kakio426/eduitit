@@ -35,9 +35,6 @@
             style="display: none;"
         >
             <p class="home-v6-nav-rail-tooltip-title">{{ section.title }}</p>
-            {% if section.subtitle %}
-            <p class="home-v6-nav-rail-tooltip-subtitle">{{ section.subtitle }}</p>
-            {% endif %}
         </div>
         {% else %}
         <button
@@ -64,9 +61,6 @@
         >
             <div class="home-v6-nav-flyout-head">
                 <p class="home-v6-nav-flyout-title">{{ section.title }}</p>
-                {% if section.subtitle %}
-                <p class="home-v6-nav-flyout-subtitle">{{ section.subtitle }}</p>
-                {% endif %}
             </div>
 
             <div
@@ -92,7 +86,6 @@
                         </span>
                         <span class="home-v6-tool-copy min-w-0 flex-1">
                             <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">학생 링크</span>
-                            <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">학생이 게임 목록으로 바로 들어가는 링크와 QR을 엽니다.</span>
                         </span>
                     </button>
                 </div>
@@ -116,7 +109,6 @@
                         </span>
                         <span class="home-v6-tool-copy min-w-0 flex-1">
                             <span class="home-v6-tool-title block truncate text-sm font-black text-slate-900">{{ product.public_service_name|default:product.title }}</span>
-                            <span class="home-v6-tool-summary mt-1 block text-xs leading-5 text-slate-500 line-clamp-2">{{ product.home_card_summary|default:product.description }}</span>
                         </span>
                     </a>
                 </div>
@@ -156,14 +148,12 @@
         >
             <div class="home-v6-nav-flyout-head">
                 <p class="home-v6-nav-flyout-title">설정</p>
-                <p class="home-v6-nav-flyout-subtitle">프로필 · 메이트 · 문의</p>
             </div>
 
             <div class="home-v6-nav-settings-links">
                 <a href="{{ settings_url }}#settings-profile" class="home-v6-nav-settings-link">
                     <span class="home-v6-nav-settings-copy">
                         <span class="home-v6-nav-settings-title">내 정보</span>
-                        <span class="home-v6-nav-settings-summary">이름 · 역할</span>
                     </span>
                     <span class="home-v6-nav-settings-arrow">
                         <i class="fa-solid fa-arrow-right"></i>
@@ -172,7 +162,6 @@
                 <a href="{{ settings_url }}#teacher-buddy-settings" class="home-v6-nav-settings-link">
                     <span class="home-v6-nav-settings-copy">
                         <span class="home-v6-nav-settings-title">교실 메이트</span>
-                        <span class="home-v6-nav-settings-summary">대표 메이트 · 보관함</span>
                     </span>
                     <span class="home-v6-nav-settings-arrow">
                         <i class="fa-solid fa-arrow-right"></i>
@@ -181,7 +170,6 @@
                 <a href="{{ settings_url }}#settings-support" class="home-v6-nav-settings-link">
                     <span class="home-v6-nav-settings-copy">
                         <span class="home-v6-nav-settings-title">개발자 채팅</span>
-                        <span class="home-v6-nav-settings-summary">문의 · 답변</span>
                     </span>
                     <span class="home-v6-nav-settings-arrow">
                         <i class="fa-solid fa-arrow-right"></i>
@@ -190,7 +178,6 @@
                 <a href="{{ settings_url }}#settings-roster" class="home-v6-nav-settings-link">
                     <span class="home-v6-nav-settings-copy">
                         <span class="home-v6-nav-settings-title">공용 명부</span>
-                        <span class="home-v6-nav-settings-summary">학생 · 보호자</span>
                     </span>
                     <span class="home-v6-nav-settings-arrow">
                         <i class="fa-solid fa-arrow-right"></i>

@@ -244,6 +244,22 @@
             panel.style.maxHeight = '';
         }
 
+        function getPortalRoot() {
+            if (rail.__homeV6PortalRoot && rail.__homeV6PortalRoot.isConnected) {
+                return rail.__homeV6PortalRoot;
+            }
+            var pageRoot = rail.closest('.home-v6-page') || document.body;
+            var portalRoot = pageRoot.querySelector('[data-home-v6-nav-portal-root="true"]');
+            if (!portalRoot) {
+                portalRoot = document.createElement('div');
+                portalRoot.dataset.homeV6NavPortalRoot = 'true';
+                portalRoot.className = 'home-v6-nav-portal-root';
+                pageRoot.appendChild(portalRoot);
+            }
+            rail.__homeV6PortalRoot = portalRoot;
+            return portalRoot;
+        }
+
         function ensurePanelPortal(panel) {
             if (!panel) {
                 return;
@@ -254,8 +270,9 @@
                     nextSibling: panel.nextSibling,
                 };
             }
-            if (panel.parentNode !== document.body) {
-                document.body.appendChild(panel);
+            var portalRoot = getPortalRoot();
+            if (panel.parentNode !== portalRoot) {
+                portalRoot.appendChild(panel);
             }
         }
 
@@ -281,14 +298,27 @@
             return group.querySelector('.home-v6-nav-rail-button') || group;
         }
 
-        function getGroupPanels(group) {
+        function ensureGroupPanelCache(group) {
             if (!group) {
-                return [];
+                return { flyout: null, tooltip: null };
             }
-            return [
-                group.querySelector('[data-home-v6-nav-flyout]'),
-                group.querySelector('[data-home-v6-nav-tooltip]'),
-            ].filter(Boolean);
+            if (!group.__homeV6Panels) {
+                group.__homeV6Panels = {
+                    flyout: group.querySelector('[data-home-v6-nav-flyout]'),
+                    tooltip: group.querySelector('[data-home-v6-nav-tooltip]'),
+                };
+            }
+            return group.__homeV6Panels;
+        }
+
+        function getGroupPanel(group, panelType) {
+            var panels = ensureGroupPanelCache(group);
+            return panels[panelType] || null;
+        }
+
+        function getGroupPanels(group) {
+            var panels = ensureGroupPanelCache(group);
+            return [panels.flyout, panels.tooltip].filter(Boolean);
         }
 
         function targetWithinGroupPanels(group, target) {
@@ -367,8 +397,8 @@
                 var key = getSectionKey(group);
                 var isActive = key && key === activeSectionKey;
                 var button = group.querySelector('.home-v6-nav-rail-button:not(.home-v6-nav-rail-button--direct)');
-                var flyout = group.querySelector('[data-home-v6-nav-flyout]');
-                var tooltip = group.querySelector('[data-home-v6-nav-tooltip]');
+                var flyout = getGroupPanel(group, 'flyout');
+                var tooltip = getGroupPanel(group, 'tooltip');
                 group.classList.toggle('is-open', isActive);
                 if (button) {
                     button.setAttribute('aria-expanded', isActive ? 'true' : 'false');
@@ -379,14 +409,15 @@
                     activeGroup = group;
                 }
             });
+            getPortalRoot().classList.toggle('is-active', Boolean(activeSectionKey));
         }
 
         function repositionActivePanels() {
             if (!activeGroup || !activeSectionKey) {
                 return;
             }
-            positionPanel(activeGroup, activeGroup.querySelector('[data-home-v6-nav-flyout]'));
-            positionPanel(activeGroup, activeGroup.querySelector('[data-home-v6-nav-tooltip]'));
+            positionPanel(activeGroup, getGroupPanel(activeGroup, 'flyout'));
+            positionPanel(activeGroup, getGroupPanel(activeGroup, 'tooltip'));
         }
 
         syncRailState('');
@@ -395,6 +426,7 @@
             var key = getSectionKey(group);
             var button = group.querySelector('.home-v6-nav-rail-button:not(.home-v6-nav-rail-button--direct)');
             var directLink = group.querySelector('.home-v6-nav-rail-button--direct');
+            ensureGroupPanelCache(group);
 
             if (!key) {
                 return;
