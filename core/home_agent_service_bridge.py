@@ -10,6 +10,8 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from .home_agent_registry import get_home_agent_service_definition
+
 
 class HomeAgentServiceUnavailable(Exception):
     """Raised when a native service cannot satisfy the home agent request."""
@@ -41,36 +43,18 @@ def generate_service_preview(
     if request is None or not getattr(getattr(request, "user", None), "is_authenticated", False):
         return None
 
-    normalized_mode = str(mode_key or "").strip().lower()
-    if normalized_mode == "notice":
-        return _generate_notice_preview(
-            request=request,
-            mode_spec=mode_spec,
-            text=text,
-        )
-    if normalized_mode == "schedule":
-        return _generate_schedule_preview(
-            mode_spec=mode_spec,
-            text=text,
-        )
-    if normalized_mode == "teacher-law":
-        return _generate_teacher_law_preview(
-            mode_spec=mode_spec,
-            text=text,
-        )
-    if normalized_mode == "reservation":
-        return _generate_reservation_preview(
-            request=request,
-            mode_spec=mode_spec,
-            text=text,
-            selected_date_label=selected_date_label,
-        )
-    if normalized_mode == "pdf":
-        return _generate_pdf_preview(
-            mode_spec=mode_spec,
-            text=text,
-        )
-    return None
+    definition = get_home_agent_service_definition(mode_key)
+    adapter_key = str((definition.adapter_key if definition is not None else mode_key) or "").strip().lower()
+    preview_handler = HOME_AGENT_PREVIEW_ADAPTERS.get(adapter_key)
+    if preview_handler is None:
+        return None
+    return preview_handler(
+        request=request,
+        mode_spec=mode_spec,
+        text=text,
+        selected_date_label=selected_date_label,
+        context=context or {},
+    )
 
 
 def execute_service_action(
@@ -83,28 +67,18 @@ def execute_service_action(
     if request is None or not getattr(getattr(request, "user", None), "is_authenticated", False):
         raise HomeAgentExecutionError("로그인이 필요합니다.", status_code=401)
 
-    normalized_mode = str(mode_key or "").strip().lower()
+    definition = get_home_agent_service_definition(mode_key)
+    adapter_key = str((definition.adapter_key if definition is not None else mode_key) or "").strip().lower()
     payload = data if isinstance(data, dict) else {}
 
-    if normalized_mode == "schedule":
-        return _execute_schedule_action(
-            request=request,
-            mode_spec=mode_spec,
-            data=payload,
-        )
-    if normalized_mode == "reservation":
-        return _execute_reservation_action(
-            request=request,
-            mode_spec=mode_spec,
-            data=payload,
-        )
-    if normalized_mode == "teacher-law":
-        return _execute_teacher_law_action(
-            request=request,
-            mode_spec=mode_spec,
-            data=payload,
-        )
-    raise HomeAgentExecutionError("이 모드는 홈에서 바로 저장할 수 없습니다.", status_code=400)
+    execute_handler = HOME_AGENT_EXECUTE_ADAPTERS.get(adapter_key)
+    if execute_handler is None:
+        raise HomeAgentExecutionError("이 모드는 홈에서 바로 저장할 수 없습니다.", status_code=400)
+    return execute_handler(
+        request=request,
+        mode_spec=mode_spec,
+        data=payload,
+    )
 
 
 def _generate_notice_preview(*, request, mode_spec: dict, text: str) -> dict:
@@ -622,15 +596,11 @@ def _build_schedule_execution(candidates: list[dict]) -> dict | None:
 
 
 def _build_teacher_law_execution(*, result: dict, question: str) -> dict:
-    from teacher_law.services.query_normalizer import (
-        COUNTERPART_OPTIONS,
-        INCIDENT_OPTIONS,
-        LEGAL_GOAL_OPTIONS,
-        SCENE_OPTIONS,
-    )
+    from teacher_law.services.query_normalizer import get_input_options
 
     payload = result.get("payload") or {}
     profile = result.get("profile") or {}
+    input_options = get_input_options() or {}
     warnings = [
         _compact_text(item)
         for item in payload.get("clarify_questions") or []
@@ -656,19 +626,19 @@ def _build_teacher_law_execution(*, result: dict, question: str) -> dict:
                 "label": option["label"],
                 "requires": option.get("requires", ""),
             }
-            for option in INCIDENT_OPTIONS
+            for option in (input_options.get("incident_options") or [])
         ],
         "goal_options": [
             {"value": option["value"], "label": option["label"]}
-            for option in LEGAL_GOAL_OPTIONS
+            for option in (input_options.get("legal_goal_options") or [])
         ],
         "scene_options": [
             {"value": option["value"], "label": option["label"]}
-            for option in SCENE_OPTIONS
+            for option in (input_options.get("scene_options") or [])
         ],
         "counterpart_options": [
             {"value": option["value"], "label": option["label"]}
-            for option in COUNTERPART_OPTIONS
+            for option in (input_options.get("counterpart_options") or [])
         ],
         "warnings": warnings,
     }
@@ -1073,3 +1043,57 @@ def _is_truthy(value) -> bool:
 
 def _normalize_match_text(value: str) -> str:
     return re.sub(r"\s+", "", str(value or "").lower())
+
+
+def _preview_notice_adapter(*, request, mode_spec: dict, text: str, **_kwargs) -> dict:
+    return _generate_notice_preview(
+        request=request,
+        mode_spec=mode_spec,
+        text=text,
+    )
+
+
+def _preview_schedule_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
+    return _generate_schedule_preview(
+        mode_spec=mode_spec,
+        text=text,
+    )
+
+
+def _preview_teacher_law_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
+    return _generate_teacher_law_preview(
+        mode_spec=mode_spec,
+        text=text,
+    )
+
+
+def _preview_reservation_adapter(*, request, mode_spec: dict, text: str, selected_date_label: str = "", **_kwargs) -> dict:
+    return _generate_reservation_preview(
+        request=request,
+        mode_spec=mode_spec,
+        text=text,
+        selected_date_label=selected_date_label,
+    )
+
+
+def _preview_pdf_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
+    return _generate_pdf_preview(
+        mode_spec=mode_spec,
+        text=text,
+    )
+
+
+HOME_AGENT_PREVIEW_ADAPTERS = {
+    "notice": _preview_notice_adapter,
+    "schedule": _preview_schedule_adapter,
+    "teacher-law": _preview_teacher_law_adapter,
+    "reservation": _preview_reservation_adapter,
+    "pdf": _preview_pdf_adapter,
+}
+
+
+HOME_AGENT_EXECUTE_ADAPTERS = {
+    "schedule": _execute_schedule_action,
+    "reservation": _execute_reservation_action,
+    "teacher-law": _execute_teacher_law_action,
+}

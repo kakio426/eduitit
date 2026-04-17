@@ -43,6 +43,14 @@
         return 'clipboard-' + Date.now() + '.' + extension;
     }
 
+    function normalizeBrowserFiles(fileList) {
+        return Array.prototype.slice.call(fileList || []).filter(Boolean);
+    }
+
+    function escapeRegExp(value) {
+        return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
     function ensureFallbackToastRoot() {
         var root = document.getElementById('home-feedback-fallback-root');
         if (root) {
@@ -642,11 +650,29 @@
             quickdropLastSentText: '',
             quickdropLastSentFileName: '',
             isSendingQuickdrop: false,
+            quickdropDragDepth: 0,
+            isQuickdropDragActive: false,
             isTtsReading: false,
             workspaceInput: '',
             agentModeMenuOpen: false,
+            railSearchText: '',
             activeModeKey: workspaceConfig.initial_mode || '',
+            activeRailKey: workspaceConfig.initial_rail_key || '',
+            activeConversationKey: '',
             agentModes: Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : [],
+            agentRailSections: Array.isArray(workspaceConfig.rail_sections) ? workspaceConfig.rail_sections : [],
+            agentConversationRail: workspaceConfig.conversations && typeof workspaceConfig.conversations === 'object'
+                ? workspaceConfig.conversations
+                : {},
+            activeRoomSnapshot: null,
+            isHumanChatLoading: false,
+            isHumanChatSending: false,
+            humanChatDraftText: '',
+            humanChatErrorText: '',
+            humanChatReplyTo: null,
+            humanChatQueuedFiles: [],
+            humanChatDragDepth: 0,
+            isHumanChatDragActive: false,
             agentPreview: {
                 badge: '',
                 title: '',
@@ -684,9 +710,16 @@
                 frontendConfig = getHomeFrontendConfig();
                 workspaceConfig = parseJsonScript('home-v7-agent-workspace', workspaceConfig) || {};
                 this.agentModes = Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : this.agentModes;
+                this.agentRailSections = Array.isArray(workspaceConfig.rail_sections) ? workspaceConfig.rail_sections : this.agentRailSections;
+                this.agentConversationRail = workspaceConfig.conversations && typeof workspaceConfig.conversations === 'object'
+                    ? workspaceConfig.conversations
+                    : this.agentConversationRail;
                 this.favoriteIds = normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', []));
                 if (!this.activeModeKey && this.agentModes.length) {
                     this.activeModeKey = this.agentModes[0].key;
+                }
+                if (!this.activeRailKey) {
+                    this.activeRailKey = 'service:' + String(this.activeModeKey || '');
                 }
                 this.showIdlePreview();
                 var self = this;
@@ -699,6 +732,570 @@
                 return this.agentModes.find(function (mode) {
                     return mode.key === this.activeModeKey;
                 }, this) || this.agentModes[0] || {};
+            },
+
+            get activeRendererKey() {
+                if (this.activeRailItem && this.activeRailItem.kind === 'room') {
+                    return trimLine(this.activeRailItem.renderer_key || 'human-chat');
+                }
+                return trimLine(this.activeMode.renderer_key || this.activeMode.key || '');
+            },
+
+            modeByKey: function (modeKey) {
+                var targetKey = trimLine(modeKey);
+                return this.agentModes.find(function (mode) {
+                    return trimLine(mode && mode.key) === targetKey;
+                }) || {};
+            },
+
+            modeHasCapability: function (mode, capabilityKey) {
+                var capabilities = mode && typeof mode.capabilities === 'object' ? mode.capabilities : {};
+                return Boolean(capabilities && capabilities[capabilityKey]);
+            },
+
+            activeModeStarterItems: function () {
+                return Array.isArray(this.activeMode.starter_items) ? this.activeMode.starter_items : [];
+            },
+
+            activeModeRefinementActions: function () {
+                return Array.isArray(this.activeMode.refinement_actions) ? this.activeMode.refinement_actions : [];
+            },
+
+            railSections: function () {
+                return Array.isArray(this.agentRailSections) ? this.agentRailSections : [];
+            },
+
+            allRailItems: function () {
+                return this.railSections().reduce(function (items, section) {
+                    var sectionItems = Array.isArray(section && section.items) ? section.items : [];
+                    return items.concat(sectionItems);
+                }, []);
+            },
+
+            railItemByKey: function (itemKey) {
+                var targetKey = trimLine(itemKey);
+                return this.allRailItems().find(function (item) {
+                    return trimLine(item && item.key) === targetKey;
+                }) || null;
+            },
+
+            get activeRailItem() {
+                return this.railItemByKey(this.activeRailKey);
+            },
+
+            get activeConversationItem() {
+                var item = this.activeRailItem;
+                return item && item.kind === 'room' ? item : null;
+            },
+
+            activeConversationItems: function () {
+                var rail = this.agentConversationRail && typeof this.agentConversationRail === 'object'
+                    ? this.agentConversationRail
+                    : {};
+                return Array.isArray(rail.items) ? rail.items : [];
+            },
+
+            railSearchQuery: function () {
+                return trimLine(this.railSearchText).toLowerCase();
+            },
+
+            filteredAgentModes: function () {
+                var query = this.railSearchQuery();
+                if (!query) {
+                    return this.agentModes;
+                }
+                return this.agentModes.filter(function (mode) {
+                    var label = trimLine(mode && mode.label).toLowerCase();
+                    var aliases = Array.isArray(mode && mode.aliases) ? mode.aliases : [];
+                    return label.indexOf(query) !== -1 || aliases.some(function (alias) {
+                        return trimLine(alias).toLowerCase().indexOf(query) !== -1;
+                    });
+                });
+            },
+
+            filteredAgentConversations: function () {
+                var query = this.railSearchQuery();
+                var items = this.activeConversationItems();
+                if (!query) {
+                    return items;
+                }
+                return items.filter(function (item) {
+                    return trimLine(item && item.label).toLowerCase().indexOf(query) !== -1
+                        || trimLine(item && item.summary).toLowerCase().indexOf(query) !== -1
+                        || trimLine(item && item.meta).toLowerCase().indexOf(query) !== -1;
+                });
+            },
+
+            filteredAgentRailSections: function () {
+                var query = this.railSearchQuery();
+                return this.railSections().map(function (section) {
+                    var items = Array.isArray(section && section.items) ? section.items : [];
+                    var filteredItems = !query
+                        ? items
+                        : items.filter(function (item) {
+                            return trimLine(item && item.title).toLowerCase().indexOf(query) !== -1
+                                || trimLine(item && item.summary).toLowerCase().indexOf(query) !== -1
+                                || trimLine(item && item.meta).toLowerCase().indexOf(query) !== -1;
+                        });
+                    return {
+                        key: trimLine(section && section.key),
+                        label: trimLine(section && section.label),
+                        items: filteredItems,
+                    };
+                }).filter(function (section) {
+                    return section.items.length;
+                });
+            },
+
+            railCountByKind: function (kind) {
+                var targetKind = trimLine(kind);
+                return this.allRailItems().filter(function (item) {
+                    return trimLine(item && item.kind) === targetKind;
+                }).length;
+            },
+
+            firstRailItemKeyByKind: function (kind) {
+                var targetKind = trimLine(kind);
+                var item = this.allRailItems().find(function (entry) {
+                    return trimLine(entry && entry.kind) === targetKind;
+                });
+                return trimLine(item && item.key);
+            },
+
+            selectRailItem: async function (itemKey) {
+                var item = this.railItemByKey(itemKey);
+                if (!item) {
+                    return;
+                }
+                if (item.kind === 'room') {
+                    await this.selectHumanConversation(item.key);
+                    return;
+                }
+                this.selectAgentMode(item.mode_key || item.entity_key || '');
+            },
+
+            updateRailItem: function (itemKey, updater) {
+                var targetKey = trimLine(itemKey);
+                this.agentRailSections = this.railSections().map(function (section) {
+                    return Object.assign({}, section, {
+                        items: (Array.isArray(section.items) ? section.items : []).map(function (item) {
+                            if (trimLine(item && item.key) !== targetKey) {
+                                return item;
+                            }
+                            return updater(Object.assign({}, item)) || item;
+                        }),
+                    });
+                });
+            },
+
+            activeHeaderTitle: function () {
+                var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : null;
+                if (this.activeConversationItem) {
+                    return trimLine(room && room.name) || trimLine(this.activeConversationItem.title) || '끼리끼리 채팅방';
+                }
+                return trimLine(this.activeMode.label) || 'AI 교무비서';
+            },
+
+            activeHeaderMeta: function () {
+                var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : null;
+                if (this.activeConversationItem) {
+                    return trimLine(room && room.room_kind_label) || trimLine(this.activeConversationItem.meta) || '대화';
+                }
+                return trimLine(this.activeMode.helper);
+            },
+
+            activeHeaderBadge: function () {
+                return this.activeConversationItem ? '대화' : 'AI';
+            },
+
+            activeHeaderPrimaryHref: function () {
+                var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : null;
+                if (this.activeConversationItem) {
+                    return trimLine(room && room.open_url) || trimLine(this.activeConversationItem.open_url);
+                }
+                return trimLine(this.activeMode.service_href);
+            },
+
+            activeHeaderPrimaryLabel: function () {
+                if (this.activeConversationItem) {
+                    return '채팅방 열기';
+                }
+                return trimLine(this.activeMode.service_label);
+            },
+
+            activeHeaderSecondaryHref: function () {
+                return this.activeConversationItem ? '' : trimLine(this.activeMode.secondary_link_href);
+            },
+
+            activeHeaderSecondaryLabel: function () {
+                return this.activeConversationItem ? '' : trimLine(this.activeMode.secondary_link_label);
+            },
+
+            quickdropDataTransferHasFiles: function (event) {
+                var transfer = event && event.dataTransfer ? event.dataTransfer : null;
+                var types = transfer && transfer.types ? Array.prototype.slice.call(transfer.types) : [];
+                return types.indexOf('Files') !== -1;
+            },
+
+            resetQuickdropDragState: function () {
+                this.quickdropDragDepth = 0;
+                this.isQuickdropDragActive = false;
+            },
+
+            handleQuickdropDragEnter: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.quickdropDragDepth += 1;
+                this.isQuickdropDragActive = true;
+            },
+
+            handleQuickdropDragOver: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.isQuickdropDragActive = true;
+            },
+
+            handleQuickdropDragLeave: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.quickdropDragDepth = Math.max(0, this.quickdropDragDepth - 1);
+                if (!this.quickdropDragDepth) {
+                    this.isQuickdropDragActive = false;
+                }
+            },
+
+            handleQuickdropDrop: function (event) {
+                var transfer = event && event.dataTransfer ? event.dataTransfer : null;
+                var files = normalizeBrowserFiles(transfer && transfer.files);
+                var file = files[0] || null;
+                this.resetQuickdropDragState();
+                if (!file) {
+                    return;
+                }
+                event.preventDefault();
+                this.queueQuickdropFile(file, trimLine(file.name || ''));
+                showFeedback('파일을 담았어요.', 'success');
+            },
+
+            clearHumanChatComposer: function () {
+                this.humanChatDraftText = '';
+                this.humanChatErrorText = '';
+                this.humanChatReplyTo = null;
+                this.humanChatQueuedFiles = [];
+                this.humanChatDragDepth = 0;
+                this.isHumanChatDragActive = false;
+            },
+
+            humanChatFileInput: function () {
+                return document.querySelector('[data-home-v6-human-chat-file-input="true"]');
+            },
+
+            openHumanChatFilePicker: function () {
+                var input = this.humanChatFileInput();
+                if (input && typeof input.click === 'function') {
+                    input.click();
+                }
+            },
+
+            appendHumanChatFiles: function (files, options) {
+                var sourceFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+                var nextFiles = Array.isArray(this.humanChatQueuedFiles) ? this.humanChatQueuedFiles.slice() : [];
+                sourceFiles.forEach(function (file, index) {
+                    var fallbackName = options && options.fromClipboard
+                        ? inferQuickdropClipboardFilename(file)
+                        : trimLine(file && file.name);
+                    var displayName = trimLine(file && file.name) || fallbackName || ('file-' + Date.now());
+                    nextFiles.push({
+                        id: ['human-file', Date.now(), nextFiles.length, index].join(':'),
+                        file: file,
+                        name: displayName,
+                        kind: String(file && file.type ? file.type : '').indexOf('image/') === 0 ? 'image' : 'file',
+                    });
+                });
+                this.humanChatQueuedFiles = nextFiles.slice(0, 8);
+                this.humanChatErrorText = '';
+            },
+
+            queueHumanChatFilesFromInput: function (event) {
+                var input = event && event.target ? event.target : null;
+                this.appendHumanChatFiles(normalizeBrowserFiles(input && input.files));
+                if (input) {
+                    input.value = '';
+                }
+            },
+
+            removeHumanChatQueuedFile: function (fileId) {
+                var targetId = trimLine(fileId);
+                this.humanChatQueuedFiles = (Array.isArray(this.humanChatQueuedFiles) ? this.humanChatQueuedFiles : []).filter(function (item) {
+                    return trimLine(item && item.id) !== targetId;
+                });
+            },
+
+            humanChatHasFilesQueued: function () {
+                return Array.isArray(this.humanChatQueuedFiles) && this.humanChatQueuedFiles.length > 0;
+            },
+
+            humanChatCanPostTopLevel: function () {
+                var snapshot = this.activeRoomSnapshot && typeof this.activeRoomSnapshot === 'object' ? this.activeRoomSnapshot : {};
+                var room = snapshot.room && typeof snapshot.room === 'object' ? snapshot.room : {};
+                return Boolean(room.can_post_top_level);
+            },
+
+            humanChatCanSend: function () {
+                var hasContent = trimLine(this.humanChatDraftText) || this.humanChatHasFilesQueued();
+                return Boolean(hasContent && (this.humanChatCanPostTopLevel() || this.humanChatReplyTo));
+            },
+
+            handleHumanChatDragEnter: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.humanChatDragDepth += 1;
+                this.isHumanChatDragActive = true;
+            },
+
+            handleHumanChatDragOver: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.isHumanChatDragActive = true;
+            },
+
+            handleHumanChatDragLeave: function (event) {
+                if (!this.quickdropDataTransferHasFiles(event)) {
+                    return;
+                }
+                event.preventDefault();
+                this.humanChatDragDepth = Math.max(0, this.humanChatDragDepth - 1);
+                if (!this.humanChatDragDepth) {
+                    this.isHumanChatDragActive = false;
+                }
+            },
+
+            handleHumanChatDrop: function (event) {
+                var transfer = event && event.dataTransfer ? event.dataTransfer : null;
+                var files = normalizeBrowserFiles(transfer && transfer.files);
+                this.humanChatDragDepth = 0;
+                this.isHumanChatDragActive = false;
+                if (!files.length) {
+                    return;
+                }
+                event.preventDefault();
+                this.appendHumanChatFiles(files);
+                showFeedback('파일을 담았어요.', 'success');
+            },
+
+            captureHumanChatPaste: function (event) {
+                var clipboard = event && event.clipboardData ? event.clipboardData : null;
+                var items = clipboard && clipboard.items ? Array.prototype.slice.call(clipboard.items) : [];
+                var files = items.map(function (item) {
+                    return item && item.kind === 'file' && typeof item.getAsFile === 'function' ? item.getAsFile() : null;
+                }).filter(Boolean);
+                if (!files.length) {
+                    return;
+                }
+                event.preventDefault();
+                this.appendHumanChatFiles(files, { fromClipboard: true });
+                showFeedback('파일을 담았어요.', 'success');
+            },
+
+            humanChatMessages: function () {
+                var snapshot = this.activeRoomSnapshot && typeof this.activeRoomSnapshot === 'object' ? this.activeRoomSnapshot : {};
+                return Array.isArray(snapshot.messages) ? snapshot.messages : [];
+            },
+
+            humanChatComposerPlaceholder: function () {
+                var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : {};
+                return trimLine(room && room.composer_placeholder) || '메시지 입력';
+            },
+
+            humanChatReplyTargetId: function (message) {
+                if (!message || typeof message !== 'object') {
+                    return '';
+                }
+                return trimLine(message.parent_message_id || message.id);
+            },
+
+            setHumanChatReply: function (message) {
+                if (!message || typeof message !== 'object') {
+                    return;
+                }
+                this.humanChatReplyTo = {
+                    id: this.humanChatReplyTargetId(message),
+                    sender_name: trimLine(message.sender_name),
+                    body: trimLine(message.body || message.parent_preview),
+                };
+                this.humanChatErrorText = '';
+            },
+
+            clearHumanChatReply: function () {
+                this.humanChatReplyTo = null;
+            },
+
+            refreshHumanConversation: async function (options) {
+                var item = this.activeConversationItem;
+                var snapshotUrl = trimLine(item && item.snapshot_url);
+                if (!item || !snapshotUrl) {
+                    this.activeRoomSnapshot = null;
+                    return;
+                }
+                this.isHumanChatLoading = true;
+                try {
+                    var response = await fetch(snapshotUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '대화를 불러오지 못했습니다.');
+                    }
+                    this.activeRoomSnapshot = payload;
+                    this.humanChatErrorText = '';
+                    this.updateRailItem(item.key, function (current) {
+                        var messages = Array.isArray(payload.messages) ? payload.messages : [];
+                        var latestMessage = messages.length ? messages[messages.length - 1] : null;
+                        return Object.assign({}, current, {
+                            summary: trimLine(latestMessage && latestMessage.body) || current.summary || '',
+                            unread_count: 0,
+                            badge: '',
+                        });
+                    });
+                    if (!(options && options.preserveReply)) {
+                        this.humanChatReplyTo = null;
+                    }
+                } catch (error) {
+                    this.humanChatErrorText = error && error.message ? error.message : '대화를 불러오지 못했습니다.';
+                    showFeedback(this.humanChatErrorText, 'error');
+                } finally {
+                    this.isHumanChatLoading = false;
+                }
+            },
+
+            selectHumanConversation: async function (itemKey) {
+                var item = this.railItemByKey(itemKey);
+                if (!item || item.kind !== 'room') {
+                    return;
+                }
+                if (this.activeMode && this.modeHasCapability(this.activeMode, 'tts_read')) {
+                    this.isTtsReading = false;
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                    }
+                }
+                this.activeRailKey = item.key;
+                this.activeConversationKey = item.key;
+                this.agentModeMenuOpen = false;
+                this.clearHumanChatComposer();
+                await this.refreshHumanConversation();
+            },
+
+            sendHumanChat: async function () {
+                var item = this.activeConversationItem;
+                var sendUrl = trimLine(item && item.send_url);
+                var csrfToken = getCsrfToken();
+                if (!sendUrl) {
+                    this.humanChatErrorText = '전송 경로를 찾지 못했습니다.';
+                    showFeedback(this.humanChatErrorText, 'error');
+                    return;
+                }
+                if (!csrfToken) {
+                    this.humanChatErrorText = '보안 토큰을 확인할 수 없습니다.';
+                    showFeedback(this.humanChatErrorText, 'error');
+                    return;
+                }
+                if (!this.humanChatCanSend()) {
+                    this.humanChatErrorText = '보낼 내용을 넣어 주세요.';
+                    showFeedback(this.humanChatErrorText, 'info');
+                    return;
+                }
+
+                this.isHumanChatSending = true;
+                this.humanChatErrorText = '';
+                try {
+                    var formData = new FormData();
+                    var draftText = trimLine(this.humanChatDraftText);
+                    if (draftText) {
+                        formData.append('text', draftText);
+                    }
+                    if (this.humanChatReplyTo && trimLine(this.humanChatReplyTo.id)) {
+                        formData.append('parent_message_id', trimLine(this.humanChatReplyTo.id));
+                    }
+                    (Array.isArray(this.humanChatQueuedFiles) ? this.humanChatQueuedFiles : []).forEach(function (entry) {
+                        if (entry && entry.file) {
+                            formData.append('files', entry.file, entry.name || entry.file.name || 'upload');
+                        }
+                    });
+                    var response = await fetch(sendUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '전송하지 못했습니다.');
+                    }
+                    this.humanChatDraftText = '';
+                    this.humanChatReplyTo = null;
+                    this.humanChatQueuedFiles = [];
+                    await this.refreshHumanConversation({ preserveReply: false });
+                } catch (error) {
+                    this.humanChatErrorText = error && error.message ? error.message : '전송하지 못했습니다.';
+                    showFeedback(this.humanChatErrorText, 'error');
+                } finally {
+                    this.isHumanChatSending = false;
+                }
+            },
+
+            toggleHumanChatReaction: async function (message) {
+                var reactionUrl = trimLine(message && message.reaction_url);
+                var csrfToken = getCsrfToken();
+                if (!reactionUrl || !csrfToken) {
+                    showFeedback('반응을 남기지 못했습니다.', 'error');
+                    return;
+                }
+                try {
+                    var response = await fetch(reactionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '반응을 남기지 못했습니다.');
+                    }
+                    await this.refreshHumanConversation({ preserveReply: true });
+                } catch (error) {
+                    showFeedback(error && error.message ? error.message : '반응을 남기지 못했습니다.', 'error');
+                }
             },
 
             focusQuickdropHomeDraftInput: function (form) {
@@ -902,26 +1499,42 @@
                 };
             },
 
+            resolveContinueQueryValue: function (source) {
+                var payload = source && typeof source === 'object' ? source : {};
+                var sourceType = trimLine(payload.source);
+                var transform = trimLine(payload.transform);
+                var value = '';
+                if (sourceType === 'workspace_input') {
+                    value = trimLine(this.workspaceInput);
+                } else if (sourceType === 'execution_field') {
+                    value = trimLine(this.agentExecutionDraft && this.agentExecutionDraft[payload.field]);
+                }
+                if (!value) {
+                    return '';
+                }
+                if (transform === 'date') {
+                    return String(value).slice(0, 10);
+                }
+                return value;
+            },
+
             buildModeContinueHref: function (mode) {
                 var targetMode = mode || this.activeMode || {};
                 var href = trimLine(targetMode.after_action_href || targetMode.service_href || '');
+                var queryFields = Array.isArray(targetMode.continue_query_fields) ? targetMode.continue_query_fields : [];
+                var query = {};
                 if (!href) {
                     return '';
                 }
-                if (targetMode.key === 'notice') {
-                    return appendQueryParams(href, {
-                        keywords: this.workspaceInput,
-                    });
-                }
-                if (targetMode.key === 'schedule') {
-                    return appendQueryParams(href, {
-                        date: String(this.agentExecutionDraft.start_time || '').slice(0, 10),
-                    });
-                }
-                if (targetMode.key === 'reservation') {
-                    return appendQueryParams(href, {
-                        date: this.agentExecutionDraft.date,
-                    });
+                queryFields.forEach(function (field) {
+                    var param = trimLine(field && field.param);
+                    var value = this.resolveContinueQueryValue(field);
+                    if (param && value) {
+                        query[param] = value;
+                    }
+                }, this);
+                if (Object.keys(query).length) {
+                    return appendQueryParams(href, query);
                 }
                 return href;
             },
@@ -997,7 +1610,7 @@
                 if (!lines.length) {
                     pushLine(preview.summary);
                 }
-                return lines.slice(0, this.activeModeKey === 'notice' ? 6 : 8);
+                return lines.slice(0, Number(this.activeMode.preview_line_limit || 8));
             },
 
             clonePayload: function (value) {
@@ -1427,7 +2040,7 @@
                 this.normalizeExecutionDraft();
                 var localFieldErrors = this.validateExecutionDraft();
                 if (Object.keys(localFieldErrors).length) {
-                    if (this.activeModeKey === 'schedule') {
+                    if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
                         this.scheduleEditorOpen = true;
                     }
                     this.setExecutionFieldErrors(localFieldErrors);
@@ -1463,7 +2076,7 @@
                         payload = {};
                     }
                     if (!response.ok || payload.status !== 'ok') {
-                        if (this.activeModeKey === 'schedule') {
+                        if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
                             this.scheduleEditorOpen = true;
                         }
                         this.setExecutionFieldErrors(payload.field_errors);
@@ -1509,7 +2122,7 @@
                 this.clearExecution();
                 this.clearMessageSaveState();
                 this.scheduleEditorOpen = false;
-                if (this.activeModeKey === 'notice' || !trimLine(this.workspaceInput)) {
+                if (this.modeHasCapability(this.activeMode, 'notice_refinement') || !trimLine(this.workspaceInput)) {
                     this.noticeRefinementLabel = '';
                     if (!trimLine(this.workspaceInput)) {
                         this.noticeBaseInput = '';
@@ -1518,12 +2131,7 @@
             },
 
             quickdropQuickExamples: function () {
-                return [
-                    { label: '글', kind: 'text', text: '오늘 6교시 체육관 사용합니다.' },
-                    { label: '링크', kind: 'text', text: '학년 회의 링크 https://example.com' },
-                    { label: '사진', kind: 'file' },
-                    { label: '파일', kind: 'file' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runQuickdropExample: function (item) {
@@ -1554,6 +2162,7 @@
                     ? trimLine(filenameOverride || file.name || '')
                     : '';
                 this.quickdropErrorText = '';
+                this.resetQuickdropDragState();
             },
 
             queueQuickdropFileFromInput: function (event) {
@@ -1574,6 +2183,7 @@
                 this.quickdropQueuedFile = null;
                 this.quickdropQueuedFileDisplayName = '';
                 this.quickdropErrorText = '';
+                this.resetQuickdropDragState();
             },
 
             captureQuickdropWorkspacePaste: function (event) {
@@ -1840,12 +2450,7 @@
             },
 
             pdfQuickExamples: function () {
-                return [
-                    { label: '가정통신문', text: '가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.' },
-                    { label: '공문', text: '공문 PDF에서 오늘 처리할 일만 짧게 정리해 주세요.' },
-                    { label: '연수 자료', text: '연수 자료 PDF에서 오늘 수업에 바로 쓸 내용만 정리해 주세요.' },
-                    { label: '회의 자료', text: '회의 자료 PDF에서 공유할 결정 사항만 정리해 주세요.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runPdfExample: function (text) {
@@ -1895,12 +2500,7 @@
             },
 
             ttsQuickExamples: function () {
-                return [
-                    { label: '이동', text: '지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다.' },
-                    { label: '정리', text: '쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다.' },
-                    { label: '조회', text: '지금부터 아침 조회를 시작합니다. 오늘 일정을 함께 확인하겠습니다.' },
-                    { label: '하교', text: '오늘 수업이 모두 끝났습니다. 주변을 정리하고 안전하게 하교합니다.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runTtsExample: function (text) {
@@ -1976,12 +2576,7 @@
             },
 
             messageSaveQuickExamples: function () {
-                return [
-                    { label: '학부모 문자', text: '학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 가능 여부 회신 부탁드립니다.' },
-                    { label: '회의 안내', text: '금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요.' },
-                    { label: '행사 공지', text: '4월 25일 오전 9시 운동장 집합입니다. 체육대회 준비물은 물과 모자입니다.' },
-                    { label: '수업 변경', text: '내일 2교시 과학실 수업이 4교시로 바뀝니다. 실험 준비물은 그대로 가져옵니다.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runMessageSaveExample: function (text) {
@@ -2586,12 +3181,7 @@
             },
 
             scheduleQuickExamples: function () {
-                return [
-                    { label: '상담', text: '학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 학교 상담실로 와 주세요.' },
-                    { label: '회의', text: '금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요.' },
-                    { label: '행사', text: '4월 25일 오전 9시 운동장 집합입니다. 체육대회 준비물은 물과 모자입니다.' },
-                    { label: '변경', text: '내일 2교시 과학실 수업이 4교시로 바뀝니다. 실험 준비물은 그대로 가져옵니다.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runScheduleExample: function (text) {
@@ -2732,12 +3322,7 @@
             },
 
             reservationQuickExamples: function () {
-                return [
-                    { label: '과학실', text: '다음 주 화요일 3교시에 과학실 예약해줘.' },
-                    { label: '음악실', text: '금요일 5교시에 음악실 예약해줘.' },
-                    { label: '미술실', text: '4월 25일 2교시에 미술실 사용하려고 해.' },
-                    { label: '컴퓨터실', text: '다음 주 목요일 4교시에 컴퓨터실 예약해줘.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runReservationExample: function (text) {
@@ -2754,6 +3339,15 @@
                     return [];
                 }
                 return Array.isArray(this.agentExecution.warnings) ? this.agentExecution.warnings : [];
+            },
+
+            reservationKnownRoomNames: function () {
+                var uiOptions = this.activeMode && typeof this.activeMode.ui_options === 'object'
+                    ? this.activeMode.ui_options
+                    : {};
+                return (Array.isArray(uiOptions.room_names) ? uiOptions.room_names : []).map(function (name) {
+                    return trimLine(name);
+                }).filter(Boolean);
             },
 
             reservationBoardLabel: function () {
@@ -2907,13 +3501,12 @@
                 return trimLine(preview.title || '법률 답변');
             },
 
+            noticeRefinementActions: function () {
+                return this.activeModeRefinementActions();
+            },
+
             teacherLawQuickExamples: function () {
-                return [
-                    { label: '학부모 민원', text: '학부모가 밤마다 전화를 반복합니다. 어떻게 대응해야 하나요?' },
-                    { label: '생활지도', text: '생활지도 중 보호자가 항의 전화를 반복하고 있습니다. 기록은 어떻게 남겨야 하나요?' },
-                    { label: '촬영/녹음', text: '수업 장면을 학부모가 녹음했다고 합니다. 먼저 무엇을 확인해야 하나요?' },
-                    { label: '폭언', text: '학생 보호자가 통화 중 폭언을 했습니다. 어떤 순서로 대응하면 되나요?' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runTeacherLawExample: function (text) {
@@ -3005,12 +3598,7 @@
             },
 
             noticeQuickExamples: function () {
-                return [
-                    { label: '체험학습', text: '내일 체험학습, 8시 40분까지 등교, 도시락과 물 챙겨 주세요.' },
-                    { label: '준비물', text: '내일 미술 준비물, 가위와 풀, 색종이를 보내 주세요.' },
-                    { label: '일정 변경', text: '금요일 체육 수업이 실내 활동으로 바뀌었습니다. 실내화 준비해 주세요.' },
-                    { label: '주간학습', text: '다음 주 주간학습 안내, 받아쓰기와 수학 익힘, 독서 기록장을 챙겨 주세요.' },
-                ];
+                return this.activeModeStarterItems();
             },
 
             runNoticeExample: function (text) {
@@ -3060,16 +3648,26 @@
             },
 
             selectAgentMode: function (modeKey) {
-                if (this.activeModeKey === 'tts' && modeKey !== 'tts') {
+                var currentMode = this.activeMode;
+                var nextMode = this.modeByKey(modeKey);
+                this.activeConversationKey = '';
+                if (this.modeHasCapability(currentMode, 'tts_read') && !this.modeHasCapability(nextMode, 'tts_read')) {
                     this.isTtsReading = false;
                     if ('speechSynthesis' in window) {
                         window.speechSynthesis.cancel();
                     }
                 }
-                if (this.activeModeKey !== modeKey && (this.activeModeKey === 'message-save' || modeKey === 'message-save')) {
+                if (
+                    this.activeModeKey !== modeKey
+                    && (this.modeHasCapability(currentMode, 'message_pipeline') || this.modeHasCapability(nextMode, 'message_pipeline'))
+                ) {
                     this.clearMessageSaveState();
                 }
+                if (this.modeHasCapability(currentMode, 'file_attach') && !this.modeHasCapability(nextMode, 'file_attach')) {
+                    this.resetQuickdropDragState();
+                }
                 this.activeModeKey = modeKey;
+                this.activeRailKey = 'service:' + String(modeKey || '');
                 this.agentModeMenuOpen = false;
                 if (trimLine(this.workspaceInput)) {
                     this.runAgentPreview();
@@ -3102,28 +3700,19 @@
             },
 
             buildLocalPreview: function (text) {
-                if (this.activeModeKey === 'quickdrop') {
-                    return this.buildQuickdropPreview(text);
-                }
-                if (this.activeModeKey === 'tts') {
-                    return this.buildTtsPreview(text);
-                }
-                if (this.activeModeKey === 'schedule') {
-                    return this.buildSchedulePreview(text);
-                }
-                if (this.activeModeKey === 'teacher-law') {
-                    return this.buildTeacherLawPreview(text);
-                }
-                if (this.activeModeKey === 'reservation') {
-                    return this.buildReservationPreview(text);
-                }
-                if (this.activeModeKey === 'pdf') {
-                    return this.buildPdfPreview(text);
-                }
-                if (this.activeModeKey === 'message-save') {
-                    return this.buildMessageSavePreview(text);
-                }
-                return this.buildNoticePreview(text);
+                var builderMap = {
+                    'notice': 'buildNoticePreview',
+                    'schedule': 'buildSchedulePreview',
+                    'teacher-law': 'buildTeacherLawPreview',
+                    'reservation': 'buildReservationPreview',
+                    'quickdrop': 'buildQuickdropPreview',
+                    'pdf': 'buildPdfPreview',
+                    'tts': 'buildTtsPreview',
+                    'message-save': 'buildMessageSavePreview',
+                };
+                var methodName = builderMap[this.activeRendererKey] || 'buildNoticePreview';
+                var builder = typeof this[methodName] === 'function' ? this[methodName] : this.buildNoticePreview;
+                return builder.call(this, text);
             },
 
             runAgentPreview: async function (overrideText) {
@@ -3133,11 +3722,11 @@
                     this.showIdlePreview();
                     return;
                 }
-                if (this.activeModeKey === 'notice' && typeof overrideText !== 'string') {
+                if (this.modeHasCapability(this.activeMode, 'notice_refinement') && typeof overrideText !== 'string') {
                     this.noticeBaseInput = text;
                     this.noticeRefinementLabel = '';
                 }
-                if (this.activeModeKey === 'schedule') {
+                if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
                     this.scheduleEditorOpen = false;
                 }
 
@@ -3301,7 +3890,13 @@
                 var dateHint = firstMatch(text, /\d{1,2}월\s*\d{1,2}일|오늘|내일|모레|다음\s*주\s*[월화수목금토일]요일/);
                 var periodHint = firstMatch(text, /\d{1,2}교시/);
                 var timeHint = firstMatch(text, /\d{1,2}:\d{2}/);
-                var roomHint = firstMatch(text, /(과학실|컴퓨터실|방송실|도서관|미술실|체육관|영어실|음악실|강당|특별실)/);
+                var roomNames = this.reservationKnownRoomNames();
+                var roomPattern = roomNames.length
+                    ? new RegExp(roomNames.slice().sort(function (left, right) {
+                        return right.length - left.length;
+                    }).map(escapeRegExp).join('|'))
+                    : null;
+                var roomHint = roomPattern ? firstMatch(text, roomPattern) : '';
                 var missing = [];
                 if (!dateHint) {
                     missing.push('날짜');

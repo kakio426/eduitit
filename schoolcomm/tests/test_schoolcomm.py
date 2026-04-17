@@ -223,6 +223,30 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(payload["message"]["body"], "채팅 바로 보내기")
         self.assertEqual(payload["message"]["room_id"], str(dm_room.id))
 
+    def test_room_snapshot_returns_chat_messages_for_home_shell(self):
+        dm_room = get_or_create_dm_room(
+            self.workspace,
+            [self.owner_membership, self.member_membership],
+            created_by=self.owner,
+        )
+        parent = create_room_message(dm_room, self.owner_membership, text="첫 메시지")
+        create_room_message(dm_room, self.member_membership, text="답글", parent_message=parent)
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:api_room_snapshot", kwargs={"room_id": dm_room.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["room"]["id"], str(dm_room.id))
+        self.assertEqual(payload["room"]["room_kind_label"], "대화")
+        self.assertEqual(payload["room"]["send_url"], reverse("schoolcomm:api_room_messages", kwargs={"room_id": dm_room.id}))
+        self.assertEqual(len(payload["messages"]), 2)
+        self.assertEqual(payload["messages"][1]["parent_message_id"], str(parent.id))
+
     def test_room_fragment_refresh_returns_partial_content(self):
         create_room_message(self.shared_room, self.owner_membership, text="자료 확인 부탁드립니다")
 

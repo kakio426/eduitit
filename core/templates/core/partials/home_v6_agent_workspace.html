@@ -4,53 +4,239 @@
     data-home-v6-agent-workspace="true"
 >
     <div class="home-v6-card home-v6-agent-card">
+        <aside class="home-v6-agent-utility" aria-label="AI 교무비서 탐색">
+            <button
+                type="button"
+                class="home-v6-agent-utility-brand"
+                @click="selectRailItem('service:' + (activeMode.key || 'notice'))"
+                aria-label="AI 교무비서"
+            >
+                <i class="fa-solid fa-sparkles"></i>
+            </button>
+            <button
+                type="button"
+                class="home-v6-agent-utility-tab"
+                :class="{ 'is-active': !activeConversationItem }"
+                @click="selectRailItem('service:' + (activeMode.key || 'notice'))"
+            >
+                <span>AI</span>
+                <strong x-text="railCountByKind('service')"></strong>
+            </button>
+            <button
+                type="button"
+                class="home-v6-agent-utility-tab"
+                :class="{ 'is-active': !!activeConversationItem }"
+                @click="selectRailItem(firstRailItemKeyByKind('room'))"
+            >
+                <span>톡</span>
+                <strong x-text="railCountByKind('room')"></strong>
+            </button>
+        </aside>
+
         <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true">
             <div class="home-v6-agent-rail-head">
-                <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</h2>
+                <div class="home-v6-agent-brand-copy">
+                    <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</h2>
+                    <p class="home-v6-agent-brand-subtitle">서비스와 대화</p>
+                </div>
             </div>
 
-            <div class="home-v6-agent-mode-list">
-                {% for mode in agent_workspace.modes %}
-                <button
-                    type="button"
-                    class="home-v6-agent-mode-item"
-                    :class="{ 'is-active': activeModeKey === '{{ mode.key }}' }"
-                    :aria-pressed="activeModeKey === '{{ mode.key }}' ? 'true' : 'false'"
-                    title="{{ mode.label }}"
-                    @click="selectAgentMode('{{ mode.key }}')"
+            <label class="home-v6-agent-rail-search" aria-label="서비스와 대화 찾기">
+                <span class="home-v6-agent-rail-search-icon" aria-hidden="true">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input
+                    type="text"
+                    class="home-v6-agent-rail-search-input"
+                    x-model="railSearchText"
+                    placeholder="{{ agent_workspace.workspace_search_placeholder|default:'서비스와 대화 찾기' }}"
                 >
-                    <span class="home-v6-agent-mode-icon" aria-hidden="true">
-                        <i class="{{ mode.icon_class|default:'fa-regular fa-circle' }}"></i>
-                    </span>
-                    <span class="home-v6-agent-mode-name">{{ mode.label }}</span>
-                </button>
-                {% endfor %}
-            </div>
+            </label>
+
+            <template x-for="section in filteredAgentRailSections()" :key="section.key">
+                <div class="home-v6-agent-rail-section" x-cloak x-show="section.items.length">
+                    <p class="home-v6-agent-rail-label" x-text="section.label || ''"></p>
+                    <div class="home-v6-agent-rail-list">
+                        <template x-for="item in section.items" :key="item.key">
+                            <button
+                                type="button"
+                                class="home-v6-agent-rail-item"
+                                :class="{ 'is-active': activeRailKey === item.key, 'is-room': item.kind === 'room' }"
+                                :aria-pressed="activeRailKey === item.key ? 'true' : 'false'"
+                                :title="item.title || ''"
+                                @click="selectRailItem(item.key)"
+                            >
+                                <span class="home-v6-agent-rail-item-icon" :class="{ 'is-room': item.kind === 'room' }" aria-hidden="true">
+                                    <template x-if="item.kind === 'room'">
+                                        <span x-text="item.avatar_label || '대화'"></span>
+                                    </template>
+                                    <template x-if="item.kind !== 'room'">
+                                        <i :class="item.icon_class || 'fa-regular fa-circle'"></i>
+                                    </template>
+                                </span>
+                                <span class="home-v6-agent-rail-item-copy">
+                                    <span class="home-v6-agent-rail-item-name" x-text="item.title || ''"></span>
+                                    <span class="home-v6-agent-rail-item-summary" x-text="item.summary || item.meta || ''"></span>
+                                </span>
+                                <span class="home-v6-agent-rail-item-badge" x-cloak x-show="item.badge" x-text="item.badge"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
         </aside>
 
         <div class="home-v6-agent-main">
             <div class="home-v6-agent-main-head">
                 <div class="home-v6-agent-active">
-                    <span class="home-v6-agent-active-icon" aria-hidden="true">
-                        <i :class="activeMode.icon_class || 'fa-regular fa-circle'"></i>
+                    <span class="home-v6-agent-active-icon" :class="{ 'is-room': activeConversationItem }" aria-hidden="true">
+                        <template x-if="activeConversationItem">
+                            <span x-text="(activeRoomSnapshot && activeRoomSnapshot.room && activeRoomSnapshot.room.avatar_label) || (activeConversationItem && activeConversationItem.avatar_label) || '대화'"></span>
+                        </template>
+                        <template x-if="!activeConversationItem">
+                            <i :class="activeMode.icon_class || 'fa-regular fa-circle'"></i>
+                        </template>
                     </span>
-                    <h3 class="home-v6-agent-active-title" x-text="activeMode.label || '알림장'"></h3>
+                    <div class="home-v6-agent-active-copy">
+                        <h3 class="home-v6-agent-active-title" x-text="activeHeaderTitle()"></h3>
+                        <div class="home-v6-agent-active-meta">
+                            <span class="home-v6-agent-active-badge" x-text="activeHeaderBadge()"></span>
+                            <span class="home-v6-agent-active-status">
+                                <span class="home-v6-agent-active-status-dot"></span>
+                                <span x-text="activeHeaderMeta()"></span>
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="home-v6-agent-head-actions" x-cloak x-show="activeMode.secondary_link_label && activeMode.secondary_link_href">
+                <div class="home-v6-agent-head-actions">
                     <a
                         class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-context-link"
-                        :href="activeMode.secondary_link_href || '#'"
-                        x-text="activeMode.secondary_link_label || ''"
+                        x-cloak
+                        x-show="activeHeaderPrimaryHref() && activeHeaderPrimaryLabel()"
+                        :href="activeHeaderPrimaryHref() || '#'"
+                        x-text="activeHeaderPrimaryLabel() || ''"
+                    ></a>
+                    <a
+                        class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-context-link"
+                        x-cloak
+                        x-show="activeHeaderSecondaryLabel() && activeHeaderSecondaryHref()"
+                        :href="activeHeaderSecondaryHref() || '#'"
+                        x-text="activeHeaderSecondaryLabel() || ''"
                     ></a>
                 </div>
             </div>
 
-            <section class="home-v6-agent-notice-chat" x-cloak x-show="activeModeKey === 'notice'">
+            <section class="home-v6-agent-human-chat" x-cloak x-show="activeRendererKey === 'human-chat'">
+                <div class="home-v6-agent-human-thread">
+                    <div class="home-v6-agent-chat-row" x-cloak x-show="isHumanChatLoading && !humanChatMessages().length">
+                        <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
+                            <div class="home-v6-agent-chat-loading">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-v6-agent-chat-row" x-cloak x-show="!isHumanChatLoading && !humanChatMessages().length">
+                        <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
+                            <p class="home-v6-agent-chat-text">대화 없음</p>
+                        </div>
+                    </div>
+
+                    <template x-for="message in humanChatMessages()" :key="message.id">
+                        <div class="home-v6-agent-chat-row" :class="{ 'home-v6-agent-chat-row--user': message.is_mine }">
+                            <div class="home-v6-agent-chat-bubble" :class="message.is_mine ? 'home-v6-agent-chat-bubble--user' : 'home-v6-agent-chat-bubble--ai'">
+                                <div class="home-v6-agent-human-meta">
+                                    <span class="home-v6-agent-human-sender" x-text="message.sender_name || ''"></span>
+                                    <span class="home-v6-agent-human-time" x-text="message.created_at_label || ''"></span>
+                                </div>
+                                <div class="home-v6-agent-human-parent" x-cloak x-show="message.parent_preview">
+                                    <span class="home-v6-agent-human-parent-name" x-text="message.parent_sender_name || ''"></span>
+                                    <span class="home-v6-agent-human-parent-body" x-text="message.parent_preview || ''"></span>
+                                </div>
+                                <p class="home-v6-agent-chat-text" x-cloak x-show="message.body" x-text="message.body || ''"></p>
+                                <div class="home-v6-agent-human-asset-list" x-cloak x-show="Array.isArray(message.assets) && message.assets.length">
+                                    <template x-for="asset in message.assets" :key="asset.id">
+                                        <a class="home-v6-agent-human-asset" :href="asset.download_url || '#'" x-text="asset.original_name || '첨부파일'"></a>
+                                    </template>
+                                </div>
+                                <div class="home-v6-agent-chat-draft-actions">
+                                    <button type="button" class="home-v6-agent-chat-action" @click="setHumanChatReply(message)">답글</button>
+                                    <button type="button" class="home-v6-agent-chat-action" @click="toggleHumanChatReaction(message)">
+                                        확인
+                                        <span x-cloak x-show="message.ack_count" x-text="message.ack_count"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div
+                    class="home-v6-agent-human-composer"
+                    :class="{ 'is-drag-active': isHumanChatDragActive }"
+                    @dragenter.prevent="handleHumanChatDragEnter($event)"
+                    @dragover.prevent="handleHumanChatDragOver($event)"
+                    @dragleave.prevent="handleHumanChatDragLeave($event)"
+                    @drop.prevent="handleHumanChatDrop($event)"
+                >
+                    <div class="home-v6-agent-human-reply" x-cloak x-show="humanChatReplyTo">
+                        <span class="home-v6-agent-human-reply-copy">
+                            <strong x-text="humanChatReplyTo && humanChatReplyTo.sender_name ? humanChatReplyTo.sender_name : ''"></strong>
+                            <span x-text="humanChatReplyTo && humanChatReplyTo.body ? humanChatReplyTo.body : ''"></span>
+                        </span>
+                        <button type="button" class="home-v6-agent-chat-action" @click="clearHumanChatReply()">닫기</button>
+                    </div>
+
+                    <div class="home-v6-agent-human-queued-list" x-cloak x-show="humanChatHasFilesQueued()">
+                        <template x-for="file in humanChatQueuedFiles" :key="file.id">
+                            <span class="home-v6-agent-human-queued-file">
+                                <span x-text="file.name || ''"></span>
+                                <button type="button" class="home-v6-agent-human-queued-remove" @click="removeHumanChatQueuedFile(file.id)">
+                                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        </template>
+                    </div>
+
+                    <textarea
+                        class="home-v6-agent-input home-v6-agent-input--human"
+                        :placeholder="humanChatComposerPlaceholder()"
+                        x-model="humanChatDraftText"
+                        @paste="captureHumanChatPaste($event)"
+                        @keydown.ctrl.enter.prevent="sendHumanChat()"
+                        @keydown.meta.enter.prevent="sendHumanChat()"
+                    ></textarea>
+                    <p class="home-v6-agent-field-error" x-cloak x-show="humanChatErrorText" x-text="humanChatErrorText"></p>
+                    <div class="home-v6-agent-action-row home-v6-agent-action-row--human">
+                        <div class="home-v6-agent-human-actions">
+                            <input
+                                type="file"
+                                class="sr-only"
+                                data-home-v6-human-chat-file-input="true"
+                                multiple
+                                @change="queueHumanChatFilesFromInput($event)"
+                            >
+                            <button type="button" class="home-v6-agent-chat-action" @click="openHumanChatFilePicker()">첨부</button>
+                        </div>
+                        <button
+                            type="button"
+                            class="home-v6-empty-primary-action home-v6-agent-submit"
+                            :disabled="isHumanChatSending || !humanChatCanSend()"
+                            @click="sendHumanChat()"
+                            x-text="isHumanChatSending ? '전송 중' : '전송'"
+                        ></button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="home-v6-agent-notice-chat" x-cloak x-show="activeRendererKey === 'notice'">
                 <div class="home-v6-agent-notice-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!noticeHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">무엇을 보낼까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '무엇을 보낼까요?'"></p>
                             <div class="home-v6-agent-notice-quick-list">
                                 <template x-for="item in noticeQuickExamples()" :key="item.label">
                                     <button
@@ -89,16 +275,14 @@
                             </div>
 
                             <div class="home-v6-agent-chat-draft-actions" x-cloak x-show="previewResultLines().length">
-                                <button
-                                    type="button"
-                                    class="home-v6-agent-chat-action"
-                                    @click="rerunNoticeRefinement('짧게', '위 내용을 더 짧게 다시 써 주세요.')"
-                                >짧게</button>
-                                <button
-                                    type="button"
-                                    class="home-v6-agent-chat-action"
-                                    @click="rerunNoticeRefinement('부드럽게', '위 내용을 더 부드럽게 다시 써 주세요.')"
-                                >부드럽게</button>
+                                <template x-for="item in noticeRefinementActions()" :key="item.label">
+                                    <button
+                                        type="button"
+                                        class="home-v6-agent-chat-action"
+                                        @click="rerunNoticeRefinement(item.label, item.instruction)"
+                                        x-text="item.label"
+                                    ></button>
+                                </template>
                                 <button
                                     type="button"
                                     class="home-v6-agent-chat-action"
@@ -145,11 +329,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-schedule-chat" x-cloak x-show="activeModeKey === 'schedule'">
+            <section class="home-v6-agent-schedule-chat" x-cloak x-show="activeRendererKey === 'schedule'">
                 <div class="home-v6-agent-schedule-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!scheduleHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">어떤 메시지에서 일정을 찾을까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '어떤 메시지에서 일정을 찾을까요?'"></p>
                             <div class="home-v6-agent-schedule-quick-list">
                                 <template x-for="item in scheduleQuickExamples()" :key="item.label">
                                     <button
@@ -337,11 +521,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-law-chat" x-cloak x-show="activeModeKey === 'teacher-law'">
+            <section class="home-v6-agent-law-chat" x-cloak x-show="activeRendererKey === 'teacher-law'">
                 <div class="home-v6-agent-law-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!teacherLawHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">어떤 상황인가요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '어떤 상황인가요?'"></p>
                             <div class="home-v6-agent-law-quick-list">
                                 <template x-for="item in teacherLawQuickExamples()" :key="item.label">
                                     <button
@@ -528,11 +712,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-reservation-chat" x-cloak x-show="activeModeKey === 'reservation'">
+            <section class="home-v6-agent-reservation-chat" x-cloak x-show="activeRendererKey === 'reservation'">
                 <div class="home-v6-agent-reservation-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!reservationHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">어디를 예약할까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '어디를 예약할까요?'"></p>
                             <div class="home-v6-agent-reservation-quick-list">
                                 <template x-for="item in reservationQuickExamples()" :key="item.label">
                                     <button
@@ -846,11 +1030,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-pdf-chat" x-cloak x-show="activeModeKey === 'pdf'">
+            <section class="home-v6-agent-pdf-chat" x-cloak x-show="activeRendererKey === 'pdf'">
                 <div class="home-v6-agent-pdf-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!pdfHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">어떤 문서를 볼까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '어떤 문서를 볼까요?'"></p>
                             <div class="home-v6-agent-pdf-quick-list">
                                 <template x-for="item in pdfQuickExamples()" :key="item.label">
                                     <button
@@ -922,7 +1106,7 @@
                             class="home-v6-empty-primary-action home-v6-agent-submit"
                             :disabled="isAgentLoading"
                             @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '정리 중' : '보기'"
+                            x-text="isAgentLoading ? '정리 중' : (activeMode.submit_label || '보기')"
                         ></button>
                         <button
                             type="button"
@@ -935,11 +1119,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-tts-chat" x-cloak x-show="activeModeKey === 'tts'">
+            <section class="home-v6-agent-tts-chat" x-cloak x-show="activeRendererKey === 'tts'">
                 <div class="home-v6-agent-tts-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!ttsHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">무엇을 읽을까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '무엇을 읽을까요?'"></p>
                             <div class="home-v6-agent-tts-quick-list">
                                 <template x-for="item in ttsQuickExamples()" :key="item.label">
                                     <button
@@ -1011,7 +1195,8 @@
                             type="button"
                             class="home-v6-empty-primary-action home-v6-agent-submit"
                             @click="runAgentPreview()"
-                        >보기</button>
+                            x-text="activeMode.submit_label || '보기'"
+                        ></button>
                         <button
                             type="button"
                             class="home-v6-inline-secondary-action home-v6-agent-action"
@@ -1023,11 +1208,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-quickdrop-chat" x-cloak x-show="activeModeKey === 'quickdrop'">
+            <section class="home-v6-agent-quickdrop-chat" x-cloak x-show="activeRendererKey === 'quickdrop'">
                 <div class="home-v6-agent-quickdrop-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!quickdropHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">무엇을 보낼까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '무엇을 보낼까요?'"></p>
                             <div class="home-v6-agent-quickdrop-quick-list">
                                 <template x-for="item in quickdropQuickExamples()" :key="item.label">
                                     <button
@@ -1093,7 +1278,15 @@
                 </div>
 
                 <div class="home-v6-agent-quickdrop-composer">
-                    <div class="home-v6-agent-quickdrop-compose-shell">
+                    <div
+                        class="home-v6-agent-quickdrop-compose-shell"
+                        :class="{ 'is-drag-active': isQuickdropDragActive }"
+                        @paste="captureQuickdropWorkspacePaste($event)"
+                        @dragenter="handleQuickdropDragEnter($event)"
+                        @dragover="handleQuickdropDragOver($event)"
+                        @dragleave="handleQuickdropDragLeave($event)"
+                        @drop="handleQuickdropDrop($event)"
+                    >
                         <label
                             class="home-v6-agent-quickdrop-attach"
                             for="home-v6-agent-quickdrop-file-input"
@@ -1104,13 +1297,16 @@
                         </label>
 
                         <div class="home-v6-agent-quickdrop-compose-body">
+                            <div class="home-v6-agent-quickdrop-drop-hint" x-cloak x-show="isQuickdropDragActive">
+                                <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
+                                <span>여기에 놓기</span>
+                            </div>
                             <textarea
                                 class="home-v6-agent-input home-v6-agent-input--quickdrop"
                                 data-home-v6-agent-input="true"
                                 data-home-v7-workspace-input="true"
                                 :placeholder="activeMode.placeholder || ''"
                                 x-model="workspaceInput"
-                                @paste="captureQuickdropWorkspacePaste($event)"
                                 @keydown.ctrl.enter.prevent="sendQuickdropChat()"
                                 @keydown.meta.enter.prevent="sendQuickdropChat()"
                             ></textarea>
@@ -1162,11 +1358,11 @@
                 </div>
             </section>
 
-            <section class="home-v6-agent-message-save-chat" x-cloak x-show="activeModeKey === 'message-save'">
+            <section class="home-v6-agent-message-save-chat" x-cloak x-show="activeRendererKey === 'message-save'">
                 <div class="home-v6-agent-message-save-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!messageSaveHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
-                            <p class="home-v6-agent-chat-text">무슨 메시지를 남길까요?</p>
+                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '무슨 메시지를 남길까요?'"></p>
                             <div class="home-v6-agent-message-save-quick-list">
                                 <template x-for="item in messageSaveQuickExamples()" :key="item.label">
                                     <button
@@ -1332,7 +1528,7 @@
                 </div>
             </section>
 
-            <div class="home-v6-agent-grid" x-cloak x-show="activeModeKey !== 'notice' && activeModeKey !== 'schedule' && activeModeKey !== 'teacher-law' && activeModeKey !== 'reservation' && activeModeKey !== 'pdf' && activeModeKey !== 'tts' && activeModeKey !== 'quickdrop' && activeModeKey !== 'message-save'">
+            <div class="home-v6-agent-grid" x-cloak x-show="!['notice', 'schedule', 'teacher-law', 'reservation', 'pdf', 'tts', 'quickdrop', 'message-save', 'human-chat'].includes(activeRendererKey)">
                 <section class="home-v6-agent-console" data-home-v6-agent-console="true">
                     <p class="home-v6-agent-section-label">입력</p>
                     <textarea

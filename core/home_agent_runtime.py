@@ -9,6 +9,10 @@ from dataclasses import dataclass
 
 from openai import OpenAI
 
+from .home_agent_registry import (
+    get_home_agent_runtime_spec,
+    get_home_agent_service_definitions,
+)
 from .home_agent_service_bridge import (
     HomeAgentServiceUnavailable,
     generate_service_preview,
@@ -20,78 +24,8 @@ DEEPSEEK_MODEL_NAME = "deepseek-chat"
 OPENCLAW_DEFAULT_API_KEY = "openclaw-local"
 
 HOME_AGENT_MODE_SPECS = {
-    "notice": {
-        "badge": "알림장",
-        "default_title": "알림장 초안",
-        "default_note": "보내기 전 말투만 한 번 더 보면 됩니다.",
-        "section_titles": ("핵심", "확인"),
-        "instruction": (
-            "교사가 학부모와 학생에게 바로 보낼 알림장 초안을 정리합니다. "
-            "시간 변경, 준비물, 회신 필요 내용을 먼저 드러내고 문장은 짧게 유지하세요. "
-            "첫 번째 sections.items에는 바로 보낼 알림장 문장만 넣고, 설명이나 검토 문구는 넣지 마세요."
-        ),
-    },
-    "schedule": {
-        "badge": "일정",
-        "default_title": "캘린더 등록 후보",
-        "default_note": "캘린더 저장 전 날짜와 시간을 한 번 더 확인하면 됩니다.",
-        "section_titles": ("후보", "확인"),
-        "instruction": (
-            "붙여넣은 문장에서 날짜, 시간, 교시, 장소를 뽑아 일정 후보를 정리합니다. "
-            "첫 번째 sections.items에는 일정 후보나 입력 필요 값만 넣고 설명 문장은 쓰지 마세요."
-        ),
-    },
-    "teacher-law": {
-        "badge": "교사 법률",
-        "default_title": "법률 검토 메모",
-        "default_note": "일반 정보 정리이며 최종 법률 자문은 아닙니다.",
-        "section_titles": ("먼저", "대응"),
-        "instruction": (
-            "교사가 상황을 정리하고 다음 대응 순서를 잡을 수 있게 도와주세요. "
-            "사실관계, 기록 보존, 관리자 공유 지점을 먼저 제시하고 단정적인 법률 판단은 피하세요. "
-            "첫 번째 sections.items에는 바로 체크할 행동만 짧게 넣고 해설은 쓰지 마세요."
-        ),
-    },
-    "reservation": {
-        "badge": "특별실 예약",
-        "default_title": "예약 요청 후보",
-        "default_note": "예약 저장 전 장소와 시간을 한 번 더 확인하면 됩니다.",
-        "section_titles": ("예약 값", "확인"),
-        "instruction": (
-            "특별실 예약에 필요한 날짜, 시간 또는 교시, 장소를 정리합니다. "
-            "첫 번째 sections.items에는 예약 값과 입력 필요 값만 짧게 넣고 설명 문장은 쓰지 마세요."
-        ),
-    },
-    "quickdrop": {
-        "badge": "바로전송",
-        "default_title": "바로전송 준비 완료",
-        "default_note": "바로 전송을 누르면 연결된 기기로 즉시 보냅니다.",
-        "section_titles": ("보낼 내용", "전송 후"),
-        "instruction": (
-            "교사가 다른 기기로 바로 보내기 전에 내용을 점검할 수 있게 정리합니다. "
-            "첫 번째 sections.items에는 실제로 보낼 내용만 넣고 설명은 쓰지 마세요."
-        ),
-    },
-    "pdf": {
-        "badge": "PDF",
-        "default_title": "문서 정리 초안",
-        "default_note": "원문을 다시 볼 때 필요한 키워드만 먼저 남겨주세요.",
-        "section_titles": ("핵심", "다음"),
-        "instruction": (
-            "문서나 공문 내용을 교사가 바로 실행할 수 있게 요약합니다. "
-            "첫 번째 sections.items에는 바로 필요한 핵심만 짧게 넣고 설명 문장은 쓰지 마세요."
-        ),
-    },
-    "tts": {
-        "badge": "TTS",
-        "default_title": "읽을 문장을 정리했습니다.",
-        "default_note": "짧게 끊어 읽기 좋은 문장 순서로 정리합니다.",
-        "section_titles": ("읽기 내용", "실행"),
-        "instruction": (
-            "교실 방송이나 읽어주기 문장을 짧고 또렷하게 정리합니다. "
-            "불필요한 설명을 줄이고 첫 번째 sections.items에는 바로 읽을 문장만 넣으세요."
-        ),
-    },
+    definition.key: get_home_agent_runtime_spec(definition.key) or {}
+    for definition in get_home_agent_service_definitions()
 }
 
 
@@ -124,7 +58,7 @@ def generate_home_agent_preview(
     context: dict | None = None,
     request=None,
 ) -> dict:
-    mode_spec = HOME_AGENT_MODE_SPECS.get(str(mode_key or "").strip())
+    mode_spec = get_home_agent_runtime_spec(str(mode_key or "").strip())
     if mode_spec is None:
         raise HomeAgentProviderError("지원하지 않는 agent 모드입니다.")
 

@@ -137,6 +137,41 @@ def _short_preview(text, limit=72):
     return f"{compact[: limit - 3]}..."
 
 
+def _room_kind_label(room_kind):
+    labels = {
+        "notice": "공지",
+        "shared": "자료",
+        "dm": "대화",
+        "group_dm": "그룹",
+    }
+    return labels.get(str(room_kind or "").strip().lower(), "대화")
+
+
+def _room_avatar_label(room):
+    name = str(getattr(room, "name", "") or "").strip()
+    initials = "".join(part[:1] for part in name.split()[:2]).strip()
+    return (initials or name[:2] or _room_kind_label(getattr(room, "room_kind", ""))[:2])[:2]
+
+
+def _build_room_snapshot(room, user, membership):
+    latest_message = room.messages.order_by("-created_at", "-id").first()
+    mark_room_read(user, room, latest_message=latest_message)
+    return {
+        "room": {
+            "id": str(room.id),
+            "name": room.name,
+            "room_kind": room.room_kind,
+            "room_kind_label": _room_kind_label(room.room_kind),
+            "avatar_label": _room_avatar_label(room),
+            "open_url": reverse("schoolcomm:room_detail", kwargs={"room_id": room.id}),
+            "send_url": reverse("schoolcomm:api_room_messages", kwargs={"room_id": room.id}),
+            "can_post_top_level": membership_can_post_notice(membership) or room.room_kind != room.RoomKind.NOTICE,
+            "composer_placeholder": "메시지 입력",
+        },
+        "messages": _build_room_chat_items(room, user),
+    }
+
+
 def _normalize_shared_board_category(raw_value):
     allowed = {code for code, _label in SHARED_BOARD_FILTERS}
     value = str(raw_value or "").strip()
@@ -508,6 +543,22 @@ def room_detail(request, room_id):
             )
         messages.error(request, SERVICE_UNAVAILABLE_MESSAGE)
         return redirect(reverse("schoolcomm:main"))
+
+
+@login_required
+@require_GET
+def api_room_snapshot(request, room_id):
+    try:
+        room, membership = get_room_for_user(room_id, request.user)
+        if room is None:
+            raise Http404("방을 찾을 수 없습니다.")
+        if membership is None:
+            return _json_error("이 방에 접근할 수 없습니다.", status=403, code="permission_denied")
+        snapshot = _build_room_snapshot(room, request.user, membership)
+        return JsonResponse({"status": "success", **snapshot})
+    except DatabaseError:
+        logger.exception("[schoolcomm] api_room_snapshot unavailable")
+        return _json_service_unavailable()
 
 
 @login_required

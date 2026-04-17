@@ -12,8 +12,17 @@ from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import UserProfileUpdateForm
 from .guide_links import SERVICE_GUIDE_PADLET_URL
+from .home_agent_registry import (
+    MESSAGE_CAPTURE_PLACEHOLDER,
+    MESSAGE_CAPTURE_REVERSE_SEED,
+    build_home_agent_mode_payload,
+    get_home_agent_runtime_spec,
+    get_home_agent_service_definitions,
+    resolve_home_agent_mode_links,
+    resolve_home_agent_starter_items,
+    resolve_home_agent_ui_options,
+)
 from .home_agent_runtime import (
-    HOME_AGENT_MODE_SPECS,
     HomeAgentConfigError,
     HomeAgentProviderError,
     generate_home_agent_preview,
@@ -1326,6 +1335,90 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
     }
 
 
+def _build_home_v7_agent_conversations(request):
+    empty_payload = {
+        'title': '끼리끼리 채팅방',
+        'workspace_name': '',
+        'open_url': _safe_reverse('schoolcomm:main') or '',
+        'items': (),
+    }
+    if request is None or not getattr(getattr(request, 'user', None), 'is_authenticated', False):
+        return empty_payload
+
+    try:
+        from schoolcomm.services import (
+            build_home_card,
+            build_workspace_dashboard,
+            get_default_workspace_for_user,
+        )
+    except Exception:
+        logger.exception('[home agent] failed to import schoolcomm services')
+        return empty_payload
+
+    try:
+        home_card = build_home_card(request.user) or {}
+        workspace = get_default_workspace_for_user(request.user, create=False)
+        open_url = str(home_card.get('open_url') or home_card.get('manage_url') or _safe_reverse('schoolcomm:main') or '').strip()
+        if workspace is None:
+            return {
+                'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
+                'workspace_name': '',
+                'open_url': open_url,
+                'items': (),
+            }
+
+        dashboard = build_workspace_dashboard(workspace, request.user)
+        candidate_rooms = []
+        for room in [dashboard.get('notice_room'), dashboard.get('shared_room')]:
+            if room:
+                candidate_rooms.append(room)
+        candidate_rooms.extend(list(dashboard.get('dm_rooms') or [])[:4])
+
+        room_kind_label = {
+            'notice': '공지',
+            'shared': '자료',
+            'dm': '대화',
+            'group_dm': '그룹',
+        }
+        items = []
+        for room in candidate_rooms:
+            room_kind = str(room.get('room_kind') or '').strip().lower()
+            room_id = str(room.get('id') or '').strip()
+            name = str(room.get('name') or '').strip()
+            summary = str(room.get('summary') or '').strip()
+            unread_count = int(room.get('unread_count') or 0)
+            if not name or not room_id:
+                continue
+            avatar_label = ''.join(part[:1] for part in name.split()[:2]).strip() or name[:2]
+            items.append({
+                'kind': 'room',
+                'key': f"room:{room_id}",
+                'entity_key': room_id,
+                'renderer_key': 'human-chat',
+                'title': name,
+                'summary': summary,
+                'meta': room_kind_label.get(room_kind, '대화'),
+                'status': room_kind_label.get(room_kind, '대화'),
+                'avatar_label': avatar_label[:2],
+                'open_url': str(room.get('url') or open_url).strip(),
+                'snapshot_url': reverse('schoolcomm:api_room_snapshot', kwargs={'room_id': room_id}),
+                'send_url': reverse('schoolcomm:api_room_messages', kwargs={'room_id': room_id}),
+                'unread_count': unread_count,
+                'badge': str(unread_count) if unread_count else '',
+            })
+
+        return {
+            'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
+            'workspace_name': str(home_card.get('workspace_name') or workspace.name or '').strip(),
+            'open_url': open_url,
+            'renderer_key': 'human-chat',
+            'items': tuple(items),
+        }
+    except Exception:
+        logger.exception('[home agent] failed to build schoolcomm conversations')
+        return empty_payload
+
+
 def _build_home_v7_agent_signal_layer(calendar_summary):
     calendar_summary = dict(calendar_summary or {})
     today_workspace = dict(calendar_summary.get('today_workspace') or {})
@@ -1465,280 +1558,127 @@ def _build_home_v7_context_router_preview(
     tacit_registry=None,
     workflow_registry=None,
 ):
-    message_capture_placeholder = '__capture_id__'
-    message_capture_reverse_seed = '00000000-0000-0000-0000-000000000000'
-    calendar_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='일정',
-        preferred_routes=('classcalendar:main',),
-        fallback_route='classcalendar:main',
-        meta='캘린더 열기',
-    )
-    notice_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='알림장',
-        preferred_routes=('noticegen:main',),
-        fallback_route='noticegen:main',
-        meta='초안 만들기',
-    )
-    law_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='교사 법률',
-        preferred_routes=('teacher_law:main',),
-        fallback_route='teacher_law:main',
-        meta='상황 질문하기',
-    )
-    reservation_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='특별실 예약',
-        preferred_routes=('reservations:dashboard_landing', 'reservations:landing'),
-        fallback_route='reservations:dashboard_landing',
-        meta='예약 요청 만들기',
-    )
-    pdf_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='PDF',
-        preferred_routes=('hwpxchat:main',),
-        fallback_route='hwpxchat:main',
-        meta='문서 요약',
-    )
-    tts_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='TTS',
-        preferred_routes=('tts_announce',),
-        fallback_route='tts_announce',
-        meta='방송 문구',
-    )
-    quickdrop_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='바로전송',
-        preferred_routes=('quickdrop:landing',),
-        fallback_route='quickdrop:landing',
-        meta='텍스트 보내기',
-    )
-    messagebox_tool = _build_home_v7_router_tool(
-        request,
-        product_list,
-        title='메시지 저장',
-        preferred_routes=('messagebox:main',),
-        fallback_route='messagebox:main',
-        meta='보관함 열기',
-    )
+    tool_map = {
+        'schedule': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='일정',
+            preferred_routes=('classcalendar:main',),
+            fallback_route='classcalendar:main',
+            meta='캘린더 열기',
+        ),
+        'notice': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='알림장',
+            preferred_routes=('noticegen:main',),
+            fallback_route='noticegen:main',
+            meta='초안 만들기',
+        ),
+        'teacher-law': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='교사 법률',
+            preferred_routes=('teacher_law:main',),
+            fallback_route='teacher_law:main',
+            meta='상황 질문하기',
+        ),
+        'reservation': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='특별실 예약',
+            preferred_routes=('reservations:dashboard_landing', 'reservations:landing'),
+            fallback_route='reservations:dashboard_landing',
+            meta='예약 요청 만들기',
+        ),
+        'pdf': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='PDF',
+            preferred_routes=('hwpxchat:main',),
+            fallback_route='hwpxchat:main',
+            meta='문서 요약',
+        ),
+        'tts': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='TTS',
+            preferred_routes=('tts_announce',),
+            fallback_route='tts_announce',
+            meta='방송 문구',
+        ),
+        'quickdrop': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='바로전송',
+            preferred_routes=('quickdrop:landing',),
+            fallback_route='quickdrop:landing',
+            meta='텍스트 보내기',
+        ),
+        'messagebox': _build_home_v7_router_tool(
+            request,
+            product_list,
+            title='메시지 저장',
+            preferred_routes=('messagebox:main',),
+            fallback_route='messagebox:main',
+            meta='보관함 열기',
+        ),
+    }
     quickdrop_card = _build_home_quickdrop_card(request.user, [], product_list) or {}
     tacit_registry = tacit_registry or _build_home_v7_agent_tacit_registry()
     workflow_registry = workflow_registry or _build_home_v7_agent_workflow_registry()
     calendar_summary = dict(calendar_summary or {})
     today_workspace = dict(calendar_summary.get('today_workspace') or {})
+    route_map = {
+        'messagebox:main': reverse('messagebox:main'),
+        'classcalendar:api_message_capture_save': reverse('classcalendar:api_message_capture_save'),
+    }
+    message_capture_links = {
+        'parse_saved_template': reverse(
+            'classcalendar:api_message_capture_parse_saved',
+            kwargs={'capture_id': MESSAGE_CAPTURE_REVERSE_SEED},
+        ).replace(MESSAGE_CAPTURE_REVERSE_SEED, MESSAGE_CAPTURE_PLACEHOLDER),
+        'commit_template': reverse(
+            'classcalendar:api_message_capture_commit',
+            kwargs={'capture_id': MESSAGE_CAPTURE_REVERSE_SEED},
+        ).replace(MESSAGE_CAPTURE_REVERSE_SEED, MESSAGE_CAPTURE_PLACEHOLDER),
+    }
+    link_sources = {
+        'tool': tool_map,
+        'route': route_map,
+        'quickdrop_card': quickdrop_card,
+        'message_capture': message_capture_links,
+    }
 
-    modes = [
-        {
-            'key': 'notice',
-            'label': '알림장',
-            'preview_strategy': 'service',
-            'selector_hint': '안내 문장',
-            'aliases': ('알림장', '알림', '가정통신문'),
-            'service_key': 'noticegen',
-            'product_id': notice_tool.get('product_id'),
-            'service_href': notice_tool.get('href', ''),
-            'service_label': '알림장 열기',
-            'submit_label': '알림 문구 생성',
-            'confirm_label': '알림장 열기',
-            'icon_class': 'fa-solid fa-note-sticky',
-            'helper': '알림장 초안',
-            'placeholder': '보낼 내용을 적으세요.',
-            'examples': (),
-        },
-        {
-            'key': 'schedule',
-            'label': '일정',
-            'preview_strategy': 'service',
-            'selector_hint': '메시지 일정 읽기',
-            'aliases': ('일정', '캘린더', '시간표'),
-            'service_key': 'classcalendar',
-            'product_id': calendar_tool.get('product_id'),
-            'service_href': calendar_tool.get('href', ''),
-            'service_label': '캘린더 열기',
-            'submit_label': '일정 찾기',
-            'confirm_label': '캘린더 열기',
-            'secondary_link_label': '받은 메시지',
-            'secondary_link_href': reverse('messagebox:main'),
-            'icon_class': 'fa-regular fa-calendar',
-            'helper': '추출 후보',
-            'placeholder': '메시지를 붙여 넣으세요.',
-            'examples': (
-                '학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 학교 상담실로 와 주세요.',
-                '금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요.',
-            ),
-        },
-        {
-            'key': 'teacher-law',
-            'label': '교사 법률',
-            'preview_strategy': 'service',
-            'selector_hint': '상황 정리',
-            'aliases': ('교사 법률', '법률', '교권', '민원'),
-            'service_key': 'teacher_law',
-            'product_id': law_tool.get('product_id'),
-            'service_href': law_tool.get('href', ''),
-            'service_label': '법률 가이드 열기',
-            'submit_label': '답변 보기',
-            'confirm_label': '법률 가이드',
-            'icon_class': 'fa-solid fa-scale-balanced',
-            'helper': '대응 메모',
-            'placeholder': '상황을 적으세요.',
-            'examples': (
-                '학생 생활지도 중 보호자가 항의 전화를 반복하고 있어요. 기록을 어떻게 남겨야 하나요?',
-                '교실 내 촬영 영상 제공 요구가 왔어요. 어떤 절차를 먼저 확인해야 하나요?',
-            ),
-        },
-        {
-            'key': 'reservation',
-            'label': '특별실 예약',
-            'preview_strategy': 'service',
-            'selector_hint': '예약 값 정리',
-            'aliases': ('특별실 예약', '특별실', '예약'),
-            'service_key': 'reservations',
-            'product_id': reservation_tool.get('product_id'),
-            'service_href': reservation_tool.get('href', ''),
-            'service_label': '예약 화면 열기',
-            'submit_label': '예약 확인',
-            'confirm_label': '예약 화면',
-            'icon_class': 'fa-regular fa-clock',
-            'helper': '예약 후보',
-            'placeholder': '예약할 내용을 적으세요.',
-            'examples': (
-                '4월 22일 3교시 과학실 예약',
-                '다음 주 목요일 2교시 컴퓨터실 사용',
-            ),
-        },
-        {
-            'key': 'quickdrop',
-            'label': '바로 전송',
-            'preview_strategy': 'direct',
-            'selector_hint': '텍스트 보내기',
-            'aliases': ('바로 전송', '바로전송', '전송', '링크 보내기'),
-            'service_key': 'quickdrop',
-            'product_id': quickdrop_tool.get('product_id'),
-            'service_href': quickdrop_card.get('manage_url', '') or quickdrop_tool.get('href', ''),
-            'service_label': '전송함 열기',
-            'submit_label': '내용 보기',
-            'confirm_label': '전송함 열기',
-            'after_action_label': '전송함 보기',
-            'after_action_href': quickdrop_card.get('history_url', '') or quickdrop_card.get('open_url', ''),
-            'secondary_link_label': '오늘 보낸 내용',
-            'secondary_link_href': quickdrop_card.get('history_url', '') or quickdrop_card.get('open_url', ''),
-            'action_label': '바로 전송',
-            'action_kind': 'quickdrop-send',
-            'direct_url': quickdrop_card.get('send_text_url', ''),
-            'send_file_url': quickdrop_card.get('send_file_url', ''),
-            'icon_class': 'fa-solid fa-paper-plane',
-            'helper': '텍스트 전송',
-            'placeholder': '보낼 내용을 적으세요.',
-            'examples': (
-                '내일 학년 회의 링크 https://example.com 15:30 시작',
-                '현장체험학습 집합 장소와 준비물 목록을 바로 보내기',
-            ),
-        },
-        {
-            'key': 'pdf',
-            'label': 'PDF',
-            'preview_strategy': 'service',
-            'selector_hint': '핵심 정리',
-            'aliases': ('PDF', '공문', '문서'),
-            'service_key': 'hwpxchat',
-            'product_id': pdf_tool.get('product_id'),
-            'service_href': pdf_tool.get('href', ''),
-            'service_label': 'PDF 화면 열기',
-            'submit_label': '정리 보기',
-            'confirm_label': 'PDF 열기',
-            'action_label': 'PDF 열기',
-            'action_kind': 'open-service',
-            'direct_url': pdf_tool.get('href', ''),
-            'icon_class': 'fa-regular fa-file-pdf',
-            'helper': '문서 요약',
-            'placeholder': '문서에서 필요한 내용을 적으세요.',
-            'examples': (
-                '가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.',
-                '연수 자료 PDF에서 오늘 수업에 바로 쓸 내용만 정리해 주세요.',
-            ),
-        },
-        {
-            'key': 'tts',
-            'label': 'TTS',
-            'preview_strategy': 'direct',
-            'selector_hint': '읽을 문장',
-            'aliases': ('TTS', '읽어주기', '방송', '음성'),
-            'service_key': 'tts_announce',
-            'product_id': tts_tool.get('product_id'),
-            'service_href': tts_tool.get('href', ''),
-            'service_label': 'TTS 열기',
-            'submit_label': '문구 보기',
-            'confirm_label': 'TTS 열기',
-            'action_label': '바로 읽기',
-            'action_kind': 'tts-read',
-            'icon_class': 'fa-solid fa-volume-high',
-            'helper': '방송 문구',
-            'placeholder': '읽을 문장을 적으세요.',
-            'examples': (
-                '지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다.',
-                '쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다.',
-            ),
-        },
-        {
-            'key': 'message-save',
-            'label': '메시지 저장',
-            'preview_strategy': 'direct',
-            'selector_hint': '메시지 보관',
-            'aliases': ('메시지 저장', '메시지 보관', '보관함', '받은 메시지'),
-            'service_key': 'messagebox',
-            'product_id': messagebox_tool.get('product_id'),
-            'service_href': messagebox_tool.get('href', ''),
-            'service_label': '보관함 열기',
-            'submit_label': '내용 보기',
-            'confirm_label': '보관함 열기',
-            'after_action_label': '보관함 보기',
-            'after_action_href': messagebox_tool.get('href', ''),
-            'secondary_link_label': '보관함 보기',
-            'secondary_link_href': messagebox_tool.get('href', ''),
-            'action_label': '메시지 저장',
-            'action_kind': 'message-capture-save',
-            'direct_url': reverse('classcalendar:api_message_capture_save'),
-            'parse_saved_template': reverse(
-                'classcalendar:api_message_capture_parse_saved',
-                kwargs={'capture_id': message_capture_reverse_seed},
-            ).replace(message_capture_reverse_seed, message_capture_placeholder),
-            'commit_template': reverse(
-                'classcalendar:api_message_capture_commit',
-                kwargs={'capture_id': message_capture_reverse_seed},
-            ).replace(message_capture_reverse_seed, message_capture_placeholder),
-            'icon_class': 'fa-regular fa-folder-open',
-            'helper': '메시지 보관',
-            'placeholder': '저장할 메시지를 적으세요.',
-            'examples': (
-                '학부모님, 다음 주 화요일 3시에 상담 가능합니다. 가능 여부만 회신 부탁드립니다.',
-                '금요일 14시에 회의실에서 학년 회의합니다. 자료는 10분 전까지 올려 주세요.',
-            ),
-        },
-    ]
-    for mode in modes:
-        service_key = str(mode.get('service_key') or '').strip()
+    modes = []
+    for definition in get_home_agent_service_definitions():
+        service_key = str(definition.service_key or '').strip()
         mode_workflows = workflow_registry.get('by_service_key', {}).get(service_key, [])
         mode_rules = tacit_registry.get('by_service_key', {}).get(service_key, [])
-        mode['workflow_keys'] = tuple(
+        workflow_keys = tuple(
             workflow.get('workflow_key')
             for workflow in mode_workflows
             if workflow.get('workflow_key')
         )
-        mode['tacit_rule_keys'] = tuple(
+        tacit_rule_keys = tuple(
             rule.get('rule_key')
             for rule in mode_rules
             if rule.get('rule_key')
+        )
+        links = resolve_home_agent_mode_links(definition, sources=link_sources)
+        starter_items = resolve_home_agent_starter_items(definition, request=request)
+        ui_options = resolve_home_agent_ui_options(definition, request=request)
+        tool = tool_map.get(definition.tool_key) or {}
+        modes.append(
+            build_home_agent_mode_payload(
+                definition,
+                product_id=tool.get('product_id'),
+                links=links,
+                starter_items=starter_items,
+                ui_options=ui_options,
+                workflow_keys=workflow_keys,
+                tacit_rule_keys=tacit_rule_keys,
+            )
         )
 
     context_questions = []
@@ -1759,13 +1699,49 @@ def _build_home_v7_context_router_preview(
         f"workflow:{workflow_key}"
         for workflow_key in list(workflow_registry.get('by_workflow_key', {}).keys())[:3]
     )
+    conversations = _build_home_v7_agent_conversations(request)
+    service_rail_items = [
+        {
+            'kind': 'service',
+            'key': f"service:{mode['key']}",
+            'entity_key': mode['key'],
+            'mode_key': mode['key'],
+            'renderer_key': mode['renderer_key'],
+            'title': mode['label'],
+            'summary': mode.get('helper') or mode.get('empty_prompt') or '',
+            'meta': 'AI',
+            'status': mode.get('helper') or '',
+            'icon_class': mode.get('icon_class') or 'fa-regular fa-circle',
+            'avatar_label': '',
+            'unread_count': 0,
+            'badge': '',
+            'open_url': mode.get('service_href') or '',
+        }
+        for mode in modes
+    ]
+    rail_sections = (
+        {
+            'key': 'services',
+            'label': 'AI 서비스',
+            'items': tuple(service_rail_items),
+        },
+        {
+            'key': 'rooms',
+            'label': conversations.get('title') or '끼리끼리 채팅방',
+            'items': tuple(conversations.get('items') or ()),
+        },
+    )
 
     return {
         'workspace_title': 'AI 교무비서',
         'workspace_summary': '',
         'workspace_selector_title': '서비스',
+        'workspace_search_placeholder': '서비스와 대화 찾기',
         'initial_mode': 'notice',
+        'initial_rail_key': 'service:notice',
         'modes': modes,
+        'rail_sections': rail_sections,
+        'conversations': conversations,
         'reason': '',
         'signal_sources': tuple(signal_sources) or ('calendar_day',),
         'selected_date_label': today_workspace.get('date_label', ''),
@@ -7423,7 +7399,7 @@ def home_agent_execute(request):
     if not mode_key:
         return JsonResponse({'error': 'mode_key required'}, status=400)
 
-    mode_spec = HOME_AGENT_MODE_SPECS.get(mode_key)
+    mode_spec = get_home_agent_runtime_spec(mode_key)
     if mode_spec is None:
         return JsonResponse({'error': '지원하지 않는 agent 모드입니다.'}, status=400)
 

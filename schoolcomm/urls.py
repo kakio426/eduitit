@@ -13,6 +13,7 @@ urlpatterns = [
     path("api/invites/", views.api_create_invite, name="api_create_invite"),
     path("api/memberships/<uuid:membership_id>/approve/", views.api_approve_membership, name="api_approve_membership"),
     path("api/dms/", views.api_dms, name="api_dms"),
+    path("api/rooms/<uuid:room_id>/snapshot/", views.api_room_snapshot, name="api_room_snapshot"),
     path("api/rooms/<uuid:room_id>/messages/", views.api_room_messages, name="api_room_messages"),
     path("api/messages/<uuid:message_id>/thread/", views.api_message_thread, name="api_message_thread"),
     path("api/messages/<uuid:message_id>/reactions/", views.api_message_reactions, name="api_message_reactions"),
