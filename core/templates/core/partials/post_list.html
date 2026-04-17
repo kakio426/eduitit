@@ -1,6 +1,6 @@
 {% for post in posts %}
 {% if compact_posts %}
-{% include 'core/partials/post_item.html' with is_first=forloop.first %}
+{% include 'core/partials/post_item.html' with is_first=forloop.first surface_variant=surface_variant %}
 {% if forloop.counter == 2 and not forloop.last %}
 <div class="text-center my-3 relative group" data-compact-posts-group>
     <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -24,7 +24,7 @@
 {% endif %}
 {% else %}
     {% if forloop.first %}
-    {% include 'core/partials/post_item.html' with is_first=True %}
+    {% include 'core/partials/post_item.html' with is_first=True surface_variant=surface_variant %}
     {% if posts.count > 1 and not expand_all_mobile %}
     <div class="md:hidden text-center my-3 relative group" data-older-posts-group>
         <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -42,7 +42,7 @@
     <div data-older-posts-container class="hidden md:block space-y-3">
     {% endif %}
     {% else %}
-    {% include 'core/partials/post_item.html' with is_first=False %}
+    {% include 'core/partials/post_item.html' with is_first=False surface_variant=surface_variant %}
     {% endif %}
     {% if forloop.last and posts.count > 1 and not expand_all_mobile %}
 </div>

@@ -410,14 +410,6 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                             </section>
                             {% endif %}
 
-                            {% if home_user_mode == 'authenticated' and schoolcomm_home_card %}
-                            {% include 'core/partials/home_v6_schoolcomm_card.html' %}
-                            {% endif %}
-
-                            {% if home_user_mode == 'authenticated' and quickdrop_home_card %}
-                            {% include 'core/partials/home_v6_quickdrop_panel.html' %}
-                            {% endif %}
-
                             <section class="home-v6-community-section home-v6-top-sns" data-home-v6-sns-panel="true">
                                 {% include 'core/partials/home_v6_sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>

@@ -1,0 +1,205 @@
+{% load static %}
+{% with list_target_id=post_list_target_id|default:'post-list-container' %}
+{% if embed_mode == 'full' %}
+<section data-home-v6-sns-rail="true" class="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
+{% else %}
+<aside data-home-v6-sns-rail="true" class="xl:w-[340px] 2xl:w-[380px] flex flex-col h-auto sticky top-32 z-20 flex-shrink-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+{% endif %}
+    <div class="flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur">
+        <div class="flex min-w-0 items-center gap-2">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <i class="ph-fill ph-chat-circle-text text-lg"></i>
+            </span>
+            <div class="min-w-0">
+                <h2 class="truncate text-base font-black text-slate-800">실시간 소통</h2>
+                <p class="text-[11px] font-medium text-slate-400">바로 쓰고 바로 훑어봅니다</p>
+            </div>
+        </div>
+        <button
+            type="button"
+            aria-label="소통 피드 새로고침"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-50 hover:text-indigo-600"
+            hx-get="{% url 'home' %}?target={{ list_target_id }}"
+            hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "compact_posts": {{ compact_posts|yesno:"true,false" }}, "surface_variant": "home_rail"}'
+            hx-target="#{{ list_target_id }}"
+            hx-swap="outerHTML"
+        >
+            <i class="ph ph-arrows-clockwise text-lg"></i>
+        </button>
+    </div>
+
+    <div class="{% if embed_mode == 'full' %}bg-slate-50/60 p-4{% else %}flex-1 bg-slate-50/60 p-4{% endif %} space-y-4" id="feed-scroll-container">
+        {% if user.is_authenticated %}
+        <form
+            hx-post="{% url 'post_create' %}"
+            hx-target="#{{ list_target_id }}"
+            hx-swap="outerHTML"
+            hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "post_list_target_id": "{{ list_target_id }}", "compact_posts": {{ compact_posts|yesno:"true,false" }}, "surface_variant": "home_rail"}'
+            hx-on::after-request="if (event.detail.successful) { this.reset(); document.getElementById('image-preview-container').classList.add('hidden'); document.getElementById('post-image-input').value = ''; if (window.syncPinnedNoticeComposerState) { window.syncPinnedNoticeComposerState(this); } }"
+            hx-indicator="find .js-post-create-loading"
+            hx-disabled-elt="find button[type='submit']"
+            hx-on::response-error="var text = event.detail.xhr && event.detail.xhr.responseText ? event.detail.xhr.responseText.replace(/<[^>]+>/g, ' ').trim() : '게시글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'; if (window.showToast) { window.showToast(text, 'error'); } else { alert(text); }"
+            hx-encoding="multipart/form-data"
+            data-home-v6-sns-compose="true"
+            class="rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm transition-all focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100"
+        >
+            {% csrf_token %}
+            <div class="flex items-start gap-3">
+                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-12 w-12' extra_class='teacher-buddy-avatar--compose teacher-buddy-avatar--sns' %}
+                <div class="min-w-0 flex-1">
+                    <textarea
+                        name="content"
+                        id="post-content-textarea"
+                        rows="3"
+                        placeholder="지금 남길 이야기를 적어보세요"
+                        class="w-full resize-none rounded-xl bg-transparent text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-100"
+                    >{{ sns_compose_prefill }}</textarea>
+                </div>
+            </div>
+
+            <div id="image-preview-container" class="relative mt-3 hidden">
+                <img
+                    id="image-preview"
+                    src=""
+                    alt="미리보기"
+                    class="max-h-64 w-full rounded-2xl border border-slate-200 object-cover"
+                >
+                <button
+                    type="button"
+                    id="remove-image-btn"
+                    class="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/70 text-white transition hover:bg-slate-900"
+                    aria-label="첨부한 이미지 제거"
+                >
+                    <i class="ph ph-x text-base"></i>
+                </button>
+            </div>
+
+            <input type="file" name="image" id="post-image-input" class="hidden" accept="image/*">
+
+            {% if user.is_staff %}
+            <details data-home-v6-sns-staff-tools="true" class="mt-3 rounded-2xl border border-amber-200 bg-amber-50/80">
+                <summary style="list-style:none;" class="flex cursor-pointer items-center justify-between gap-3 px-3.5 py-3 text-sm font-bold text-amber-800">
+                    <span class="inline-flex items-center gap-2">
+                        <i class="ph ph-sliders-horizontal text-base"></i>
+                        운영
+                    </span>
+                    <i class="ph ph-caret-down text-base"></i>
+                </summary>
+                <div class="space-y-3 border-t border-amber-200/80 px-3.5 py-3">
+                    <div class="flex flex-wrap gap-2">
+                        <a
+                            href="{% url 'news_review_queue' %}"
+                            data-home-v6-sns-shortcut="news"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100"
+                        >
+                            <i class="ph ph-shield-check text-sm"></i>
+                            뉴스 검토
+                        </a>
+                        <a
+                            href="{% url 'insight_sns_queue' %}"
+                            data-home-v6-sns-shortcut="insight"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50"
+                        >
+                            <i class="ph ph-lightbulb text-sm"></i>
+                            인사이트 노출
+                        </a>
+                    </div>
+
+                    <div class="rounded-2xl border border-amber-100 bg-white/80 px-3 py-3">
+                        <div class="flex flex-wrap gap-3">
+                            <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <input
+                                    type="checkbox"
+                                    name="pin_notice_to_top"
+                                    value="1"
+                                    data-pin-notice-input
+                                    class="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                                >
+                                <span>고정 공지</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <input
+                                    type="checkbox"
+                                    name="allow_notice_dismiss"
+                                    value="1"
+                                    data-allow-dismiss-input
+                                    class="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                                    disabled
+                                >
+                                <span>닫기 허용</span>
+                            </label>
+                        </div>
+                        <p class="mt-2 text-[11px] font-medium text-amber-700/90">공지 작성일 때만 적용</p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="submit"
+                            name="submit_kind"
+                            value="notice"
+                            data-home-v6-sns-cta="notice"
+                            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-600"
+                        >
+                            <span class="js-post-create-loading htmx-indicator">
+                                <i class="ph ph-spinner-gap animate-spin"></i>
+                            </span>
+                            <span>공지 작성</span>
+                        </button>
+                    </div>
+                </div>
+            </details>
+            {% endif %}
+
+            <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                <button
+                    type="button"
+                    onclick="document.getElementById('post-image-input').click()"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600"
+                    title="이미지 첨부 또는 붙여넣기"
+                    aria-label="이미지 첨부"
+                >
+                    <i class="ph ph-image text-xl"></i>
+                </button>
+                <button
+                    type="submit"
+                    name="submit_kind"
+                    value="general"
+                    data-home-v6-sns-cta="primary"
+                    class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-indigo-700"
+                >
+                    <span class="js-post-create-loading htmx-indicator">
+                        <i class="ph ph-spinner-gap animate-spin"></i>
+                    </span>
+                    <span>올리기</span>
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="rounded-[1.6rem] border border-indigo-100 bg-indigo-50 p-5 text-center shadow-sm">
+            <div class="mb-3">
+                <i class="ph ph-sign-in text-4xl text-indigo-600"></i>
+            </div>
+            <p class="font-bold text-slate-700">로그인 후 글을 남길 수 있습니다</p>
+            <a
+                href="{% url 'account_login' %}?next={{ request.path }}"
+                data-home-v6-sns-cta="primary"
+                class="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700"
+            >
+                로그인
+            </a>
+        </div>
+        {% endif %}
+
+        {% include 'core/partials/post_feed_container.html' with post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts surface_variant='home_rail' %}
+    </div>
+{% if embed_mode == 'full' %}
+</section>
+{% else %}
+</aside>
+{% endif %}
+{% endwith %}
+
+<script src="{% static 'core/js/sns_pinned_notice.js' %}"></script>
+{% if user.is_authenticated %}
+<script src="{% static 'core/js/post_image_paste.js' %}"></script>
+{% endif %}

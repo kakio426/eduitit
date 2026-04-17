@@ -1,7 +1,11 @@
-<div data-post-root data-post-id="{{ post.id }}"
+<div
+    data-post-root
+    data-post-id="{{ post.id }}"
     {% if post.is_active_pinned_notice %}data-pinned-notice-card="true" data-pinned-notice-key="{{ post.pinned_notice_dismiss_key }}"{% endif %}
-    class="p-4 rounded-2xl border shadow-sm hover:shadow-md transition-all group/post {% if post.is_active_pinned_notice %}border-amber-200 bg-amber-50/40{% else %}border-slate-100 bg-white{% endif %}">
-    <div class="flex items-start justify-between gap-3 mb-3">
+    {% if surface_variant == 'home_rail' %}data-home-rail-post-card="true"{% endif %}
+    class="{% if surface_variant == 'home_rail' %}rounded-[1.45rem] border p-3.5 shadow-sm transition-colors{% else %}rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all group/post{% endif %} {% if post.is_active_pinned_notice %}border-amber-200 bg-amber-50/40{% else %}border-slate-100 bg-white{% endif %}"
+>
+    <div class="mb-3 flex items-start justify-between gap-3">
         <div class="flex min-w-0 flex-1 items-center gap-3">
             {% if post.teacher_buddy_avatar_context.profile_sheet_path %}
             <button
@@ -12,14 +16,14 @@
                 data-buddy-profile-title="{% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %} 메이트 프로필"
                 aria-label="{% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %} 메이트 프로필 열기"
             >
-                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-10 w-10' extra_class='teacher-buddy-avatar--sns' %}
+                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-9 w-9' extra_class='teacher-buddy-avatar--sns' %}
             </button>
             {% else %}
-            {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-10 w-10' extra_class='teacher-buddy-avatar--sns' %}
+            {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=post.teacher_buddy_avatar_context size_class='h-9 w-9' extra_class='teacher-buddy-avatar--sns' %}
             {% endif %}
             <div class="min-w-0 flex-1">
                 <p class="flex flex-wrap items-center gap-1.5 text-sm font-bold text-slate-700">
-                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{post.author.username }}{% endif %}
+                    {% if post.author.userprofile.nickname %}{{ post.author.userprofile.nickname }}{% else %}{{ post.author.username }}{% endif %}
                     {% if post.author.is_staff %}
                     <span class="text-xs text-indigo-500" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
                     {% endif %}
@@ -34,52 +38,111 @@
                     </span>
                     {% endif %}
                 </p>
-                <p class="text-xs text-slate-400">
+                <p class="text-[11px] text-slate-400">
                     {{ post.created_at|timesince }} 전
                     {% if post.updated_at|date:"YmdHi" != post.created_at|date:"YmdHi" %}
                     <span class="text-slate-400/80">(수정됨)</span>
                     {% endif %}
                 </p>
                 {% if post.is_active_pinned_notice and not pinned_notice_expanded %}
-                <p class="mt-1 truncate text-sm font-semibold text-slate-800">{{ post.og_title|default:post.content|truncatechars:40 }}</p>
+                <p class="mt-1 truncate text-sm font-semibold text-slate-800">{{ post.og_title|default:post.content|truncatechars:36 }}</p>
                 {% endif %}
             </div>
         </div>
 
+        {% if surface_variant == 'home_rail' %}
+            {% if post.is_active_pinned_notice and post.allow_notice_dismiss or user == post.author or user.is_staff %}
+            <details class="relative shrink-0" data-home-rail-post-menu="true">
+                <summary style="list-style:none;" class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                    <i class="ph ph-dots-three text-lg"></i>
+                    <span class="sr-only">게시글 메뉴</span>
+                </summary>
+                <div class="absolute right-0 top-full z-20 mt-2 w-36 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    {% if post.is_active_pinned_notice and post.allow_notice_dismiss %}
+                    <button
+                        type="button"
+                        data-pinned-notice-close
+                        onclick="if (window.dismissPinnedNotice) { window.dismissPinnedNotice('{{ post.pinned_notice_dismiss_key }}', this); }"
+                        class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                    >
+                        <i class="ph ph-x text-sm"></i>
+                        <span>공지 닫기</span>
+                    </button>
+                    {% endif %}
+                    {% if user == post.author %}
+                    <button
+                        hx-get="{% url 'post_edit' post.id %}?surface_variant={{ surface_variant }}"
+                        hx-target="closest [data-post-root]"
+                        hx-swap="outerHTML"
+                        class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                    >
+                        <i class="ph ph-pencil-simple text-sm"></i>
+                        <span>수정</span>
+                    </button>
+                    {% endif %}
+                    {% if user == post.author or user.is_staff %}
+                    <button
+                        hx-delete="{% url 'post_delete' post.id %}"
+                        hx-target="closest [data-post-root]"
+                        hx-swap="outerHTML"
+                        hx-confirm="정말 삭제하시겠습니까?"
+                        class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                    >
+                        <i class="ph ph-trash text-sm"></i>
+                        <span>삭제</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </details>
+            {% endif %}
+        {% else %}
         <div
             class="flex shrink-0 items-center gap-1 opacity-100 md:opacity-0 md:group-hover/post:opacity-100 transition-opacity"
-            @click.stop>
+            @click.stop
+        >
             {% if post.is_active_pinned_notice and post.allow_notice_dismiss %}
-            <button type="button" data-pinned-notice-close
+            <button
+                type="button"
+                data-pinned-notice-close
                 onclick="if (window.dismissPinnedNotice) { window.dismissPinnedNotice('{{ post.pinned_notice_dismiss_key }}', this); }"
-                class="text-slate-300 hover:text-amber-600 transition-colors p-2 rounded-lg hover:bg-amber-100"
-                aria-label="고정 공지 닫기">
+                class="rounded-lg p-2 text-slate-300 transition-colors hover:bg-amber-100 hover:text-amber-600"
+                aria-label="고정 공지 닫기"
+            >
                 <i class="ph ph-x text-lg"></i>
             </button>
             {% endif %}
-        {% if user == post.author or user.is_staff %}
-            {% if user == post.author %}
-            <button hx-get="{% url 'post_edit' post.id %}" hx-target="closest [data-post-root]" hx-swap="outerHTML"
-                class="text-slate-300 hover:text-indigo-500 transition-colors p-2 rounded-lg hover:bg-slate-50">
-                <i class="ph ph-pencil-simple text-lg"></i>
-            </button>
+            {% if user == post.author or user.is_staff %}
+                {% if user == post.author %}
+                <button
+                    hx-get="{% url 'post_edit' post.id %}"
+                    hx-target="closest [data-post-root]"
+                    hx-swap="outerHTML"
+                    class="rounded-lg p-2 text-slate-300 transition-colors hover:bg-slate-50 hover:text-indigo-500"
+                >
+                    <i class="ph ph-pencil-simple text-lg"></i>
+                </button>
+                {% endif %}
+                <button
+                    hx-delete="{% url 'post_delete' post.id %}"
+                    hx-target="closest [data-post-root]"
+                    hx-swap="outerHTML"
+                    hx-confirm="정말 삭제하시겠습니까?"
+                    class="rounded-lg p-2 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
+                >
+                    <i class="ph ph-trash text-lg"></i>
+                </button>
             {% endif %}
-            <button hx-delete="{% url 'post_delete' post.id %}" hx-target="closest [data-post-root]" hx-swap="outerHTML"
-                hx-confirm="정말 삭제하시겠습니까?"
-                class="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">
-                <i class="ph ph-trash text-lg"></i>
-            </button>
-        {% endif %}
         </div>
+        {% endif %}
     </div>
 
     {% if post.is_active_pinned_notice %}
-    {% if pinned_notice_expanded %}
-    <div class="mt-4 border-t border-amber-100 pt-4">
-        {% include 'core/partials/post_item_body.html' %}
-    </div>
-    {% endif %}
+        {% if pinned_notice_expanded %}
+        <div class="mt-4 border-t border-amber-100 pt-4">
+            {% include 'core/partials/post_item_body.html' with surface_variant=surface_variant %}
+        </div>
+        {% endif %}
     {% else %}
-    {% include 'core/partials/post_item_body.html' %}
+        {% include 'core/partials/post_item_body.html' with surface_variant=surface_variant %}
     {% endif %}
 </div>

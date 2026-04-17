@@ -5,14 +5,18 @@
     <div class="mb-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
         {% if post.og_image_url %}
         <div class="bg-slate-100">
-            <img src="{{ post.og_image_url }}" alt="{{ post.og_title|default:post.content }}"
-                class="w-full h-44 object-cover" loading="lazy">
+            <img
+                src="{{ post.og_image_url }}"
+                alt="{{ post.og_title|default:post.content }}"
+                class="w-full {% if surface_variant == 'home_rail' %}h-36{% else %}h-44{% endif %} object-cover"
+                loading="lazy"
+            >
         </div>
         {% endif %}
         <div class="p-4">
-            <div class="flex items-center gap-2 text-[11px] text-slate-500 mb-1">
+            <div class="mb-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                 {% if post.primary_tag %}
-                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold">{{ post.primary_tag }}</span>
+                <span class="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-600">{{ post.primary_tag }}</span>
                 {% endif %}
                 {% if post.publisher %}
                 <span>{{ post.publisher }}</span>
@@ -21,14 +25,16 @@
                 <span>· {{ post.published_at|date:"Y.m.d" }}</span>
                 {% endif %}
             </div>
-            <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-2">{{ post.og_title|default:post.content }}</h4>
+            <h4 class="text-sm font-bold leading-snug text-slate-800 line-clamp-2">{{ post.og_title|default:post.content }}</h4>
             {% if post.og_description %}
-            <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ post.og_description }}</p>
+            <p class="mt-1 text-xs text-slate-500 line-clamp-2">{{ post.og_description }}</p>
             {% endif %}
-            <div class="mt-3 flex items-center justify-between gap-2">
-                <p class="text-xs text-slate-500">홈에서 내용을 먼저 보고 필요할 때만 원문으로 이동합니다.</p>
-                <a href="{{ post.source_url }}" rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50">
+            <div class="mt-3">
+                <a
+                    href="{{ post.source_url }}"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50"
+                >
                     원문 보기
                     <i class="ph ph-arrow-up-right"></i>
                 </a>
@@ -36,28 +42,39 @@
         </div>
     </div>
     {% if post.content and post.content != post.og_title %}
-    <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
+    <p class="mb-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700 [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
     {% endif %}
     {% else %}
     {% if post.og_title and post.og_title != post.content %}
     <h4 class="mb-2 text-sm font-bold leading-snug text-slate-800">{{ post.og_title }}</h4>
     {% endif %}
-    <p class="text-slate-700 text-sm leading-relaxed mb-3 whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
+    <p class="mb-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700 [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ post.content|urlize }}</p>
     {% endif %}
 
     {% if post.image %}
-    <div class="mb-3 rounded-xl overflow-hidden border border-slate-100">
-        <img src="{{ post.image.url|optimize }}" alt="Post image" loading="lazy" class="w-full h-auto object-cover max-h-96">
+    <div class="mb-3 overflow-hidden rounded-xl border border-slate-100">
+        <img
+            src="{{ post.image.url|optimize }}"
+            alt="Post image"
+            loading="lazy"
+            class="h-auto w-full object-cover {% if surface_variant == 'home_rail' %}max-h-[18rem]{% else %}max-h-96{% endif %}"
+        >
     </div>
     {% endif %}
 
-    <div class="flex items-center gap-4 py-3 border-t border-slate-50">
+    <div class="flex items-center gap-4 border-t border-slate-100 py-3">
         {% if user.is_authenticated %}
-        <button hx-post="{% url 'post_like' post.id %}" hx-target="closest [data-post-root]" hx-swap="outerHTML"
-            hx-indicator="find .js-post-like-loading" hx-disabled-elt="this"
+        <button
+            hx-post="{% url 'post_like' post.id %}"
+            hx-target="closest [data-post-root]"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-post-like-loading"
+            hx-disabled-elt="this"
             data-inline-error-target="#post-inline-error-{{ post.id }}"
             data-inline-error-action="좋아요 처리"
-            class="flex items-center gap-2 text-sm font-medium transition-colors {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}">
+            {% if surface_variant == 'home_rail' %}hx-vals='{"surface_variant":"home_rail"}'{% endif %}
+            class="flex items-center gap-2 text-sm font-medium transition-colors {% if user in post.likes.all %}text-red-500{% else %}text-slate-400 hover:text-red-500{% endif %}"
+        >
             <span class="js-post-like-loading htmx-indicator">
                 <i class="ph ph-spinner-gap animate-spin text-base"></i>
             </span>
@@ -65,16 +82,18 @@
             <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
         </button>
         {% else %}
-        <a href="{% url 'account_login' %}?next={{ request.path }}"
-            class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-red-500 transition-colors">
+        <a
+            href="{% url 'account_login' %}?next={{ request.path }}"
+            class="flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-red-500"
+        >
             <i class="ph ph-heart text-lg"></i>
             <span>{{ post.likes_count_annotated|default:post.likes.count }}</span>
         </a>
         {% endif %}
         <button
             type="button"
-            onclick="var input = document.getElementById('comment-input-{{ post.id }}'); if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }"
-            class="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-indigo-500 transition-colors"
+            onclick="{% if surface_variant == 'home_rail' %}var panel = document.getElementById('post-comments-{{ post.id }}'); if (panel) { panel.open = true; } setTimeout(function () { var input = document.getElementById('comment-input-{{ post.id }}'); if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 0);{% else %}var input = document.getElementById('comment-input-{{ post.id }}'); if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }{% endif %}"
+            class="flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-indigo-500"
             aria-label="댓글 입력으로 이동"
         >
             <i class="ph ph-chat-circle text-lg"></i>
@@ -82,56 +101,152 @@
         </button>
     </div>
 
-    {% if post.comments_count_annotated|default:post.comments.count %}
-    <div class="mt-2 space-y-3 bg-slate-50/50 rounded-xl p-3 border border-slate-50 mb-3">
-        {% for comment in post.comments.all %}
-        {% if not comment.is_hidden or user.is_staff %}
-        {% include 'core/partials/comment_item.html' %}
-        {% endif %}
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if user.is_authenticated %}
-    <form hx-post="{% url 'comment_create' post.id %}" hx-target="closest [data-post-root]" hx-swap="outerHTML"
-        hx-indicator="find .js-comment-create-loading"
-        hx-disabled-elt="find button[type='submit']"
-        data-inline-error-target="#post-inline-error-{{ post.id }}"
-        data-inline-error-action="댓글 등록"
-        data-reset-on-success="true"
-        class="mt-3 flex items-center gap-2">
-        <div class="flex-1 bg-slate-100 rounded-xl px-4 py-2 flex items-center">
-            <input id="comment-input-{{ post.id }}" type="text" name="content" placeholder="따뜻한 댓글을 남겨주세요..." required
-                class="w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-purple-300 text-xs text-slate-600 placeholder-slate-400 font-medium rounded">
-        </div>
-        <button type="submit" class="text-indigo-600 hover:text-indigo-700 p-1.5 transition-colors inline-flex items-center gap-1">
-            <span class="js-comment-create-loading htmx-indicator">
-                <i class="ph ph-spinner-gap animate-spin text-base"></i>
+    {% if surface_variant == 'home_rail' %}
+    <details id="post-comments-{{ post.id }}" data-home-rail-comments="true" class="mt-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3">
+        <summary style="list-style:none;" class="flex cursor-pointer items-center justify-between gap-3 text-xs font-semibold text-slate-600">
+            <span>
+                {% if post.comments_count_annotated|default:post.comments.count %}
+                댓글 {{ post.comments_count_annotated|default:post.comments.count }}개 보기
+                {% elif user.is_authenticated %}
+                댓글 남기기
+                {% else %}
+                댓글 참여
+                {% endif %}
             </span>
-            <i class="ph ph-paper-plane-right text-xl"></i>
-        </button>
-    </form>
-    <div id="post-inline-error-{{ post.id }}" class="mt-3 hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" data-inline-error-box hidden>
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-                <p class="text-xs font-black text-rose-800" data-inline-error-message></p>
-                <p class="mt-1 text-[11px] font-semibold text-rose-600">입력한 내용은 그대로 남겨둘게요. 같은 버튼으로 다시 시도할 수 있습니다.</p>
+            <i class="ph ph-caret-down text-sm"></i>
+        </summary>
+
+        <div class="mt-3 space-y-3">
+            {% if post.comments_count_annotated|default:post.comments.count %}
+            <div class="space-y-2.5">
+                {% for comment in post.comments.all %}
+                {% if not comment.is_hidden or user.is_staff %}
+                {% include 'core/partials/comment_item.html' with surface_variant=surface_variant %}
+                {% endif %}
+                {% endfor %}
             </div>
-            <button type="button" class="inline-flex flex-shrink-0 items-center rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black text-rose-700" data-inline-error-retry>
-                다시 시도
-            </button>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <form
+                hx-post="{% url 'comment_create' post.id %}"
+                hx-target="closest [data-post-root]"
+                hx-swap="outerHTML"
+                hx-indicator="find .js-comment-create-loading"
+                hx-disabled-elt="find button[type='submit']"
+                data-inline-error-target="#post-inline-error-{{ post.id }}"
+                data-inline-error-action="댓글 등록"
+                data-reset-on-success="true"
+                class="flex items-center gap-2"
+            >
+                <input type="hidden" name="surface_variant" value="{{ surface_variant }}">
+                <div class="flex flex-1 items-center rounded-xl bg-white px-3.5 py-2.5 ring-1 ring-slate-200">
+                    <input
+                        id="comment-input-{{ post.id }}"
+                        type="text"
+                        name="content"
+                        placeholder="댓글 쓰기"
+                        required
+                        class="w-full rounded bg-transparent text-xs font-medium text-slate-600 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-100"
+                    >
+                </div>
+                <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-full text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-700">
+                    <span class="js-comment-create-loading htmx-indicator">
+                        <i class="ph ph-spinner-gap animate-spin text-base"></i>
+                    </span>
+                    <i class="ph ph-paper-plane-right text-lg"></i>
+                </button>
+            </form>
+            <div id="post-inline-error-{{ post.id }}" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" data-inline-error-box hidden>
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black text-rose-800" data-inline-error-message></p>
+                        <p class="mt-1 text-[11px] font-semibold text-rose-600">입력 내용은 그대로 남겨둡니다.</p>
+                    </div>
+                    <button type="button" class="inline-flex flex-shrink-0 items-center rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black text-rose-700" data-inline-error-retry>
+                        다시 시도
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-white px-3.5 py-3 ring-1 ring-slate-200">
+                <p class="text-xs font-medium text-slate-500">로그인 후 댓글을 남길 수 있습니다</p>
+                <a
+                    href="{% url 'account_login' %}?next={{ request.path }}"
+                    class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600"
+                >
+                    로그인
+                    <i class="ph ph-arrow-right text-sm"></i>
+                </a>
+            </div>
+            {% endif %}
         </div>
-    </div>
+    </details>
     {% else %}
-    <div class="mt-3 flex items-center gap-2">
-        <div class="flex-1 bg-slate-100 rounded-xl px-4 py-2 flex items-center">
-            <input type="text" placeholder="댓글을 작성하려면 로그인하세요" disabled
-                class="w-full bg-transparent border-none outline-none text-xs text-slate-400 placeholder-slate-400 font-medium cursor-not-allowed">
+        {% if post.comments_count_annotated|default:post.comments.count %}
+        <div class="mb-3 mt-2 space-y-3 rounded-xl border border-slate-50 bg-slate-50/50 p-3">
+            {% for comment in post.comments.all %}
+            {% if not comment.is_hidden or user.is_staff %}
+            {% include 'core/partials/comment_item.html' with surface_variant=surface_variant %}
+            {% endif %}
+            {% endfor %}
         </div>
-        <a href="{% url 'account_login' %}?next={{ request.path }}"
-            class="text-indigo-600 hover:text-indigo-700 p-1.5 transition-colors">
-            <i class="ph ph-sign-in text-xl"></i>
-        </a>
-    </div>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <form
+            hx-post="{% url 'comment_create' post.id %}"
+            hx-target="closest [data-post-root]"
+            hx-swap="outerHTML"
+            hx-indicator="find .js-comment-create-loading"
+            hx-disabled-elt="find button[type='submit']"
+            data-inline-error-target="#post-inline-error-{{ post.id }}"
+            data-inline-error-action="댓글 등록"
+            data-reset-on-success="true"
+            class="mt-3 flex items-center gap-2"
+        >
+            <div class="flex flex-1 items-center rounded-xl bg-slate-100 px-4 py-2">
+                <input
+                    id="comment-input-{{ post.id }}"
+                    type="text"
+                    name="content"
+                    placeholder="따뜻한 댓글을 남겨주세요..."
+                    required
+                    class="w-full rounded bg-transparent text-xs font-medium text-slate-600 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-purple-300"
+                >
+            </div>
+            <button type="submit" class="inline-flex items-center gap-1 p-1.5 text-indigo-600 transition-colors hover:text-indigo-700">
+                <span class="js-comment-create-loading htmx-indicator">
+                    <i class="ph ph-spinner-gap animate-spin text-base"></i>
+                </span>
+                <i class="ph ph-paper-plane-right text-xl"></i>
+            </button>
+        </form>
+        <div id="post-inline-error-{{ post.id }}" class="mt-3 hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" data-inline-error-box hidden>
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-black text-rose-800" data-inline-error-message></p>
+                    <p class="mt-1 text-[11px] font-semibold text-rose-600">입력한 내용은 그대로 남겨둘게요. 같은 버튼으로 다시 시도할 수 있습니다.</p>
+                </div>
+                <button type="button" class="inline-flex flex-shrink-0 items-center rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-black text-rose-700" data-inline-error-retry>
+                    다시 시도
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-3 flex items-center gap-2">
+            <div class="flex flex-1 items-center rounded-xl bg-slate-100 px-4 py-2">
+                <input
+                    type="text"
+                    placeholder="댓글을 작성하려면 로그인하세요"
+                    disabled
+                    class="w-full cursor-not-allowed bg-transparent text-xs font-medium text-slate-400 placeholder:text-slate-400 outline-none"
+                >
+            </div>
+            <a href="{% url 'account_login' %}?next={{ request.path }}" class="p-1.5 text-indigo-600 transition-colors hover:text-indigo-700">
+                <i class="ph ph-sign-in text-xl"></i>
+            </a>
+        </div>
+        {% endif %}
     {% endif %}
 </div>

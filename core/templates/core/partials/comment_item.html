@@ -1,35 +1,98 @@
-<div data-comment-root class="group flex gap-2 text-sm">
-    <div
-        class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-        {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else %}{{comment.author.username|slice:":1" }}{% endif %}
+<div data-comment-root class="{% if surface_variant == 'home_rail' %}flex gap-2.5 text-sm{% else %}group flex gap-2 text-sm{% endif %}">
+    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500">
+        {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else %}{{ comment.author.username|slice:":1" }}{% endif %}
     </div>
     <div class="flex-1">
-        <div class="flex items-baseline gap-2">
-            <span class="font-bold text-slate-700 text-xs">
-                {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname }}{% else %}{{comment.author.username }}{% endif %}
-                {% if comment.author.is_staff %}
-                <span class="text-xs text-indigo-500 ml-0.5" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
-                {% endif %}
-            </span>
-            {% if comment.is_hidden %}
-            <span class="text-[10px] text-red-500 font-semibold">숨김됨</span>
-            {% endif %}
-            <span class="text-[10px] text-slate-400">
-                {{ comment.created_at|timesince }} 전
-                {% if comment.updated_at|date:"YmdHi" != comment.created_at|date:"YmdHi" %}
-                <span class="text-slate-400/80">(수정됨)</span>
-                {% endif %}
-            </span>
+        <div class="flex items-start gap-2">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-700">
+                        {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname }}{% else %}{{ comment.author.username }}{% endif %}
+                        {% if comment.author.is_staff %}
+                        <span class="ml-0.5 text-xs text-indigo-500" title="관리자"><i class="ph-fill ph-shield-check"></i></span>
+                        {% endif %}
+                    </span>
+                    {% if comment.is_hidden %}
+                    <span class="text-[10px] font-semibold text-red-500">숨김됨</span>
+                    {% endif %}
+                    <span class="text-[10px] text-slate-400">
+                        {{ comment.created_at|timesince }} 전
+                        {% if comment.updated_at|date:"YmdHi" != comment.created_at|date:"YmdHi" %}
+                        <span class="text-slate-400/80">(수정됨)</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <p class="mt-0.5 whitespace-pre-wrap break-words text-xs leading-snug text-slate-600 [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ comment.content|urlize }}</p>
+            </div>
 
-            <!-- Actions (Edit/Delete) -->
-            <div class="ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            {% if surface_variant == 'home_rail' %}
+                {% if user.is_authenticated and user != comment.author or user == comment.author or user.is_staff %}
+                <details class="relative shrink-0" data-home-rail-comment-menu="true">
+                    <summary style="list-style:none;" class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                        <i class="ph ph-dots-three text-base"></i>
+                        <span class="sr-only">댓글 메뉴</span>
+                    </summary>
+                    <div class="absolute right-0 top-full z-20 mt-2 w-32 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg">
+                        {% if user.is_authenticated and user != comment.author %}
+                        <button
+                            hx-post="{% url 'comment_report' comment.id %}"
+                            hx-target="closest [data-comment-root]"
+                            hx-swap="outerHTML"
+                            hx-vals='{"reason":"other","surface_variant":"home_rail"}'
+                            hx-indicator="find .js-comment-report-loading"
+                            hx-disabled-elt="this"
+                            data-inline-error-target="#comment-inline-error-{{ comment.id }}"
+                            data-inline-error-action="댓글 신고"
+                            class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                        >
+                            <span class="js-comment-report-loading htmx-indicator">
+                                <i class="ph ph-spinner-gap animate-spin text-xs"></i>
+                            </span>
+                            <i class="ph ph-flag text-sm"></i>
+                            <span>신고</span>
+                        </button>
+                        {% endif %}
+                        {% if user == comment.author %}
+                        <button
+                            hx-get="{% url 'comment_edit' comment.id %}?surface_variant={{ surface_variant }}"
+                            hx-target="closest [data-comment-root]"
+                            hx-swap="outerHTML"
+                            class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                        >
+                            <i class="ph ph-pencil-simple text-sm"></i>
+                            <span>수정</span>
+                        </button>
+                        {% endif %}
+                        {% if user == comment.author or user.is_staff %}
+                        <button
+                            hx-delete="{% url 'comment_delete' comment.id %}"
+                            hx-target="closest [data-comment-root]"
+                            hx-swap="outerHTML"
+                            hx-confirm="댓글을 삭제하시겠습니까?"
+                            class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                        >
+                            <i class="ph ph-trash text-sm"></i>
+                            <span>삭제</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                </details>
+                {% endif %}
+            {% else %}
+            <div class="ml-auto flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                 {% if user.is_authenticated and user != comment.author %}
-                <button hx-post="{% url 'comment_report' comment.id %}" hx-target="closest [data-comment-root]"
-                    hx-swap="outerHTML" hx-vals='{"reason":"other"}' title="신고하기"
-                    hx-indicator="find .js-comment-report-loading" hx-disabled-elt="this"
+                <button
+                    hx-post="{% url 'comment_report' comment.id %}"
+                    hx-target="closest [data-comment-root]"
+                    hx-swap="outerHTML"
+                    hx-vals='{"reason":"other"}'
+                    title="신고하기"
+                    hx-indicator="find .js-comment-report-loading"
+                    hx-disabled-elt="this"
                     data-inline-error-target="#comment-inline-error-{{ comment.id }}"
                     data-inline-error-action="댓글 신고"
-                    class="text-slate-400 hover:text-amber-600 p-1 md:p-0.5 inline-flex items-center gap-1">
+                    class="inline-flex items-center gap-1 p-1 text-slate-400 hover:text-amber-600 md:p-0.5"
+                >
                     <span class="js-comment-report-loading htmx-indicator">
                         <i class="ph ph-spinner-gap animate-spin text-xs"></i>
                     </span>
@@ -37,21 +100,31 @@
                 </button>
                 {% endif %}
                 {% if user == comment.author %}
-                <button hx-get="{% url 'comment_edit' comment.id %}" hx-target="closest [data-comment-root]"
-                    hx-swap="outerHTML" class="text-slate-400 hover:text-indigo-500 p-1 md:p-0.5">
+                <button
+                    hx-get="{% url 'comment_edit' comment.id %}"
+                    hx-target="closest [data-comment-root]"
+                    hx-swap="outerHTML"
+                    class="p-1 text-slate-400 hover:text-indigo-500 md:p-0.5"
+                >
                     <i class="ph ph-pencil-simple"></i>
                 </button>
                 {% endif %}
 
                 {% if user == comment.author or user.is_staff %}
-                <button hx-delete="{% url 'comment_delete' comment.id %}" hx-target="closest [data-comment-root]"
-                    hx-swap="outerHTML" hx-confirm="댓글을 삭제하시겠습니까?" class="text-slate-400 hover:text-red-500 p-1 md:p-0.5">
+                <button
+                    hx-delete="{% url 'comment_delete' comment.id %}"
+                    hx-target="closest [data-comment-root]"
+                    hx-swap="outerHTML"
+                    hx-confirm="댓글을 삭제하시겠습니까?"
+                    class="p-1 text-slate-400 hover:text-red-500 md:p-0.5"
+                >
                     <i class="ph ph-trash"></i>
                 </button>
                 {% endif %}
             </div>
+            {% endif %}
         </div>
-        <p class="text-slate-600 leading-snug mt-0.5 text-xs whitespace-pre-wrap break-words [&_a]:break-all [&_a]:font-semibold [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2">{{ comment.content|urlize }}</p>
+
         <div id="comment-inline-error-{{ comment.id }}" class="mt-2 hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5" data-inline-error-box hidden>
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">

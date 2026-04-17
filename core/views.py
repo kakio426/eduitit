@@ -146,6 +146,12 @@ POST_FEED_SCOPE_ALLOWED = {
 POST_FEED_NOTICE_TYPES = (
     'notice',
 )
+POST_SURFACE_VARIANT_DEFAULT = ''
+POST_SURFACE_VARIANT_HOME_RAIL = 'home_rail'
+POST_SURFACE_VARIANT_ALLOWED = {
+    POST_SURFACE_VARIANT_DEFAULT,
+    POST_SURFACE_VARIANT_HOME_RAIL,
+}
 
 
 WORKBENCH_BUNDLE_LIMIT = 6
@@ -373,6 +379,17 @@ def _get_compact_posts(request):
     return _is_truthy(raw_value)
 
 
+def _get_post_surface_variant(request):
+    raw_value = request.GET.get('surface_variant') or request.POST.get('surface_variant')
+    if raw_value is None:
+        return POST_SURFACE_VARIANT_DEFAULT
+
+    surface_variant = str(raw_value).strip().lower()
+    if surface_variant in POST_SURFACE_VARIANT_ALLOWED:
+        return surface_variant
+    return POST_SURFACE_VARIANT_DEFAULT
+
+
 def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_posts=None):
     empty_title = None
     empty_subtitle = None
@@ -402,6 +419,7 @@ def _render_post_list_partial(request, page_obj, feed_scope, *, pinned_notice_po
             'post_list_target_id': _get_post_list_target_id(request),
             'feed_scope': feed_scope,
             'compact_posts': _get_compact_posts(request),
+            'surface_variant': _get_post_surface_variant(request),
             'empty_title': empty_title,
             'empty_subtitle': empty_subtitle,
             'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
@@ -6053,7 +6071,14 @@ def post_like(request, pk):
             user=request.user,
             label='post like partial',
         )
-        return render(request, 'core/partials/post_item.html', {'post': post})
+        return render(
+            request,
+            'core/partials/post_item.html',
+            {
+                'post': post,
+                'surface_variant': _get_post_surface_variant(request),
+            },
+        )
         
     return redirect('home')
 
@@ -6099,7 +6124,14 @@ def comment_create(request, pk):
             user=request.user,
             label='comment create partial',
         )
-        return render(request, 'core/partials/post_item.html', {'post': post})
+        return render(
+            request,
+            'core/partials/post_item.html',
+            {
+                'post': post,
+                'surface_variant': _get_post_surface_variant(request),
+            },
+        )
         
     return redirect('home')
 
@@ -6121,6 +6153,7 @@ def post_edit(request, pk):
     post = _resolve_post_for_action(pk, request.user)
     if post is None:
         return HttpResponse("Not found", status=404)
+    surface_variant = _get_post_surface_variant(request)
     
     # Only author can edit
     if post.author != request.user:
@@ -6142,12 +6175,28 @@ def post_edit(request, pk):
             if image.size > MAX_SIZE:
                 form_error_message = '이미지 크기는 10MB 이하만 가능합니다.'
                 messages.error(request, form_error_message)
-                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
+                return render(
+                    request,
+                    'core/partials/post_edit_form.html',
+                    {
+                        'post': post,
+                        'form_error_message': form_error_message,
+                        'surface_variant': surface_variant,
+                    },
+                )
 
             if image.content_type not in ALLOWED_TYPES:
                 form_error_message = '허용되지 않는 파일 형식입니다. JPEG, PNG, GIF, WebP만 올릴 수 있어요.'
                 messages.error(request, form_error_message)
-                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
+                return render(
+                    request,
+                    'core/partials/post_edit_form.html',
+                    {
+                        'post': post,
+                        'form_error_message': form_error_message,
+                        'surface_variant': surface_variant,
+                    },
+                )
 
             try:
                 img = Image.open(image)
@@ -6157,11 +6206,27 @@ def post_edit(request, pk):
             except Exception:
                 form_error_message = '올바른 이미지 파일이 아닙니다.'
                 messages.error(request, form_error_message)
-                return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
+                return render(
+                    request,
+                    'core/partials/post_edit_form.html',
+                    {
+                        'post': post,
+                        'form_error_message': form_error_message,
+                        'surface_variant': surface_variant,
+                    },
+                )
 
         if not (content or '').strip():
             form_error_message = '게시글 내용을 먼저 입력해 주세요.'
-            return render(request, 'core/partials/post_edit_form.html', {'post': post, 'form_error_message': form_error_message})
+            return render(
+                request,
+                'core/partials/post_edit_form.html',
+                {
+                    'post': post,
+                    'form_error_message': form_error_message,
+                    'surface_variant': surface_variant,
+                },
+            )
 
         post.content = content
         post.save()
@@ -6171,10 +6236,25 @@ def post_edit(request, pk):
             user=request.user,
             label='post edit partial',
         )
-        return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
+        return render(
+            request,
+            'core/partials/post_item.html',
+            {
+                'post': post,
+                'is_first': True,
+                'surface_variant': surface_variant,
+            },
+        )
             
     # GET: Return the edit form
-    return render(request, 'core/partials/post_edit_form.html', {'post': post})
+    return render(
+        request,
+        'core/partials/post_edit_form.html',
+        {
+            'post': post,
+            'surface_variant': surface_variant,
+        },
+    )
 
 @login_required
 def post_detail_partial(request, pk):
@@ -6188,7 +6268,15 @@ def post_detail_partial(request, pk):
         user=request.user,
         label='post detail partial',
     )
-    return render(request, 'core/partials/post_item.html', {'post': post, 'is_first': True})
+    return render(
+        request,
+        'core/partials/post_item.html',
+        {
+            'post': post,
+            'is_first': True,
+            'surface_variant': _get_post_surface_variant(request),
+        },
+    )
 
 @login_required
 def comment_delete(request, pk):
@@ -6204,6 +6292,7 @@ def comment_delete(request, pk):
 @login_required
 def comment_edit(request, pk):
     comment = get_object_or_404(Comment, pk=pk)
+    surface_variant = _get_post_surface_variant(request)
     
     # Only author can edit
     if comment.author != request.user:
@@ -6214,24 +6303,46 @@ def comment_edit(request, pk):
         if content:
             comment.content = content
             comment.save()
-            return render(request, 'core/partials/comment_item.html', {'comment': comment})
+            return render(
+                request,
+                'core/partials/comment_item.html',
+                {
+                    'comment': comment,
+                    'surface_variant': surface_variant,
+                },
+            )
         return render(
             request,
             'core/partials/comment_edit_form.html',
             {
                 'comment': comment,
                 'form_error_message': '댓글 내용을 먼저 입력해 주세요.',
+                'surface_variant': surface_variant,
             },
         )
             
     # GET: Return the edit form
-    return render(request, 'core/partials/comment_edit_form.html', {'comment': comment})
+    return render(
+        request,
+        'core/partials/comment_edit_form.html',
+        {
+            'comment': comment,
+            'surface_variant': surface_variant,
+        },
+    )
 
 @login_required
 def comment_item_partial(request, pk):
     """Helper view to return the read-only comment item"""
     comment = get_object_or_404(Comment, pk=pk)
-    return render(request, 'core/partials/comment_item.html', {'comment': comment})
+    return render(
+        request,
+        'core/partials/comment_item.html',
+        {
+            'comment': comment,
+            'surface_variant': _get_post_surface_variant(request),
+        },
+    )
 
 
 @login_required
@@ -6281,7 +6392,14 @@ def comment_report(request, pk):
     if request.headers.get('HX-Request'):
         if comment.is_hidden and not request.user.is_staff:
             return HttpResponse("")
-        return render(request, 'core/partials/comment_item.html', {'comment': comment})
+        return render(
+            request,
+            'core/partials/comment_item.html',
+            {
+                'comment': comment,
+                'surface_variant': _get_post_surface_variant(request),
+            },
+        )
 
     if created:
         messages.success(request, '신고가 접수되었습니다.')

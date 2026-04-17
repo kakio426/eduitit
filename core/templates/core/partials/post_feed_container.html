@@ -1,7 +1,38 @@
 {% with list_target_id=post_list_target_id|default:'post-list-container' %}
-<div id="{{ list_target_id }}" class="space-y-4 {% if list_target_id == 'mobile-post-list-container' %}pb-4{% else %}pb-10{% endif %}" data-feed-scope="{{ feed_scope|default:'all' }}">
+<div
+    id="{{ list_target_id }}"
+    class="space-y-4 {% if list_target_id == 'mobile-post-list-container' %}pb-4{% else %}pb-10{% endif %}"
+    data-feed-scope="{{ feed_scope|default:'all' }}"
+    {% if surface_variant %}data-surface-variant="{{ surface_variant }}"{% endif %}
+>
     {% if pinned_notice_posts %}
     <section data-pinned-notice-section="true" class="space-y-2">
+        {% if surface_variant == 'home_rail' %}
+        <div class="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-3.5 py-3">
+            <div class="flex min-w-0 items-center gap-3">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                    <i class="ph-fill ph-push-pin-simple text-sm"></i>
+                </span>
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-bold text-amber-900">{{ pinned_notice_posts.0.og_title|default:pinned_notice_posts.0.content|truncatechars:34 }}</p>
+                </div>
+            </div>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'toggle_pinned_notice_expanded' %}" class="shrink-0">
+                {% csrf_token %}
+                <input type="hidden" name="expanded" value="{% if pinned_notice_expanded %}0{% else %}1{% endif %}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100"
+                >
+                    <span>{% if pinned_notice_expanded %}접기{% else %}펼치기{% endif %}</span>
+                    <i class="ph ph-caret-down text-xs"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-amber-50 to-white px-4 py-3">
             <div class="flex min-w-0 items-center gap-3">
                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700">
@@ -31,9 +62,10 @@
             </span>
             {% endif %}
         </div>
+        {% endif %}
         <div class="space-y-3">
             {% for post in pinned_notice_posts %}
-            {% include 'core/partials/post_item.html' %}
+            {% include 'core/partials/post_item.html' with surface_variant=surface_variant %}
             {% endfor %}
         </div>
     </section>
@@ -44,7 +76,7 @@
             <button
                 type="button"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope != 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
-                hx-get="{% url 'home' %}?feed_scope=all&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}"
+                hx-get="{% url 'home' %}?feed_scope=all&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}{% if surface_variant %}&surface_variant={{ surface_variant }}{% endif %}"
                 hx-target="#{{ list_target_id }}"
                 hx-swap="outerHTML"
             >
@@ -53,18 +85,20 @@
             <button
                 type="button"
                 class="rounded-lg px-3 py-1.5 text-xs font-semibold transition {% if feed_scope == 'notice' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-500 hover:bg-slate-100{% endif %}"
-                hx-get="{% url 'home' %}?feed_scope=notice&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}"
+                hx-get="{% url 'home' %}?feed_scope=notice&target={{ list_target_id }}{% if compact_posts %}&compact_posts=1{% endif %}{% if surface_variant %}&surface_variant={{ surface_variant }}{% endif %}"
                 hx-target="#{{ list_target_id }}"
                 hx-swap="outerHTML"
             >
                 공지
             </button>
         </div>
+        {% if surface_variant != 'home_rail' %}
         {% if feed_scope == 'notice' %}
         <span class="text-[11px] font-medium text-indigo-500">공지사항만 모아보기</span>
         {% endif %}
+        {% endif %}
     </div>
 
-    {% include 'core/partials/post_list.html' with post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts empty_title=empty_title empty_subtitle=empty_subtitle %}
+    {% include 'core/partials/post_list.html' with post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts empty_title=empty_title empty_subtitle=empty_subtitle surface_variant=surface_variant %}
 </div>
 {% endwith %}

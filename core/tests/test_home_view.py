@@ -1685,6 +1685,23 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('block xl:hidden', content)
         self.assertNotIn('data-home-v2-tablet-community-summary="true"', content)
 
+    def test_v2_non_staff_home_uses_simplified_sns_rail(self):
+        _create_posts(username='railviewer')
+        self._login('railviewerhome')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertIn('data-home-v6-sns-rail="true"', content)
+        self.assertIn('data-home-v6-sns-compose="true"', content)
+        self.assertIn('지금 남길 이야기를 적어보세요', content)
+        self.assertIn('data-home-v6-sns-cta="primary"', content)
+        self.assertNotIn('Ctrl+V 붙여넣기 또는 드래그 앤 드롭', content)
+        self.assertNotIn('data-home-v6-sns-staff-tools="true"', content)
+        self.assertNotIn('뉴스 검토', content)
+        self.assertNotIn('인사이트 노출', content)
+
     def test_v2_staff_home_restores_sns_controls(self):
         staff = _create_onboarded_user('staffsns', nickname='운영자')
         staff.is_staff = True
@@ -1706,9 +1723,14 @@ class HomeV2ViewTest(TestCase):
 
         self._assert_authenticated_home_uses_v6(response, content)
         self.assertIn('실시간 소통', content)
+        self.assertIn('data-home-v6-sns-rail="true"', content)
+        self.assertIn('data-home-v6-sns-staff-tools="true"', content)
         self.assertIn('공지 작성', content)
         self.assertIn('뉴스 검토', content)
         self.assertIn('인사이트 노출', content)
+        self.assertIn('data-pin-notice-input', content)
+        self.assertIn('data-allow-dismiss-input', content)
+        self.assertIn('data-home-v6-sns-cta="notice"', content)
         self.assertIn('data-home-v6-top-calendar="true"', content)
 
     def test_v2_authenticated_notice_scope_excludes_news_link_cards(self):
@@ -1989,6 +2011,21 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-sns-expand="true"', content)
         self.assertIn('더보기', content)
 
+    def test_v2_home_htmx_post_feed_preserves_home_rail_variant(self):
+        _create_posts(username='snsrailhtmx')
+
+        response = self.client.get(
+            reverse('home'),
+            {'target': 'post-list-container', 'compact_posts': '1', 'surface_variant': 'home_rail'},
+            HTTP_HX_REQUEST='true',
+        )
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-surface-variant="home_rail"', content)
+        self.assertIn('data-home-rail-post-card="true"', content)
+        self.assertNotIn('공지사항만 모아보기', content)
+
     def test_v2_community_feed_keeps_full_sns_list_without_home_expand_button(self):
         _create_posts(username='snscommunityauthor')
 
@@ -2007,6 +2044,13 @@ class HomeSupplementaryViewTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], f"{reverse('home')}#home-community-section")
+
+    def test_community_feed_template_keeps_shared_sns_widget(self):
+        template_path = Path(settings.BASE_DIR) / 'core' / 'templates' / 'core' / 'community_feed.html'
+        template = template_path.read_text(encoding='utf-8')
+
+        self.assertIn("core/partials/sns_widget.html", template)
+        self.assertNotIn("core/partials/home_v6_sns_widget_rail.html", template)
 
     def test_home_search_payload_uses_is_active_and_public_names(self):
         Product.objects.create(
@@ -2470,8 +2514,10 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('가뿐하게 서명 톡', content)
         self.assertIn('배부 체크', content)
         self.assertNotIn('>Representative<', content)
-        self.assertIn('선생님들과 나누고 싶은 이야기가 있나요?', content)
+        self.assertIn('data-home-v6-sns-rail="true"', content)
+        self.assertIn('지금 남길 이야기를 적어보세요', content)
         self.assertIn(f'hx-post="{reverse("post_create")}"', content)
+        self.assertNotIn('Ctrl+V 붙여넣기 또는 드래그 앤 드롭', content)
         self.assertNotIn('더 많은 도구 보기', content)
         self.assertNotIn('홈 요약은 그대로 두고, 필요한 도구만 펼쳐서 바로 찾습니다.', content)
         self.assertNotIn('최근 올라온 이야기만 간단히 확인하고 전체 소통으로 이어갑니다.', content)
@@ -2496,7 +2542,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn(day_modal_marker, content)
         self.assertLess(content.index(portal_marker), content.index(day_modal_marker))
 
-    def test_v4_home_places_quickdrop_card_between_favorites_and_sns(self):
+    def test_v4_home_omits_desktop_quickdrop_card(self):
         user = self._login('v4quickdropcard')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         Product.objects.create(
@@ -2516,20 +2562,16 @@ class HomeV4ViewTest(TestCase):
         channel = QuickdropChannel.objects.get(owner=user)
 
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v6-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v6-quickdrop-form="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-actions="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
+        self.assertNotIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
-
-        favorites_index = content.index('data-home-v6-favorites-panel="true"')
-        quickdrop_index = content.index('data-home-v6-quickdrop-panel="true"')
-        sns_index = content.index('data-home-v6-sns-panel="true"')
-        self.assertLess(favorites_index, quickdrop_index)
-        self.assertLess(quickdrop_index, sns_index)
 
     def test_v4_home_auto_provisions_quickdrop_card_when_product_is_missing(self):
         user = self._login('v4quickdropautocreate')
@@ -2545,8 +2587,9 @@ class HomeV4ViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v6-quickdrop-form="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
 
@@ -3845,7 +3888,7 @@ class HomeV6ViewTest(TestCase):
             '일시적인 문제로 오늘 일정을 아직 보여드리지 못했습니다.',
         )
 
-    def test_v6_schoolcomm_card_uses_v6_markup_and_styles(self):
+    def test_v6_desktop_home_omits_schoolcomm_card(self):
         user = self._login('v6schoolcomm')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
 
@@ -3870,9 +3913,8 @@ class HomeV6ViewTest(TestCase):
         css = _read_home_v6_css_bundle()
 
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('data-home-v6-schoolcomm-card="desktop"', content)
-        self.assertIn('home-v6-schoolcomm-card', content)
-        self.assertNotIn('class="home-v4-card home-schoolcomm-card"', content)
+        self.assertNotIn('data-home-v6-schoolcomm-card="desktop"', content)
+        self.assertNotIn('home-v6-schoolcomm-card', content)
         self.assertIn('.home-v6-page .home-schoolcomm-card-head', css)
         self.assertIn('.home-v6-page .home-schoolcomm-card-primary', css)
         self.assertIn('--home-v6-radius-panel:', css)
@@ -4115,7 +4157,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
 
-    def test_v6_quickdrop_card_uses_direct_send_form(self):
+    def test_v6_mobile_quickdrop_uses_direct_send_form_without_desktop_card(self):
         user = self._login('v6quickdropdirect')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
         Product.objects.create(
@@ -4136,14 +4178,15 @@ class HomeV6ViewTest(TestCase):
         history_url = f'{reverse("quickdrop:channel", kwargs={"slug": channel.slug})}?focus=history#history-panel'
 
         self.assertEqual(response.context['home_design_version'], 'v6')
-        self.assertIn('data-home-v6-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v6-quickdrop-form="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
+        self.assertNotIn('data-home-v6-quickdrop-form="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
         self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
         self.assertIn('aria-label="보낼 내용"', content)
         self.assertIn('지금 보내기', content)
         self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
         self.assertIn('aria-label="새 기기 추가"', content)
-        self.assertIn('home-v6-quickdrop-shortcut-label">새 기기 추가</span>', content)
         self.assertIn(f'href="{history_url}"', content)
         self.assertIn('오늘 보낸 내용', content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)

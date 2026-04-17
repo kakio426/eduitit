@@ -3,6 +3,9 @@
     data-inline-error-target="#comment-edit-inline-error-{{ comment.id }}"
     data-inline-error-action="댓글 수정"
     class="flex gap-2 text-sm w-full">
+    {% if surface_variant %}
+    <input type="hidden" name="surface_variant" value="{{ surface_variant }}">
+    {% endif %}
     <div
         class="w-7 h-7 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
         {% if comment.author.userprofile.nickname %}{{ comment.author.userprofile.nickname|slice:":1" }}{% else
@@ -23,7 +26,7 @@
         <textarea name="content" rows="2" required
             class="w-full bg-white border border-indigo-200 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-100 outline-none resize-none">{{ comment.content }}</textarea>
         <div class="flex justify-end gap-2 mt-1">
-            <button type="button" hx-get="{% url 'comment_item' comment.id %}" hx-target="closest form"
+            <button type="button" hx-get="{% url 'comment_item' comment.id %}{% if surface_variant %}?surface_variant={{ surface_variant }}{% endif %}" hx-target="closest form"
                 hx-swap="outerHTML"
                 class="text-xs text-slate-500 hover:text-slate-700 font-medium px-2 py-1">취소</button>
             <button type="submit"
