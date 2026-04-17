@@ -60,6 +60,7 @@ urlpatterns = [
     path('handoff/', include('handoff.urls', namespace='handoff')),
     path('qrgen/', include('qrgen.urls', namespace='qrgen')),
     path('hwpx-chat/', include('hwpxchat.urls', namespace='hwpxchat')),
+    path('doc-hub/', include('doccollab.urls', namespace='doccollab')),
     path('reservations/', include('reservations.urls', namespace='reservations')),
     path('encyclopedia/', include('encyclopedia.urls', namespace='encyclopedia')),
     path('version-manager/', include('version_manager.urls', namespace='version_manager')),

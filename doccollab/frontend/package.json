@@ -1,0 +1,17 @@
+{
+  "name": "doccollab-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@rhwp/core": "^0.7.2",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "vite": "^7.2.1"
+  }
+}
+

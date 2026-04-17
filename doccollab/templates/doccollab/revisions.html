@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ room.title }} 버전{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
+
+<section class="service-shell service-shell--compact doccollab-shell">
+    <div class="doccollab-frame doccollab-frame--narrow">
+        <header class="doccollab-hero doccollab-hero--room">
+            <div>
+                <a href="{% url 'doccollab:room_detail' room.id %}" class="doccollab-back">문서방</a>
+                <p class="doccollab-kicker">버전</p>
+                <h1 class="doccollab-title">{{ room.title }}</h1>
+                <p class="doccollab-copy">원본과 저장본, 공식본을 확인합니다.</p>
+            </div>
+        </header>
+
+        <section class="doccollab-card">
+            <div class="doccollab-list">
+                {% for revision in revisions %}
+                <div class="doccollab-revision-row">
+                    <div>
+                        <div class="doccollab-room-title">r{{ revision.revision_number }} · {{ revision.get_export_format_display }}</div>
+                        <div class="doccollab-room-meta">{{ revision.created_at|date:"Y.m.d H:i" }} · {{ revision.original_name }}</div>
+                    </div>
+                    <div class="doccollab-inline-actions">
+                        <a href="{% url 'doccollab:download_revision' room.id revision.id %}" class="doccollab-secondary">다운로드</a>
+                        {% if membership.role == "owner" %}
+                        <form method="post" action="{% url 'doccollab:publish_revision' room.id revision.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="doccollab-primary" {% if revision.is_published %}disabled{% endif %}>공식본</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="doccollab-empty">저장본이 아직 없습니다.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

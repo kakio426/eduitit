@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}함께문서실{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
+
+<section class="service-shell service-shell--compact doccollab-shell">
+    <div class="doccollab-frame">
+        <header class="doccollab-hero">
+            <div>
+                <p class="doccollab-kicker">문서 허브</p>
+                <h1 class="doccollab-title">함께문서실</h1>
+                <p class="doccollab-copy">HWP와 HWPX를 열고 같이 수정하고 HWP로 저장합니다.</p>
+            </div>
+            <div class="doccollab-chip-row">
+                <span class="doccollab-chip">HWP/HWPX</span>
+                <span class="doccollab-chip">데스크톱 Chrome</span>
+                <span class="doccollab-chip">모바일 보기만</span>
+            </div>
+        </header>
+
+        {% if messages %}
+        <div class="doccollab-stack">
+            {% for message in messages %}
+            <div class="doccollab-alert {% if message.tags %}doccollab-alert--{{ message.tags }}{% endif %}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="doccollab-grid">
+            <aside class="doccollab-card doccollab-card--sticky">
+                <div class="doccollab-card-head">
+                    <p class="doccollab-label">문서 열기</p>
+                    <h2 class="doccollab-card-title">새 문서</h2>
+                </div>
+                <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form" data-doccollab-upload-form="true">
+                    {% csrf_token %}
+                    <label class="doccollab-field">
+                        <span>HWP/HWPX 파일</span>
+                        <input type="file" name="source_file" accept=".hwp,.hwpx" required>
+                    </label>
+                    <label class="doccollab-field">
+                        <span>문서 이름</span>
+                        <input type="text" name="title" placeholder="비우면 파일 이름을 씁니다.">
+                    </label>
+                    <button type="submit" class="doccollab-primary" data-doccollab-open-button="true">파일 열기</button>
+                    <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">파일만 올리면 바로 문서방이 열립니다.</p>
+                </form>
+            </aside>
+
+            <div class="doccollab-stack">
+                <section class="doccollab-card">
+                    <div class="doccollab-card-head">
+                        <p class="doccollab-label">이어서 작업</p>
+                        <h2 class="doccollab-card-title">내 문서</h2>
+                    </div>
+                    <div class="doccollab-summary-strip">
+                        <span class="doccollab-chip doccollab-chip--soft">오늘 {{ today_room_count }}</span>
+                        <span class="doccollab-chip doccollab-chip--soft">공유 {{ shared_room_count }}</span>
+                    </div>
+                    {% if my_room_cards %}
+                    <div class="doccollab-list">
+                        {% for room in my_room_cards %}
+                        <a href="{{ room.url }}" class="doccollab-room-row doccollab-room-row--workspace">
+                            <div class="doccollab-room-main">
+                                <div class="doccollab-room-heading">
+                                    <span class="doccollab-room-title">{{ room.title }}</span>
+                                    <div class="doccollab-room-badges">
+                                        {% if room.is_today %}
+                                        <span class="doccollab-chip doccollab-chip--soft">오늘</span>
+                                        {% endif %}
+                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.scope_label }}</span>
+                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.role_label }}</span>
+                                    </div>
+                                </div>
+                                <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
+                            </div>
+                            <div class="doccollab-room-side">
+                                <span class="doccollab-room-meta">{{ room.revision_label }}</span>
+                                <span class="doccollab-room-meta">{{ room.activity_label }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="doccollab-empty">내가 연 문서는 여기 모입니다.</p>
+                    {% endif %}
+                </section>
+
+                <section class="doccollab-card">
+                    <div class="doccollab-card-head">
+                        <p class="doccollab-label">공유 문서</p>
+                        <h2 class="doccollab-card-title">받은 문서</h2>
+                    </div>
+                    {% if shared_room_cards %}
+                    <div class="doccollab-list">
+                        {% for room in shared_room_cards %}
+                        <a href="{{ room.url }}" class="doccollab-room-row doccollab-room-row--workspace">
+                            <div class="doccollab-room-main">
+                                <div class="doccollab-room-heading">
+                                    <span class="doccollab-room-title">{{ room.title }}</span>
+                                    <div class="doccollab-room-badges">
+                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.role_label }}</span>
+                                    </div>
+                                </div>
+                                <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
+                            </div>
+                            <div class="doccollab-room-side">
+                                <span class="doccollab-room-meta">{{ room.revision_label }}</span>
+                                <span class="doccollab-room-meta">{{ room.activity_label }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="doccollab-empty">공유받은 문서는 아직 없습니다.</p>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </div>
+</section>
+<script type="module" src="{% static 'doccollab/editor/main.js' %}"></script>
+{% endblock %}

@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'handoff.apps.HandoffConfig',
     'qrgen.apps.QrgenConfig',
     'hwpxchat.apps.HwpxchatConfig',
+    'doccollab.apps.DoccollabConfig',
     'encyclopedia.apps.EncyclopediaConfig',
     'version_manager.apps.VersionManagerConfig',
     'happy_seed.apps.HappySeedConfig',
