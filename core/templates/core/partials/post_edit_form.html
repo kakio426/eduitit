@@ -51,6 +51,7 @@
             <i class="ph ph-image text-lg"></i>
             <span>이미지 {% if post.image %}변경{% else %}추가{% endif %}하기</span>
         </button>
+    </div>
 
     <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
         <button type="button" hx-get="{% url 'post_detail_partial' post.id %}{% if surface_variant %}?surface_variant={{ surface_variant }}{% endif %}" hx-target="closest form"
