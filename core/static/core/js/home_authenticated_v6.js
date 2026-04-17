@@ -260,6 +260,12 @@
             return portalRoot;
         }
 
+        function getViewportTopBoundary() {
+            var rootStyles = window.getComputedStyle(document.documentElement);
+            var mainNavHeight = parseFloat(rootStyles.getPropertyValue('--main-nav-height')) || 88;
+            return Math.max(16, Math.round(mainNavHeight + 12));
+        }
+
         function ensurePanelPortal(panel) {
             if (!panel) {
                 return;
@@ -344,6 +350,7 @@
             }
 
             var viewportPadding = 16;
+            var viewportTopBoundary = getViewportTopBoundary();
             var triggerRect = trigger.getBoundingClientRect();
 
             panel.style.position = 'fixed';
@@ -351,18 +358,18 @@
             panel.style.top = '0px';
             panel.style.transform = 'translate3d(-9999px, -9999px, 0)';
             panel.style.zIndex = '520';
-            panel.style.maxHeight = Math.max(window.innerHeight - (viewportPadding * 2), 160) + 'px';
+            panel.style.maxHeight = Math.max(window.innerHeight - viewportTopBoundary - viewportPadding, 160) + 'px';
 
             var panelRect = panel.getBoundingClientRect();
-            var left = triggerRect.right + 14;
+            var left = triggerRect.right + 10;
             if ((left + panelRect.width) > (window.innerWidth - viewportPadding)) {
-                left = Math.max(viewportPadding, triggerRect.left - panelRect.width - 14);
+                left = Math.max(viewportPadding, triggerRect.left - panelRect.width - 10);
             }
 
-            var top = triggerRect.top + (triggerRect.height / 2) - (panelRect.height / 2);
-            var maxTop = Math.max(viewportPadding, window.innerHeight - viewportPadding - panelRect.height);
-            if (top < viewportPadding) {
-                top = viewportPadding;
+            var top = triggerRect.top - 6;
+            var maxTop = Math.max(viewportTopBoundary, window.innerHeight - viewportPadding - panelRect.height);
+            if (top < viewportTopBoundary) {
+                top = viewportTopBoundary;
             } else if (top > maxTop) {
                 top = maxTop;
             }
