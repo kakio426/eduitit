@@ -4,6 +4,7 @@ from django.test import RequestFactory, TestCase
 from core.home_agent_registry import (
     get_home_agent_service_definition,
     get_home_agent_service_definitions,
+    resolve_home_agent_conversation_actions,
     resolve_home_agent_starter_items,
     resolve_home_agent_ui_options,
 )
@@ -88,3 +89,12 @@ class HomeAgentRegistryTests(TestCase):
         self.assertIn('legal_goal_options', ui_options)
         self.assertIn('scene_options', ui_options)
         self.assertIn('counterpart_options', ui_options)
+
+    def test_conversation_actions_are_resolved_from_registry_contract(self):
+        shared_actions = resolve_home_agent_conversation_actions('shared')
+        dm_actions = resolve_home_agent_conversation_actions('dm')
+        notice_actions = resolve_home_agent_conversation_actions('notice')
+
+        self.assertEqual([item['mode_key'] for item in shared_actions], ['pdf', 'tts', 'message-save', 'quickdrop'])
+        self.assertEqual([item['mode_key'] for item in dm_actions], ['schedule', 'teacher-law', 'reservation', 'quickdrop'])
+        self.assertEqual([item['mode_key'] for item in notice_actions], ['notice', 'quickdrop', 'message-save'])

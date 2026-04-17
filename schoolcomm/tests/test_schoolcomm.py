@@ -109,6 +109,19 @@ class SchoolcommServiceTests(SchoolcommTestCase):
         self.assertEqual(room_a.room_kind, CommunityRoom.RoomKind.DM)
         self.assertEqual(group_room.room_kind, CommunityRoom.RoomKind.GROUP_DM)
 
+    @patch("schoolcomm.services.broadcast_user_summary")
+    def test_new_dm_broadcasts_summary_to_all_participants(self, broadcast_summary):
+        room = get_or_create_dm_room(
+            self.workspace,
+            [self.owner_membership, self.member_membership],
+            created_by=self.owner,
+            name="새 DM",
+        )
+
+        self.assertEqual(room.room_kind, CommunityRoom.RoomKind.DM)
+        called_user_ids = {call.args[0].id for call in broadcast_summary.call_args_list}
+        self.assertEqual(called_user_ids, {self.owner.id, self.member.id})
+
     def test_asset_dedup_and_manual_category_protection(self):
         upload_a = SimpleUploadedFile("2026_1학기_중간_수학.hwp", b"same-bytes", content_type="application/octet-stream")
         upload_b = SimpleUploadedFile("2026_1학기_중간_수학_복사.hwp", b"same-bytes", content_type="application/octet-stream")
@@ -244,8 +257,37 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(payload["room"]["id"], str(dm_room.id))
         self.assertEqual(payload["room"]["room_kind_label"], "대화")
         self.assertEqual(payload["room"]["send_url"], reverse("schoolcomm:api_room_messages", kwargs={"room_id": dm_room.id}))
+        self.assertEqual(payload["room"]["room_ws_url"], f"/schoolcomm/ws/rooms/{dm_room.id}/")
+        self.assertTrue(payload["reply_state"]["enabled"])
+        self.assertEqual(payload["dm_actions"]["create_url"], reverse("schoolcomm:api_dms"))
+        self.assertTrue(payload["composer_capabilities"]["file_attach"])
+        self.assertEqual(payload["context_actions"][0]["mode_key"], "schedule")
         self.assertEqual(len(payload["messages"]), 2)
         self.assertEqual(payload["messages"][1]["parent_message_id"], str(parent.id))
+
+    def test_shared_room_snapshot_exposes_assets_panel_and_calendar_suggestions(self):
+        upload = SimpleUploadedFile("회의자료.pdf", b"pdf", content_type="application/pdf")
+        create_room_message(
+            self.shared_room,
+            self.owner_membership,
+            text="4월 25일 오전 9시 회의실에서 협의합니다.",
+            uploads=[upload],
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schoolcomm:api_room_snapshot", kwargs={"room_id": self.shared_room.id}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["assets_panel"]["has_assets"])
+        self.assertTrue(payload["assets_panel"]["view_url"].endswith(f"/rooms/{self.shared_room.id}/"))
+        self.assertGreaterEqual(len(payload["assets_panel"]["sections"]), 1)
+        self.assertGreaterEqual(len(payload["calendar_suggestions"]), 1)
+        self.assertTrue(payload["invite_actions"]["can_create"])
+        self.assertEqual(payload["context_actions"][0]["mode_key"], "pdf")
 
     def test_room_fragment_refresh_returns_partial_content(self):
         create_room_message(self.shared_room, self.owner_membership, text="자료 확인 부탁드립니다")

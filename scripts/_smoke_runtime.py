@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import shutil
 import subprocess
 import sys
@@ -11,7 +12,20 @@ from typing import Iterator
 
 
 def _sqlite_database_url(path: Path) -> str:
-    return f"sqlite:///{path}"
+    return f"sqlite:///{path}?timeout=20"
+
+
+def _configure_sqlite_for_smoke(db_path: Path) -> None:
+    """Reduce lock contention for browser smoke tests hitting the temp SQLite DB."""
+
+    connection = sqlite3.connect(str(db_path))
+    try:
+        connection.execute("PRAGMA journal_mode=WAL;")
+        connection.execute("PRAGMA synchronous=NORMAL;")
+        connection.execute("PRAGMA busy_timeout=20000;")
+        connection.commit()
+    finally:
+        connection.close()
 
 
 @contextmanager
@@ -40,6 +54,7 @@ def managed_smoke_database(
             stderr=subprocess.DEVNULL,
             timeout=migrate_timeout,
         )
+        _configure_sqlite_for_smoke(db_path)
         yield {
             "DATABASE_URL": database_url,
             "SMOKE_DB_PATH": str(db_path),

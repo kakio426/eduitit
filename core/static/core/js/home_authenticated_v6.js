@@ -24,6 +24,18 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    function buildSocketUrl(path) {
+        var rawPath = String(path || '').trim();
+        if (!rawPath) {
+            return '';
+        }
+        if (rawPath.indexOf('ws://') === 0 || rawPath.indexOf('wss://') === 0) {
+            return rawPath;
+        }
+        var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return protocol + '//' + window.location.host + '/' + rawPath.replace(/^\/+/, '');
+    }
+
     function quickdropFileExtensionLabel(filename) {
         var name = String(filename || '').trim();
         var parts = name.split('.');
@@ -673,6 +685,26 @@
             humanChatQueuedFiles: [],
             humanChatDragDepth: 0,
             isHumanChatDragActive: false,
+            humanChatSelectedMessageIds: [],
+            humanChatSelectedAssetIds: [],
+            humanChatUtilityPanel: '',
+            humanChatInviteEmail: '',
+            humanChatInviteRole: '',
+            humanChatLatestInviteUrl: '',
+            humanChatInviteErrorText: '',
+            isHumanChatCreatingInvite: false,
+            humanChatDmMemberIds: [],
+            humanChatDmRoomName: '',
+            humanChatDmErrorText: '',
+            isHumanChatCreatingDm: false,
+            humanChatApplyingSuggestionIds: [],
+            agentConversationContext: null,
+            isSharingAgentPreviewToRoom: false,
+            homeConversationSocket: null,
+            homeActiveRoomSocket: null,
+            homeActiveRoomSocketId: '',
+            homeConversationRefreshTimer: 0,
+            homeRoomRefreshTimer: 0,
             agentPreview: {
                 badge: '',
                 title: '',
@@ -722,9 +754,14 @@
                     this.activeRailKey = 'service:' + String(this.activeModeKey || '');
                 }
                 this.showIdlePreview();
+                this.connectHomeConversationSocket();
                 var self = this;
                 window.addEventListener('home-v6:favorites-updated', function (event) {
                     self.favoriteIds = normalizeIdList(event && event.detail ? event.detail.productIds : []);
+                });
+                window.addEventListener('beforeunload', function () {
+                    self.disconnectHomeConversationSocket();
+                    self.disconnectActiveRoomSocket();
                 });
             },
 
@@ -871,6 +908,8 @@
                     await this.selectHumanConversation(item.key);
                     return;
                 }
+                this.disconnectActiveRoomSocket();
+                this.clearAgentConversationContext();
                 this.selectAgentMode(item.mode_key || item.entity_key || '');
             },
 
@@ -929,6 +968,775 @@
 
             activeHeaderSecondaryLabel: function () {
                 return this.activeConversationItem ? '' : trimLine(this.activeMode.secondary_link_label);
+            },
+
+            humanChatSnapshotRoom: function () {
+                return this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : {};
+            },
+
+            humanChatComposerCapabilities: function () {
+                return this.activeRoomSnapshot && typeof this.activeRoomSnapshot.composer_capabilities === 'object'
+                    ? this.activeRoomSnapshot.composer_capabilities
+                    : {};
+            },
+
+            humanChatSupportsReply: function () {
+                return Boolean(this.humanChatComposerCapabilities().reply);
+            },
+
+            humanChatCanAttachFiles: function () {
+                return Boolean(this.humanChatComposerCapabilities().file_attach);
+            },
+
+            humanChatSupportsReactions: function () {
+                return Boolean(this.humanChatComposerCapabilities().reactions);
+            },
+
+            humanChatContextActions: function () {
+                return Array.isArray(this.activeRoomSnapshot && this.activeRoomSnapshot.context_actions)
+                    ? this.activeRoomSnapshot.context_actions
+                    : [];
+            },
+
+            humanChatAssetsPanel: function () {
+                return this.activeRoomSnapshot && typeof this.activeRoomSnapshot.assets_panel === 'object'
+                    ? this.activeRoomSnapshot.assets_panel
+                    : {};
+            },
+
+            humanChatHasAssetsPanel: function () {
+                var panel = this.humanChatAssetsPanel();
+                return Boolean(panel && panel.has_assets);
+            },
+
+            humanChatAssetSections: function () {
+                var panel = this.humanChatAssetsPanel();
+                return Array.isArray(panel.sections) ? panel.sections : [];
+            },
+
+            humanChatAssetsTotalCount: function () {
+                var panel = this.humanChatAssetsPanel();
+                return Number(panel.total_asset_count || 0);
+            },
+
+            humanChatCalendarSuggestions: function () {
+                return Array.isArray(this.activeRoomSnapshot && this.activeRoomSnapshot.calendar_suggestions)
+                    ? this.activeRoomSnapshot.calendar_suggestions
+                    : [];
+            },
+
+            humanChatInviteConfig: function () {
+                return this.activeRoomSnapshot && typeof this.activeRoomSnapshot.invite_actions === 'object'
+                    ? this.activeRoomSnapshot.invite_actions
+                    : {};
+            },
+
+            humanChatInviteRoles: function () {
+                var config = this.humanChatInviteConfig();
+                return Array.isArray(config.roles) ? config.roles : [];
+            },
+
+            humanChatCanCreateInvite: function () {
+                var config = this.humanChatInviteConfig();
+                return Boolean(config.can_create && trimLine(config.create_url));
+            },
+
+            humanChatDmConfig: function () {
+                return this.activeRoomSnapshot && typeof this.activeRoomSnapshot.dm_actions === 'object'
+                    ? this.activeRoomSnapshot.dm_actions
+                    : {};
+            },
+
+            humanChatDmMembers: function () {
+                var config = this.humanChatDmConfig();
+                return Array.isArray(config.members) ? config.members : [];
+            },
+
+            humanChatCanCreateDm: function () {
+                var config = this.humanChatDmConfig();
+                return Boolean(trimLine(config.create_url));
+            },
+
+            humanChatAllAssets: function () {
+                return this.humanChatMessages().reduce(function (items, message) {
+                    var assets = Array.isArray(message && message.assets) ? message.assets : [];
+                    assets.forEach(function (asset) {
+                        items.push(Object.assign({}, asset, {
+                            message_id: trimLine(message && message.id),
+                            message_body: trimLine(message && message.body),
+                            sender_name: trimLine(message && message.sender_name),
+                        }));
+                    });
+                    return items;
+                }, []);
+            },
+
+            humanChatMessageById: function (messageId) {
+                var targetId = trimLine(messageId);
+                if (!targetId) {
+                    return null;
+                }
+                return this.humanChatMessages().find(function (message) {
+                    return trimLine(message && message.id) === targetId;
+                }) || null;
+            },
+
+            humanChatSelectedMessages: function () {
+                return (Array.isArray(this.humanChatSelectedMessageIds) ? this.humanChatSelectedMessageIds : [])
+                    .map(function (messageId) {
+                        return this.humanChatMessageById(messageId);
+                    }, this)
+                    .filter(Boolean);
+            },
+
+            humanChatSelectedAssets: function () {
+                var selectedIds = Array.isArray(this.humanChatSelectedAssetIds) ? this.humanChatSelectedAssetIds : [];
+                var assets = this.humanChatAllAssets();
+                return selectedIds.map(function (assetId) {
+                    return assets.find(function (asset) {
+                        return trimLine(asset && asset.id) === trimLine(assetId);
+                    }) || null;
+                }).filter(Boolean);
+            },
+
+            humanChatIsMessageSelected: function (messageId) {
+                var targetId = trimLine(messageId);
+                return Boolean(targetId && Array.isArray(this.humanChatSelectedMessageIds) && this.humanChatSelectedMessageIds.indexOf(targetId) !== -1);
+            },
+
+            humanChatIsAssetSelected: function (assetId) {
+                var targetId = trimLine(assetId);
+                return Boolean(targetId && Array.isArray(this.humanChatSelectedAssetIds) && this.humanChatSelectedAssetIds.indexOf(targetId) !== -1);
+            },
+
+            toggleHumanChatMessageSelection: function (message) {
+                var messageId = trimLine(message && message.id);
+                if (!messageId) {
+                    return;
+                }
+                var selected = Array.isArray(this.humanChatSelectedMessageIds) ? this.humanChatSelectedMessageIds.slice() : [];
+                if (selected.indexOf(messageId) !== -1) {
+                    this.humanChatSelectedMessageIds = selected.filter(function (value) {
+                        return value !== messageId;
+                    });
+                    return;
+                }
+                selected.push(messageId);
+                this.humanChatSelectedMessageIds = selected.slice(0, 6);
+            },
+
+            toggleHumanChatAssetSelection: function (asset) {
+                var assetId = trimLine(asset && asset.id);
+                if (!assetId) {
+                    return;
+                }
+                var selected = Array.isArray(this.humanChatSelectedAssetIds) ? this.humanChatSelectedAssetIds.slice() : [];
+                if (selected.indexOf(assetId) !== -1) {
+                    this.humanChatSelectedAssetIds = selected.filter(function (value) {
+                        return value !== assetId;
+                    });
+                    return;
+                }
+                selected.push(assetId);
+                this.humanChatSelectedAssetIds = selected.slice(0, 6);
+            },
+
+            humanChatHasSelection: function () {
+                return Boolean(
+                    (Array.isArray(this.humanChatSelectedMessageIds) && this.humanChatSelectedMessageIds.length)
+                    || (Array.isArray(this.humanChatSelectedAssetIds) && this.humanChatSelectedAssetIds.length)
+                );
+            },
+
+            clearHumanChatSelection: function () {
+                this.humanChatSelectedMessageIds = [];
+                this.humanChatSelectedAssetIds = [];
+            },
+
+            syncHumanChatSelection: function () {
+                var availableMessageIds = this.humanChatMessages().map(function (message) {
+                    return trimLine(message && message.id);
+                }).filter(Boolean);
+                var availableAssetIds = this.humanChatAllAssets().map(function (asset) {
+                    return trimLine(asset && asset.id);
+                }).filter(Boolean);
+                this.humanChatSelectedMessageIds = (Array.isArray(this.humanChatSelectedMessageIds) ? this.humanChatSelectedMessageIds : []).filter(function (messageId) {
+                    return availableMessageIds.indexOf(trimLine(messageId)) !== -1;
+                });
+                this.humanChatSelectedAssetIds = (Array.isArray(this.humanChatSelectedAssetIds) ? this.humanChatSelectedAssetIds : []).filter(function (assetId) {
+                    return availableAssetIds.indexOf(trimLine(assetId)) !== -1;
+                });
+            },
+
+            humanChatSelectionSummary: function () {
+                var messageCount = (Array.isArray(this.humanChatSelectedMessageIds) ? this.humanChatSelectedMessageIds.length : 0);
+                var assetCount = (Array.isArray(this.humanChatSelectedAssetIds) ? this.humanChatSelectedAssetIds.length : 0);
+                var parts = [];
+                if (messageCount) {
+                    parts.push('메시지 ' + messageCount);
+                }
+                if (assetCount) {
+                    parts.push('자료 ' + assetCount);
+                }
+                return parts.join(' · ');
+            },
+
+            toggleHumanChatUtilityPanel: function (panelKey) {
+                var nextKey = trimLine(panelKey);
+                this.humanChatUtilityPanel = this.humanChatUtilityPanel === nextKey ? '' : nextKey;
+                this.humanChatInviteErrorText = '';
+                this.humanChatDmErrorText = '';
+                if (!this.humanChatInviteRole) {
+                    this.humanChatInviteRole = trimLine(this.humanChatInviteConfig().default_role) || 'member';
+                }
+            },
+
+            closeHumanChatUtilityPanel: function () {
+                this.humanChatUtilityPanel = '';
+                this.humanChatInviteErrorText = '';
+                this.humanChatDmErrorText = '';
+            },
+
+            humanChatIsDmMemberSelected: function (userId) {
+                return Boolean(Array.isArray(this.humanChatDmMemberIds) && this.humanChatDmMemberIds.indexOf(trimLine(userId)) !== -1);
+            },
+
+            toggleHumanChatDmMember: function (userId) {
+                var memberId = trimLine(userId);
+                var maxMembers = Number(this.humanChatDmConfig().max_members || 4);
+                var selected = Array.isArray(this.humanChatDmMemberIds) ? this.humanChatDmMemberIds.slice() : [];
+                if (!memberId) {
+                    return;
+                }
+                if (selected.indexOf(memberId) !== -1) {
+                    this.humanChatDmMemberIds = selected.filter(function (value) {
+                        return value !== memberId;
+                    });
+                    return;
+                }
+                if (selected.length >= maxMembers) {
+                    this.humanChatDmErrorText = '최대 ' + maxMembers + '명까지 선택할 수 있습니다.';
+                    return;
+                }
+                selected.push(memberId);
+                this.humanChatDmErrorText = '';
+                this.humanChatDmMemberIds = selected;
+            },
+
+            buildHumanChatContextText: function () {
+                var lines = [];
+                var selectedMessages = this.humanChatSelectedMessages();
+                var selectedAssets = this.humanChatSelectedAssets();
+                var room = this.humanChatSnapshotRoom();
+
+                selectedMessages.forEach(function (message) {
+                    var body = trimLine(message && (message.body || message.parent_preview));
+                    if (!body) {
+                        return;
+                    }
+                    var prefix = trimLine(message && message.sender_name);
+                    lines.push(prefix ? prefix + ': ' + body : body);
+                });
+
+                selectedAssets.forEach(function (asset) {
+                    var name = trimLine(asset && asset.original_name);
+                    if (name) {
+                        lines.push('첨부: ' + name);
+                    }
+                });
+
+                if (!lines.length) {
+                    this.humanChatMessages().slice(-3).forEach(function (message) {
+                        var body = trimLine(message && message.body);
+                        if (!body) {
+                            return;
+                        }
+                        var prefix = trimLine(message && message.sender_name);
+                        lines.push(prefix ? prefix + ': ' + body : body);
+                    });
+                }
+
+                if (!lines.length) {
+                    var summary = trimLine(this.activeConversationItem && this.activeConversationItem.summary);
+                    if (summary) {
+                        lines.push(summary);
+                    }
+                }
+
+                if (!lines.length) {
+                    var title = trimLine(room && room.name);
+                    if (title) {
+                        lines.push(title);
+                    }
+                }
+
+                return lines.filter(Boolean).join('\n');
+            },
+
+            setAgentConversationContext: function () {
+                var room = this.humanChatSnapshotRoom();
+                var item = this.activeConversationItem;
+                this.agentConversationContext = {
+                    conversation_key: trimLine(item && item.key),
+                    room_id: trimLine(room && room.id),
+                    room_title: trimLine(room && room.name),
+                    room_kind: trimLine(room && room.room_kind),
+                    can_post_top_level: Boolean(room && room.can_post_top_level),
+                    selected_message_ids: (Array.isArray(this.humanChatSelectedMessageIds) ? this.humanChatSelectedMessageIds : []).slice(),
+                    selected_asset_ids: (Array.isArray(this.humanChatSelectedAssetIds) ? this.humanChatSelectedAssetIds : []).slice(),
+                    selected_message_texts: this.humanChatSelectedMessages().map(function (message) {
+                        return trimLine(message && (message.body || message.parent_preview));
+                    }).filter(Boolean).slice(0, 4),
+                    selected_asset_names: this.humanChatSelectedAssets().map(function (asset) {
+                        return trimLine(asset && asset.original_name);
+                    }).filter(Boolean).slice(0, 4),
+                };
+            },
+
+            clearAgentConversationContext: function () {
+                this.agentConversationContext = null;
+                this.isSharingAgentPreviewToRoom = false;
+            },
+
+            hasAgentConversationContext: function () {
+                return Boolean(this.agentConversationContext && trimLine(this.agentConversationContext.conversation_key));
+            },
+
+            agentConversationContextItem: function () {
+                return this.hasAgentConversationContext()
+                    ? this.railItemByKey(this.agentConversationContext.conversation_key)
+                    : null;
+            },
+
+            agentConversationContextTitle: function () {
+                var item = this.agentConversationContextItem();
+                var context = this.agentConversationContext || {};
+                return trimLine(item && item.title) || trimLine(context.room_title) || '대화';
+            },
+
+            launchHumanChatContextAction: function (action) {
+                var modeKey = trimLine(action && action.mode_key);
+                if (!modeKey) {
+                    return;
+                }
+                this.setAgentConversationContext();
+                this.workspaceInput = this.buildHumanChatContextText();
+                this.humanChatUtilityPanel = '';
+                this.selectAgentMode(modeKey);
+            },
+
+            returnToAgentConversationContext: async function () {
+                var item = this.agentConversationContextItem();
+                var itemKey = trimLine(item && item.key);
+                this.clearAgentConversationContext();
+                if (itemKey) {
+                    await this.selectHumanConversation(itemKey);
+                }
+            },
+
+            buildShareableAgentPreviewText: function () {
+                var lines = this.previewResultLines().slice();
+                if (this.activeRendererKey === 'schedule' && this.scheduleHasExecution()) {
+                    lines = [
+                        trimLine(this.agentExecutionDraft && this.agentExecutionDraft.title),
+                        trimLine(this.scheduleDraftDateLabel()),
+                        trimLine(this.scheduleDraftTimeLabel()),
+                    ].filter(Boolean);
+                }
+                if (this.activeRendererKey === 'reservation' && this.reservationHasExecution()) {
+                    lines = [
+                        trimLine(this.reservationRoomLabel()),
+                        trimLine(this.reservationDateLabel()),
+                        trimLine(this.reservationTimeLabel()),
+                        trimLine(this.reservationPartyLabel()),
+                    ].filter(Boolean);
+                }
+                return lines.filter(Boolean).join('\n');
+            },
+
+            canSharePreviewToContextConversation: function () {
+                var item = this.agentConversationContextItem();
+                var context = this.agentConversationContext || {};
+                if (!item || !trimLine(item.send_url)) {
+                    return false;
+                }
+                if (String(context.room_kind || '') === 'notice' && !context.can_post_top_level) {
+                    return false;
+                }
+                return Boolean(trimLine(this.buildShareableAgentPreviewText()));
+            },
+
+            shareAgentPreviewToContextConversation: async function () {
+                var item = this.agentConversationContextItem();
+                var csrfToken = getCsrfToken();
+                var text = trimLine(this.buildShareableAgentPreviewText());
+                if (!item || !trimLine(item.send_url) || !text) {
+                    showFeedback('공유할 내용을 아직 만들지 못했습니다.', 'info');
+                    return;
+                }
+                if (!csrfToken) {
+                    showFeedback('보안 토큰을 확인할 수 없습니다.', 'error');
+                    return;
+                }
+                this.isSharingAgentPreviewToRoom = true;
+                try {
+                    var formData = new FormData();
+                    formData.append('text', text);
+                    var response = await fetch(item.send_url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '대화방에 공유하지 못했습니다.');
+                    }
+                    showFeedback('대화방에 공유했습니다.', 'success');
+                    await this.refreshConversationRail();
+                    await this.returnToAgentConversationContext();
+                } catch (error) {
+                    showFeedback(error && error.message ? error.message : '대화방에 공유하지 못했습니다.', 'error');
+                } finally {
+                    this.isSharingAgentPreviewToRoom = false;
+                }
+            },
+
+            applyConversationPayload: function (conversations) {
+                var payload = conversations && typeof conversations === 'object' ? conversations : {};
+                var roomItems = Array.isArray(payload.items) ? payload.items : [];
+                this.agentConversationRail = payload;
+                this.agentRailSections = this.railSections().map(function (section) {
+                    if (trimLine(section && section.key) !== 'rooms') {
+                        return section;
+                    }
+                    return Object.assign({}, section, {
+                        label: trimLine(payload.title) || trimLine(section && section.label) || '끼리끼리 채팅방',
+                        items: roomItems,
+                    });
+                });
+                if (this.activeConversationItem && !roomItems.some(function (item) {
+                    return trimLine(item && item.key) === trimLine(this.activeRailKey);
+                }, this)) {
+                    this.disconnectActiveRoomSocket();
+                    this.activeRoomSnapshot = null;
+                    this.activeConversationKey = '';
+                    this.activeRailKey = 'service:' + trimLine(this.activeModeKey || 'notice');
+                }
+            },
+
+            refreshConversationRail: async function () {
+                var refreshUrl = trimLine(
+                    (this.agentConversationRail && this.agentConversationRail.refresh_url)
+                    || (workspaceConfig.conversations && workspaceConfig.conversations.refresh_url)
+                );
+                if (!refreshUrl) {
+                    return;
+                }
+                var response = await fetch(refreshUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                var payload = {};
+                try {
+                    payload = await response.json();
+                } catch (jsonError) {
+                    payload = {};
+                }
+                if (!response.ok || payload.status !== 'ok') {
+                    throw new Error(payload.error || '대화 목록을 불러오지 못했습니다.');
+                }
+                this.applyConversationPayload(payload.conversations);
+            },
+
+            scheduleConversationRailRefresh: function () {
+                if (this.homeConversationRefreshTimer) {
+                    window.clearTimeout(this.homeConversationRefreshTimer);
+                }
+                this.homeConversationRefreshTimer = window.setTimeout(function () {
+                    this.refreshConversationRail().catch(function (error) {
+                        console.warn('[home-v6] failed to refresh conversations', error);
+                    });
+                }.bind(this), 160);
+            },
+
+            scheduleHumanRoomRefresh: function () {
+                if (this.homeRoomRefreshTimer) {
+                    window.clearTimeout(this.homeRoomRefreshTimer);
+                }
+                this.homeRoomRefreshTimer = window.setTimeout(function () {
+                    if (!this.activeConversationItem) {
+                        return;
+                    }
+                    this.refreshHumanConversation({ preserveReply: true }).catch(function (error) {
+                        console.warn('[home-v6] failed to refresh active room', error);
+                    });
+                    this.scheduleConversationRailRefresh();
+                }.bind(this), 160);
+            },
+
+            disconnectHomeConversationSocket: function () {
+                if (this.homeConversationSocket && typeof this.homeConversationSocket.close === 'function') {
+                    try {
+                        this.homeConversationSocket.onclose = null;
+                        this.homeConversationSocket.close();
+                    } catch (error) {
+                        // Ignore close errors.
+                    }
+                }
+                this.homeConversationSocket = null;
+            },
+
+            connectHomeConversationSocket: function () {
+                var socketUrl = buildSocketUrl(
+                    trimLine(
+                        (this.agentConversationRail && this.agentConversationRail.user_ws_url)
+                        || (workspaceConfig.conversations && workspaceConfig.conversations.user_ws_url)
+                    )
+                );
+                if (!socketUrl || typeof window.WebSocket !== 'function') {
+                    return;
+                }
+                this.disconnectHomeConversationSocket();
+                var self = this;
+                var socket = new window.WebSocket(socketUrl);
+                this.homeConversationSocket = socket;
+                socket.onmessage = function (event) {
+                    try {
+                        var data = JSON.parse(event.data || '{}');
+                        if (data.type === 'notification.summary') {
+                            self.scheduleConversationRailRefresh();
+                        }
+                    } catch (error) {
+                        console.warn('[home-v6] failed to parse conversation socket payload', error);
+                    }
+                };
+                socket.onclose = function () {
+                    if (self.homeConversationSocket === socket) {
+                        self.homeConversationSocket = null;
+                        window.setTimeout(function () {
+                            self.connectHomeConversationSocket();
+                        }, 1200);
+                    }
+                };
+            },
+
+            disconnectActiveRoomSocket: function () {
+                if (this.homeActiveRoomSocket && typeof this.homeActiveRoomSocket.close === 'function') {
+                    try {
+                        this.homeActiveRoomSocket.onclose = null;
+                        this.homeActiveRoomSocket.close();
+                    } catch (error) {
+                        // Ignore close errors.
+                    }
+                }
+                this.homeActiveRoomSocket = null;
+                this.homeActiveRoomSocketId = '';
+            },
+
+            connectActiveRoomSocket: function () {
+                var room = this.humanChatSnapshotRoom();
+                var roomId = trimLine(room && room.id);
+                var socketUrl = buildSocketUrl(trimLine(room && room.room_ws_url));
+                if (!roomId || !socketUrl || typeof window.WebSocket !== 'function') {
+                    this.disconnectActiveRoomSocket();
+                    return;
+                }
+                if (this.homeActiveRoomSocket && this.homeActiveRoomSocketId === roomId) {
+                    return;
+                }
+                this.disconnectActiveRoomSocket();
+                var self = this;
+                var socket = new window.WebSocket(socketUrl);
+                this.homeActiveRoomSocket = socket;
+                this.homeActiveRoomSocketId = roomId;
+                socket.onmessage = function (event) {
+                    try {
+                        var data = JSON.parse(event.data || '{}');
+                        if (!data.type || data.type === 'room.snapshot') {
+                            return;
+                        }
+                        self.scheduleHumanRoomRefresh();
+                    } catch (error) {
+                        console.warn('[home-v6] failed to parse room socket payload', error);
+                    }
+                };
+                socket.onclose = function () {
+                    if (self.homeActiveRoomSocket === socket && self.homeActiveRoomSocketId === roomId) {
+                        self.homeActiveRoomSocket = null;
+                        window.setTimeout(function () {
+                            if (self.activeConversationItem && trimLine(self.humanChatSnapshotRoom().id) === roomId) {
+                                self.connectActiveRoomSocket();
+                            }
+                        }, 1200);
+                    }
+                };
+            },
+
+            isHumanChatSuggestionApplying: function (suggestionId) {
+                return Array.isArray(this.humanChatApplyingSuggestionIds)
+                    && this.humanChatApplyingSuggestionIds.indexOf(trimLine(suggestionId)) !== -1;
+            },
+
+            applyHumanChatCalendarSuggestion: async function (suggestion) {
+                var applyUrl = trimLine(suggestion && suggestion.apply_url);
+                var suggestionId = trimLine(suggestion && suggestion.id);
+                var csrfToken = getCsrfToken();
+                if (!applyUrl || !suggestionId || !csrfToken) {
+                    showFeedback('일정을 넣지 못했습니다.', 'error');
+                    return;
+                }
+                this.humanChatApplyingSuggestionIds = (Array.isArray(this.humanChatApplyingSuggestionIds) ? this.humanChatApplyingSuggestionIds : []).concat([suggestionId]);
+                try {
+                    var response = await fetch(applyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '일정을 넣지 못했습니다.');
+                    }
+                    showFeedback(payload.message || '캘린더에 넣었습니다.', 'success');
+                    await this.refreshHumanConversation({ preserveReply: true });
+                    await this.refreshConversationRail();
+                } catch (error) {
+                    showFeedback(error && error.message ? error.message : '일정을 넣지 못했습니다.', 'error');
+                } finally {
+                    this.humanChatApplyingSuggestionIds = (Array.isArray(this.humanChatApplyingSuggestionIds) ? this.humanChatApplyingSuggestionIds : []).filter(function (value) {
+                        return value !== suggestionId;
+                    });
+                }
+            },
+
+            copyHumanChatInviteUrl: async function () {
+                var inviteUrl = trimLine(this.humanChatLatestInviteUrl);
+                if (!inviteUrl) {
+                    return;
+                }
+                try {
+                    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        await navigator.clipboard.writeText(inviteUrl);
+                    }
+                    showFeedback('초대 링크를 복사했습니다.', 'success');
+                } catch (error) {
+                    showFeedback('초대 링크를 복사하지 못했습니다.', 'error');
+                }
+            },
+
+            submitHumanChatInvite: async function () {
+                var config = this.humanChatInviteConfig();
+                var createUrl = trimLine(config.create_url);
+                var csrfToken = getCsrfToken();
+                if (!createUrl || !csrfToken) {
+                    this.humanChatInviteErrorText = '초대 링크를 만들 수 없습니다.';
+                    return;
+                }
+                this.isHumanChatCreatingInvite = true;
+                this.humanChatInviteErrorText = '';
+                this.humanChatLatestInviteUrl = '';
+                try {
+                    var formData = new FormData();
+                    if (trimLine(this.humanChatInviteEmail)) {
+                        formData.append('email', trimLine(this.humanChatInviteEmail));
+                    }
+                    formData.append('role', trimLine(this.humanChatInviteRole || config.default_role || 'member'));
+                    var response = await fetch(createUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '초대 링크를 만들지 못했습니다.');
+                    }
+                    this.humanChatLatestInviteUrl = trimLine(payload.invite && payload.invite.url);
+                    this.humanChatInviteEmail = '';
+                    showFeedback('초대 링크를 만들었습니다.', 'success');
+                } catch (error) {
+                    this.humanChatInviteErrorText = error && error.message ? error.message : '초대 링크를 만들지 못했습니다.';
+                    showFeedback(this.humanChatInviteErrorText, 'error');
+                } finally {
+                    this.isHumanChatCreatingInvite = false;
+                }
+            },
+
+            submitHumanChatDm: async function () {
+                var config = this.humanChatDmConfig();
+                var createUrl = trimLine(config.create_url);
+                var csrfToken = getCsrfToken();
+                if (!createUrl || !csrfToken) {
+                    this.humanChatDmErrorText = '대화를 만들 수 없습니다.';
+                    return;
+                }
+                if (!Array.isArray(this.humanChatDmMemberIds) || !this.humanChatDmMemberIds.length) {
+                    this.humanChatDmErrorText = '상대를 선택해 주세요.';
+                    return;
+                }
+                this.isHumanChatCreatingDm = true;
+                this.humanChatDmErrorText = '';
+                try {
+                    var formData = new FormData();
+                    this.humanChatDmMemberIds.forEach(function (memberId) {
+                        formData.append('user_ids', memberId);
+                    });
+                    if (trimLine(this.humanChatDmRoomName)) {
+                        formData.append('name', trimLine(this.humanChatDmRoomName));
+                    }
+                    var response = await fetch(createUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: formData,
+                    });
+                    var payload = {};
+                    try {
+                        payload = await response.json();
+                    } catch (jsonError) {
+                        payload = {};
+                    }
+                    if (!response.ok || payload.status !== 'success') {
+                        throw new Error(payload.error || '대화를 만들지 못했습니다.');
+                    }
+                    this.humanChatDmMemberIds = [];
+                    this.humanChatDmRoomName = '';
+                    this.closeHumanChatUtilityPanel();
+                    await this.refreshConversationRail();
+                    if (payload.room && payload.room.id) {
+                        await this.selectHumanConversation('room:' + String(payload.room.id));
+                    }
+                    showFeedback('새 대화를 시작했습니다.', 'success');
+                } catch (error) {
+                    this.humanChatDmErrorText = error && error.message ? error.message : '대화를 만들지 못했습니다.';
+                    showFeedback(this.humanChatDmErrorText, 'error');
+                } finally {
+                    this.isHumanChatCreatingDm = false;
+                }
             },
 
             quickdropDataTransferHasFiles: function (event) {
@@ -990,6 +1798,15 @@
                 this.humanChatQueuedFiles = [];
                 this.humanChatDragDepth = 0;
                 this.isHumanChatDragActive = false;
+                this.humanChatUtilityPanel = '';
+                this.humanChatInviteErrorText = '';
+                this.humanChatDmErrorText = '';
+                this.humanChatLatestInviteUrl = '';
+                this.humanChatInviteEmail = '';
+                this.humanChatDmMemberIds = [];
+                this.humanChatDmRoomName = '';
+                this.humanChatApplyingSuggestionIds = [];
+                this.clearHumanChatSelection();
             },
 
             humanChatFileInput: function () {
@@ -1145,6 +1962,7 @@
                 var snapshotUrl = trimLine(item && item.snapshot_url);
                 if (!item || !snapshotUrl) {
                     this.activeRoomSnapshot = null;
+                    this.disconnectActiveRoomSocket();
                     return;
                 }
                 this.isHumanChatLoading = true;
@@ -1164,6 +1982,11 @@
                         throw new Error(payload.error || '대화를 불러오지 못했습니다.');
                     }
                     this.activeRoomSnapshot = payload;
+                    if (!this.humanChatInviteRole) {
+                        this.humanChatInviteRole = trimLine(payload && payload.invite_actions && payload.invite_actions.default_role) || 'member';
+                    }
+                    this.syncHumanChatSelection();
+                    this.connectActiveRoomSocket();
                     this.humanChatErrorText = '';
                     this.updateRailItem(item.key, function (current) {
                         var messages = Array.isArray(payload.messages) ? payload.messages : [];
@@ -1190,6 +2013,7 @@
                 if (!item || item.kind !== 'room') {
                     return;
                 }
+                this.clearAgentConversationContext();
                 if (this.activeMode && this.modeHasCapability(this.activeMode, 'tts_read')) {
                     this.isTtsReading = false;
                     if ('speechSynthesis' in window) {
@@ -3682,6 +4506,9 @@
             },
 
             buildPreviewRequestPayload: function (text) {
+                var context = this.agentConversationContext && typeof this.agentConversationContext === 'object'
+                    ? this.agentConversationContext
+                    : {};
                 return {
                     mode_key: this.activeModeKey,
                     text: text,
@@ -3695,6 +4522,14 @@
                         tacit_rule_keys: Array.isArray(this.activeMode.tacit_rule_keys) ? this.activeMode.tacit_rule_keys : [],
                         context_questions: Array.isArray(workspaceConfig.context_questions) ? workspaceConfig.context_questions : [],
                         signal_sources: Array.isArray(workspaceConfig.signal_sources) ? workspaceConfig.signal_sources : [],
+                        conversation_key: trimLine(context.conversation_key),
+                        room_id: trimLine(context.room_id),
+                        room_title: trimLine(context.room_title),
+                        room_kind: trimLine(context.room_kind),
+                        selected_message_ids: Array.isArray(context.selected_message_ids) ? context.selected_message_ids : [],
+                        selected_asset_ids: Array.isArray(context.selected_asset_ids) ? context.selected_asset_ids : [],
+                        selected_message_texts: Array.isArray(context.selected_message_texts) ? context.selected_message_texts : [],
+                        selected_asset_names: Array.isArray(context.selected_asset_names) ? context.selected_asset_names : [],
                     },
                 };
             },

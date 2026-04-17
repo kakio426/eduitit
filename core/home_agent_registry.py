@@ -30,6 +30,7 @@ class HomeAgentServiceDefinition:
     runtime_spec: dict = field(default_factory=dict)
     starter_items: tuple[dict, ...] = ()
     starter_provider_key: str = ""
+    conversation_actions: tuple[dict, ...] = ()
 
 
 def _starter_items(*items):
@@ -85,6 +86,13 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="notice",
+        conversation_actions=(
+            {
+                "room_kind": "notice",
+                "label": "알림장",
+                "order": 10,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "체험학습", "text": "내일 체험학습, 8시 40분까지 등교, 도시락과 물 챙겨 주세요."},
             {"label": "준비물", "text": "내일 미술 준비물, 가위와 풀, 색종이를 보내 주세요."},
@@ -138,6 +146,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="schedule",
+        conversation_actions=(
+            {
+                "room_kind": "dm",
+                "label": "일정",
+                "order": 10,
+            },
+            {
+                "room_kind": "group_dm",
+                "label": "일정",
+                "order": 10,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "상담", "text": "학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 학교 상담실로 와 주세요."},
             {"label": "회의", "text": "금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요."},
@@ -186,6 +206,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="teacher-law",
+        conversation_actions=(
+            {
+                "room_kind": "dm",
+                "label": "교사법률",
+                "order": 20,
+            },
+            {
+                "room_kind": "group_dm",
+                "label": "교사법률",
+                "order": 20,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "학부모 민원", "text": "학부모가 밤마다 전화를 반복합니다. 어떻게 대응해야 하나요?"},
             {"label": "생활지도", "text": "생활지도 중 보호자가 항의 전화를 반복하고 있습니다. 기록은 어떻게 남겨야 하나요?"},
@@ -236,6 +268,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="reservation",
+        conversation_actions=(
+            {
+                "room_kind": "dm",
+                "label": "특별실 예약",
+                "order": 30,
+            },
+            {
+                "room_kind": "group_dm",
+                "label": "특별실 예약",
+                "order": 30,
+            },
+        ),
     ),
     HomeAgentServiceDefinition(
         key="quickdrop",
@@ -294,6 +338,28 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="quickdrop",
+        conversation_actions=(
+            {
+                "room_kind": "notice",
+                "label": "바로전송",
+                "order": 20,
+            },
+            {
+                "room_kind": "shared",
+                "label": "바로전송",
+                "order": 40,
+            },
+            {
+                "room_kind": "dm",
+                "label": "바로전송",
+                "order": 40,
+            },
+            {
+                "room_kind": "group_dm",
+                "label": "바로전송",
+                "order": 40,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "글", "kind": "text", "text": "오늘 6교시 체육관 사용합니다."},
             {"label": "링크", "kind": "text", "text": "학년 회의 링크 https://example.com"},
@@ -343,6 +409,13 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="pdf",
+        conversation_actions=(
+            {
+                "room_kind": "shared",
+                "label": "PDF",
+                "order": 10,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "가정통신문", "text": "가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요."},
             {"label": "공문", "text": "공문 PDF에서 오늘 처리할 일만 짧게 정리해 주세요."},
@@ -392,6 +465,13 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="tts",
+        conversation_actions=(
+            {
+                "room_kind": "shared",
+                "label": "TTS",
+                "order": 20,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "이동", "text": "지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다."},
             {"label": "정리", "text": "쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다."},
@@ -448,6 +528,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             ),
         },
         starter_provider_key="message-save",
+        conversation_actions=(
+            {
+                "room_kind": "notice",
+                "label": "메시지 저장",
+                "order": 30,
+            },
+            {
+                "room_kind": "shared",
+                "label": "메시지 저장",
+                "order": 30,
+            },
+        ),
         starter_items=_starter_items(
             {"label": "학부모 문자", "text": "학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 가능 여부 회신 부탁드립니다."},
             {"label": "회의 안내", "text": "금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요."},
@@ -470,6 +562,31 @@ def get_home_agent_service_definitions():
 
 def get_home_agent_service_definition(mode_key: str):
     return HOME_AGENT_SERVICE_MAP.get(str(mode_key or "").strip())
+
+
+def resolve_home_agent_conversation_actions(room_kind: str) -> list[dict]:
+    normalized_room_kind = str(room_kind or "").strip().lower()
+    if not normalized_room_kind:
+        return []
+
+    actions = []
+    for definition in HOME_AGENT_SERVICE_DEFINITIONS:
+        for spec in definition.conversation_actions or ():
+            spec_room_kind = str(spec.get("room_kind") or "").strip().lower()
+            if spec_room_kind != normalized_room_kind:
+                continue
+            actions.append(
+                (
+                    int(spec.get("order") or 100),
+                    {
+                        "key": f"{normalized_room_kind}:{definition.key}",
+                        "mode_key": definition.key,
+                        "label": str(spec.get("label") or definition.label).strip() or definition.label,
+                    },
+                )
+            )
+    actions.sort(key=lambda item: item[0])
+    return [payload for _order, payload in actions]
 
 
 def get_home_agent_runtime_spec(mode_key: str) -> dict | None:

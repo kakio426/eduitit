@@ -1361,6 +1361,8 @@ class HomeV2ViewTest(TestCase):
             'title': '끼리끼리 채팅방',
             'workspace_name': '우리학교',
             'open_url': '/schoolcomm/',
+            'refresh_url': '/api/home-agent/conversations/',
+            'user_ws_url': '/schoolcomm/ws/users/me/',
             'renderer_key': 'human-chat',
             'items': (
                 {
@@ -1391,10 +1393,53 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(conversations['title'], '끼리끼리 채팅방')
         self.assertEqual(conversations['workspace_name'], '우리학교')
         self.assertEqual(conversations['open_url'], '/schoolcomm/')
+        self.assertTrue(conversations['refresh_url'])
+        self.assertTrue(conversations['user_ws_url'])
         self.assertEqual(conversations['items'][0]['title'], '학년 공지')
         self.assertEqual(conversations['items'][0]['badge'], '2')
         self.assertEqual(conversations['items'][0]['renderer_key'], 'human-chat')
         self.assertEqual(workspace['rail_sections'][1]['items'][0]['kind'], 'room')
+
+    @patch(
+        'core.views._build_home_v7_agent_conversations',
+        return_value={
+            'title': '끼리끼리 채팅방',
+            'workspace_name': '우리학교',
+            'open_url': '/schoolcomm/',
+            'refresh_url': '/api/home-agent/conversations/',
+            'user_ws_url': '/schoolcomm/ws/users/me/',
+            'renderer_key': 'human-chat',
+            'items': (
+                {
+                    'kind': 'room',
+                    'key': 'room:notice',
+                    'entity_key': 'notice',
+                    'renderer_key': 'human-chat',
+                    'title': '학년 공지',
+                    'summary': '회의 시간 바뀌었어요.',
+                    'meta': '공지',
+                    'status': '공지',
+                    'avatar_label': '학공',
+                    'open_url': '/schoolcomm/rooms/notice/',
+                    'snapshot_url': '/schoolcomm/api/rooms/notice/snapshot/',
+                    'send_url': '/schoolcomm/api/rooms/notice/messages/',
+                    'badge': '2',
+                    'unread_count': 2,
+                },
+            ),
+        },
+    )
+    def test_home_agent_conversations_api_returns_room_section_payload(self, _mock_conversations):
+        self._login('conversationapiuser')
+        response = self.client.get(reverse('home_agent_conversations'), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['status'], 'ok')
+        self.assertEqual(payload['conversations']['title'], '끼리끼리 채팅방')
+        self.assertEqual(payload['conversations']['refresh_url'], '/api/home-agent/conversations/')
+        self.assertEqual(payload['rail_section']['key'], 'rooms')
+        self.assertEqual(payload['rail_section']['items'][0]['renderer_key'], 'human-chat')
 
     def test_v2_agent_workspace_accepts_new_registry_service_without_template_changes(self):
         self._login('agentregistryextension')

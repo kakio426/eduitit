@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
 
+from core.home_agent_registry import resolve_home_agent_conversation_actions
 from core.seo import build_route_page_seo
 
 from .models import CalendarSuggestion, MessageReaction, RoomMessage, SchoolMembership, SharedAsset, UserAssetCategory, WorkspaceInvite
@@ -52,6 +53,7 @@ from .services import (
     toggle_ack_reaction,
     update_user_asset_category,
     update_shared_calendar_event,
+    user_display_name,
     user_can_download_asset,
 )
 
@@ -156,6 +158,55 @@ def _room_avatar_label(room):
 def _build_room_snapshot(room, user, membership):
     latest_message = room.messages.order_by("-created_at", "-id").first()
     mark_room_read(user, room, latest_message=latest_message)
+    room_items = _build_room_items(room, user)
+    active_category = "all"
+    assets_panel = {
+        "active_category": active_category,
+        "filter_tabs": [],
+        "sections": [],
+        "total_asset_count": 0,
+        "today_asset_count": 0,
+        "unclassified_count": 0,
+        "manual_asset_count": 0,
+        "has_assets": False,
+        "has_visible_assets": False,
+        "view_url": reverse("schoolcomm:room_detail", kwargs={"room_id": room.id}),
+    }
+    if room.room_kind == room.RoomKind.SHARED:
+        assets_panel = {
+            **_build_shared_room_board(room, room_items, active_category=active_category),
+            "view_url": reverse("schoolcomm:room_detail", kwargs={"room_id": room.id}),
+        }
+    calendar_suggestions = [
+        serialize_calendar_suggestion(suggestion)
+        for suggestion in (
+            CalendarSuggestion.objects.filter(
+                user=user,
+                status=CalendarSuggestion.Status.PENDING,
+                source_message__room=room,
+            )
+            .order_by("-created_at")[:6]
+        )
+    ]
+    member_options = []
+    for workspace_membership in (
+        room.workspace.memberships.select_related("user")
+        .filter(status=SchoolMembership.Status.ACTIVE)
+        .exclude(user=user)
+        .order_by("role", "user__username")
+    ):
+        display_name = user_display_name(workspace_membership.user)
+        member_options.append(
+            {
+                "user_id": str(workspace_membership.user_id),
+                "label": display_name,
+                "meta": workspace_membership.get_role_display(),
+                "search_text": f"{display_name} {workspace_membership.user.username}".strip(),
+            }
+        )
+
+    context_actions = resolve_home_agent_conversation_actions(room.room_kind)
+    can_manage_workspace = membership_can_manage_workspace(membership)
     return {
         "room": {
             "id": str(room.id),
@@ -163,12 +214,59 @@ def _build_room_snapshot(room, user, membership):
             "room_kind": room.room_kind,
             "room_kind_label": _room_kind_label(room.room_kind),
             "avatar_label": _room_avatar_label(room),
+            "workspace_id": str(room.workspace_id),
+            "workspace_name": str(room.workspace.name or ""),
             "open_url": reverse("schoolcomm:room_detail", kwargs={"room_id": room.id}),
             "send_url": reverse("schoolcomm:api_room_messages", kwargs={"room_id": room.id}),
             "can_post_top_level": membership_can_post_notice(membership) or room.room_kind != room.RoomKind.NOTICE,
             "composer_placeholder": "메시지 입력",
+            "room_ws_url": _build_ws_path(f"schoolcomm/ws/rooms/{room.id}/"),
+            "user_ws_url": _build_ws_path("schoolcomm/ws/users/me/"),
         },
         "messages": _build_room_chat_items(room, user),
+        "reply_state": {
+            "enabled": True,
+        },
+        "assets_panel": assets_panel,
+        "calendar_suggestions": calendar_suggestions,
+        "room_actions": {
+            "items": (
+                {
+                    "key": "open-room",
+                    "label": "채팅방 열기",
+                    "href": reverse("schoolcomm:room_detail", kwargs={"room_id": room.id}),
+                    "kind": "link",
+                },
+            ),
+        },
+        "context_actions": context_actions,
+        "invite_actions": {
+            "can_create": can_manage_workspace,
+            "create_url": reverse("schoolcomm:api_create_invite") if can_manage_workspace else "",
+            "default_role": SchoolMembership.Role.MEMBER,
+            "roles": (
+                {
+                    "value": SchoolMembership.Role.MEMBER,
+                    "label": "멤버",
+                },
+                {
+                    "value": SchoolMembership.Role.ADMIN,
+                    "label": "관리자",
+                },
+            ),
+        },
+        "dm_actions": {
+            "create_url": reverse("schoolcomm:api_dms"),
+            "max_members": 4,
+            "members": member_options,
+        },
+        "composer_capabilities": {
+            "reply": True,
+            "file_attach": True,
+            "paste": True,
+            "drag_drop": True,
+            "reactions": True,
+        },
     }
 
 

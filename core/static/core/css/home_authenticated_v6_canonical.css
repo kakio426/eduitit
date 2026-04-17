@@ -3894,6 +3894,154 @@ grid-template-columns: minmax(0, 1fr);
     justify-content: space-between;
 }
 
+.home-v6-page .home-v6-agent-context-bar,
+.home-v6-page .home-v6-agent-human-toolbar,
+.home-v6-page .home-v6-agent-human-toolbar-group,
+.home-v6-page .home-v6-agent-human-selection-bar,
+.home-v6-page .home-v6-agent-human-utility-head,
+.home-v6-page .home-v6-agent-human-extra-head,
+.home-v6-page .home-v6-agent-human-board-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.56rem;
+}
+
+.home-v6-page .home-v6-agent-context-bar {
+    padding: 0.7rem 0.82rem;
+    border: 1px solid rgba(219, 228, 239, 0.94);
+    border-radius: 1rem;
+    background: rgba(248, 250, 252, 0.96);
+}
+
+.home-v6-page .home-v6-agent-context-room,
+.home-v6-page .home-v6-agent-human-selection-text,
+.home-v6-page .home-v6-agent-human-extra-title,
+.home-v6-page .home-v6-agent-human-utility-title,
+.home-v6-page .home-v6-agent-human-board-title,
+.home-v6-page .home-v6-agent-human-board-name,
+.home-v6-page .home-v6-agent-human-member-name {
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.home-v6-page .home-v6-agent-context-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+}
+
+.home-v6-page .home-v6-agent-human-toolbar {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.home-v6-page .home-v6-agent-human-toolbar-group {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.home-v6-page .home-v6-agent-human-toolbar-chip,
+.home-v6-page .home-v6-agent-human-member-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2rem;
+    padding: 0 0.78rem;
+    border: 1px solid rgba(214, 222, 234, 0.96);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-agent-human-toolbar-chip.is-active,
+.home-v6-page .home-v6-agent-human-member-chip.is-active {
+    border-color: rgba(var(--home-v6-brand-rgb), 0.28);
+    background: rgba(248, 245, 255, 0.98);
+    color: var(--home-v6-brand-strong);
+}
+
+.home-v6-page .home-v6-agent-human-selection-bar,
+.home-v6-page .home-v6-agent-human-utility-panel,
+.home-v6-page .home-v6-agent-human-extra-card {
+    padding: 0.82rem 0.88rem;
+    border: 1px solid rgba(219, 228, 239, 0.94);
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.home-v6-page .home-v6-agent-human-utility-panel,
+.home-v6-page .home-v6-agent-human-extras {
+    display: grid;
+    gap: 0.72rem;
+}
+
+.home-v6-page .home-v6-agent-human-member-list,
+.home-v6-page .home-v6-agent-human-calendar-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.48rem;
+}
+
+.home-v6-page .home-v6-agent-human-member-chip {
+    justify-content: space-between;
+}
+
+.home-v6-page .home-v6-agent-human-member-meta,
+.home-v6-page .home-v6-agent-human-board-meta,
+.home-v6-page .home-v6-agent-human-board-count {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-agent-human-invite-url {
+    color: #6366f1;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-break: anywhere;
+}
+
+.home-v6-page .home-v6-agent-human-asset-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+}
+
+.home-v6-page .home-v6-agent-human-board-section-list,
+.home-v6-page .home-v6-agent-human-board-list {
+    display: grid;
+    gap: 0.56rem;
+}
+
+.home-v6-page .home-v6-agent-human-board-card,
+.home-v6-page .home-v6-agent-human-calendar-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.74rem 0.8rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 0.96rem;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.home-v6-page .home-v6-agent-human-board-copy {
+    display: grid;
+    gap: 0.14rem;
+    min-width: 0;
+}
+
+.home-v6-page .home-v6-agent-human-board-name,
+.home-v6-page .home-v6-agent-human-board-meta {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 @media (min-width: 1100px) {
     .home-v6-page .home-v6-agent-card {
         grid-template-columns: minmax(14.6rem, 15.4rem) minmax(0, 1fr);

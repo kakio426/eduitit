@@ -198,13 +198,37 @@ def _build_preview_messages(
 ) -> list[dict]:
     context = dict(context or {})
     service_key = str(context.get("service_key") or "").strip()
+    room_id = str(context.get("room_id") or "").strip()
+    room_title = str(context.get("room_title") or "").strip()
+    room_kind = str(context.get("room_kind") or "").strip()
+    conversation_key = str(context.get("conversation_key") or "").strip()
     workflow_keys = _normalize_context_list(context.get("workflow_keys"), limit=5)
     tacit_rule_keys = _normalize_context_list(context.get("tacit_rule_keys"), limit=5)
     context_questions = _normalize_context_list(context.get("context_questions"), limit=6)
     signal_sources = _normalize_context_list(context.get("signal_sources"), limit=6)
+    selected_message_ids = _normalize_context_list(context.get("selected_message_ids"), limit=8)
+    selected_asset_ids = _normalize_context_list(context.get("selected_asset_ids"), limit=8)
+    selected_message_texts = _normalize_context_list(context.get("selected_message_texts"), limit=4)
+    selected_asset_names = _normalize_context_list(context.get("selected_asset_names"), limit=4)
     context_lines = []
     if service_key:
         context_lines.append(f"연결 서비스: {service_key}")
+    if room_title or room_kind or room_id:
+        room_bits = [room_title, room_kind]
+        room_label = " / ".join(bit for bit in room_bits if bit)
+        if room_id and room_id not in room_label:
+            room_label = f"{room_label} ({room_id})".strip()
+        context_lines.append(f"대화방: {room_label or room_id}")
+    if conversation_key:
+        context_lines.append(f"대화 키: {conversation_key}")
+    if selected_message_ids:
+        context_lines.append(f"선택 메시지: {len(selected_message_ids)}건")
+    if selected_message_texts:
+        context_lines.append(f"선택 내용: {' / '.join(selected_message_texts)}")
+    if selected_asset_ids:
+        context_lines.append(f"선택 첨부: {len(selected_asset_ids)}건")
+    if selected_asset_names:
+        context_lines.append(f"첨부 이름: {', '.join(selected_asset_names)}")
     if signal_sources:
         context_lines.append(f"현재 신호: {', '.join(signal_sources)}")
     if workflow_keys:

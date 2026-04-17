@@ -551,6 +551,7 @@ def get_or_create_dm_room(workspace, memberships, *, created_by, name=""):
     for membership in unique_memberships:
         RoomParticipant.objects.create(room=room, membership=membership)
         ensure_user_room_state(room, membership.user)
+        broadcast_user_summary(membership.user)
     return room
 
 

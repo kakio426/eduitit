@@ -1340,6 +1340,8 @@ def _build_home_v7_agent_conversations(request):
         'title': '끼리끼리 채팅방',
         'workspace_name': '',
         'open_url': _safe_reverse('schoolcomm:main') or '',
+        'refresh_url': _safe_reverse('home_agent_conversations') or '',
+        'user_ws_url': '/schoolcomm/ws/users/me/',
         'items': (),
     }
     if request is None or not getattr(getattr(request, 'user', None), 'is_authenticated', False):
@@ -1364,6 +1366,8 @@ def _build_home_v7_agent_conversations(request):
                 'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
                 'workspace_name': '',
                 'open_url': open_url,
+                'refresh_url': _safe_reverse('home_agent_conversations') or '',
+                'user_ws_url': '/schoolcomm/ws/users/me/',
                 'items': (),
             }
 
@@ -1372,7 +1376,7 @@ def _build_home_v7_agent_conversations(request):
         for room in [dashboard.get('notice_room'), dashboard.get('shared_room')]:
             if room:
                 candidate_rooms.append(room)
-        candidate_rooms.extend(list(dashboard.get('dm_rooms') or [])[:4])
+        candidate_rooms.extend(list(dashboard.get('dm_rooms') or [])[:8])
 
         room_kind_label = {
             'notice': '공지',
@@ -1411,6 +1415,8 @@ def _build_home_v7_agent_conversations(request):
             'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
             'workspace_name': str(home_card.get('workspace_name') or workspace.name or '').strip(),
             'open_url': open_url,
+            'refresh_url': _safe_reverse('home_agent_conversations') or '',
+            'user_ws_url': '/schoolcomm/ws/users/me/',
             'renderer_key': 'human-chat',
             'items': tuple(items),
         }
@@ -7386,6 +7392,21 @@ def home_agent_preview(request):
         'message': payload.get('message', ''),
         'provider': payload.get('provider', ''),
         'model': payload.get('model', ''),
+    })
+
+
+@require_GET
+@login_required
+def home_agent_conversations(request):
+    conversations = _build_home_v7_agent_conversations(request)
+    return JsonResponse({
+        'status': 'ok',
+        'conversations': conversations,
+        'rail_section': {
+            'key': 'rooms',
+            'label': conversations.get('title') or '끼리끼리 채팅방',
+            'items': conversations.get('items') or (),
+        },
     })
 
 

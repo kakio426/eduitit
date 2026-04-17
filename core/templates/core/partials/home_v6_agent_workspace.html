@@ -127,7 +127,147 @@
                 </div>
             </div>
 
+            <div class="home-v6-agent-context-bar" x-cloak x-show="hasAgentConversationContext() && !activeConversationItem">
+                <span class="home-v6-agent-context-room" x-text="agentConversationContextTitle() || ''"></span>
+                <div class="home-v6-agent-context-actions">
+                    <button
+                        type="button"
+                        class="home-v6-agent-chat-action"
+                        @click="returnToAgentConversationContext()"
+                    >대화로</button>
+                    <button
+                        type="button"
+                        class="home-v6-agent-chat-action"
+                        x-cloak
+                        x-show="canSharePreviewToContextConversation()"
+                        :disabled="isSharingAgentPreviewToRoom"
+                        @click="shareAgentPreviewToContextConversation()"
+                        x-text="isSharingAgentPreviewToRoom ? '공유 중' : '방에 공유'"
+                    ></button>
+                </div>
+            </div>
+
             <section class="home-v6-agent-human-chat" x-cloak x-show="activeRendererKey === 'human-chat'">
+                <div class="home-v6-agent-human-toolbar">
+                    <div class="home-v6-agent-human-toolbar-group">
+                        <template x-for="action in humanChatContextActions()" :key="action.key">
+                            <button
+                                type="button"
+                                class="home-v6-agent-human-toolbar-chip"
+                                @click="launchHumanChatContextAction(action)"
+                                x-text="action.label"
+                            ></button>
+                        </template>
+                    </div>
+                    <div class="home-v6-agent-human-toolbar-group">
+                        <button
+                            type="button"
+                            class="home-v6-agent-human-toolbar-chip"
+                            x-cloak
+                            x-show="humanChatCanCreateDm()"
+                            @click="toggleHumanChatUtilityPanel('dm')"
+                        >새 대화</button>
+                        <button
+                            type="button"
+                            class="home-v6-agent-human-toolbar-chip"
+                            x-cloak
+                            x-show="humanChatCanCreateInvite()"
+                            @click="toggleHumanChatUtilityPanel('invite')"
+                        >초대</button>
+                    </div>
+                </div>
+
+                <div class="home-v6-agent-human-selection-bar" x-cloak x-show="humanChatHasSelection()">
+                    <span class="home-v6-agent-human-selection-text" x-text="humanChatSelectionSummary()"></span>
+                    <button type="button" class="home-v6-agent-chat-action" @click="clearHumanChatSelection()">지우기</button>
+                </div>
+
+                <div class="home-v6-agent-human-utility-panel" x-cloak x-show="humanChatUtilityPanel === 'dm'">
+                    <div class="home-v6-agent-human-utility-head">
+                        <p class="home-v6-agent-human-utility-title">새 대화</p>
+                        <button type="button" class="home-v6-agent-chat-action" @click="closeHumanChatUtilityPanel()">닫기</button>
+                    </div>
+                    <div class="home-v6-agent-human-member-list">
+                        <template x-for="member in humanChatDmMembers()" :key="'dm-member-' + member.user_id">
+                            <button
+                                type="button"
+                                class="home-v6-agent-human-member-chip"
+                                :class="{ 'is-active': humanChatIsDmMemberSelected(member.user_id) }"
+                                @click="toggleHumanChatDmMember(member.user_id)"
+                            >
+                                <span class="home-v6-agent-human-member-name" x-text="member.label"></span>
+                                <span class="home-v6-agent-human-member-meta" x-text="member.meta"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <input
+                        type="text"
+                        class="home-v6-agent-form-input"
+                        placeholder="대화 이름"
+                        x-model="humanChatDmRoomName"
+                    >
+                    <p class="home-v6-agent-field-error" x-cloak x-show="humanChatDmErrorText" x-text="humanChatDmErrorText"></p>
+                    <div class="home-v6-agent-chat-draft-actions">
+                        <button
+                            type="button"
+                            class="home-v6-agent-chat-action"
+                            :disabled="isHumanChatCreatingDm"
+                            @click="submitHumanChatDm()"
+                            x-text="isHumanChatCreatingDm ? '만드는 중' : '시작'"
+                        ></button>
+                    </div>
+                </div>
+
+                <div class="home-v6-agent-human-utility-panel" x-cloak x-show="humanChatUtilityPanel === 'invite'">
+                    <div class="home-v6-agent-human-utility-head">
+                        <p class="home-v6-agent-human-utility-title">초대</p>
+                        <button type="button" class="home-v6-agent-chat-action" @click="closeHumanChatUtilityPanel()">닫기</button>
+                    </div>
+                    <div class="home-v6-agent-human-toolbar-group">
+                        <template x-for="role in humanChatInviteRoles()" :key="'invite-role-' + role.value">
+                            <button
+                                type="button"
+                                class="home-v6-agent-human-toolbar-chip"
+                                :class="{ 'is-active': humanChatInviteRole === role.value }"
+                                @click="humanChatInviteRole = role.value"
+                                x-text="role.label"
+                            ></button>
+                        </template>
+                    </div>
+                    <input
+                        type="email"
+                        class="home-v6-agent-form-input"
+                        placeholder="이메일"
+                        x-model="humanChatInviteEmail"
+                    >
+                    <p class="home-v6-agent-field-error" x-cloak x-show="humanChatInviteErrorText" x-text="humanChatInviteErrorText"></p>
+                    <div class="home-v6-agent-chat-draft-actions">
+                        <button
+                            type="button"
+                            class="home-v6-agent-chat-action"
+                            :disabled="isHumanChatCreatingInvite"
+                            @click="submitHumanChatInvite()"
+                            x-text="isHumanChatCreatingInvite ? '만드는 중' : '링크 만들기'"
+                        ></button>
+                        <button
+                            type="button"
+                            class="home-v6-agent-chat-action"
+                            x-cloak
+                            x-show="humanChatLatestInviteUrl"
+                            @click="copyHumanChatInviteUrl()"
+                        >복사</button>
+                    </div>
+                    <a
+                        class="home-v6-agent-human-invite-url"
+                        x-cloak
+                        x-show="humanChatLatestInviteUrl"
+                        :href="humanChatLatestInviteUrl || '#'"
+                        x-text="humanChatLatestInviteUrl || ''"
+                        target="_blank"
+                        rel="noopener"
+                    ></a>
+                </div>
+
                 <div class="home-v6-agent-human-thread">
                     <div class="home-v6-agent-chat-row" x-cloak x-show="isHumanChatLoading && !humanChatMessages().length">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
@@ -159,19 +299,96 @@
                                 <p class="home-v6-agent-chat-text" x-cloak x-show="message.body" x-text="message.body || ''"></p>
                                 <div class="home-v6-agent-human-asset-list" x-cloak x-show="Array.isArray(message.assets) && message.assets.length">
                                     <template x-for="asset in message.assets" :key="asset.id">
-                                        <a class="home-v6-agent-human-asset" :href="asset.download_url || '#'" x-text="asset.original_name || '첨부파일'"></a>
+                                        <span class="home-v6-agent-human-asset-item">
+                                            <a class="home-v6-agent-human-asset" :href="asset.download_url || '#'" x-text="asset.original_name || '첨부파일'"></a>
+                                            <button
+                                                type="button"
+                                                class="home-v6-agent-chat-action"
+                                                @click="toggleHumanChatAssetSelection(asset)"
+                                                x-text="humanChatIsAssetSelected(asset.id) ? '선택됨' : '선택'"
+                                            ></button>
+                                        </span>
                                     </template>
                                 </div>
                                 <div class="home-v6-agent-chat-draft-actions">
-                                    <button type="button" class="home-v6-agent-chat-action" @click="setHumanChatReply(message)">답글</button>
-                                    <button type="button" class="home-v6-agent-chat-action" @click="toggleHumanChatReaction(message)">
+                                    <button type="button" class="home-v6-agent-chat-action" x-cloak x-show="humanChatSupportsReply()" @click="setHumanChatReply(message)">답글</button>
+                                    <button type="button" class="home-v6-agent-chat-action" x-cloak x-show="humanChatSupportsReactions()" @click="toggleHumanChatReaction(message)">
                                         확인
                                         <span x-cloak x-show="message.ack_count" x-text="message.ack_count"></span>
                                     </button>
+                                    <button
+                                        type="button"
+                                        class="home-v6-agent-chat-action"
+                                        @click="toggleHumanChatMessageSelection(message)"
+                                        x-text="humanChatIsMessageSelected(message.id) ? '선택됨' : '선택'"
+                                    ></button>
                                 </div>
                             </div>
                         </div>
                     </template>
+                </div>
+
+                <div class="home-v6-agent-human-extras" x-cloak x-show="humanChatHasAssetsPanel() || humanChatCalendarSuggestions().length">
+                    <section class="home-v6-agent-human-extra-card" x-cloak x-show="humanChatHasAssetsPanel()">
+                        <div class="home-v6-agent-human-extra-head">
+                            <p class="home-v6-agent-human-extra-title">자료</p>
+                            <span class="home-v6-agent-rail-item-badge" x-text="humanChatAssetsTotalCount()"></span>
+                        </div>
+                        <div class="home-v6-agent-human-board-section-list">
+                            <template x-for="section in humanChatAssetSections()" :key="'asset-section-' + section.code">
+                                <div class="home-v6-agent-human-board-section">
+                                    <div class="home-v6-agent-human-board-head">
+                                        <p class="home-v6-agent-human-board-title" x-text="section.label"></p>
+                                        <span class="home-v6-agent-human-board-count" x-text="section.count"></span>
+                                    </div>
+                                    <div class="home-v6-agent-human-board-list">
+                                        <template x-for="asset in section.items" :key="'board-asset-' + asset.id">
+                                            <div class="home-v6-agent-human-board-card">
+                                                <div class="home-v6-agent-human-board-copy">
+                                                    <p class="home-v6-agent-human-board-name" x-text="asset.original_name || '자료'"></p>
+                                                    <p class="home-v6-agent-human-board-meta" x-text="asset.posted_by || asset.uploader_name || ''"></p>
+                                                </div>
+                                                <div class="home-v6-agent-chat-draft-actions">
+                                                    <a class="home-v6-agent-chat-action home-v6-agent-chat-action--link" :href="asset.download_url || '#'" target="_blank" rel="noopener">다운로드</a>
+                                                    <a class="home-v6-agent-chat-action home-v6-agent-chat-action--link" :href="asset.message_url || '#'" x-cloak x-show="asset.message_url">원문</a>
+                                                    <button
+                                                        type="button"
+                                                        class="home-v6-agent-chat-action"
+                                                        @click="toggleHumanChatAssetSelection(asset)"
+                                                        x-text="humanChatIsAssetSelected(asset.id) ? '선택됨' : '선택'"
+                                                    ></button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </section>
+
+                    <section class="home-v6-agent-human-extra-card" x-cloak x-show="humanChatCalendarSuggestions().length">
+                        <div class="home-v6-agent-human-extra-head">
+                            <p class="home-v6-agent-human-extra-title">일정</p>
+                            <span class="home-v6-agent-rail-item-badge" x-text="humanChatCalendarSuggestions().length"></span>
+                        </div>
+                        <div class="home-v6-agent-human-calendar-list">
+                            <template x-for="suggestion in humanChatCalendarSuggestions()" :key="'calendar-suggestion-' + suggestion.id">
+                                <div class="home-v6-agent-human-calendar-card">
+                                    <div class="home-v6-agent-human-board-copy">
+                                        <p class="home-v6-agent-human-board-name" x-text="suggestion.title || '추천 일정'"></p>
+                                        <p class="home-v6-agent-human-board-meta" x-text="suggestion.start_time_label || ''"></p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="home-v6-agent-chat-action"
+                                        :disabled="isHumanChatSuggestionApplying(suggestion.id)"
+                                        @click="applyHumanChatCalendarSuggestion(suggestion)"
+                                        x-text="isHumanChatSuggestionApplying(suggestion.id) ? '넣는 중' : '캘린더 넣기'"
+                                    ></button>
+                                </div>
+                            </template>
+                        </div>
+                    </section>
                 </div>
 
                 <div
@@ -219,7 +436,7 @@
                                 multiple
                                 @change="queueHumanChatFilesFromInput($event)"
                             >
-                            <button type="button" class="home-v6-agent-chat-action" @click="openHumanChatFilePicker()">첨부</button>
+                            <button type="button" class="home-v6-agent-chat-action" x-cloak x-show="humanChatCanAttachFiles()" @click="openHumanChatFilePicker()">첨부</button>
                         </div>
                         <button
                             type="button"

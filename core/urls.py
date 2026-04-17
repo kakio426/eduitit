@@ -40,6 +40,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path('api/track-usage/', views.track_product_usage, name='track_product_usage'),
     path('api/home-agent/preview/', views.home_agent_preview, name='home_agent_preview'),
+    path('api/home-agent/conversations/', views.home_agent_conversations, name='home_agent_conversations'),
     path('api/home-agent/execute/', views.home_agent_execute, name='home_agent_execute'),
     path('api/buddy/draw/', views.teacher_buddy_draw, name='teacher_buddy_draw'),
     path('api/buddy/coupon/redeem/', views.teacher_buddy_redeem_coupon_view, name='teacher_buddy_redeem_coupon'),
