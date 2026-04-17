@@ -1551,7 +1551,7 @@
                                     class="classcalendar-home-mobile-day"
                                     :class="getHomeMobileDayClass(date)"
                                     :disabled="!isCurrentMonth(date)"
-                                    @click="selectHomeMobileDate(date)"
+                                    @click="selectHomeMobileDate(date, $event)"
                                     :aria-pressed="isSelectedDate(date) ? 'true' : 'false'"
                                     :title="isCurrentMonth(date) ? getDayTooltip(date) : ''"
                                     x-text="isCurrentMonth(date) ? date.getDate() : ''"
@@ -4979,9 +4979,9 @@ function calendarApp() {
             const nextDate = new Date(targetYear, targetMonth, Math.min(baseDate.getDate(), targetLastDate));
             this.setSelectedDateContext(nextDate);
         },
-        selectHomeMobileDate(date) {
+        selectHomeMobileDate(date, triggerEvent = null) {
             if (!(date instanceof Date) || Number.isNaN(date.getTime()) || !this.isCurrentMonth(date)) return;
-            this.setSelectedDateContext(date);
+            this.handleDayCellClick(date, triggerEvent);
         },
         getHomeMobileDayClass(date) {
             const classes = [];
