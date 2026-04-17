@@ -12,11 +12,6 @@
         class="home-v6-nav-rail-group"
         data-home-v6-nav-section="{{ section.key }}"
         data-home-accent="{{ section.home_accent_token|default:'external' }}"
-        @mouseenter="openSection = '{{ section.key }}'"
-        @mouseleave="if (openSection === '{{ section.key }}') openSection = ''"
-        @focusin="openSection = '{{ section.key }}'"
-        @focusout="if (!$el.contains($event.relatedTarget)) openSection = ''"
-        @click.outside="if (openSection === '{{ section.key }}') openSection = ''"
     >
         {% if section.is_direct %}
         <a
@@ -34,11 +29,10 @@
         </a>
         <div
             class="home-v6-nav-rail-tooltip"
-            x-cloak
-            x-show="openSection === '{{ section.key }}'"
-            x-transition.opacity
-            x-transition.scale.origin.left
             data-home-v6-nav-tooltip="{{ section.key }}"
+            hidden
+            aria-hidden="true"
+            style="display: none;"
         >
             <p class="home-v6-nav-rail-tooltip-title">{{ section.title }}</p>
             {% if section.subtitle %}
@@ -49,8 +43,7 @@
         <button
             type="button"
             class="home-v6-nav-rail-button"
-            @click="openSection = openSection === '{{ section.key }}' ? '' : '{{ section.key }}'"
-            :aria-expanded="openSection === '{{ section.key }}' ? 'true' : 'false'"
+            aria-expanded="false"
             aria-controls="home-v6-nav-flyout-{{ section.key }}"
             aria-label="{{ section.title }}"
             title="{{ section.title }}"
@@ -64,11 +57,10 @@
         <section
             id="home-v6-nav-flyout-{{ section.key }}"
             class="home-v6-nav-flyout"
-            x-cloak
-            x-show="openSection === '{{ section.key }}'"
-            x-transition.opacity
-            x-transition.scale.origin.left
             data-home-v6-nav-flyout="{{ section.key }}"
+            hidden
+            aria-hidden="true"
+            style="display: none;"
         >
             <div class="home-v6-nav-flyout-head">
                 <p class="home-v6-nav-flyout-title">{{ section.title }}</p>
@@ -139,17 +131,11 @@
         class="home-v6-nav-rail-group home-v6-nav-rail-group--settings"
         data-home-v6-nav-section="settings"
         data-home-accent="external"
-        @mouseenter="openSection = 'settings'"
-        @mouseleave="if (openSection === 'settings') openSection = ''"
-        @focusin="openSection = 'settings'"
-        @focusout="if (!$el.contains($event.relatedTarget)) openSection = ''"
-        @click.outside="if (openSection === 'settings') openSection = ''"
     >
         <button
             type="button"
             class="home-v6-nav-rail-button"
-            @click="openSection = openSection === 'settings' ? '' : 'settings'"
-            :aria-expanded="openSection === 'settings' ? 'true' : 'false'"
+            aria-expanded="false"
             aria-controls="home-v6-nav-flyout-settings"
             aria-label="설정"
             title="설정"
@@ -163,11 +149,10 @@
         <section
             id="home-v6-nav-flyout-settings"
             class="home-v6-nav-flyout home-v6-nav-flyout--settings"
-            x-cloak
-            x-show="openSection === 'settings'"
-            x-transition.opacity
-            x-transition.scale.origin.left
             data-home-v6-nav-flyout="settings"
+            hidden
+            aria-hidden="true"
+            style="display: none;"
         >
             <div class="home-v6-nav-flyout-head">
                 <p class="home-v6-nav-flyout-title">설정</p>

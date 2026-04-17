@@ -225,23 +225,90 @@
         }
 
         var activeSectionKey = '';
+        var activeGroup = null;
+        var pinnedSectionKey = '';
 
         function getSectionKey(group) {
             return group && group.dataset ? String(group.dataset.homeV6NavSection || '') : '';
         }
 
-        function setPanelState(panel, isOpen, displayValue) {
+        function resetPanelPosition(panel) {
+            if (!panel) {
+                return;
+            }
+            panel.style.position = '';
+            panel.style.left = '';
+            panel.style.top = '';
+            panel.style.transform = '';
+            panel.style.zIndex = '';
+            panel.style.maxHeight = '';
+        }
+
+        function getPanelTrigger(group) {
+            if (!group) {
+                return null;
+            }
+            return group.querySelector('.home-v6-nav-rail-button') || group;
+        }
+
+        function positionPanel(group, panel) {
+            if (!group || !panel) {
+                return;
+            }
+
+            var trigger = getPanelTrigger(group);
+            if (!trigger) {
+                return;
+            }
+
+            var viewportPadding = 16;
+            var triggerRect = trigger.getBoundingClientRect();
+
+            panel.style.position = 'fixed';
+            panel.style.left = '0px';
+            panel.style.top = '0px';
+            panel.style.transform = 'translate3d(-9999px, -9999px, 0)';
+            panel.style.zIndex = '520';
+            panel.style.maxHeight = Math.max(window.innerHeight - (viewportPadding * 2), 160) + 'px';
+
+            var panelRect = panel.getBoundingClientRect();
+            var left = triggerRect.right + 14;
+            if ((left + panelRect.width) > (window.innerWidth - viewportPadding)) {
+                left = Math.max(viewportPadding, triggerRect.left - panelRect.width - 14);
+            }
+
+            var top = triggerRect.top + (triggerRect.height / 2) - (panelRect.height / 2);
+            var maxTop = Math.max(viewportPadding, window.innerHeight - viewportPadding - panelRect.height);
+            if (top < viewportPadding) {
+                top = viewportPadding;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            panel.style.left = Math.round(left) + 'px';
+            panel.style.top = Math.round(top) + 'px';
+            panel.style.transform = 'none';
+        }
+
+        function setPanelState(group, panel, isOpen, displayValue) {
             if (!panel) {
                 return;
             }
             panel.removeAttribute('x-cloak');
             panel.hidden = !isOpen;
             panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-            panel.style.display = isOpen ? (displayValue || 'block') : 'none';
+            if (isOpen) {
+                panel.style.display = displayValue || 'block';
+                positionPanel(group, panel);
+                return;
+            }
+            panel.style.display = 'none';
+            resetPanelPosition(panel);
         }
 
         function syncRailState(nextKey) {
             activeSectionKey = String(nextKey || '');
+            activeGroup = null;
             groups.forEach(function (group) {
                 var key = getSectionKey(group);
                 var isActive = key && key === activeSectionKey;
@@ -252,9 +319,20 @@
                 if (button) {
                     button.setAttribute('aria-expanded', isActive ? 'true' : 'false');
                 }
-                setPanelState(flyout, isActive, 'block');
-                setPanelState(tooltip, isActive, 'block');
+                setPanelState(group, flyout, isActive, 'block');
+                setPanelState(group, tooltip, isActive, 'block');
+                if (isActive) {
+                    activeGroup = group;
+                }
             });
+        }
+
+        function repositionActivePanels() {
+            if (!activeGroup || !activeSectionKey) {
+                return;
+            }
+            positionPanel(activeGroup, activeGroup.querySelector('[data-home-v6-nav-flyout]'));
+            positionPanel(activeGroup, activeGroup.querySelector('[data-home-v6-nav-tooltip]'));
         }
 
         syncRailState('');
@@ -269,18 +347,30 @@
             }
 
             group.addEventListener('mouseenter', function () {
+                if (pinnedSectionKey && pinnedSectionKey !== key) {
+                    return;
+                }
                 syncRailState(key);
             });
 
             group.addEventListener('mouseleave', function () {
+                if (pinnedSectionKey === key) {
+                    return;
+                }
                 syncRailState('');
             });
 
             group.addEventListener('focusin', function () {
+                if (pinnedSectionKey && pinnedSectionKey !== key) {
+                    return;
+                }
                 syncRailState(key);
             });
 
             group.addEventListener('focusout', function (event) {
+                if (pinnedSectionKey === key) {
+                    return;
+                }
                 if (!group.contains(event.relatedTarget)) {
                     syncRailState('');
                 }
@@ -289,19 +379,30 @@
             if (button) {
                 button.addEventListener('click', function (event) {
                     event.preventDefault();
-                    syncRailState(activeSectionKey === key ? '' : key);
+                    if (activeSectionKey === key && pinnedSectionKey === key) {
+                        pinnedSectionKey = '';
+                        syncRailState('');
+                        return;
+                    }
+                    pinnedSectionKey = key;
+                    syncRailState(key);
                 });
             }
 
             if (directLink) {
                 directLink.addEventListener('click', function () {
+                    pinnedSectionKey = '';
                     syncRailState('');
                 });
             }
         });
 
+        window.addEventListener('resize', repositionActivePanels);
+        window.addEventListener('scroll', repositionActivePanels, true);
+
         document.addEventListener('click', function (event) {
             if (!rail.contains(event.target)) {
+                pinnedSectionKey = '';
                 syncRailState('');
             }
         });
