@@ -244,11 +244,63 @@
             panel.style.maxHeight = '';
         }
 
+        function ensurePanelPortal(panel) {
+            if (!panel) {
+                return;
+            }
+            if (!panel.__homeV6PortalMeta) {
+                panel.__homeV6PortalMeta = {
+                    parent: panel.parentNode,
+                    nextSibling: panel.nextSibling,
+                };
+            }
+            if (panel.parentNode !== document.body) {
+                document.body.appendChild(panel);
+            }
+        }
+
+        function restorePanelPortal(panel) {
+            if (!panel || !panel.__homeV6PortalMeta) {
+                return;
+            }
+            var meta = panel.__homeV6PortalMeta;
+            if (!meta.parent || panel.parentNode === meta.parent) {
+                return;
+            }
+            if (meta.nextSibling && meta.nextSibling.parentNode === meta.parent) {
+                meta.parent.insertBefore(panel, meta.nextSibling);
+                return;
+            }
+            meta.parent.appendChild(panel);
+        }
+
         function getPanelTrigger(group) {
             if (!group) {
                 return null;
             }
             return group.querySelector('.home-v6-nav-rail-button') || group;
+        }
+
+        function getGroupPanels(group) {
+            if (!group) {
+                return [];
+            }
+            return [
+                group.querySelector('[data-home-v6-nav-flyout]'),
+                group.querySelector('[data-home-v6-nav-tooltip]'),
+            ].filter(Boolean);
+        }
+
+        function targetWithinGroupPanels(group, target) {
+            if (!target) {
+                return false;
+            }
+            if (group && group.contains(target)) {
+                return true;
+            }
+            return getGroupPanels(group).some(function (panel) {
+                return panel && panel.contains(target);
+            });
         }
 
         function positionPanel(group, panel) {
@@ -298,12 +350,14 @@
             panel.hidden = !isOpen;
             panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
             if (isOpen) {
+                ensurePanelPortal(panel);
                 panel.style.display = displayValue || 'block';
                 positionPanel(group, panel);
                 return;
             }
             panel.style.display = 'none';
             resetPanelPosition(panel);
+            restorePanelPortal(panel);
         }
 
         function syncRailState(nextKey) {
@@ -353,8 +407,11 @@
                 syncRailState(key);
             });
 
-            group.addEventListener('mouseleave', function () {
+            group.addEventListener('mouseleave', function (event) {
                 if (pinnedSectionKey === key) {
+                    return;
+                }
+                if (targetWithinGroupPanels(group, event.relatedTarget)) {
                     return;
                 }
                 syncRailState('');
@@ -371,7 +428,7 @@
                 if (pinnedSectionKey === key) {
                     return;
                 }
-                if (!group.contains(event.relatedTarget)) {
+                if (!targetWithinGroupPanels(group, event.relatedTarget)) {
                     syncRailState('');
                 }
             });
@@ -395,6 +452,33 @@
                     syncRailState('');
                 });
             }
+
+            getGroupPanels(group).forEach(function (panel) {
+                panel.addEventListener('mouseenter', function () {
+                    syncRailState(key);
+                });
+                panel.addEventListener('mouseleave', function (event) {
+                    if (pinnedSectionKey === key) {
+                        return;
+                    }
+                    if (targetWithinGroupPanels(group, event.relatedTarget)) {
+                        return;
+                    }
+                    syncRailState('');
+                });
+                panel.addEventListener('focusin', function () {
+                    syncRailState(key);
+                });
+                panel.addEventListener('focusout', function (event) {
+                    if (pinnedSectionKey === key) {
+                        return;
+                    }
+                    if (targetWithinGroupPanels(group, event.relatedTarget)) {
+                        return;
+                    }
+                    syncRailState('');
+                });
+            });
         });
 
         window.addEventListener('resize', repositionActivePanels);

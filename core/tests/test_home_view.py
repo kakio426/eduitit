@@ -3617,6 +3617,58 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('data-home-v6-start-panel="desktop"', content)
         self.assertNotIn('지금 바로 할 일', content)
 
+    def test_v6_desktop_nav_rail_flyouts_start_hidden_and_collapsed(self):
+        self._login('v6railmarkup')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertIn('data-home-v6-nav-shell="desktop"', content)
+        self.assertIn('data-home-v6-nav-rail="true"', content)
+        self.assertIn('data-home-v6-nav-flyout="settings"', content)
+        self.assertIn('aria-expanded="false"', content)
+        self.assertIn('aria-hidden="true"', content)
+        self.assertIn('style="display: none;"', content)
+
+    def test_v6_desktop_nav_assets_use_js_portal_contract(self):
+        template = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'templates'
+            / 'core'
+            / 'partials'
+            / 'home_v6_nav_sections.html'
+        ).read_text(encoding='utf-8')
+        desktop_markup, _mobile_markup = template.split('{% else %}', 1)
+        js = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'static'
+            / 'core'
+            / 'js'
+            / 'home_authenticated_v6.js'
+        ).read_text(encoding='utf-8')
+        css = _read_home_v6_css_bundle()
+
+        self.assertIn('data-home-v6-nav-rail="true"', desktop_markup)
+        self.assertIn('aria-hidden="true"', desktop_markup)
+        self.assertIn('style="display: none;"', desktop_markup)
+        self.assertNotIn('@mouseenter', desktop_markup)
+        self.assertNotIn('x-show', desktop_markup)
+        self.assertNotIn('x-cloak', desktop_markup)
+
+        self.assertIn('function ensurePanelPortal(panel)', js)
+        self.assertIn('function restorePanelPortal(panel)', js)
+        self.assertIn('function getGroupPanels(group)', js)
+        self.assertIn('function targetWithinGroupPanels(group, target)', js)
+        self.assertIn('document.body.appendChild(panel);', js)
+        self.assertIn("window.addEventListener('scroll', repositionActivePanels, true);", js)
+
+        self.assertIn('.home-v6-page .home-v6-nav-card--rail', css)
+        self.assertIn('.home-v6-page .home-v6-nav-rail-group.is-open', css)
+        self.assertIn('.home-v6-page .home-v6-nav-flyout,', css)
+        self.assertIn('.home-v6-page .home-v6-nav-rail-tooltip {', css)
+
     def test_v6_first_run_empty_workbench_offers_next_actions(self):
         self._login('v6emptyfirst')
 
