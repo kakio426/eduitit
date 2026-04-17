@@ -158,7 +158,6 @@ HOME_MOBILE_SECTION_ORDER = (
     'calendar',
     'quickdrop',
     'reservations',
-    'buddy',
     'sns',
 )
 HOME_V5_MOBILE_SECTION_ORDER = HOME_MOBILE_SECTION_ORDER
@@ -1231,7 +1230,7 @@ def _is_home_utility_product(product):
     return _canonical_home_service_key(product) in HOME_UTILITY_SERVICE_KEYS
 
 
-def _filter_home_mobile_workbench_items(favorite_items, *, limit=6):
+def _filter_home_mobile_workbench_items(favorite_items, *, limit=4):
     filtered_items = [
         item for item in favorite_items
         if not _is_home_utility_product(item.get('product'))
@@ -5439,7 +5438,7 @@ def build_home_surface_context(
         request,
         label='mobile workbench items',
         fallback_factory=list,
-        builder=lambda: _filter_home_mobile_workbench_items(favorite_items, limit=6),
+        builder=lambda: _filter_home_mobile_workbench_items(favorite_items, limit=4),
     )
     home_mobile_recommend_items = _build_home_surface_mobile_recommend_items(
         representative_recommendations=representative_recommendations,

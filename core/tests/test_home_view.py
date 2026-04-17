@@ -3315,7 +3315,7 @@ class HomeV5ViewTest(TestCase):
         self.assertEqual(response.context['today_workspace']['today_event_count'], 0)
         self.assertFalse(response.context['messagebox_home_card']['enabled'])
 
-    def test_v5_mobile_workbench_renders_more_than_four_items(self):
+    def test_v5_mobile_workbench_limits_favorites_to_four_items(self):
         user = self._login('v5favoriteoverflow')
         favorite_products = []
         for index in range(5):
@@ -3339,8 +3339,9 @@ class HomeV5ViewTest(TestCase):
         sns_index = content.index('data-home-v6-mobile-sns="true"')
         workbench_block = content[workbench_index:calendar_index]
 
-        self.assertEqual(workbench_block.count('data-home-v6-mobile-workbench-card="true"'), 5)
-        self.assertIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', workbench_block)
+        self.assertEqual(workbench_block.count('data-home-v6-mobile-workbench-card="true"'), 4)
+        self.assertIn('title="즐겨찾기 서비스 4">즐겨찾기 서비스 4</p>', workbench_block)
+        self.assertNotIn('title="즐겨찾기 서비스 5">즐겨찾기 서비스 5</p>', workbench_block)
         self.assertLess(workbench_index, calendar_index)
         self.assertLess(calendar_index, sns_index)
 

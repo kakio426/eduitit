@@ -434,6 +434,270 @@
         color: #94a3b8;
     }
 
+    .classcalendar-home-mobile-surface {
+        display: none;
+    }
+
+    .classcalendar-home-desktop-surface {
+        display: block;
+    }
+
+    .classcalendar-home-mobile-expanded-card {
+        border: 1px solid #eceff3;
+        border-radius: 1.85rem;
+        background: #ffffff;
+        padding: 1.5rem 1.3rem 1.2rem;
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .classcalendar-home-mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+    }
+
+    .classcalendar-home-mobile-title {
+        margin: 0;
+        font-size: 1.08rem;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        color: #1f2937;
+    }
+
+    .classcalendar-home-mobile-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.24rem;
+    }
+
+    .classcalendar-home-mobile-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #4b5563;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .classcalendar-home-mobile-nav-btn:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    .classcalendar-home-mobile-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.28rem;
+        margin-top: 1.55rem;
+        padding-bottom: 0.62rem;
+    }
+
+    .classcalendar-home-mobile-weekday {
+        text-align: center;
+        font-size: 0.86rem;
+        line-height: 1;
+        font-weight: 700;
+        color: #3f3f46;
+    }
+
+    .classcalendar-home-mobile-month-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.38rem 0.28rem;
+    }
+
+    .classcalendar-home-mobile-day {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 2.55rem;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #6b7280;
+        font-size: 1rem;
+        line-height: 1;
+        font-weight: 500;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .classcalendar-home-mobile-day:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    .classcalendar-home-mobile-day--placeholder {
+        color: transparent;
+        pointer-events: none;
+    }
+
+    .classcalendar-home-mobile-day--today {
+        color: #111827;
+        font-weight: 800;
+    }
+
+    .classcalendar-home-mobile-day--selected {
+        background: #ff4d4f;
+        color: #ffffff;
+        font-weight: 900;
+        box-shadow: 0 12px 22px rgba(255, 77, 79, 0.26);
+    }
+
+    .classcalendar-home-mobile-day--selected:hover {
+        background: #ff4d4f;
+        color: #ffffff;
+    }
+
+    .classcalendar-home-mobile-agenda {
+        margin-top: 1.28rem;
+        border-top: 1px solid #edf1f4;
+        padding-top: 1.18rem;
+    }
+
+    .classcalendar-home-mobile-agenda-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .classcalendar-home-mobile-agenda-date {
+        margin: 0;
+        font-size: 0.84rem;
+        line-height: 1.25;
+        font-weight: 700;
+        color: #6b7280;
+    }
+
+    .classcalendar-home-mobile-agenda-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-size: 0.84rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #6b7280;
+    }
+
+    .classcalendar-home-mobile-agenda-list {
+        display: grid;
+        gap: 1rem;
+        margin-top: 0.92rem;
+    }
+
+    .classcalendar-home-mobile-agenda-item {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+    }
+
+    .classcalendar-home-mobile-agenda-item:hover .classcalendar-home-mobile-agenda-title {
+        color: #111827;
+    }
+
+    .classcalendar-home-mobile-agenda-time {
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        font-weight: 700;
+        color: #7b818b;
+    }
+
+    .classcalendar-home-mobile-agenda-title {
+        margin: 0.24rem 0 0;
+        font-size: 0.99rem;
+        line-height: 1.3;
+        font-weight: 700;
+        color: #32353c;
+        transition: color 0.2s ease;
+    }
+
+    .classcalendar-home-mobile-agenda-meta {
+        margin: 0.2rem 0 0;
+        font-size: 0.78rem;
+        line-height: 1.35;
+        font-weight: 600;
+        color: #9aa1ab;
+    }
+
+    .classcalendar-home-mobile-agenda-empty {
+        display: grid;
+        gap: 0.58rem;
+        border: 1px dashed #d6dbe2;
+        border-radius: 1rem;
+        background: #fafafa;
+        padding: 0.95rem 1rem;
+        text-align: left;
+    }
+
+    .classcalendar-home-mobile-agenda-empty-copy {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .classcalendar-home-mobile-agenda-empty-action,
+    .classcalendar-home-mobile-agenda-more {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.35rem;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font-size: 0.84rem;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .classcalendar-home-mobile-footer {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-top: 1rem;
+        padding-top: 0.95rem;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    .classcalendar-home-mobile-footer-link,
+    .classcalendar-home-mobile-footer-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1 1 0;
+        min-height: 2.5rem;
+        border-radius: 999px;
+        font-size: 0.84rem;
+        line-height: 1;
+        font-weight: 800;
+    }
+
+    .classcalendar-home-mobile-footer-link {
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #4b5563;
+    }
+
+    .classcalendar-home-mobile-footer-button {
+        border: 0;
+        background: #111827;
+        color: #ffffff;
+    }
+
     .classcalendar-main-toolbar-scroll {
         width: 100%;
         max-width: 100%;
@@ -821,6 +1085,14 @@
     }
 
     @media (max-width: 1099px) {
+        .classcalendar-home-mobile-surface {
+            display: block;
+        }
+
+        .classcalendar-home-desktop-surface {
+            display: none;
+        }
+
         #home-calendar .classcalendar-center-month-panel {
             overflow: hidden;
             border-radius: 1.5rem;
@@ -840,6 +1112,24 @@
     }
 
     @media (max-width: 639px) {
+        .classcalendar-home-mobile-expanded-card {
+            padding: 1.28rem 1rem 1rem;
+            border-radius: 1.65rem;
+        }
+
+        .classcalendar-home-mobile-title {
+            font-size: 1rem;
+        }
+
+        .classcalendar-home-mobile-day {
+            height: 2.35rem;
+            font-size: 0.95rem;
+        }
+
+        .classcalendar-home-mobile-agenda-title {
+            font-size: 0.96rem;
+        }
+
         .classcalendar-home-workweek-surface {
             min-width: 900px;
         }
@@ -902,6 +1192,16 @@
             white-space: normal;
             text-align: center;
             line-height: 1.2;
+        }
+    }
+
+    @media (min-width: 1100px) {
+        .classcalendar-home-mobile-surface {
+            display: none;
+        }
+
+        .classcalendar-home-desktop-surface {
+            display: block;
         }
     }
 
@@ -1220,47 +1520,135 @@
             {% endif %}
             <div class="mb-2.5 sm:mb-3" data-classcalendar-main-view="true">
                 {% if is_embedded_on_home %}
-                <div class="classcalendar-home-workweek-toolbar" data-classcalendar-home-toolbar="true">
-                    <div class="classcalendar-home-workweek-month-group">
-                        <button type="button" @click="prevMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="이전 달">
-                            <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M15 19l-7-7 7-7"/>
-                            </svg>
-                        </button>
-                        <h2 class="classcalendar-home-workweek-title" x-text="currentMonthText"></h2>
-                        <button type="button" @click="nextMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="다음 달">
-                            <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="classcalendar-home-workweek-actions">
-                        <button
-                            type="button"
-                            @click="selectToday()"
-                            class="classcalendar-home-workweek-action"
-                        >
-                            오늘
-                        </button>
-                        <a
-                            href="{{ calendar_center_url }}?focus_search=1#calendar-search"
-                            class="classcalendar-home-workweek-action"
-                        >
-                            일정 찾기
-                        </a>
-                        <a
-                            href="{{ calendar_center_url }}"
-                            class="classcalendar-home-workweek-action"
-                        >
-                            전체 일정
-                        </a>
-                        <button
-                            type="button"
-                            @click="openCreateModalForSelectedDate()"
-                            class="classcalendar-home-workweek-action classcalendar-home-workweek-action--primary"
-                        >
-                            새 일정
-                        </button>
+                <div class="classcalendar-home-mobile-surface" data-classcalendar-home-mobile-surface="true">
+                    <section class="classcalendar-home-mobile-expanded-card" data-classcalendar-home-mobile-expanded="true">
+                        <div class="classcalendar-home-mobile-header">
+                            <h2 class="classcalendar-home-mobile-title" x-text="currentMonthText"></h2>
+                            <div class="classcalendar-home-mobile-nav">
+                                <button type="button" @click="shiftHomeMobileMonth(-1)" class="classcalendar-home-mobile-nav-btn" aria-label="이전 달">
+                                    <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M15 19l-7-7 7-7"/>
+                                    </svg>
+                                </button>
+                                <button type="button" @click="shiftHomeMobileMonth(1)" class="classcalendar-home-mobile-nav-btn" aria-label="다음 달">
+                                    <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="classcalendar-home-mobile-weekdays">
+                            <template x-for="day in ['월', '화', '수', '목', '금', '토', '일']" :key="`mobile-day-${day}`">
+                                <div class="classcalendar-home-mobile-weekday" x-text="day"></div>
+                            </template>
+                        </div>
+
+                        <div class="classcalendar-home-mobile-month-grid">
+                            <template x-for="date in homeMobileCalendarDates" :key="`home-mobile-date-${date.toISOString()}`">
+                                <button
+                                    type="button"
+                                    class="classcalendar-home-mobile-day"
+                                    :class="getHomeMobileDayClass(date)"
+                                    :disabled="!isCurrentMonth(date)"
+                                    @click="selectHomeMobileDate(date)"
+                                    :aria-pressed="isSelectedDate(date) ? 'true' : 'false'"
+                                    :title="isCurrentMonth(date) ? getDayTooltip(date) : ''"
+                                    x-text="isCurrentMonth(date) ? date.getDate() : ''"
+                                ></button>
+                            </template>
+                        </div>
+
+                        <div class="classcalendar-home-mobile-agenda">
+                            <div class="classcalendar-home-mobile-agenda-head">
+                                <p class="classcalendar-home-mobile-agenda-date" x-text="selectedDateKey ? formatAgendaDate(selectedDateKey) : ''"></p>
+                                <a href="{{ calendar_center_url }}" class="classcalendar-home-mobile-agenda-link">전체 일정</a>
+                            </div>
+
+                            <div class="classcalendar-home-mobile-agenda-list">
+                                <template x-if="homeMobileVisibleSelectedItems.length === 0">
+                                    <div class="classcalendar-home-mobile-agenda-empty">
+                                        <p class="classcalendar-home-mobile-agenda-empty-copy">이 날은 비어 있습니다.</p>
+                                        <button type="button" @click="openCreateModalForSelectedDate()" class="classcalendar-home-mobile-agenda-empty-action">
+                                            새 일정
+                                            <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <template x-for="item in homeMobileVisibleSelectedItems" :key="item.key">
+                                    <button
+                                        type="button"
+                                        @click="openHomeMobileAgendaItem(item, $event)"
+                                        class="classcalendar-home-mobile-agenda-item"
+                                    >
+                                        <p class="classcalendar-home-mobile-agenda-time" x-text="item.timeLabel"></p>
+                                        <p class="classcalendar-home-mobile-agenda-title" x-text="item.title"></p>
+                                        <p x-show="item.metaText" class="classcalendar-home-mobile-agenda-meta" x-text="item.metaText"></p>
+                                    </button>
+                                </template>
+
+                                <button
+                                    type="button"
+                                    x-show="homeMobileSelectedItemsOverflowCount > 0"
+                                    @click="openDayOverview(parseDateKey(selectedDateKey), $event)"
+                                    class="classcalendar-home-mobile-agenda-more"
+                                >
+                                    <span x-text="`+${homeMobileSelectedItemsOverflowCount}개 더 보기`"></span>
+                                    <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
+                                </button>
+                            </div>
+
+                            <div class="classcalendar-home-mobile-footer">
+                                <a href="{{ calendar_center_url }}?focus_search=1#calendar-search" class="classcalendar-home-mobile-footer-link">일정 찾기</a>
+                                <button type="button" @click="openCreateModalForSelectedDate()" class="classcalendar-home-mobile-footer-button">새 일정</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="classcalendar-home-desktop-surface" data-classcalendar-home-desktop-surface="true">
+                    <div class="classcalendar-home-workweek-toolbar" data-classcalendar-home-toolbar="true">
+                        <div class="classcalendar-home-workweek-month-group">
+                            <button type="button" @click="prevMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="이전 달">
+                                <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                            <h2 class="classcalendar-home-workweek-title" x-text="currentMonthText"></h2>
+                            <button type="button" @click="nextMonth()" class="classcalendar-home-workweek-nav-btn" aria-label="다음 달">
+                                <svg class="classcalendar-main-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="classcalendar-home-workweek-actions">
+                            <button
+                                type="button"
+                                @click="selectToday()"
+                                class="classcalendar-home-workweek-action"
+                            >
+                                오늘
+                            </button>
+                            <a
+                                href="{{ calendar_center_url }}?focus_search=1#calendar-search"
+                                class="classcalendar-home-workweek-action"
+                            >
+                                일정 찾기
+                            </a>
+                            <a
+                                href="{{ calendar_center_url }}"
+                                class="classcalendar-home-workweek-action"
+                            >
+                                전체 일정
+                            </a>
+                            <button
+                                type="button"
+                                @click="openCreateModalForSelectedDate()"
+                                class="classcalendar-home-workweek-action classcalendar-home-workweek-action--primary"
+                            >
+                                새 일정
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% else %}
@@ -1323,7 +1711,7 @@
             </div>
 
             <div
-                class="min-w-0"
+                class="min-w-0{% if is_embedded_on_home %} classcalendar-home-desktop-surface{% endif %}"
                 {% if is_embedded_on_home %}
                 data-classcalendar-home-grid-wrap="true"
                 style="padding-bottom: 0.5rem;"
@@ -4504,6 +4892,121 @@ function calendarApp() {
             return map[this.messageCapturePredictedItemType] || 'border-slate-200 bg-slate-100 text-slate-700';
         },
         get currentMonthText() { return `${this.currentDate.getFullYear()}년 ${this.currentDate.getMonth() + 1}월`; },
+        get homeMobileCalendarDates() {
+            const year = this.currentDate.getFullYear();
+            const month = this.currentDate.getMonth();
+            const first = new Date(year, month, 1);
+            const last = new Date(year, month + 1, 0);
+            const start = new Date(first);
+            const mondayOffset = first.getDay() === 0 ? 6 : first.getDay() - 1;
+            start.setDate(start.getDate() - mondayOffset);
+            const end = new Date(last);
+            const sundayOffset = last.getDay() === 0 ? 0 : 7 - last.getDay();
+            end.setDate(end.getDate() + sundayOffset);
+
+            const dates = [];
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                dates.push(new Date(cursor));
+            }
+            return dates;
+        },
+        get homeMobileSelectedItems() {
+            if (!this.selectedDateKey) return [];
+
+            const selectedDate = this.parseDateKey(this.selectedDateKey);
+            const items = [];
+
+            this.getEventsForSelectedDate().forEach((event) => {
+                const startAt = event && event.start_time ? new Date(event.start_time) : null;
+                items.push({
+                    key: `event-${event.id}`,
+                    kind: 'event',
+                    eventId: event.id,
+                    title: event.title,
+                    timeLabel: event.is_all_day ? '하루 종일' : (startAt instanceof Date && !Number.isNaN(startAt.getTime()) ? this.formatClock(startAt) : '일정'),
+                    metaText: event.is_holiday ? this.getEventStatusText(event) : '',
+                    sortValue: startAt instanceof Date && !Number.isNaN(startAt.getTime()) ? startAt.getTime() : 0,
+                });
+            });
+
+            this.getVisibleHubItemsForDate(selectedDate).forEach((item) => {
+                const startAt = item && item.start_at ? new Date(item.start_at) : null;
+                const sortDate = item.start_at || item.sort_at || (item.date_key ? this.parseDateKey(item.date_key) : null);
+                items.push({
+                    key: `hub-${item.id}`,
+                    kind: 'hub',
+                    sourceId: item.id,
+                    title: item.title,
+                    timeLabel: item.is_all_day ? '하루 종일' : (startAt instanceof Date && !Number.isNaN(startAt.getTime()) ? this.formatClock(startAt) : (item.serviceLabel || '확인')),
+                    metaText: item.status_label || '',
+                    sortValue: sortDate instanceof Date && !Number.isNaN(sortDate.getTime()) ? sortDate.getTime() : 0,
+                });
+            });
+
+            this.getTasksForSelectedDate().forEach((task) => {
+                const dueAt = task && task.due_at ? new Date(task.due_at) : null;
+                const taskStatus = this.getTaskStatusText(task);
+                items.push({
+                    key: `task-${task.id}`,
+                    kind: 'task',
+                    taskId: task.id,
+                    title: task.title,
+                    timeLabel: task && task.has_time && dueAt instanceof Date && !Number.isNaN(dueAt.getTime()) ? this.formatClock(dueAt) : '할 일',
+                    metaText: taskStatus === '진행 중' ? '' : taskStatus,
+                    sortValue: dueAt instanceof Date && !Number.isNaN(dueAt.getTime()) ? dueAt.getTime() : Number.MAX_SAFE_INTEGER,
+                });
+            });
+
+            return items.sort((left, right) => {
+                if (left.sortValue !== right.sortValue) return left.sortValue - right.sortValue;
+                return String(left.title || '').localeCompare(String(right.title || ''), 'ko');
+            });
+        },
+        get homeMobileVisibleSelectedItems() {
+            return this.homeMobileSelectedItems.slice(0, 4);
+        },
+        get homeMobileSelectedItemsOverflowCount() {
+            return Math.max(this.homeMobileSelectedItems.length - this.homeMobileVisibleSelectedItems.length, 0);
+        },
+        shiftHomeMobileMonth(offset = 0) {
+            const baseDate = this.selectedDateKey
+                ? this.parseDateKey(this.selectedDateKey)
+                : new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+            const safeOffset = Number(offset) || 0;
+            const targetYear = baseDate.getFullYear();
+            const targetMonth = baseDate.getMonth() + safeOffset;
+            const targetLastDate = new Date(targetYear, targetMonth + 1, 0).getDate();
+            const nextDate = new Date(targetYear, targetMonth, Math.min(baseDate.getDate(), targetLastDate));
+            this.setSelectedDateContext(nextDate);
+        },
+        selectHomeMobileDate(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime()) || !this.isCurrentMonth(date)) return;
+            this.setSelectedDateContext(date);
+        },
+        getHomeMobileDayClass(date) {
+            const classes = [];
+            if (!this.isCurrentMonth(date)) classes.push('classcalendar-home-mobile-day--placeholder');
+            if (this.isToday(date)) classes.push('classcalendar-home-mobile-day--today');
+            if (this.isSelectedDate(date)) classes.push('classcalendar-home-mobile-day--selected');
+            return classes;
+        },
+        async openHomeMobileAgendaItem(item, triggerEvent = null) {
+            if (!item) return;
+            if (item.kind === 'event') {
+                this.openEventDetailById(item.eventId);
+                return;
+            }
+            if (item.kind === 'task') {
+                this.openTaskDetailById(item.taskId);
+                return;
+            }
+            if (item.kind === 'hub') {
+                const hubItem = this.findHubItemById(item.sourceId);
+                if (hubItem) {
+                    await this.openSelectedDateHubItem(hubItem, triggerEvent);
+                }
+            }
+        },
         get calendarDates() {
             const y = this.currentDate.getFullYear();
             const m = this.currentDate.getMonth();
