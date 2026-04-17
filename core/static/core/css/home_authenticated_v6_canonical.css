@@ -251,11 +251,13 @@ border-color: transparent;
 .home-v6-page .home-v6-nav-card--rail {
 padding: 0.4rem;
     overflow: visible;
+    z-index: 90;
 }
 
 .home-v6-page .home-v6-nav-stack--rail,
 .home-v6-page .home-v6-nav-rail {
 gap: 0.55rem;
+    overflow: visible;
 }
 
 .home-v6-page .home-v6-nav-rail {
@@ -267,6 +269,10 @@ display: grid;
 position: relative;
     display: grid;
     justify-items: center;
+}
+
+.home-v6-page .home-v6-nav-rail-group.is-open {
+z-index: 110;
 }
 
 .home-v6-page .home-v6-nav-rail-button {
@@ -307,7 +313,7 @@ position: absolute;
     left: calc(100% + 0.9rem);
     top: 50%;
     transform: translateY(-50%);
-    z-index: 30;
+    z-index: 140;
     width: 20rem;
     max-height: calc(100vh - 8rem);
     overflow-y: auto;
@@ -2434,15 +2440,18 @@ display: grid;
 .home-v6-layout {
 display: grid;
         grid-template-columns: 5rem minmax(0, 1fr);
+        overflow: visible;
 }
 
 .home-v6-nav-shell {
 display: grid;
         gap: var(--home-v6-panel-gap);
         position: sticky;
+        z-index: 100;
         top: calc(var(--main-nav-height, 88px) + 1rem);
         align-self: start;
         width: 5rem;
+        overflow: visible;
 }
 
 .home-v6-main {

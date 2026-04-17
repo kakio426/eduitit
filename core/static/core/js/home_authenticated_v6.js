@@ -211,6 +211,102 @@
         return normalized ? normalized : '';
     }
 
+    function initHomeV6DesktopRail() {
+        var rail = document.querySelector('[data-home-v6-nav-rail="true"]');
+        if (!rail || rail.dataset.jsBound === 'true') {
+            return;
+        }
+
+        rail.dataset.jsBound = 'true';
+
+        var groups = Array.prototype.slice.call(rail.querySelectorAll('[data-home-v6-nav-section]'));
+        if (!groups.length) {
+            return;
+        }
+
+        var activeSectionKey = '';
+
+        function getSectionKey(group) {
+            return group && group.dataset ? String(group.dataset.homeV6NavSection || '') : '';
+        }
+
+        function setPanelState(panel, isOpen, displayValue) {
+            if (!panel) {
+                return;
+            }
+            panel.removeAttribute('x-cloak');
+            panel.hidden = !isOpen;
+            panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+            panel.style.display = isOpen ? (displayValue || 'block') : 'none';
+        }
+
+        function syncRailState(nextKey) {
+            activeSectionKey = String(nextKey || '');
+            groups.forEach(function (group) {
+                var key = getSectionKey(group);
+                var isActive = key && key === activeSectionKey;
+                var button = group.querySelector('.home-v6-nav-rail-button:not(.home-v6-nav-rail-button--direct)');
+                var flyout = group.querySelector('[data-home-v6-nav-flyout]');
+                var tooltip = group.querySelector('[data-home-v6-nav-tooltip]');
+                group.classList.toggle('is-open', isActive);
+                if (button) {
+                    button.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+                }
+                setPanelState(flyout, isActive, 'block');
+                setPanelState(tooltip, isActive, 'block');
+            });
+        }
+
+        syncRailState('');
+
+        groups.forEach(function (group) {
+            var key = getSectionKey(group);
+            var button = group.querySelector('.home-v6-nav-rail-button:not(.home-v6-nav-rail-button--direct)');
+            var directLink = group.querySelector('.home-v6-nav-rail-button--direct');
+
+            if (!key) {
+                return;
+            }
+
+            group.addEventListener('mouseenter', function () {
+                syncRailState(key);
+            });
+
+            group.addEventListener('mouseleave', function () {
+                syncRailState('');
+            });
+
+            group.addEventListener('focusin', function () {
+                syncRailState(key);
+            });
+
+            group.addEventListener('focusout', function (event) {
+                if (!group.contains(event.relatedTarget)) {
+                    syncRailState('');
+                }
+            });
+
+            if (button) {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    syncRailState(activeSectionKey === key ? '' : key);
+                });
+            }
+
+            if (directLink) {
+                directLink.addEventListener('click', function () {
+                    syncRailState('');
+                });
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!rail.contains(event.target)) {
+                syncRailState('');
+            }
+        });
+    }
+
     function appendQueryParams(href, params) {
         var baseHref = trimLine(href);
         if (!baseHref) {
@@ -1511,6 +1607,8 @@
             return;
         }
         window.__homeCommonInteractionsInitialized = true;
+
+        initHomeV6DesktopRail();
 
         var config = getHomeFrontendConfig();
         var favoriteIds = new Set();
