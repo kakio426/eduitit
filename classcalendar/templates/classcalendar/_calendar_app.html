@@ -2207,21 +2207,25 @@
                             </div>
                             <span class="text-xs font-bold text-slate-400" x-text="`${getSelectedDateDirectHubCount()}건`"></span>
                         </div>
-                        <div class="space-y-3">
-                            <template x-for="item in getSelectedDateDirectHubItems()" :key="`day-hub-${item.id}`">
+                        <div class="space-y-2.5">
+                            <template x-for="item in getSelectedDateDirectHubDisplayItems()" :key="`day-hub-${item.id}`">
                                 <button
                                     type="button"
-                                    @click="openSelectedDateHubItem(item, $event)"
-                                    class="block w-full rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/40"
+                                    @click="openSelectedDateHubItem(item.clickItem || item, $event)"
+                                    class="block w-full rounded-[1.25rem] border border-slate-200 bg-white px-4 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/40"
+                                    :class="item.isCondensedReservation ? 'py-3' : 'py-4'"
                                 >
-                                    <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start justify-between gap-3" :class="item.isCondensedReservation ? 'sm:items-center' : ''">
                                         <div class="min-w-0">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800" x-text="item.serviceLabel"></span>
-                                                <span x-show="item.status_label" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.status_label"></span>
+                                                <span x-show="item.displayStatusLabel || item.status_label" class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600" x-text="item.displayStatusLabel || item.status_label"></span>
+                                                <span x-show="item.displayCountLabel" class="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200" x-text="item.displayCountLabel"></span>
                                             </div>
-                                            <p class="classcalendar-copy mt-2 text-base font-black text-slate-900" x-text="item.title"></p>
-                                            <p x-show="item.meta_text" class="mt-1 text-sm font-semibold text-slate-500" x-text="item.meta_text"></p>
+                                            <div class="min-w-0" :class="item.isCondensedReservation ? 'mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1' : ''">
+                                                <p class="classcalendar-copy text-base font-black text-slate-900" :class="item.isCondensedReservation ? 'mt-0' : 'mt-2'" x-text="item.displayTitle || item.title"></p>
+                                                <p x-show="item.displayMeta || item.meta_text" class="text-sm font-semibold text-slate-500" :class="item.isCondensedReservation ? 'mt-0' : 'mt-1'" x-text="item.displayMeta || item.meta_text"></p>
+                                            </div>
                                         </div>
                                         <span class="shrink-0 text-xs font-bold text-amber-700">열기</span>
                                     </div>
@@ -4370,6 +4374,90 @@ function calendarApp() {
 
         getSelectedDateDirectHubItems() {
             return this.getSelectedDateHubItems().filter((item) => !['event', 'task'].includes(item.item_kind));
+        },
+
+        extractReservationPeriodLabel(item) {
+            const metaText = String(item && item.meta_text ? item.meta_text : '');
+            const matched = metaText.match(/(\d+교시)/);
+            if (matched) return matched[1];
+            const firstSegment = metaText
+                .split('·')
+                .map((part) => String(part || '').trim())
+                .find(Boolean);
+            return firstSegment || '';
+        },
+
+        formatReservationPeriodSummary(periodLabels) {
+            const uniqueLabels = [...new Set((periodLabels || []).filter(Boolean))];
+            const numericPeriods = uniqueLabels
+                .map((label) => Number.parseInt(String(label).replace(/[^0-9]/g, ''), 10))
+                .filter((value) => Number.isFinite(value))
+                .sort((left, right) => left - right);
+            if (!numericPeriods.length) {
+                return uniqueLabels.join(', ');
+            }
+            const parts = [];
+            let rangeStart = numericPeriods[0];
+            let previous = numericPeriods[0];
+            for (let index = 1; index <= numericPeriods.length; index += 1) {
+                const current = numericPeriods[index];
+                if (current === previous + 1) {
+                    previous = current;
+                    continue;
+                }
+                parts.push(rangeStart === previous ? `${rangeStart}교시` : `${rangeStart}~${previous}교시`);
+                rangeStart = current;
+                previous = current;
+            }
+            return parts.join(', ');
+        },
+
+        buildCondensedReservationHubItem(items) {
+            const sourceItems = Array.isArray(items) ? items.filter(Boolean) : [];
+            const firstItem = sourceItems[0];
+            if (!firstItem) return null;
+            const periodSummary = this.formatReservationPeriodSummary(
+                sourceItems.map((item) => this.extractReservationPeriodLabel(item))
+            );
+            const hasConflict = sourceItems.some((item) => item.status_label === '확인 필요');
+            return {
+                ...firstItem,
+                id: `reservation-group:${sourceItems.map((item) => item.id).join(':')}`,
+                clickItem: firstItem,
+                displayTitle: firstItem.title || '특별실 예약',
+                displayMeta: periodSummary || firstItem.meta_text || '',
+                displayStatusLabel: hasConflict ? '확인 필요' : (firstItem.status_label || '예약됨'),
+                displayCountLabel: sourceItems.length > 1 ? `${sourceItems.length}건` : '',
+                isCondensedReservation: true,
+            };
+        },
+
+        getSelectedDateDirectHubDisplayItems() {
+            const displayItems = [];
+            const reservationGroups = new Map();
+
+            this.getSelectedDateDirectHubItems().forEach((item) => {
+                if (!item || item.item_kind !== 'reservation') {
+                    displayItems.push(item);
+                    return;
+                }
+                const groupKey = [
+                    String(item.item_kind || ''),
+                    String(item.title || '').trim(),
+                    String(item.source_url || '').split('?')[0],
+                ].join('::');
+                let group = reservationGroups.get(groupKey);
+                if (!group) {
+                    group = [];
+                    reservationGroups.set(groupKey, group);
+                    displayItems.push(group);
+                }
+                group.push(item);
+            });
+
+            return displayItems
+                .map((item) => Array.isArray(item) ? this.buildCondensedReservationHubItem(item) : item)
+                .filter(Boolean);
         },
 
         getSelectedDateDirectHubCount() {
