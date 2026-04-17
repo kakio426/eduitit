@@ -250,6 +250,7 @@ border-color: transparent;
 
 .home-v6-page .home-v6-nav-card--rail {
 padding: 0.12rem 0.34rem 0.34rem;
+    margin-top: var(--home-v6-rail-align-offset, 0px);
     overflow: visible;
     z-index: 90;
 }
@@ -349,6 +350,17 @@ position: absolute;
     box-shadow:
         0 12px 28px rgba(15, 23, 42, 0.06),
         0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+.home-v6-page .home-v6-nav-flyout::before,
+.home-v6-page .home-v6-nav-rail-tooltip::before {
+content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -18px;
+    width: 18px;
+    background: transparent;
 }
 
 .home-v6-page .home-v6-nav-portal-root .home-v6-nav-flyout,

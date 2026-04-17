@@ -227,6 +227,8 @@
         var activeSectionKey = '';
         var activeGroup = null;
         var pinnedSectionKey = '';
+        var closeDelayTimer = 0;
+        var railCloseDelayMs = 220;
 
         function getSectionKey(group) {
             return group && group.dataset ? String(group.dataset.homeV6NavSection || '') : '';
@@ -264,6 +266,42 @@
             var rootStyles = window.getComputedStyle(document.documentElement);
             var mainNavHeight = parseFloat(rootStyles.getPropertyValue('--main-nav-height')) || 88;
             return Math.max(16, Math.round(mainNavHeight + 12));
+        }
+
+        function syncRailAlignment() {
+            var railCard = rail.closest('[data-home-v6-nav-card="rail"]');
+            var calendarGrid = document.querySelector('[data-home-v6-calendar-panel="desktop"] [data-classcalendar-home-grid-wrap="true"]');
+            if (!railCard || !calendarGrid) {
+                if (railCard) {
+                    railCard.style.setProperty('--home-v6-rail-align-offset', '0px');
+                }
+                return;
+            }
+            var railCardRect = railCard.getBoundingClientRect();
+            var calendarGridRect = calendarGrid.getBoundingClientRect();
+            var offset = Math.max(0, Math.round(calendarGridRect.top - railCardRect.top));
+            railCard.style.setProperty('--home-v6-rail-align-offset', offset + 'px');
+        }
+
+        function cancelPendingClose() {
+            if (!closeDelayTimer) {
+                return;
+            }
+            window.clearTimeout(closeDelayTimer);
+            closeDelayTimer = 0;
+        }
+
+        function scheduleRailClose(key) {
+            cancelPendingClose();
+            closeDelayTimer = window.setTimeout(function () {
+                closeDelayTimer = 0;
+                if (pinnedSectionKey === key) {
+                    return;
+                }
+                if (activeSectionKey === key) {
+                    syncRailState('');
+                }
+            }, railCloseDelayMs);
         }
 
         function ensurePanelPortal(panel) {
@@ -398,6 +436,9 @@
         }
 
         function syncRailState(nextKey) {
+            if (nextKey) {
+                cancelPendingClose();
+            }
             activeSectionKey = String(nextKey || '');
             activeGroup = null;
             groups.forEach(function (group) {
@@ -420,6 +461,7 @@
         }
 
         function repositionActivePanels() {
+            syncRailAlignment();
             if (!activeGroup || !activeSectionKey) {
                 return;
             }
@@ -428,6 +470,7 @@
         }
 
         syncRailState('');
+        syncRailAlignment();
 
         groups.forEach(function (group) {
             var key = getSectionKey(group);
@@ -443,6 +486,7 @@
                 if (pinnedSectionKey && pinnedSectionKey !== key) {
                     return;
                 }
+                cancelPendingClose();
                 syncRailState(key);
             });
 
@@ -453,13 +497,14 @@
                 if (targetWithinGroupPanels(group, event.relatedTarget)) {
                     return;
                 }
-                syncRailState('');
+                scheduleRailClose(key);
             });
 
             group.addEventListener('focusin', function () {
                 if (pinnedSectionKey && pinnedSectionKey !== key) {
                     return;
                 }
+                cancelPendingClose();
                 syncRailState(key);
             });
 
@@ -468,7 +513,7 @@
                     return;
                 }
                 if (!targetWithinGroupPanels(group, event.relatedTarget)) {
-                    syncRailState('');
+                    scheduleRailClose(key);
                 }
             });
 
@@ -494,6 +539,7 @@
 
             getGroupPanels(group).forEach(function (panel) {
                 panel.addEventListener('mouseenter', function () {
+                    cancelPendingClose();
                     syncRailState(key);
                 });
                 panel.addEventListener('mouseleave', function (event) {
@@ -503,9 +549,10 @@
                     if (targetWithinGroupPanels(group, event.relatedTarget)) {
                         return;
                     }
-                    syncRailState('');
+                    scheduleRailClose(key);
                 });
                 panel.addEventListener('focusin', function () {
+                    cancelPendingClose();
                     syncRailState(key);
                 });
                 panel.addEventListener('focusout', function (event) {
@@ -515,7 +562,7 @@
                     if (targetWithinGroupPanels(group, event.relatedTarget)) {
                         return;
                     }
-                    syncRailState('');
+                    scheduleRailClose(key);
                 });
             });
         });
@@ -525,6 +572,7 @@
 
         document.addEventListener('click', function (event) {
             if (!rail.contains(event.target)) {
+                cancelPendingClose();
                 pinnedSectionKey = '';
                 syncRailState('');
             }

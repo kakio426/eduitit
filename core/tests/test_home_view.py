@@ -3662,12 +3662,17 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('home-v6-nav-settings-summary', desktop_markup)
 
         self.assertIn('function getPortalRoot()', js)
+        self.assertIn('function cancelPendingClose()', js)
+        self.assertIn('function scheduleRailClose(key)', js)
+        self.assertIn('function syncRailAlignment()', js)
         self.assertIn('function ensurePanelPortal(panel)', js)
         self.assertIn('function restorePanelPortal(panel)', js)
         self.assertIn('function ensureGroupPanelCache(group)', js)
         self.assertIn('function getGroupPanels(group)', js)
         self.assertIn('function getGroupPanel(group, panelType)', js)
         self.assertIn('function targetWithinGroupPanels(group, target)', js)
+        self.assertIn('var railCloseDelayMs = 220;', js)
+        self.assertIn("railCard.style.setProperty('--home-v6-rail-align-offset', offset + 'px');", js)
         self.assertIn("portalRoot.dataset.homeV6NavPortalRoot = 'true';", js)
         self.assertIn('portalRoot.appendChild(panel);', js)
         self.assertIn("window.addEventListener('scroll', repositionActivePanels, true);", js)
@@ -3678,6 +3683,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .home-v6-nav-rail-group.is-open', css)
         self.assertIn('.home-v6-page .home-v6-nav-flyout,', css)
         self.assertIn('.home-v6-page .home-v6-nav-rail-tooltip {', css)
+        self.assertIn('.home-v6-page .home-v6-nav-flyout::before,', css)
         self.assertIn('.home-v6-page .home-v6-nav-flyout .home-v6-tool-summary {', css)
 
     def test_v6_first_run_empty_workbench_offers_next_actions(self):
