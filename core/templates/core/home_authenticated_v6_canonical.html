@@ -3,6 +3,12 @@
 
 {% block title %}{{ page_title|default:brand_home_title_ko }}{% endblock %}
 
+{% block extra_head %}
+<script>
+document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
+</script>
+{% endblock %}
+
 {% block extra_css %}
 <link href="{% static 'core/css/home_teacher_buddy.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_authenticated_v6.css' %}" rel="stylesheet">
@@ -20,7 +26,7 @@
 
 {% block content %}
 <div class="min-h-screen home-v6-page" data-home-layout-version="v6">
-    <div class="mx-auto max-w-[1760px]" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
+    <div class="mx-auto max-w-[1760px]" data-home-v6-page-frame="true" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
         <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-5 lg:px-5 xl:px-6 2xl:px-6">
             <div
                 class="home-v6-shell"

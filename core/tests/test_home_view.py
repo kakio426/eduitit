@@ -3567,7 +3567,9 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('core/js/home_authenticated_v2.js', content)
         self.assertIn('data-home-layout-version="v6"', content)
         self.assertIn('data-home-design-version="v6"', content)
+        self.assertIn("data-home-mobile-chrome', 'minimal'", content)
         self.assertIn('data-home-v6-shell="true"', content)
+        self.assertIn('data-home-v6-page-frame="true"', content)
         self.assertIn('data-home-v6-mobile-summary="true"', content)
         self.assertIn('data-home-v6-mobile-sheet="true"', content)
         self.assertNotIn('data-home-v6-start-panel="mobile"', content)
@@ -4145,6 +4147,9 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('@media (min-width: 1100px)', public_css)
         self.assertIn('grid-template-columns: minmax(0, 1.3fr) minmax(20rem, 0.9fr);', public_css)
         self.assertIn('grid-column: 1 / -1;', public_css)
+        self.assertIn('html[data-home-mobile-chrome="minimal"] #mainNav', public_css)
+        self.assertIn('html[data-home-mobile-chrome="minimal"] .home-public-v6-header', public_css)
+        self.assertIn('html[data-home-mobile-chrome="minimal"] #mainNav', _read_home_v6_css_bundle())
 
     def test_v6_home_shows_shared_school_reservation_card(self):
         owner = _create_onboarded_user('v6owner')
@@ -4232,6 +4237,7 @@ class HomeV6ViewTest(TestCase):
         _assert_public_home_context_contract(self, response)
         self.assertIn('core/css/home_public_v5.css', content)
         self.assertIn('core/css/home_public_v6.css', content)
+        self.assertIn("data-home-mobile-chrome', 'minimal'", content)
         self.assertIn('home-public-v6-page', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('data-home-v6-public-header="true"', content)

@@ -3,6 +3,12 @@
 
 {% block title %}{{ page_title|default:brand_home_title_ko }}{% endblock %}
 
+{% block extra_head %}
+<script>
+document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
+</script>
+{% endblock %}
+
 {% block extra_css %}
 <link href="{% static 'core/css/home_public_v5.css' %}" rel="stylesheet">
 <link href="{% static 'core/css/home_public_v6.css' %}" rel="stylesheet">

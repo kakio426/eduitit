@@ -1467,6 +1467,23 @@ html[data-home-public-v6-pointer="true"] .home-public-v6-page button {
 }
 
 @media (max-width: 767px) {
+    html[data-home-mobile-chrome="minimal"] #mainNav,
+    html[data-home-mobile-chrome="minimal"] #mobileMenu {
+        display: none !important;
+    }
+
+    html[data-home-mobile-chrome="minimal"] .home-public-v6-page-top-spacer {
+        padding-top: calc(var(--global-banner-height, 0px) + env(safe-area-inset-top) + 0.65rem);
+    }
+
+    html[data-home-mobile-chrome="minimal"] .home-public-v6-header {
+        display: none;
+    }
+
+    html[data-home-mobile-chrome="minimal"] .home-public-v6-main {
+        padding-top: 0;
+    }
+
     .home-public-v6-header {
         width: 100%;
         border-radius: 1.5rem;

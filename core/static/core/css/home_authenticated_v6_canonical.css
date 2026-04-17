@@ -2659,6 +2659,15 @@ grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
 }
 
 @media (max-width: 767px) {
+html[data-home-mobile-chrome="minimal"] #mainNav,
+html[data-home-mobile-chrome="minimal"] #mobileMenu {
+display: none !important;
+}
+
+html[data-home-mobile-chrome="minimal"] .home-v6-page [data-home-v6-page-frame="true"] {
+padding-top: calc(var(--global-banner-height, 0px) + env(safe-area-inset-top) + 0.65rem) !important;
+}
+
 .home-v6-page .home-v6-agent-head-row,
 .home-v6-page .home-v6-agent-head-actions {
 justify-content: flex-start;
