@@ -207,46 +207,6 @@ body {
     box-shadow: 0 12px 22px rgba(52, 37, 95, 0.22);
 }
 
-.auth-shell-spectrum {
-    display: flex;
-    justify-content: center;
-    gap: 0.55rem;
-    margin: 1.05rem auto 0;
-}
-
-.auth-shell-spectrum-swatch {
-    width: 0.72rem;
-    height: 0.72rem;
-    border-radius: 999px;
-    box-shadow:
-        0 0 0 4px rgba(255, 255, 255, 0.92),
-        0 10px 16px rgba(31, 21, 56, 0.08);
-}
-
-.auth-shell-spectrum-swatch--darkest {
-    background: #1f1538;
-}
-
-.auth-shell-spectrum-swatch--darker {
-    background: #34255f;
-}
-
-.auth-shell-spectrum-swatch--dark {
-    background: #4d358d;
-}
-
-.auth-shell-spectrum-swatch--default {
-    background: #8758f2;
-}
-
-.auth-shell-spectrum-swatch--light {
-    background: #b287f4;
-}
-
-.auth-shell-spectrum-swatch--lighter {
-    background: #e6d8fc;
-}
-
 .auth-shell-kicker {
     margin: 1.1rem 0 0;
     color: #667085;
@@ -296,6 +256,7 @@ body {
 }
 
 .auth-shell-card--login-spectrum .auth-shell-title {
+    margin-top: 0.95rem;
     color: var(--auth-login-950);
 }
 
@@ -439,17 +400,17 @@ body {
 }
 
 .auth-shell-page--login-spectrum .auth-shell-provider--kakao {
-    border-color: rgba(178, 135, 244, 0.3);
-    background: linear-gradient(135deg, rgba(251, 249, 255, 0.98) 0%, rgba(230, 216, 252, 0.92) 100%);
-    color: var(--auth-login-950);
-    box-shadow: 0 12px 24px rgba(178, 135, 244, 0.18);
+    border-color: rgba(196, 167, 0, 0.56);
+    background: linear-gradient(135deg, #fee500 0%, #ffef7a 100%);
+    color: #2f1a1a;
+    box-shadow: 0 12px 24px rgba(201, 168, 0, 0.26);
 }
 
 .auth-shell-page--login-spectrum .auth-shell-provider--naver {
-    border-color: rgba(77, 53, 141, 0.24);
-    background: linear-gradient(135deg, var(--auth-login-900) 0%, var(--auth-login-700) 100%);
+    border-color: rgba(3, 199, 90, 0.38);
+    background: linear-gradient(135deg, #03c75a 0%, #00b050 100%);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(52, 37, 95, 0.22);
+    box-shadow: 0 12px 24px rgba(3, 176, 80, 0.24);
 }
 
 .auth-shell-muted-panel {
@@ -520,6 +481,10 @@ body {
     color: #667085;
     font-size: 0.78rem;
     font-weight: 700;
+}
+
+.auth-shell-links--standalone {
+    margin-top: 1rem;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-links,

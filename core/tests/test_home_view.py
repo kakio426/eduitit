@@ -572,10 +572,11 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('방금 고른 도구를 이어서 시작', content)
-        self.assertIn('카카오·네이버로 로그인하면 바로 열립니다.', content)
-        self.assertIn('방금 고른 도구로 이동합니다.', content)
+        self.assertIn('내 교실 열기', content)
+        self.assertNotIn('방금 고른 도구를 이어서 시작', content)
+        self.assertNotIn('카카오·네이버로 로그인하면 바로 열립니다.', content)
         self.assertIn('로그인 후 바로 열립니다.', content)
+        self.assertNotIn('방금 고른 도구로 이동합니다.', content)
 
     def test_v2_anonymous_removes_hero_access_legend(self):
         self._create_try_now_products()
