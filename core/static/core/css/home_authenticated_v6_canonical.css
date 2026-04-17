@@ -248,9 +248,8 @@ border-color: transparent;
     box-shadow: none;
 }
 
-.home-v6-page .home-v6-nav-card--rail {
+.home-v6-page .home-v6-nav-card.home-v6-nav-card--rail {
 padding: 0.12rem 0.34rem 0.34rem;
-    margin-top: var(--home-v6-rail-align-offset, 0px);
     overflow: visible;
     z-index: 90;
     border-color: transparent;
@@ -259,8 +258,8 @@ padding: 0.12rem 0.34rem 0.34rem;
     backdrop-filter: none;
 }
 
-.home-v6-page .home-v6-nav-card--rail::before,
-.home-v6-page .home-v6-nav-card--rail::after {
+.home-v6-page .home-v6-nav-card.home-v6-nav-card--rail::before,
+.home-v6-page .home-v6-nav-card.home-v6-nav-card--rail::after {
 content: none;
 }
 
