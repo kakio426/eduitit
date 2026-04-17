@@ -3704,7 +3704,12 @@ class HomeV6ViewTest(TestCase):
 
         self.assertIn('.home-v6-page .home-v6-nav-portal-root {', css)
         self.assertIn('.home-v6-page .home-v6-nav-portal-root.is-active::before {', css)
+        self.assertIn('body:has(.home-v6-page) #app-root {', css)
+        self.assertIn('.home-v6-page {', css)
+        self.assertIn('overflow-x: clip;', css)
         self.assertIn('.home-v6-page .home-v6-nav-card.home-v6-nav-card--rail {', css)
+        self.assertIn('position: sticky;', css)
+        self.assertIn('top: calc(var(--main-nav-height, 88px) + 0.75rem);', css)
         self.assertNotIn('--home-v6-rail-align-offset', css)
         self.assertIn('.home-v6-page .home-v6-nav-rail-group.is-open', css)
         self.assertIn('.home-v6-page .home-v6-nav-flyout,', css)

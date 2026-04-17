@@ -18,6 +18,19 @@ position: relative;
     transform: translateZ(0);
 }
 
+@supports selector(body:has(.home-v6-page)) {
+body:has(.home-v6-page),
+body:has(.home-v6-page) #app-root {
+    overflow-x: clip;
+    overflow-y: visible;
+}
+}
+
+.home-v6-page {
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
 .home-v6-page .home-v6-card::before,
 .home-v6-page .home-v6-mobile-sheet::before,
 .home-v6-page .home-v6-mobile-panel::before,
