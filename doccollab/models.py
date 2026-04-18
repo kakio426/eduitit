@@ -126,7 +126,7 @@ class DocRoom(models.Model):
         related_name="doccollab_room",
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    source_file = models.FileField(upload_to=room_source_upload_to, storage=get_raw_storage)
+    source_file = models.FileField(upload_to=room_source_upload_to, storage=get_raw_storage, max_length=500)
     source_name = models.CharField(max_length=255)
     source_format = models.CharField(max_length=10, choices=SourceFormat.choices, default=SourceFormat.HWPX)
     source_sha256 = models.CharField(max_length=64)
@@ -158,7 +158,7 @@ class DocRevision(models.Model):
         related_name="revisions",
     )
     revision_number = models.PositiveIntegerField()
-    file = models.FileField(upload_to=revision_upload_to, storage=get_raw_storage)
+    file = models.FileField(upload_to=revision_upload_to, storage=get_raw_storage, max_length=500)
     original_name = models.CharField(max_length=255)
     file_sha256 = models.CharField(max_length=64)
     export_format = models.CharField(max_length=20, choices=ExportFormat.choices, default=ExportFormat.HWP_EXPORT)

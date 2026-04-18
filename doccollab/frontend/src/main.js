@@ -10,10 +10,14 @@ if (form) {
   const statusEl = document.getElementById("doccollab-upload-status");
   const rhwpReady = initRhwp({ module_or_path: wasmUrl });
   let validation = { key: null, ok: false, running: null };
+  let submitLocked = false;
 
   fileInput?.addEventListener("change", () => {
     const file = fileInput.files?.[0] || null;
     validation = { key: null, ok: false, running: null };
+    submitLocked = false;
+    submitButton?.removeAttribute("disabled");
+    submitButton?.removeAttribute("aria-busy");
     if (!file) {
       setStatus("파일 선택");
       return;
@@ -26,17 +30,23 @@ if (form) {
   });
 
   form.addEventListener("submit", async (event) => {
+    if (submitLocked) {
+      event.preventDefault();
+      return;
+    }
     const file = fileInput?.files?.[0] || null;
     if (!file || !isDesktopChrome()) {
       return;
     }
     const key = buildFileKey(file);
     if (validation.key === key && validation.ok) {
+      lockSubmit("여는 중");
       return;
     }
     event.preventDefault();
     const ok = await runPreflight(file);
     if (ok) {
+      lockSubmit("여는 중");
       HTMLFormElement.prototype.submit.call(form);
     }
   });
@@ -86,6 +96,13 @@ if (form) {
     }
     statusEl.textContent = message;
     statusEl.dataset.state = isError ? "error" : "default";
+  }
+
+  function lockSubmit(message) {
+    submitLocked = true;
+    submitButton?.setAttribute("disabled", "disabled");
+    submitButton?.setAttribute("aria-busy", "true");
+    setStatus(message);
   }
 }
 

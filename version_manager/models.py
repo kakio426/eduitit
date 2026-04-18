@@ -155,7 +155,7 @@ class DocumentVersion(models.Model):
 
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='versions')
     version = models.PositiveIntegerField()
-    upload = models.FileField(upload_to=document_version_upload_to, storage=get_raw_storage)
+    upload = models.FileField(upload_to=document_version_upload_to, storage=get_raw_storage, max_length=500)
     original_filename = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     uploaded_by_name = models.CharField(max_length=80, blank=True)

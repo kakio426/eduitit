@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import UserProfile
-from doccollab.models import DocEditEvent, DocMembership, DocRevision, DocRoom
+from doccollab.models import DocEditEvent, DocMembership, DocRevision, DocRoom, revision_upload_to, room_source_upload_to
 from doccollab.services import (
     accessible_rooms_queryset,
     append_room_collab_update,
@@ -14,7 +14,7 @@ from doccollab.services import (
     load_room_collab_state,
     save_room_revision,
 )
-from version_manager.models import DocumentVersion, get_raw_storage
+from version_manager.models import Document, DocumentGroup, DocumentVersion, document_version_upload_to, get_raw_storage
 
 
 User = get_user_model()
@@ -68,6 +68,32 @@ class DoccollabViewTests(TestCase):
 
         self.assertIs(source_field._storage_callable, get_raw_storage)
         self.assertIs(revision_field._storage_callable, get_raw_storage)
+
+    def test_binary_file_path_budget_covers_generated_storage_paths(self):
+        source_field = DocRoom._meta.get_field("source_file")
+        revision_field = DocRevision._meta.get_field("file")
+        mirrored_field = DocumentVersion._meta.get_field("upload")
+
+        long_name = f"{'a' * 180}.hwpx"
+        room_path = room_source_upload_to(DocRoom(title="긴 파일명"), long_name)
+        revision_path = revision_upload_to(DocRevision(revision_number=1), long_name)
+        mirrored_path = document_version_upload_to(
+            DocumentVersion(
+                document=Document(
+                    group=DocumentGroup(name="HWP 문서실", slug="hwp-docs"),
+                    base_name="a" * 200,
+                ),
+                version=1,
+            ),
+            "mirrored.hwp",
+        )
+
+        self.assertEqual(source_field.max_length, 500)
+        self.assertEqual(revision_field.max_length, 500)
+        self.assertEqual(mirrored_field.max_length, 500)
+        self.assertLessEqual(len(room_path), source_field.max_length)
+        self.assertLessEqual(len(revision_path), revision_field.max_length)
+        self.assertLessEqual(len(mirrored_path), mirrored_field.max_length)
 
     def test_create_room_builds_workspace_first_revision_and_collab_seed(self):
         self.client.force_login(self.owner)
