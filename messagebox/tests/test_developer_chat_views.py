@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import UserPolicyConsent, UserProfile
+from core.models import HomeAgentQuotaBoost, UserPolicyConsent, UserProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from messagebox.developer_chat import get_or_create_developer_chat_thread
 from messagebox.models import DeveloperChatMessage, DeveloperChatThread
@@ -197,6 +197,56 @@ class DeveloperChatViewTests(TestCase):
         self.assertNotIn("<", preview)
         self.assertNotIn(">", preview)
 
+    def test_regular_user_page_keeps_prefill_text_from_query(self):
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(
+            reverse("messagebox:developer_chat"),
+            {"prefill": "인디스쿨 함께 사용하기에 올린 홍보글 캡처를 보내드립니다."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "developer-chat-prefill-text")
+        self.assertEqual(
+            response.context["developer_chat_prefill_text"],
+            "인디스쿨 함께 사용하기에 올린 홍보글 캡처를 보내드립니다.",
+        )
+
+    def test_admin_can_grant_home_agent_quota_from_thread(self):
+        thread = get_or_create_developer_chat_thread(self.teacher)
+        DeveloperChatMessage.objects.create(
+            thread=thread,
+            sender=self.teacher,
+            sender_role=DeveloperChatMessage.SenderRole.USER,
+            body="한도 요청드립니다.",
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("messagebox:developer_chat_grant_quota", kwargs={"thread_id": thread.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(HomeAgentQuotaBoost.objects.filter(user=self.teacher).count(), 1)
+        boost = HomeAgentQuotaBoost.objects.get(user=self.teacher)
+        self.assertEqual(boost.daily_limit, 30)
+        self.assertEqual(boost.granted_by, self.admin)
+        self.assertEqual(boost.source_thread_id, thread.id)
+        thread.refresh_from_db()
+        self.assertEqual(thread.last_message_sender_role, DeveloperChatMessage.SenderRole.ADMIN)
+        self.assertIn("감사드리는 마음으로", thread.last_message_preview)
+        self.assertTrue(response.json()["thread"]["participant"]["home_agent_quota"]["has_active_boost"])
+
+    def test_regular_user_cannot_grant_home_agent_quota(self):
+        thread = get_or_create_developer_chat_thread(self.teacher)
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(
+            reverse("messagebox:developer_chat_grant_quota", kwargs={"thread_id": thread.id})
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_developer_chat_script_renders_thread_and_message_text_without_innerhtml(self):
         script_path = Path(settings.BASE_DIR) / "messagebox" / "static" / "messagebox" / "developer_chat_page.js"
         script = script_path.read_text(encoding="utf-8")
@@ -206,3 +256,4 @@ class DeveloperChatViewTests(TestCase):
         self.assertIn('appendTextElement(topLeft, "div", "developer-chat-thread-title", thread.title || "");', script)
         self.assertIn('appendTextElement(button, "div", "developer-chat-thread-preview", thread.last_message_preview || "");', script)
         self.assertIn('appendTextElement(bubble, "p", "developer-chat-message-sender", message.sender_name || "");', script)
+        self.assertIn('elements.input.value = prefillText;', script)

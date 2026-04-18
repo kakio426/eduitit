@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/home-agent/preview/', views.home_agent_preview, name='home_agent_preview'),
     path('api/home-agent/conversations/', views.home_agent_conversations, name='home_agent_conversations'),
     path('api/home-agent/execute/', views.home_agent_execute, name='home_agent_execute'),
+    path('api/home-agent/quota/dismiss/', views.home_agent_quota_dismiss, name='home_agent_quota_dismiss'),
     path('api/buddy/draw/', views.teacher_buddy_draw, name='teacher_buddy_draw'),
     path('api/buddy/coupon/redeem/', views.teacher_buddy_redeem_coupon_view, name='teacher_buddy_redeem_coupon'),
     path('api/buddy/select/', views.teacher_buddy_select_view, name='teacher_buddy_select'),

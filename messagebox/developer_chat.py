@@ -2,6 +2,8 @@ from django.db.models import Q
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
+from core.home_agent_quota import build_home_agent_quota_snapshot
+
 from .models import DeveloperChatMessage, DeveloperChatReadState, DeveloperChatThread
 
 
@@ -70,6 +72,10 @@ def build_developer_chat_api_urls():
         ).replace(str(THREAD_URL_PLACEHOLDER), "__thread_id__"),
         "delete_template": reverse(
             "messagebox:developer_chat_delete_thread",
+            kwargs={"thread_id": THREAD_URL_PLACEHOLDER},
+        ).replace(str(THREAD_URL_PLACEHOLDER), "__thread_id__"),
+        "grant_template": reverse(
+            "messagebox:developer_chat_grant_quota",
             kwargs={"thread_id": THREAD_URL_PLACEHOLDER},
         ).replace(str(THREAD_URL_PLACEHOLDER), "__thread_id__"),
     }
@@ -256,12 +262,20 @@ def serialize_thread_detail(thread, viewer):
     ]
     participant_name = user_display_name(thread.participant)
     assigned_admin_name = user_display_name(thread.assigned_admin) if thread.assigned_admin else ""
+    quota_snapshot = build_home_agent_quota_snapshot(thread.participant)
     return {
         **serialize_thread_summary(thread, viewer),
         "participant": {
             "id": thread.participant_id,
             "display_name": participant_name,
             "secondary_label": user_secondary_label(thread.participant),
+            "home_agent_quota": {
+                **quota_snapshot,
+                "grant_url": reverse(
+                    "messagebox:developer_chat_grant_quota",
+                    kwargs={"thread_id": thread.id},
+                ) if is_developer_chat_admin(viewer) else "",
+            },
         },
         "assigned_admin_name": assigned_admin_name,
         "messages": messages,

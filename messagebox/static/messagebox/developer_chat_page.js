@@ -43,6 +43,7 @@
         const urls = parseJsonScript("developer-chat-api-urls-data", {});
         const isAdmin = parseJsonScript("developer-chat-admin-flag", false) === true;
         const initialThreadId = String(parseJsonScript("developer-chat-initial-thread-id", "") || "");
+        const prefillText = String(parseJsonScript("developer-chat-prefill-text", "") || "");
         const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value || "";
 
         const elements = {
@@ -57,6 +58,11 @@
             input: root.querySelector('[data-developer-chat-input="true"]'),
             sendButton: root.querySelector('[data-developer-chat-send="true"]'),
             deleteButton: root.querySelector('[data-developer-chat-delete="true"]'),
+            adminCard: root.querySelector('[data-developer-chat-admin-card="true"]'),
+            adminStatus: root.querySelector('[data-developer-chat-admin-status="true"]'),
+            adminUsage: root.querySelector('[data-developer-chat-admin-usage="true"]'),
+            adminMeta: root.querySelector('[data-developer-chat-admin-meta="true"]'),
+            grantButton: root.querySelector('[data-developer-chat-grant="true"]'),
             search: root.querySelector('[data-developer-chat-search="true"]'),
             refreshButtons: Array.from(root.querySelectorAll('[data-developer-chat-refresh="true"]')),
             toastRoot: document.getElementById("developer-chat-toast-root"),
@@ -73,6 +79,7 @@
             isLoadingDetail: false,
             isSending: false,
             isDeleting: false,
+            isGranting: false,
             searchTimer: null,
         };
 
@@ -97,14 +104,51 @@
         }
 
         function setLoadingState() {
-            const disabled = state.isLoadingThreads || state.isLoadingDetail || state.isSending || state.isDeleting;
+            const disabled = state.isLoadingThreads || state.isLoadingDetail || state.isSending || state.isDeleting || state.isGranting;
             elements.sendButton.disabled = disabled || !state.selectedThreadId;
             if (elements.deleteButton) {
                 elements.deleteButton.disabled = disabled || !state.selectedThreadId;
             }
+            if (elements.grantButton) {
+                elements.grantButton.disabled = disabled || !state.selectedThreadId;
+            }
             elements.refreshButtons.forEach((button) => {
-                button.disabled = state.isSending || state.isDeleting;
+                button.disabled = state.isSending || state.isDeleting || state.isGranting;
             });
+        }
+
+        function renderAdminQuotaCard(thread) {
+            if (!elements.adminCard || !state.isAdmin) {
+                return;
+            }
+            const quota = thread && thread.participant && thread.participant.home_agent_quota
+                ? thread.participant.home_agent_quota
+                : null;
+            if (!quota) {
+                elements.adminCard.hidden = true;
+                if (elements.grantButton) {
+                    elements.grantButton.hidden = true;
+                }
+                return;
+            }
+
+            elements.adminCard.hidden = false;
+            if (elements.adminStatus) {
+                elements.adminStatus.textContent = quota.status_label || "기본 15회";
+            }
+            if (elements.adminUsage) {
+                elements.adminUsage.textContent = `오늘 ${Number(quota.used_count || 0)} / ${Number(quota.daily_limit || 15)}회`;
+            }
+            if (elements.adminMeta) {
+                elements.adminMeta.textContent = quota.has_active_boost && quota.active_until_label
+                    ? `남은 횟수 ${Number(quota.remaining_count || 0)}회 · ${quota.active_until_label}까지`
+                    : `남은 횟수 ${Number(quota.remaining_count || 0)}회`;
+            }
+            if (elements.grantButton) {
+                elements.grantButton.hidden = !quota.grant_url;
+                elements.grantButton.dataset.grantUrl = quota.grant_url || "";
+                elements.grantButton.textContent = quota.grant_button_label || "2주간 30회";
+            }
         }
 
         function sortThreads() {
@@ -214,6 +258,7 @@
                     ? "왼쪽 목록에서 사용자를 선택해 주세요."
                     : "첫 문의를 남기면 여기서 답장이 이어집니다.";
                 elements.status.textContent = "대기 중";
+                renderAdminQuotaCard(null);
                 renderEmptyState();
                 setLoadingState();
                 return;
@@ -230,6 +275,7 @@
                     ? `${thread.assigned_admin_name}님이 확인 중입니다.`
                     : "보낸 문의와 개발자 답장을 이 자리에서 계속 이어갈 수 있어요.");
             elements.status.textContent = thread.status_label || "대화 중";
+            renderAdminQuotaCard(thread);
             renderMessages(thread.messages || []);
             setLoadingState();
         }
@@ -430,6 +476,35 @@
             }
         }
 
+        async function handleGrantQuota() {
+            const grantUrl = elements.grantButton ? String(elements.grantButton.dataset.grantUrl || "") : "";
+            if (!state.isAdmin || !state.selectedThreadId || !grantUrl) {
+                showToast("증액할 대화를 먼저 선택해 주세요.", "error");
+                return;
+            }
+
+            state.isGranting = true;
+            setLoadingState();
+            try {
+                const data = await fetchJson(grantUrl, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken,
+                    },
+                });
+                state.selectedThread = data.thread || null;
+                upsertThreadSummary(state.selectedThread);
+                renderThreadList();
+                renderSelectedThread();
+                showToast("2주 증액을 적용했어요.", "info");
+            } catch (error) {
+                showToast(error.message, "error");
+            } finally {
+                state.isGranting = false;
+                setLoadingState();
+            }
+        }
+
         elements.composer.addEventListener("submit", handleSend);
         elements.input.addEventListener("keydown", (event) => {
             if (event.key === "Enter" && !event.shiftKey) {
@@ -437,8 +512,14 @@
                 handleSend(event);
             }
         });
+        if (prefillText && elements.input && !elements.input.value.trim()) {
+            elements.input.value = prefillText;
+        }
         if (elements.deleteButton) {
             elements.deleteButton.addEventListener("click", handleDelete);
+        }
+        if (elements.grantButton) {
+            elements.grantButton.addEventListener("click", handleGrantQuota);
         }
 
         if (elements.search) {

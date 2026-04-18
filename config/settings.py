@@ -168,6 +168,7 @@ TEMPLATES = [
                 'core.context_processors.seo_meta',
                 'core.context_processors.search_products',
                 'core.context_processors.active_classroom',
+                'core.context_processors.home_agent_limit_nav',
             ],
         },
     },

@@ -34,7 +34,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                 data-home-design-version="v6"
                 x-data="window.homeV6Shell ? window.homeV6Shell() : { openSection: '', menuSheetOpen: false }"
                 x-init="if ($data && typeof $data.init === 'function') $data.init()"
-                @keydown.escape.window="menuSheetOpen = false; openSection = ''"
+                @keydown.escape.window="menuSheetOpen = false; openSection = ''; homeAgentLimitModalOpen = false"
             >
                 <div class="home-v6-mobile-summary" data-home-v6-mobile-summary="true">
                     <div class="home-v6-mobile-summary-scroll" data-home-v6-mobile-summary-scroll="true">
@@ -415,6 +415,45 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                             </section>
                         </div>
                     </div>
+                </div>
+                <div
+                    class="home-v6-limit-modal-backdrop"
+                    x-cloak
+                    x-show="homeAgentLimitModalOpen"
+                    x-transition.opacity
+                    @click="dismissHomeAgentLimitModal()"
+                ></div>
+                <div
+                    class="home-v6-limit-modal-shell"
+                    x-cloak
+                    x-show="homeAgentLimitModalOpen"
+                    x-transition.opacity
+                >
+                    <section
+                        class="home-v6-limit-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="home-v6-limit-modal-title"
+                        @click.stop
+                    >
+                        <p class="home-v6-limit-modal-eyebrow">AI 교무비서</p>
+                        <h2 id="home-v6-limit-modal-title" class="home-v6-limit-modal-title" x-text="homeAgentLimitModal.title || '오늘 AI 한도 끝'"></h2>
+                        <p class="home-v6-limit-modal-copy" x-text="homeAgentLimitModal.message || ''"></p>
+                        <p class="home-v6-limit-modal-status" x-cloak x-show="homeAgentLimitModal.statusText" x-text="homeAgentLimitModal.statusText || ''"></p>
+                        <div class="home-v6-limit-modal-actions">
+                            <a
+                                class="home-v6-limit-modal-primary"
+                                :href="homeAgentLimitModal.actionHref || '#'"
+                                @click.prevent="goToHomeAgentLimitChat()"
+                                x-text="homeAgentLimitModal.actionLabel || '개발자 채팅'"
+                            ></a>
+                            <button
+                                type="button"
+                                class="home-v6-limit-modal-secondary"
+                                @click="dismissHomeAgentLimitModal()"
+                            >닫기</button>
+                        </div>
+                    </section>
                 </div>
             </div>
         </main>

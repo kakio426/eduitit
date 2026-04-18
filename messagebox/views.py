@@ -10,6 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 from products.models import Product
 
 from classcalendar.views import build_calendar_message_capture_url, build_message_capture_ui_context
+from core.home_agent_quota import grant_home_agent_quota_boost
 from .developer_chat import (
     build_developer_chat_api_urls,
     build_developer_chat_home_card_context,
@@ -88,6 +89,7 @@ def _json_body(request):
 def developer_chat_view(request):
     is_admin_view = is_developer_chat_admin(request.user)
     requested_thread_id = str(request.GET.get("thread") or "").strip()
+    prefill_text = str(request.GET.get("prefill") or "").strip()[:4000]
     initial_thread_id = ""
     if is_admin_view:
         if requested_thread_id.isdigit():
@@ -109,6 +111,7 @@ def developer_chat_view(request):
         "developer_chat_api_urls_json": build_developer_chat_api_urls(),
         "developer_chat_page_url": get_developer_chat_page_url(),
         "developer_chat_home_card": build_developer_chat_home_card_context(request.user),
+        "developer_chat_prefill_text": prefill_text,
     }
     return render(request, "messagebox/developer_chat.html", context)
 
@@ -214,5 +217,33 @@ def developer_chat_delete_thread_api(request, thread_id):
         {
             "status": "ok",
             "thread_id": deleted_thread_id,
+        }
+    )
+
+
+@require_POST
+@login_required
+def developer_chat_grant_quota_api(request, thread_id):
+    if not is_developer_chat_admin(request.user):
+        return _developer_chat_permission_denied()
+
+    thread = get_object_or_404(get_developer_chat_thread_queryset(), id=thread_id)
+    boost = grant_home_agent_quota_boost(
+        thread.participant,
+        granted_by=request.user,
+        source_thread_id=thread.id,
+        note="developer_chat",
+    )
+    create_developer_chat_message(
+        thread,
+        request.user,
+        "인디스쿨 함께 사용하기에 홍보해 주셔서 감사드리는 마음으로 AI 교무비서 한도를 2주 동안 하루 30회로 추가 제공해드렸어요.",
+    )
+    thread = get_object_or_404(get_developer_chat_thread_queryset(), id=thread.id)
+    return JsonResponse(
+        {
+            "status": "ok",
+            "thread": serialize_thread_detail(thread, request.user),
+            "granted_until": boost.ends_at.isoformat(),
         }
     )

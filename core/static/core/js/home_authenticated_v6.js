@@ -668,6 +668,16 @@
             workspaceInput: '',
             agentModeMenuOpen: false,
             railSearchText: '',
+            homeAgentLimitModalOpen: false,
+            homeAgentLimitModal: {
+                title: '',
+                message: '',
+                statusText: '',
+                actionLabel: '',
+                actionHref: '',
+                dismissUrl: '',
+                chipLabel: '',
+            },
             activeModeKey: workspaceConfig.initial_mode || '',
             activeRailKey: workspaceConfig.initial_rail_key || '',
             activeConversationKey: '',
@@ -766,6 +776,75 @@
                     self.disconnectHomeConversationSocket();
                     self.disconnectActiveRoomSocket();
                 });
+            },
+
+            revealHomeAgentLimitNavChip: function (href, label) {
+                Array.prototype.slice.call(document.querySelectorAll('[data-home-agent-limit-chip="true"]')).forEach(function (node) {
+                    if (href) {
+                        node.setAttribute('href', href);
+                    }
+                    node.hidden = false;
+                    node.classList.remove('hidden');
+                });
+                Array.prototype.slice.call(document.querySelectorAll('[data-home-agent-limit-chip-label="true"]')).forEach(function (node) {
+                    if (label) {
+                        node.textContent = label;
+                    }
+                });
+            },
+
+            showHomeAgentLimitModal: function (quotaPayload, fallbackMessage) {
+                var payload = quotaPayload && typeof quotaPayload === 'object' ? quotaPayload : {};
+                this.homeAgentLimitModal = {
+                    title: trimLine(payload.title || '오늘 AI 한도 끝'),
+                    message: trimLine(payload.message || fallbackMessage || '개발자 채팅으로 요청을 남길 수 있어요.'),
+                    statusText: trimLine(payload.status_text || ''),
+                    actionLabel: trimLine(payload.action_label || '개발자 채팅'),
+                    actionHref: trimLine(payload.action_href || ''),
+                    dismissUrl: trimLine(payload.dismiss_url || ''),
+                    chipLabel: trimLine(payload.chip_label || '한도 요청'),
+                };
+                this.homeAgentLimitModalOpen = true;
+            },
+
+            dismissHomeAgentLimitModal: async function () {
+                var dismissUrl = trimLine(this.homeAgentLimitModal.dismissUrl || '');
+                var actionHref = trimLine(this.homeAgentLimitModal.actionHref || '');
+                var chipLabel = trimLine(this.homeAgentLimitModal.chipLabel || '한도 요청');
+                var csrfToken = getCsrfToken();
+                this.homeAgentLimitModalOpen = false;
+                if (dismissUrl && csrfToken) {
+                    try {
+                        var response = await fetch(dismissUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+                        var payload = {};
+                        try {
+                            payload = await response.json();
+                        } catch (jsonError) {
+                            payload = {};
+                        }
+                        if (response.ok && payload.status === 'ok' && payload.nav_action) {
+                            actionHref = trimLine(payload.nav_action.href || actionHref);
+                            chipLabel = trimLine(payload.nav_action.label || chipLabel);
+                        }
+                    } catch (error) {
+                        // Keep the local chip reveal even when the dismiss sync fails.
+                    }
+                }
+                this.revealHomeAgentLimitNavChip(actionHref, chipLabel);
+            },
+
+            goToHomeAgentLimitChat: function () {
+                var href = trimLine(this.homeAgentLimitModal.actionHref || '');
+                this.homeAgentLimitModalOpen = false;
+                if (href) {
+                    window.location.href = href;
+                }
             },
 
             get activeMode() {
@@ -5187,6 +5266,10 @@
                         payload = {};
                     }
                     if (!response.ok || payload.status !== 'ok') {
+                        if (payload && payload.error_code === 'home_agent_quota_exceeded') {
+                            this.showHomeAgentLimitModal(payload.quota, payload.error || '');
+                            return;
+                        }
                         throw new Error(payload.error || 'AI 미리보기를 불러오지 못했습니다.');
                     }
                     this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));

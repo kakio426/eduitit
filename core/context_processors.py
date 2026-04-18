@@ -5,6 +5,7 @@ from .active_classroom import (
     get_default_classroom_for_user,
     list_hs_classrooms_for_user,
 )
+from .home_agent_quota import build_home_agent_limit_nav_action
 from .product_visibility import filter_discoverable_products
 from .service_launcher import build_service_launcher_items
 from .seo import (
@@ -231,4 +232,10 @@ def active_classroom(request):
         'hs_classrooms_json': classrooms_data,
         'hs_classrooms_payload': json.dumps(classrooms_data, ensure_ascii=False),
         'active_classroom_name_payload': json.dumps(classroom.name if classroom else None, ensure_ascii=False),
+    }
+
+
+def home_agent_limit_nav(request):
+    return {
+        'home_agent_limit_nav_action': build_home_agent_limit_nav_action(getattr(request, 'user', None)),
     }

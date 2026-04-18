@@ -560,6 +560,82 @@ class ProductWorkbenchBundle(models.Model):
         return f"{self.user.username} 작업대 조합 - {self.name}"
 
 
+class HomeAgentUsageLog(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="home_agent_usage_logs",
+    )
+    usage_date = models.DateField(db_index=True)
+    mode_key = models.CharField(max_length=40, blank=True, default="")
+    provider = models.CharField(max_length=40, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["user", "usage_date"]),
+            models.Index(fields=["user", "-created_at"]),
+        ]
+        verbose_name = "AI 교무비서 사용 기록"
+        verbose_name_plural = "AI 교무비서 사용 기록"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.usage_date} - {self.mode_key or 'home-agent'}"
+
+
+class HomeAgentQuotaState(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="home_agent_quota_state",
+    )
+    last_limit_reached_at = models.DateTimeField(null=True, blank=True)
+    prompt_dismissed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "AI 교무비서 한도 상태"
+        verbose_name_plural = "AI 교무비서 한도 상태"
+
+    def __str__(self):
+        return f"{self.user.username} AI 한도 상태"
+
+
+class HomeAgentQuotaBoost(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="home_agent_quota_boosts",
+    )
+    daily_limit = models.PositiveIntegerField(default=30)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField(db_index=True)
+    granted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="granted_home_agent_quota_boosts",
+    )
+    source_thread_id = models.PositiveIntegerField(null=True, blank=True)
+    note = models.CharField(max_length=200, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-ends_at", "-id"]
+        indexes = [
+            models.Index(fields=["user", "ends_at"]),
+            models.Index(fields=["user", "-created_at"]),
+        ]
+        verbose_name = "AI 교무비서 한도 증액"
+        verbose_name_plural = "AI 교무비서 한도 증액"
+
+    def __str__(self):
+        return f"{self.user.username} {self.daily_limit}회 ({self.starts_at:%Y-%m-%d}~{self.ends_at:%Y-%m-%d})"
+
+
 class TeacherBuddyState(models.Model):
     user = models.OneToOneField(
         User,

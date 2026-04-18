@@ -27,6 +27,14 @@ from .home_agent_runtime import (
     HomeAgentProviderError,
     generate_home_agent_preview,
 )
+from .home_agent_quota import (
+    build_home_agent_limit_nav_action,
+    build_home_agent_limit_response_payload,
+    dismiss_home_agent_limit_prompt,
+    is_home_agent_limit_reached,
+    mark_home_agent_limit_reached,
+    record_home_agent_usage,
+)
 from .home_agent_service_bridge import (
     HomeAgentExecutionError,
     execute_service_action,
@@ -7426,6 +7434,9 @@ def home_agent_preview(request):
         return JsonResponse({'error': 'mode_key required'}, status=400)
     if not text:
         return JsonResponse({'error': 'text required'}, status=400)
+    if getattr(request, 'user', None) and request.user.is_authenticated and is_home_agent_limit_reached(request.user):
+        mark_home_agent_limit_reached(request.user)
+        return JsonResponse(build_home_agent_limit_response_payload(request.user), status=429)
 
     try:
         payload = generate_home_agent_preview(
@@ -7441,6 +7452,11 @@ def home_agent_preview(request):
     except HomeAgentProviderError as exc:
         status_code = 400 if str(exc) in {'지원하지 않는 agent 모드입니다.', '내용을 먼저 입력해 주세요.'} else 503
         return JsonResponse({'error': str(exc)}, status=status_code)
+    record_home_agent_usage(
+        request.user,
+        mode_key=mode_key,
+        provider=payload.get('provider', ''),
+    )
 
     return JsonResponse({
         'status': 'ok',
@@ -7504,6 +7520,18 @@ def home_agent_execute(request):
         'provider': payload.get('provider', ''),
         'model': payload.get('model', ''),
     })
+
+
+@require_POST
+@login_required
+def home_agent_quota_dismiss(request):
+    dismiss_home_agent_limit_prompt(request.user)
+    return JsonResponse(
+        {
+            'status': 'ok',
+            'nav_action': build_home_agent_limit_nav_action(request.user),
+        }
+    )
 
 
 @require_POST

@@ -293,6 +293,101 @@
     padding: 1.15rem;
 }
 
+.developer-chat-admin-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 1.15rem;
+    padding: 0.95rem 1rem;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, rgba(240, 249, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.developer-chat-admin-card[hidden] {
+    display: none;
+}
+
+.developer-chat-admin-card-copy {
+    min-width: 0;
+}
+
+.developer-chat-admin-card-label {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.developer-chat-admin-card-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+    margin-top: 0.45rem;
+}
+
+.developer-chat-admin-card-badge,
+.developer-chat-admin-card-count {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    border-radius: 999px;
+    padding: 0 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.developer-chat-admin-card-badge {
+    border: 1px solid #bae6fd;
+    background: #f0f9ff;
+    color: #0369a1;
+}
+
+.developer-chat-admin-card-count {
+    border: 1px solid #dbeafe;
+    background: #ffffff;
+    color: #334155;
+}
+
+.developer-chat-admin-card-meta {
+    margin: 0.55rem 0 0;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.developer-chat-grant-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.85rem;
+    border: 1px solid #99f6e4;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 900;
+    padding: 0 1rem;
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.developer-chat-grant-button:hover,
+.developer-chat-grant-button:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 28px rgba(20, 184, 166, 0.2);
+}
+
+.developer-chat-grant-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .developer-chat-empty-state.is-visible {
     display: block;
 }
@@ -492,5 +587,14 @@
 
     .developer-chat-panel {
         min-height: 68vh;
+    }
+
+    .developer-chat-admin-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .developer-chat-grant-button {
+        width: 100%;
     }
 }

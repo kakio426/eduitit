@@ -30,4 +30,9 @@ urlpatterns = [
         views.developer_chat_delete_thread_api,
         name="developer_chat_delete_thread",
     ),
+    path(
+        "developer-chat/api/threads/<int:thread_id>/grant-quota/",
+        views.developer_chat_grant_quota_api,
+        name="developer_chat_grant_quota",
+    ),
 ]

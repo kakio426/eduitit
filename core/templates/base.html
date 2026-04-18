@@ -188,6 +188,16 @@
                         <kbd class="shell-kbd rounded border px-1.5 py-0.5 text-[10px] font-bold">Ctrl+K</kbd>
                     </button>
                     {% endif %}
+                    {% if user.is_authenticated and home_agent_limit_nav_action %}
+                    <a
+                        href="{{ home_agent_limit_nav_action.href }}"
+                        class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--warning px-4 py-2 text-sm font-bold shadow-clay-inner{% if not home_agent_limit_nav_action.visible %} hidden{% endif %}"
+                        data-home-agent-limit-chip="true"
+                    >
+                        <i class="fa-solid fa-bolt text-xs"></i>
+                        <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
+                    </a>
+                    {% endif %}
                     <div class="flex items-center gap-2 px-4 py-2 rounded-full shell-pill shell-pill--strong shadow-clay-inner text-sm font-bold">
                         <i class="fa-solid fa-clock shell-icon-muted"></i>
                         <span id="navbarClock">--:--:--</span>
@@ -338,6 +348,16 @@
                         <i class="fa-solid fa-magnifying-glass text-sm"></i>
                     </button>
                     {% endif %}
+                    {% if user.is_authenticated and home_agent_limit_nav_action %}
+                    <a
+                        href="{{ home_agent_limit_nav_action.href }}"
+                        class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--warning px-3 py-2 text-sm font-bold shadow-clay{% if not home_agent_limit_nav_action.visible %} hidden{% endif %}"
+                        data-home-agent-limit-chip="true"
+                    >
+                        <i class="fa-solid fa-bolt text-xs"></i>
+                        <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
+                    </a>
+                    {% endif %}
                     {% if user.is_authenticated %}
                     <div class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--strong px-3 py-2 shadow-clay-inner text-sm font-bold">
                         <span class="flex h-8 w-8 items-center justify-center rounded-full shell-avatar">
@@ -413,6 +433,17 @@
                         <i class="fa-solid fa-user-circle text-2xl"></i>
                         <span>{% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{user.username }}{% else %}사용자{% endif %}님</span>
                     </div>
+
+                    {% if home_agent_limit_nav_action %}
+                    <a
+                        href="{{ home_agent_limit_nav_action.href }}"
+                        class="shell-link transition py-2 border-b shell-section-divider{% if not home_agent_limit_nav_action.visible %} hidden{% endif %}"
+                        data-home-agent-limit-chip="true"
+                    >
+                        <i class="fa-solid fa-bolt mr-3 text-amber-500"></i>
+                        <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
+                    </a>
+                    {% endif %}
 
                     {% if has_hs_classrooms %}
                     <!-- 모바일 학급 단축키 -->

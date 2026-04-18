@@ -70,6 +70,18 @@
                     </div>
                 </div>
 
+                <div class="developer-chat-admin-card" data-developer-chat-admin-card="true" hidden>
+                    <div class="developer-chat-admin-card-copy">
+                        <p class="developer-chat-admin-card-label">AI 교무비서 한도</p>
+                        <div class="developer-chat-admin-card-stats">
+                            <span class="developer-chat-admin-card-badge" data-developer-chat-admin-status="true">기본 15회</span>
+                            <span class="developer-chat-admin-card-count" data-developer-chat-admin-usage="true">오늘 0 / 15회</span>
+                        </div>
+                        <p class="developer-chat-admin-card-meta" data-developer-chat-admin-meta="true">남은 횟수 15회</p>
+                    </div>
+                    <button type="button" class="developer-chat-grant-button" data-developer-chat-grant="true" hidden>2주간 30회</button>
+                </div>
+
                 <div class="developer-chat-empty-state" data-developer-chat-empty="true">
                     <div class="developer-chat-empty-card">
                         <h3>대화를 고르면 바로 이어집니다.</h3>
@@ -103,5 +115,6 @@
 {{ developer_chat_api_urls_json|json_script:"developer-chat-api-urls-data" }}
 {{ developer_chat_is_admin|json_script:"developer-chat-admin-flag" }}
 {{ developer_chat_initial_thread_id|default:""|json_script:"developer-chat-initial-thread-id" }}
+{{ developer_chat_prefill_text|default:""|json_script:"developer-chat-prefill-text" }}
 <script src="{% static 'messagebox/developer_chat_page.js' %}"></script>
 {% endblock %}
