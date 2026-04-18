@@ -15,11 +15,11 @@ if (form) {
     const file = fileInput.files?.[0] || null;
     validation = { key: null, ok: false, running: null };
     if (!file) {
-      setStatus("파일만 올리면 바로 문서방이 열립니다.");
+      setStatus("파일을 고르면 바로 편집 화면이 열립니다.");
       return;
     }
     if (!isDesktopChrome()) {
-      setStatus("데스크톱 Chrome에서 바로 확인됩니다.");
+      setStatus("데스크톱 Chrome에서 바로 편집됩니다.");
       return;
     }
     void runPreflight(file);

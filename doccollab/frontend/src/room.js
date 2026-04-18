@@ -68,7 +68,7 @@ class DoccollabRoom {
         this.socket.close();
       }
     });
-    this.setStatus("준비 완료");
+    this.setStatus("편집 준비 완료");
   }
 
   showLoadError(error) {
@@ -254,7 +254,7 @@ class DoccollabRoom {
   }
 
   insertPlainText(text) {
-    if (!this.ensureCursor("페이지를 눌러 위치를 먼저 잡아 주세요.")) {
+    if (!this.ensureCursor("문서를 눌러 입력 위치를 먼저 잡아 주세요.")) {
       return;
     }
     const normalized = String(text || "").replace(/\r\n?/g, "\n");
@@ -281,7 +281,7 @@ class DoccollabRoom {
   }
 
   deleteBackward() {
-    if (!this.ensureCursor("페이지를 눌러 위치를 먼저 잡아 주세요.")) {
+    if (!this.ensureCursor("문서를 눌러 입력 위치를 먼저 잡아 주세요.")) {
       return;
     }
     if ((this.currentCursor.charOffset || 0) <= 0) {
@@ -300,7 +300,7 @@ class DoccollabRoom {
   }
 
   deleteForward() {
-    if (!this.ensureCursor("페이지를 눌러 위치를 먼저 잡아 주세요.")) {
+    if (!this.ensureCursor("문서를 눌러 입력 위치를 먼저 잡아 주세요.")) {
       return;
     }
     this.applyLocalCommand({
@@ -312,7 +312,7 @@ class DoccollabRoom {
   }
 
   splitParagraph() {
-    if (!this.ensureCursor("페이지를 눌러 위치를 먼저 잡아 주세요.")) {
+    if (!this.ensureCursor("문서를 눌러 입력 위치를 먼저 잡아 주세요.")) {
       return;
     }
     this.applyLocalCommand({
@@ -413,7 +413,7 @@ class DoccollabRoom {
       return;
     }
     if (!this.currentCursor) {
-      this.cursorLabel.textContent = "페이지를 눌러 위치를 잡아 주세요.";
+      this.cursorLabel.textContent = "문서를 눌러 입력 위치를 잡아 주세요.";
       return;
     }
     this.cursorLabel.textContent = `구역 ${this.currentCursor.sectionIndex + 1} · 문단 ${this.currentCursor.paragraphIndex + 1} · 위치 ${this.currentCursor.charOffset}`;
@@ -596,7 +596,7 @@ class DoccollabRoom {
     }
     this.participantList.innerHTML = "";
     if (!participants.length) {
-      this.participantList.innerHTML = '<div class="doccollab-empty">아직 접속 중인 사람이 없습니다.</div>';
+      this.participantList.innerHTML = '<div class="doccollab-empty">아직 접속 중인 선생님이 없습니다.</div>';
       return;
     }
     participants.forEach((item) => {
@@ -864,7 +864,7 @@ class DoccollabRoom {
       window.clearTimeout(this.snapshotTimer);
     }
     if (this.snapshotBadge) {
-      this.snapshotBadge.textContent = "스냅샷 예정";
+      this.snapshotBadge.textContent = "자동 저장 예정";
     }
     this.snapshotTimer = window.setTimeout(() => this.postSnapshot(), 4000);
   }
@@ -882,19 +882,19 @@ class DoccollabRoom {
       });
       if (!response.ok) {
         if (this.snapshotBadge) {
-          this.snapshotBadge.textContent = "스냅샷 실패";
+          this.snapshotBadge.textContent = "자동 저장 실패";
         }
-        this.setStatus("자동 스냅샷 실패", true);
+        this.setStatus("자동 저장 실패", true);
         return;
       }
       if (this.snapshotBadge) {
-        this.snapshotBadge.textContent = "스냅샷 저장";
+        this.snapshotBadge.textContent = "자동 저장 완료";
       }
     } catch (_error) {
       if (this.snapshotBadge) {
-        this.snapshotBadge.textContent = "스냅샷 실패";
+        this.snapshotBadge.textContent = "자동 저장 실패";
       }
-      this.setStatus("자동 스냅샷 실패", true);
+      this.setStatus("자동 저장 실패", true);
     }
   }
 
@@ -918,7 +918,7 @@ class DoccollabRoom {
       const fileName = `${this.payload.title || "document"}.hwp`;
       const formData = new FormData();
       formData.append("export_file", new File([bytes], fileName, { type: "application/x-hwp" }));
-      formData.append("note", "협업 저장");
+      formData.append("note", "문서 저장");
       formData.append("snapshot_json", JSON.stringify(this.buildSnapshotPayload()));
       const response = await fetch(this.payload.saveRevisionUrl, {
         method: "POST",

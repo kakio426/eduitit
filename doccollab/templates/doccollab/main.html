@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}함께문서실{% endblock %}
+{% block title %}HWP 문서실{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
@@ -10,14 +10,14 @@
     <div class="doccollab-frame">
         <header class="doccollab-hero">
             <div>
-                <p class="doccollab-kicker">문서 허브</p>
-                <h1 class="doccollab-title">함께문서실</h1>
-                <p class="doccollab-copy">HWP와 HWPX를 열고 같이 수정하고 HWP로 저장합니다.</p>
+                <p class="doccollab-kicker">온라인 HWP 편집</p>
+                <h1 class="doccollab-title">HWP 문서실</h1>
+                <p class="doccollab-copy">HWP와 HWPX를 열고 바로 수정한 뒤 HWP로 저장합니다.</p>
             </div>
             <div class="doccollab-chip-row">
                 <span class="doccollab-chip">HWP/HWPX</span>
-                <span class="doccollab-chip">데스크톱 Chrome</span>
-                <span class="doccollab-chip">모바일 보기만</span>
+                <span class="doccollab-chip">Chrome 편집</span>
+                <span class="doccollab-chip">모바일 보기</span>
             </div>
         </header>
 
@@ -32,8 +32,8 @@
         <div class="doccollab-grid">
             <aside class="doccollab-card doccollab-card--sticky">
                 <div class="doccollab-card-head">
-                    <p class="doccollab-label">문서 열기</p>
-                    <h2 class="doccollab-card-title">새 문서</h2>
+                    <p class="doccollab-label">파일 열기</p>
+                    <h2 class="doccollab-card-title">지금 수정</h2>
                 </div>
                 <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form" data-doccollab-upload-form="true">
                     {% csrf_token %}
@@ -46,19 +46,15 @@
                         <input type="text" name="title" placeholder="비우면 파일 이름을 씁니다.">
                     </label>
                     <button type="submit" class="doccollab-primary" data-doccollab-open-button="true">파일 열기</button>
-                    <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">파일만 올리면 바로 문서방이 열립니다.</p>
+                    <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">파일을 고르면 바로 편집 화면이 열립니다.</p>
                 </form>
             </aside>
 
             <div class="doccollab-stack">
                 <section class="doccollab-card">
                     <div class="doccollab-card-head">
-                        <p class="doccollab-label">이어서 작업</p>
-                        <h2 class="doccollab-card-title">내 문서</h2>
-                    </div>
-                    <div class="doccollab-summary-strip">
-                        <span class="doccollab-chip doccollab-chip--soft">오늘 {{ today_room_count }}</span>
-                        <span class="doccollab-chip doccollab-chip--soft">공유 {{ shared_room_count }}</span>
+                        <p class="doccollab-label">최근</p>
+                        <h2 class="doccollab-card-title">최근 문서</h2>
                     </div>
                     {% if my_room_cards %}
                     <div class="doccollab-list">
@@ -72,7 +68,6 @@
                                         <span class="doccollab-chip doccollab-chip--soft">오늘</span>
                                         {% endif %}
                                         <span class="doccollab-chip doccollab-chip--soft">{{ room.scope_label }}</span>
-                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.role_label }}</span>
                                     </div>
                                 </div>
                                 <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
@@ -85,14 +80,14 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="doccollab-empty">내가 연 문서는 여기 모입니다.</p>
+                    <p class="doccollab-empty">최근 연 문서가 아직 없습니다.</p>
                     {% endif %}
                 </section>
 
                 <section class="doccollab-card">
                     <div class="doccollab-card-head">
-                        <p class="doccollab-label">공유 문서</p>
-                        <h2 class="doccollab-card-title">받은 문서</h2>
+                        <p class="doccollab-label">공유</p>
+                        <h2 class="doccollab-card-title">공유받은 문서</h2>
                     </div>
                     {% if shared_room_cards %}
                     <div class="doccollab-list">
@@ -115,7 +110,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="doccollab-empty">공유받은 문서는 아직 없습니다.</p>
+                    <p class="doccollab-empty">공유받은 문서가 아직 없습니다.</p>
                     {% endif %}
                 </section>
             </div>

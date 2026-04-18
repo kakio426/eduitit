@@ -10,8 +10,8 @@
     <div class="doccollab-frame">
         <header class="doccollab-hero doccollab-hero--room">
             <div>
-                <a href="{% url 'doccollab:main' %}" class="doccollab-back">문서실</a>
-                <p class="doccollab-kicker">문서방</p>
+                <a href="{% url 'doccollab:main' %}" class="doccollab-back">HWP 문서실</a>
+                <p class="doccollab-kicker">문서 편집</p>
                 <h1 class="doccollab-title">{{ room.title }}</h1>
                 <p class="doccollab-copy">{{ share_title }} · {{ share_copy }}</p>
             </div>
@@ -35,25 +35,25 @@
                 <section class="doccollab-card doccollab-card--editor">
                     <div class="doccollab-toolbar doccollab-toolbar--editor">
                         <div class="doccollab-toolbar-copy">
-                            <p class="doccollab-label">편집</p>
+                            <p class="doccollab-label">문서 입력</p>
                             <h2 class="doccollab-card-title">바로 수정</h2>
-                            <p class="doccollab-footnote">{{ share_copy }} 현재 저장 <strong id="doccollab-current-revision-label">{% if current_revision %}r{{ current_revision.revision_number }} · {{ current_revision.get_export_format_display }}{% else %}없음{% endif %}</strong> · 공식본 <strong id="doccollab-published-revision-label">{% if published_revision %}r{{ published_revision.revision_number }} · {{ published_revision.get_export_format_display }}{% else %}없음{% endif %}</strong></p>
+                            <p class="doccollab-footnote">{{ share_copy }} 현재 저장 <strong id="doccollab-current-revision-label">{% if current_revision %}r{{ current_revision.revision_number }} · {{ current_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong> · 배포본 <strong id="doccollab-published-revision-label">{% if published_revision %}r{{ published_revision.revision_number }} · {{ published_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong></p>
                         </div>
                         <div class="doccollab-toolbar-actions">
-                            {% if can_manage %}
-                            <a href="#doccollab-share-members" class="doccollab-secondary">공유</a>
-                            {% endif %}
                             {% if can_edit %}
                             <button type="button" id="doccollab-save-button" class="doccollab-primary" {% if not editing_supported %}disabled{% endif %}>저장</button>
                             {% endif %}
                             <a id="doccollab-download-link" href="{% if current_revision %}{% url 'doccollab:download_revision' room.id current_revision.id %}{% else %}#{% endif %}" class="doccollab-secondary {% if not current_revision %}doccollab-secondary--disabled{% endif %}" {% if not current_revision %}aria-disabled="true"{% endif %}>다운로드</a>
                             <a href="{% url 'doccollab:room_revisions' room.id %}" class="doccollab-secondary">버전</a>
+                            {% if can_manage %}
+                            <a href="#doccollab-share-members" class="doccollab-secondary">공유</a>
+                            {% endif %}
                         </div>
                     </div>
 
                     {% if not can_edit %}
                     <div class="doccollab-readonly">
-                        <strong>보기 전용</strong>
+                        <strong>보기만 가능</strong>
                         <p class="doccollab-footnote">다운로드만 가능합니다.</p>
                     </div>
                     {% elif not editing_supported %}
@@ -72,17 +72,17 @@
                     {% if editing_supported and can_edit %}
                     <div class="doccollab-input-bar">
                         <div>
-                            <p class="doccollab-label">같이 수정</p>
-                            <p class="doccollab-footnote">페이지를 누르고 바로 입력합니다.</p>
+                            <p class="doccollab-label">문서 입력</p>
+                            <p class="doccollab-footnote">문서를 누르고 바로 입력합니다.</p>
                         </div>
-                        <span id="doccollab-cursor-label" class="doccollab-chip doccollab-chip--soft">페이지를 눌러 위치를 잡아 주세요.</span>
+                        <span id="doccollab-cursor-label" class="doccollab-chip doccollab-chip--soft">문서를 눌러 입력 위치를 잡아 주세요.</span>
                     </div>
                     <textarea id="doccollab-input-proxy" class="doccollab-input-proxy" rows="1" tabindex="-1" aria-label="문서 입력"></textarea>
                     {% endif %}
 
                     <div class="doccollab-status-row">
                         <span id="doccollab-status-badge" class="doccollab-chip">준비 중</span>
-                        <span id="doccollab-snapshot-badge" class="doccollab-chip">스냅샷 대기</span>
+                        <span id="doccollab-snapshot-badge" class="doccollab-chip">자동 저장 대기</span>
                         <span class="doccollab-footnote">원본 {{ room.get_source_format_display }} · 저장 HWP</span>
                     </div>
                 </section>
@@ -92,17 +92,60 @@
                 <div class="doccollab-card-head">
                     <div>
                         <p class="doccollab-label">문서 정보</p>
-                        <h2 class="doccollab-card-title">보조 패널</h2>
+                        <h2 class="doccollab-card-title">저장과 공유</h2>
                     </div>
                     <span class="doccollab-chip doccollab-chip--soft">{{ access_label }}</span>
                 </div>
                 <div class="doccollab-meta-list">
-                    <div><span>공유</span><strong>{{ share_title }}</strong></div>
+                    <div><span>상태</span><strong>{{ share_copy }}</strong></div>
                     <div><span>내 권한</span><strong>{{ membership.get_role_display|default:"보기" }}</strong></div>
                     <div><span>브라우저</span><strong>{% if editing_supported %}Chrome 편집{% else %}보기만{% endif %}</strong></div>
                     <div><span>원본</span><strong>{{ room.get_source_format_display }}</strong></div>
-                    <div><span>저장</span><strong>협업 저장 HWP</strong></div>
+                    <div><span>저장</span><strong>저장본 HWP</strong></div>
                 </div>
+
+                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
+                    <summary>저장본 {{ revisions|length }}</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div id="doccollab-revision-list" class="doccollab-list doccollab-list--tight">
+                            {% for revision in revisions %}
+                            <a href="{% url 'doccollab:download_revision' room.id revision.id %}" class="doccollab-room-row" data-revision-id="{{ revision.id }}">
+                                <span class="doccollab-room-title">r{{ revision.revision_number }} · {{ revision.ui_export_format_label }}</span>
+                                <span class="doccollab-room-meta">{{ revision.created_at|date:"m.d H:i" }}</span>
+                            </a>
+                            {% empty %}
+                            <div class="doccollab-empty">저장본이 아직 없습니다.</div>
+                            {% endfor %}
+                        </div>
+                        <a href="{% url 'doccollab:room_revisions' room.id %}" class="doccollab-secondary doccollab-secondary--link">전체 버전</a>
+                    </div>
+                </details>
+
+                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
+                    <summary>편집 기록 {{ edit_history|length }}</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div id="doccollab-edit-history-list" class="doccollab-list doccollab-list--tight">
+                            {% for event in edit_history %}
+                            <div class="doccollab-room-row doccollab-room-row--history" data-edit-event-id="{{ event.id }}">
+                                <div class="doccollab-room-main">
+                                    <div class="doccollab-room-heading">
+                                        <span class="doccollab-room-title">{{ event.display_name|default:"사용자" }}</span>
+                                        <div class="doccollab-room-badges">
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_type }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="doccollab-room-submeta">{{ event.summary }}</span>
+                                </div>
+                                <div class="doccollab-room-side">
+                                    <span class="doccollab-room-meta">{{ event.created_at|date:"m.d H:i" }}</span>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="doccollab-empty">아직 기록된 편집이 없습니다.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
 
                 {% if editing_supported and can_edit %}
                 <section class="doccollab-support-block">
@@ -139,55 +182,52 @@
                 </section>
                 {% endif %}
 
-                <section id="doccollab-share-members" class="doccollab-support-block">
-                    <div class="doccollab-support-head">
-                        <div>
-                            <p class="doccollab-label">공유 멤버</p>
-                            <h3 class="doccollab-card-title">같이 쓰는 선생님</h3>
-                        </div>
-                    </div>
-                    <div class="doccollab-list doccollab-list--tight">
-                        {% for item in shared_members %}
-                        <div class="doccollab-room-row doccollab-room-row--workspace">
-                            <div class="doccollab-room-main">
-                                <div class="doccollab-room-heading">
-                                    <span class="doccollab-room-title">{{ item.display_name }}</span>
-                                    <div class="doccollab-room-badges">
-                                        {% if item.is_owner %}
-                                        <span class="doccollab-chip doccollab-chip--soft">문서 주인</span>
-                                        {% endif %}
-                                        <span class="doccollab-chip doccollab-chip--soft">{{ item.role_label }}</span>
-                                        {% if item.is_online %}
-                                        <span class="doccollab-chip doccollab-chip--soft">접속 중</span>
-                                        {% endif %}
+                <details id="doccollab-share-members" class="doccollab-disclosure doccollab-disclosure--panel">
+                    <summary>문서 공유 {{ shared_members|length }}</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div class="doccollab-list doccollab-list--tight">
+                            {% for item in shared_members %}
+                            <div class="doccollab-room-row doccollab-room-row--workspace">
+                                <div class="doccollab-room-main">
+                                    <div class="doccollab-room-heading">
+                                        <span class="doccollab-room-title">{{ item.display_name }}</span>
+                                        <div class="doccollab-room-badges">
+                                            {% if item.is_owner %}
+                                            <span class="doccollab-chip doccollab-chip--soft">문서 주인</span>
+                                            {% endif %}
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ item.role_label }}</span>
+                                            {% if item.is_online %}
+                                            <span class="doccollab-chip doccollab-chip--soft">접속 중</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
+                                    <span class="doccollab-room-submeta">{{ item.status_label }}</span>
                                 </div>
-                                <span class="doccollab-room-submeta">{{ item.status_label }}</span>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
+
+                        {% if can_manage %}
+                        <form method="post" action="{% url 'doccollab:add_member' room.id %}" class="doccollab-form doccollab-form--inline">
+                            {% csrf_token %}
+                            <label class="doccollab-field">
+                                <span>아이디</span>
+                                <input type="text" name="username" placeholder="teacher01">
+                            </label>
+                            <label class="doccollab-field">
+                                <span>권한</span>
+                                <select name="role">
+                                    <option value="editor">편집</option>
+                                    <option value="viewer">보기</option>
+                                </select>
+                            </label>
+                            <button type="submit" class="doccollab-secondary">사용자 추가</button>
+                        </form>
+                        {% endif %}
                     </div>
+                </details>
 
-                    {% if can_manage %}
-                    <form method="post" action="{% url 'doccollab:add_member' room.id %}" class="doccollab-form doccollab-form--inline">
-                        {% csrf_token %}
-                        <label class="doccollab-field">
-                            <span>아이디</span>
-                            <input type="text" name="username" placeholder="teacher01">
-                        </label>
-                        <label class="doccollab-field">
-                            <span>권한</span>
-                            <select name="role">
-                                <option value="editor">편집</option>
-                                <option value="viewer">보기</option>
-                            </select>
-                        </label>
-                        <button type="submit" class="doccollab-secondary">사용자 추가</button>
-                    </form>
-                    {% endif %}
-                </section>
-
-                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
+                <details class="doccollab-disclosure doccollab-disclosure--panel">
                     <summary>온라인 참여자 {{ participants|length }}</summary>
                     <div class="doccollab-disclosure-body">
                         <div id="doccollab-participant-list" class="doccollab-list doccollab-list--tight">
@@ -202,49 +242,6 @@
                             <div class="doccollab-empty">아직 접속 중인 사람이 없습니다.</div>
                             {% endif %}
                         </div>
-                    </div>
-                </details>
-
-                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
-                    <summary>편집 기록 {{ edit_history|length }}</summary>
-                    <div class="doccollab-disclosure-body">
-                        <div id="doccollab-edit-history-list" class="doccollab-list doccollab-list--tight">
-                            {% for event in edit_history %}
-                            <div class="doccollab-room-row doccollab-room-row--history" data-edit-event-id="{{ event.id }}">
-                                <div class="doccollab-room-main">
-                                    <div class="doccollab-room-heading">
-                                        <span class="doccollab-room-title">{{ event.display_name|default:"사용자" }}</span>
-                                        <div class="doccollab-room-badges">
-                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_type }}</span>
-                                        </div>
-                                    </div>
-                                    <span class="doccollab-room-submeta">{{ event.summary }}</span>
-                                </div>
-                                <div class="doccollab-room-side">
-                                    <span class="doccollab-room-meta">{{ event.created_at|date:"m.d H:i" }}</span>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="doccollab-empty">아직 기록된 편집이 없습니다.</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </details>
-
-                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
-                    <summary>저장본 {{ revisions|length }}</summary>
-                    <div class="doccollab-disclosure-body">
-                        <div id="doccollab-revision-list" class="doccollab-list doccollab-list--tight">
-                            {% for revision in revisions %}
-                            <a href="{% url 'doccollab:download_revision' room.id revision.id %}" class="doccollab-room-row" data-revision-id="{{ revision.id }}">
-                                <span class="doccollab-room-title">r{{ revision.revision_number }} · {{ revision.get_export_format_display }}</span>
-                                <span class="doccollab-room-meta">{{ revision.created_at|date:"m.d H:i" }}</span>
-                            </a>
-                            {% empty %}
-                            <div class="doccollab-empty">저장본이 아직 없습니다.</div>
-                            {% endfor %}
-                        </div>
-                        <a href="{% url 'doccollab:room_revisions' room.id %}" class="doccollab-secondary doccollab-secondary--link">전체 버전</a>
                     </div>
                 </details>
             </aside>

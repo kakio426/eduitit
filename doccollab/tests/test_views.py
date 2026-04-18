@@ -160,6 +160,10 @@ class DoccollabViewTests(TestCase):
 
         self.assertIn(own_room.title, my_card_titles)
         self.assertIn(shared_room.title, shared_card_titles)
+        self.assertContains(response, "HWP 문서실")
+        self.assertContains(response, "최근 문서")
+        self.assertContains(response, "공유받은 문서")
+        self.assertNotContains(response, "함께문서실")
 
     def test_shared_room_detail_shows_share_owner_members_and_access_label(self):
         shared_room, _ = self._create_room(self.other_teacher, "공유 수정 문서", "shared-edit.hwpx")
@@ -175,11 +179,12 @@ class DoccollabViewTests(TestCase):
         response = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": shared_room.id}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["share_title"], "다른선생님이 공유")
+        self.assertEqual(response.context["share_title"], "공유받은 문서")
         self.assertEqual(response.context["access_label"], "편집 가능")
         self.assertEqual(len(response.context["shared_members"]), 2)
-        self.assertContains(response, "같이 쓰는 선생님")
-        self.assertContains(response, "다른선생님이 공유")
+        self.assertContains(response, "문서 편집")
+        self.assertContains(response, "공유받은 문서")
+        self.assertContains(response, "문서 공유")
 
     def test_same_title_rooms_keep_separate_mirrored_documents(self):
         first_room, _ = self._create_room(self.owner, "같은 제목", "same-1.hwpx")
@@ -196,7 +201,7 @@ class DoccollabViewTests(TestCase):
         response = self.client.post(
             reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
             {
-                "note": "협업 저장",
+                "note": "문서 저장",
                 "export_file": hwp_upload("save-test.hwp"),
             },
         )
@@ -246,6 +251,7 @@ class DoccollabViewTests(TestCase):
 
         self.assertContains(response, "편집 기록")
         self.assertContains(response, "문장 입력 · 회의 안내")
+        self.assertContains(response, "배포본")
 
     def test_mobile_room_is_read_only(self):
         room, _revision = self._create_room(self.owner, "모바일 보기", "mobile.hwpx")
@@ -258,4 +264,4 @@ class DoccollabViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["editing_supported"])
-        self.assertContains(response, "휴대폰에서는 보기만 됩니다.")
+        self.assertContains(response, "휴대폰에서는 보기만 가능합니다.")

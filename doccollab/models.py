@@ -187,6 +187,14 @@ class DocRevision(models.Model):
             models.Index(fields=["room", "created_at"]),
         ]
 
+    @property
+    def ui_export_format_label(self):
+        if self.export_format == self.ExportFormat.SOURCE_HWP:
+            return "원본 HWP"
+        if self.export_format == self.ExportFormat.SOURCE_HWPX:
+            return "원본 HWPX"
+        return "저장본 HWP"
+
     def __str__(self):
         return f"{self.room.title} r{self.revision_number}"
 

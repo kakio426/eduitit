@@ -18,7 +18,7 @@ from version_manager.models import Document, DocumentGroup, DocumentVersion
 from .models import DocEditEvent, DocMembership, DocPresence, DocRevision, DocRoom, DocSnapshot, DocWorkspace
 
 
-DOC_GROUP_NAME = "함께문서실"
+DOC_GROUP_NAME = "HWP 문서실"
 MAX_SOURCE_FILE_BYTES = 20 * 1024 * 1024
 MAX_CONTROL_SCAN = 12
 MAX_LIVE_UPDATES = 250
@@ -229,7 +229,7 @@ def serialize_revision(revision):
         "revision_number": revision.revision_number,
         "original_name": revision.original_name,
         "export_format": revision.export_format,
-        "export_format_label": revision.get_export_format_display(),
+        "export_format_label": revision.ui_export_format_label,
         "file_format": file_format,
         "file_format_label": display_source_format(file_format),
         "is_published": revision.is_published,
@@ -548,6 +548,6 @@ def room_payload_for_template(*, room, membership, request):
         "saveFormatLabel": display_source_format(DocRoom.SourceFormat.HWP),
         "supportedUploadFormats": list(SUPPORTED_UPLOAD_FORMATS.values()),
         "collabState": collab_state,
-        "notes": f"원본 {source_format_label}는 그대로 두고, 협업 저장은 HWP로 쌓습니다.",
+        "notes": f"원본 {source_format_label}는 그대로 두고, 저장본은 HWP로 남깁니다.",
         "maxControlScan": MAX_CONTROL_SCAN,
     }

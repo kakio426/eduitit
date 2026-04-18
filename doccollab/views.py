@@ -70,9 +70,9 @@ def _room_card(room, user):
         "title": room.title,
         "url": reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
         "is_today": timezone.localtime(room.last_activity_at).date() == timezone.localdate(),
-        "scope_label": "내 문서" if is_mine else "공유",
+        "scope_label": "내 문서" if is_mine else "공유받은 문서",
         "role_label": membership.get_role_display() if membership else "보기",
-        "owner_label": "내가 연 문서" if is_mine else f"{owner_name}이 공유",
+        "owner_label": "내 문서" if is_mine else owner_name,
         "revision_label": f"r{current_revision.revision_number}" if current_revision else "원본",
         "activity_label": _activity_label(room.last_activity_at),
     }
@@ -105,23 +105,22 @@ def _shared_members_for_room(room):
 
 
 def _room_access_context(room, membership):
-    owner_name = _teacher_name_label(room.created_by)
     if getattr(membership, "role", "") == DocMembership.Role.OWNER:
         return {
             "share_title": "내 문서",
-            "share_copy": "함께 쓸 선생님을 추가하고 권한을 관리합니다.",
-            "access_label": "공유 가능",
+            "share_copy": "바로 수정 가능",
+            "access_label": "바로 수정 가능",
         }
     if getattr(membership, "role", "") == DocMembership.Role.EDITOR:
         return {
-            "share_title": f"{owner_name}이 공유",
-            "share_copy": "편집 가능 · 저장하면 협업 저장본에 반영됩니다.",
+            "share_title": "공유받은 문서",
+            "share_copy": "편집 가능",
             "access_label": "편집 가능",
         }
     return {
-        "share_title": f"{owner_name}이 공유",
-        "share_copy": "보기 전용 · 다운로드만 가능합니다.",
-        "access_label": "보기 전용",
+        "share_title": "공유받은 문서",
+        "share_copy": "보기만 가능",
+        "access_label": "보기만 가능",
     }
 
 
@@ -135,7 +134,7 @@ def _build_dashboard_context(request):
     recent_revisions = DocRevision.objects.filter(room__in=rooms).select_related("room").order_by("-created_at")[:8]
     today_rooms = today_rooms_qs[:8]
     return {
-        "service_title": "함께문서실",
+        "service_title": "HWP 문서실",
         "my_rooms": my_rooms,
         "shared_rooms": shared_rooms,
         "recent_revisions": recent_revisions,
@@ -172,7 +171,7 @@ def create_room(request):
     except ValidationError as exc:
         messages.error(request, str(exc))
         return redirect("doccollab:main")
-    messages.success(request, "문서를 열었습니다.")
+    messages.success(request, "편집 화면을 열었습니다.")
     return redirect("doccollab:room_detail", room_id=room.id)
 
 
@@ -183,9 +182,9 @@ def room_detail(request, room_id):
     editing_supported = _is_desktop_chrome(request)
     read_only_reason = ""
     if _is_mobile_user_agent(request):
-        read_only_reason = "휴대폰에서는 보기만 됩니다."
+        read_only_reason = "휴대폰에서는 보기만 가능합니다."
     elif not editing_supported:
-        read_only_reason = "데스크톱 Chrome에서 편집됩니다."
+        read_only_reason = "데스크톱 Chrome에서 편집 가능합니다."
     revisions = room.revisions.order_by("-revision_number")[:10]
     edit_history = DocEditEvent.objects.filter(room=room).order_by("-created_at")[:20]
     current_revision = revisions[0] if revisions else None
@@ -249,7 +248,7 @@ def save_revision(request, room_id):
     if uploaded_file is None:
         return JsonResponse({"message": "저장할 파일이 없습니다."}, status=400)
     snapshot_json = request.POST.get("snapshot_json")
-    note = request.POST.get("note") or "협업 저장"
+    note = request.POST.get("note") or "문서 저장"
     try:
         revision = save_room_revision(
             room=room,
@@ -296,7 +295,7 @@ def publish_revision_view(request, room_id, revision_id):
         "revision.saved",
         {"revision": serialize_revision(revision), "published": True},
     )
-    messages.success(request, f"r{revision.revision_number}을 공식본으로 지정했습니다.")
+    messages.success(request, f"r{revision.revision_number}을 배포본으로 지정했습니다.")
     return redirect("doccollab:room_revisions", room_id=room.id)
 
 
