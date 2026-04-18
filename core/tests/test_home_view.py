@@ -1334,8 +1334,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('rail_sections', workspace)
         self.assertEqual(workspace['workspace_search_placeholder'], '서비스와 대화 찾기')
 
-    def test_v2_agent_workspace_shows_mode_examples_and_actions(self):
-        """V6 agent 워크스페이스는 입력창과 실행 액션을 함께 보여준다."""
+    def test_v2_agent_workspace_shows_mode_composer_and_actions_without_idle_examples(self):
+        """V6 agent 워크스페이스는 예시칩 없이 입력창과 실행 액션을 함께 보여준다."""
         self._login('cardsummaryuser')
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -1344,7 +1344,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-agent-input="true"', content)
         self.assertIn('home-v6-agent-ai-messenger', content)
         self.assertIn('home-v6-agent-ai-composer', content)
-        self.assertIn('home-v6-agent-ai-starter-chip', content)
+        self.assertNotIn('home-v6-agent-ai-starter-chip', content)
         self.assertIn('home-v6-agent-human-chat', content)
         self.assertNotIn('home-v6-agent-utility-tab', content)
         self.assertNotIn('home-v6-agent-active-badge', content)

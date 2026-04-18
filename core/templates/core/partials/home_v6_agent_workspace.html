@@ -582,22 +582,6 @@
 
             <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger'">
                 <div class="home-v6-agent-ai-thread">
-                    <div class="home-v6-agent-chat-row" x-cloak x-show="!activeAiHasConversation()">
-                        <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
-                            <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '무엇을 도와드릴까요?'"></p>
-                            <div class="home-v6-agent-ai-starter-list" x-cloak x-show="activeAiHasStarterChips()">
-                                <template x-for="item in activeAiStarterItems()" :key="'ai-starter-' + activeModeKey + '-' + item.label">
-                                    <button
-                                        type="button"
-                                        class="home-v6-agent-ai-starter-chip"
-                                        @click="runActiveAiStarter(item)"
-                                        x-text="item.label"
-                                    ></button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user" x-cloak x-show="activeAiUserBubbleKind()">
                         <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
                             <template x-if="activeAiUserBubbleKind() === 'text'">
