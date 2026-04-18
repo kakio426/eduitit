@@ -1,0 +1,101 @@
+<section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
+    <div class="flex items-start justify-between gap-3">
+        <div>
+            <p class="text-xs font-bold text-sky-700">문제 만들기</p>
+            <h2 class="mt-1 text-2xl font-black text-slate-900">{{ create_count|add:1 }}번째 문제</h2>
+            <p class="mt-2 text-sm text-slate-500">{{ room.get_topic_display }} · {{ room.grade }}학년</p>
+        </div>
+        {% if seconds_left != None %}
+        <div class="rounded-2xl bg-sky-50 px-3 py-2 text-center">
+            <p class="text-xs font-bold text-sky-700">남은 시간</p>
+            <p class="text-lg font-black text-sky-900">{{ seconds_left }}초</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if error_message %}
+    <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    <form id="sqg-create-form"
+          hx-post="{% url 'seed_quiz:htmx_student_game_submit_question' %}"
+          hx-target="#game-area"
+          hx-swap="innerHTML"
+          class="mt-5 space-y-4">
+        {% if room.question_mode == 'mixed' %}
+        <div>
+            <label class="mb-2 block text-sm font-bold text-slate-700">형식</label>
+            <select name="question_type" id="sqg-question-type" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                <option value="mc4">4지선다</option>
+                <option value="ox">O/X</option>
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="question_type" value="{{ room.question_mode }}">
+        <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+            형식 {{ room.get_question_mode_display }}
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="mb-2 block text-sm font-bold text-slate-700">문제</label>
+            <textarea name="question_text" rows="4" required
+                      class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                      placeholder="친구들이 읽고 바로 답할 수 있게 짧고 분명하게 적어 주세요."></textarea>
+        </div>
+
+        <div id="sqg-mc4-panel" {% if room.question_mode == 'ox' %}class="hidden"{% endif %}>
+            <label class="mb-2 block text-sm font-bold text-slate-700">정답</label>
+            <input type="text" name="answer_text"
+                   class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                   placeholder="정답 한 가지">
+            <button type="button"
+                    hx-post="{% url 'seed_quiz:htmx_student_game_generate_choices' %}"
+                    hx-include="#sqg-create-form"
+                    hx-target="#sqg-choice-builder"
+                    hx-swap="innerHTML"
+                    class="mt-3 w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800">
+                보기 만들기
+            </button>
+            <div id="sqg-choice-builder" class="mt-3 rounded-3xl bg-slate-50 p-4 text-xs text-slate-500">
+                정답을 넣고 보기를 만들면 수정할 수 있습니다.
+            </div>
+        </div>
+
+        <div id="sqg-ox-panel" {% if room.question_mode == 'mc4' %}class="hidden"{% endif %}>
+            <p class="mb-2 text-sm font-bold text-slate-700">정답</p>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-lg font-black text-slate-900">
+                    <input type="radio" name="correct_ox" value="O" checked>
+                    O
+                </label>
+                <label class="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-lg font-black text-slate-900">
+                    <input type="radio" name="correct_ox" value="X">
+                    X
+                </label>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+            제출
+        </button>
+    </form>
+</section>
+
+<script>
+(function () {
+    const select = document.getElementById('sqg-question-type');
+    if (!select) return;
+    const mc4Panel = document.getElementById('sqg-mc4-panel');
+    const oxPanel = document.getElementById('sqg-ox-panel');
+    const syncPanels = function () {
+        const type = select.value;
+        if (mc4Panel) mc4Panel.classList.toggle('hidden', type !== 'mc4');
+        if (oxPanel) oxPanel.classList.toggle('hidden', type !== 'ox');
+    };
+    syncPanels();
+    select.addEventListener('change', syncPanels);
+})();
+</script>

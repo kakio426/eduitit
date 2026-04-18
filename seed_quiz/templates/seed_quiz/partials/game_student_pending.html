@@ -1,0 +1,16 @@
+<section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100"
+         hx-get="{% url 'seed_quiz:htmx_student_game_question_status' question_id=pending_question.id %}"
+         hx-trigger="load delay:400ms, every 2s"
+         hx-target="#game-area"
+         hx-swap="innerHTML">
+    <div class="text-center">
+        <div class="mb-4 text-5xl">🤖</div>
+        <h2 class="text-2xl font-black text-slate-900">AI가 확인 중</h2>
+        <p class="mt-2 text-sm text-slate-500">문제 품질과 점수를 정리하고 있어요.</p>
+    </div>
+
+    <div class="mt-6 rounded-3xl bg-slate-50 px-5 py-5">
+        <p class="text-xs font-bold text-slate-500">방금 보낸 문제</p>
+        <p class="mt-2 text-lg font-black text-slate-900">{{ pending_question.question_text }}</p>
+    </div>
+</section>

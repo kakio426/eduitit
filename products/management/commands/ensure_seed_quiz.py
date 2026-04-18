@@ -9,10 +9,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         title = "씨앗 퀴즈"
         defaults = {
-            "lead_text": "공식/공유 퀴즈 은행에서 세트를 고르거나 CSV 업로드·붙여넣기로 직접 만들어, 문항 수(1~200)를 자유롭게 배포하세요.",
+            "lead_text": "퀴즈 은행 배포와 실시간 게임을 한곳에서 운영하세요. 세트 배포, CSV 업로드, 학생 주도 게임까지 바로 시작됩니다.",
             "description": (
                 "씨앗 퀴즈는 교사가 공식/공유 퀴즈 은행에서 문제 세트를 선택하거나 직접 업로드해 "
-                "즉시 배포할 수 있는 교실 참여형 퀴즈 서비스입니다. "
+                "즉시 배포하고, 학생이 직접 문제를 만드는 실시간 게임도 함께 운영할 수 있는 교실 참여형 퀴즈 서비스입니다. "
                 "저장한 세트는 기본으로 공유되어 다른 교사도 재사용할 수 있고, "
                 "만점 학생에게는 행복의 씨앗 보상이 자동으로 지급됩니다."
             ),
@@ -75,6 +75,12 @@ class Command(BaseCommand):
                 "title": "CSV 업로드 지원",
                 "legacy_titles": ["태블릿 최적화 UI", "학생 풀이 최적화"],
                 "description": "CSV·붙여넣기 입력으로 1~200문항 세트를 만들고, 저장 즉시 공유 자산으로 쌓을 수 있습니다.",
+            },
+            {
+                "icon": "🎮",
+                "title": "실시간 게임 모드",
+                "legacy_titles": [],
+                "description": "학생이 직접 문제를 만들고 서로 풀며 순위를 겨루는 실시간 교실 게임을 열 수 있습니다.",
             },
             {
                 "icon": "🌱",
@@ -148,6 +154,7 @@ class Command(BaseCommand):
             manual.is_published = True
             manual_changed.append("is_published")
         target_desc = "퀴즈 선택부터 배포, 학생 풀이, 씨앗 보상까지 바로 따라갈 수 있습니다."
+        target_desc = "퀴즈 배포부터 실시간 게임, 학생 풀이, 씨앗 보상까지 바로 따라갈 수 있습니다."
         if manual.description != target_desc:
             manual.description = target_desc
             manual_changed.append("description")
@@ -160,7 +167,7 @@ class Command(BaseCommand):
                 "legacy_titles": [],
                 "content": (
                     "1) 교실 상세 화면에서 '씨앗 퀴즈' 버튼 클릭 → 2) 주제/학년 필터로 퀴즈 은행 조회 "
-                    "또는 CSV/붙여넣기로 세트 업로드 → 3) 미리보기 확인 후 '배포하기' "
+                    "또는 CSV/붙여넣기로 세트 업로드 → 3) 미리보기 확인 후 '배포하기' 또는 '실시간 게임 시작' "
                     "→ 4) 학생에게 접속 주소 공유 순서로 진행합니다."
                 ),
                 "display_order": 1,
@@ -175,6 +182,15 @@ class Command(BaseCommand):
                 "display_order": 2,
             },
             {
+                "title": "실시간 게임",
+                "legacy_titles": [],
+                "content": (
+                    "실시간 게임에서는 교사가 방을 만들고 입장 코드를 보여 주면, 학생이 직접 문제를 만든 뒤 서로의 문제를 풀며 순위를 겨룹니다. "
+                    "문제 품질은 AI가 점검하고, 1~3위는 선택적으로 씨앗 보상을 받을 수 있습니다."
+                ),
+                "display_order": 3,
+            },
+            {
                 "title": "학생 안내",
                 "legacy_titles": [],
                 "content": (
@@ -182,7 +198,7 @@ class Command(BaseCommand):
                     "배포된 세트의 문항을 순서대로 풀고, 마지막 문항 제출 즉시 채점과 보상이 이루어집니다. "
                     "만점+보호자 동의 완료 학생에게 씨앗 2개가 자동 지급됩니다."
                 ),
-                "display_order": 3,
+                "display_order": 4,
             },
             {
                 "title": "진행 현황 확인",
@@ -191,7 +207,7 @@ class Command(BaseCommand):
                     "교사 대시보드 하단의 '진행 현황'에서 접속/제출/만점 학생 수를 실시간으로 확인할 수 있습니다. "
                     "현황은 15초마다 자동으로 갱신됩니다."
                 ),
-                "display_order": 4,
+                "display_order": 5,
             },
             {
                 "title": "보상 정책",
@@ -200,7 +216,7 @@ class Command(BaseCommand):
                     "보상 조건: 3문항 모두 정답(만점) + 보호자 동의 완료(approved 상태). "
                     "보상 씨앗 수: 2개. 중복 제출 방지: 동일 학생이 같은 퀴즈에 보상은 1회만 지급됩니다."
                 ),
-                "display_order": 5,
+                "display_order": 6,
             },
         ]
 

@@ -144,6 +144,7 @@ class TeacherFlowTest(TestCase):
         self.assertContains(resp, "방법 하나만 고르세요")
         self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
         self.assertContains(resp, "방법 B. 파일 올리기")
+        self.assertContains(resp, "실시간 게임 시작")
         self.assertNotContains(resp, "랜덤 1세트 선택")
 
     def test_dashboard_shows_new_tab_navigation_labels(self):

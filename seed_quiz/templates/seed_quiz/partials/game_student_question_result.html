@@ -1,0 +1,37 @@
+<section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
+    <div class="text-center">
+        <div class="mb-4 text-5xl">{% if evaluated_question.status == 'ready' %}✅{% else %}🛠️{% endif %}</div>
+        <h2 class="text-2xl font-black text-slate-900">
+            {% if evaluated_question.status == 'ready' %}문제가 준비됐어요{% else %}다시 다듬어 주세요{% endif %}
+        </h2>
+        <p class="mt-2 text-sm text-slate-500">{{ evaluated_question.ai_feedback }}</p>
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+            <p class="text-xs font-bold text-slate-500">품질 점수</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ evaluated_question.ai_quality_score }}</p>
+        </div>
+        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+            <p class="text-xs font-bold text-slate-500">기본 점수</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ evaluated_question.base_points }}</p>
+        </div>
+    </div>
+
+    {% if create_slots_left > 0 %}
+    <button hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
+            hx-target="#game-area"
+            hx-swap="innerHTML"
+            class="mt-6 w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+        다음 문제
+    </button>
+    {% else %}
+    <div class="mt-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-center text-sm font-bold text-sky-800"
+         hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
+         hx-trigger="load delay:1500ms, every 3s"
+         hx-target="#game-area"
+         hx-swap="innerHTML">
+        친구들 문제를 기다리는 중입니다.
+    </div>
+    {% endif %}
+</section>

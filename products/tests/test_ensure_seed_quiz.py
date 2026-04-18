@@ -74,7 +74,7 @@ class EnsureSeedQuizCommandTest(TestCase):
         )
         self.assertEqual(
             feature_titles,
-            ["퀴즈 은행 원클릭 적용", "CSV 업로드 지원", "행복의 씨앗 연동"],
+            ["퀴즈 은행 원클릭 적용", "CSV 업로드 지원", "실시간 게임 모드", "행복의 씨앗 연동"],
         )
 
         section_titles = list(
@@ -84,11 +84,10 @@ class EnsureSeedQuizCommandTest(TestCase):
         )
         self.assertEqual(
             section_titles,
-            ["시작하기", "퀴즈 선택법", "학생 안내", "진행 현황 확인", "보상 정책"],
+            ["시작하기", "퀴즈 선택법", "실시간 게임", "학생 안내", "진행 현황 확인", "보상 정책"],
         )
         self.assertFalse(
             ManualSection.objects.filter(manual=manual, title="퀴즈 생성법").exists()
         )
         self.assertEqual(manual.title, "씨앗 퀴즈 시작 가이드")
         self.assertTrue(manual.is_published)
-

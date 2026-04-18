@@ -473,3 +473,253 @@ class SQGenerationLog(models.Model):
 
     def __str__(self):
         return f"[{self.level.upper()}] {self.code}: {self.message[:50]}"
+
+
+class SQGameRoom(models.Model):
+    STATUS_CHOICES = [
+        ("waiting", "입장 대기"),
+        ("creating", "문제 만들기"),
+        ("playing", "문제 풀기"),
+        ("finished", "결과"),
+    ]
+    QUESTION_MODE_CHOICES = [
+        ("mixed", "혼합"),
+        ("ox", "O/X"),
+        ("mc4", "4지선다"),
+    ]
+    PRESET_CHOICES = TOPIC_CHOICES
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    classroom = models.ForeignKey(
+        HSClassroom,
+        on_delete=models.CASCADE,
+        related_name="sq_game_rooms",
+        verbose_name="교실",
+    )
+    title = models.CharField(max_length=120, verbose_name="게임 이름")
+    topic = models.CharField(
+        max_length=20,
+        choices=PRESET_CHOICES,
+        default=DEFAULT_TOPIC,
+        verbose_name="주제",
+    )
+    grade = models.IntegerField(default=3, choices=GRADE_CHOICES, verbose_name="학년")
+    join_code = models.CharField(max_length=8, unique=True, verbose_name="입장 코드")
+    status = models.CharField(
+        max_length=12,
+        choices=STATUS_CHOICES,
+        default="waiting",
+        verbose_name="상태",
+    )
+    question_mode = models.CharField(
+        max_length=10,
+        choices=QUESTION_MODE_CHOICES,
+        default="mixed",
+        verbose_name="문제 형식",
+    )
+    questions_per_player = models.PositiveSmallIntegerField(default=1, verbose_name="학생당 출제 수")
+    solve_target_count = models.PositiveSmallIntegerField(default=5, verbose_name="학생당 풀이 수")
+    create_time_seconds = models.PositiveIntegerField(default=300, verbose_name="출제 시간(초)")
+    solve_time_seconds = models.PositiveIntegerField(default=300, verbose_name="풀이 시간(초)")
+    reward_enabled = models.BooleanField(default=False, verbose_name="씨앗 보상")
+    settings_json = models.JSONField(default=dict, blank=True, verbose_name="설정")
+    phase_started_at = models.DateTimeField(null=True, blank=True, verbose_name="단계 시작 시각")
+    finished_at = models.DateTimeField(null=True, blank=True, verbose_name="종료 시각")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sq_game_rooms_created",
+        verbose_name="생성자",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "실시간 게임 방"
+        verbose_name_plural = "실시간 게임 방"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["classroom", "status", "-created_at"]),
+            models.Index(fields=["join_code"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+
+class SQGamePlayer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    game = models.ForeignKey(
+        SQGameRoom,
+        on_delete=models.CASCADE,
+        related_name="players",
+        verbose_name="게임",
+    )
+    student = models.ForeignKey(
+        HSStudent,
+        on_delete=models.CASCADE,
+        related_name="sq_game_players",
+        verbose_name="학생",
+    )
+    nickname = models.CharField(max_length=50, verbose_name="표시 이름")
+    create_score = models.IntegerField(default=0, verbose_name="출제 점수")
+    solve_score = models.IntegerField(default=0, verbose_name="풀이 점수")
+    rank = models.PositiveIntegerField(default=0, verbose_name="순위")
+    is_connected = models.BooleanField(default=True, verbose_name="접속 중")
+    last_seen_at = models.DateTimeField(null=True, blank=True, verbose_name="최근 접속")
+    joined_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "실시간 게임 참가자"
+        verbose_name_plural = "실시간 게임 참가자"
+        unique_together = [("game", "student")]
+        ordering = ["rank", "student__number", "nickname"]
+        indexes = [
+            models.Index(fields=["game", "rank"]),
+            models.Index(fields=["game", "is_connected"]),
+        ]
+
+    def __str__(self):
+        return f"{self.game.title} - {self.nickname}"
+
+    @property
+    def total_score(self) -> int:
+        return int(self.create_score or 0) + int(self.solve_score or 0)
+
+
+class SQGameQuestion(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "작성중"),
+        ("pending_ai", "AI 평가중"),
+        ("ready", "사용 가능"),
+        ("rejected", "제외"),
+    ]
+    QUESTION_TYPE_CHOICES = [
+        ("ox", "O/X"),
+        ("mc4", "4지선다"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    game = models.ForeignKey(
+        SQGameRoom,
+        on_delete=models.CASCADE,
+        related_name="questions",
+        verbose_name="게임",
+    )
+    author = models.ForeignKey(
+        SQGamePlayer,
+        on_delete=models.CASCADE,
+        related_name="authored_questions",
+        verbose_name="출제자",
+    )
+    question_type = models.CharField(
+        max_length=8,
+        choices=QUESTION_TYPE_CHOICES,
+        default="mc4",
+        verbose_name="문제 형식",
+    )
+    question_text = models.TextField(verbose_name="문제")
+    answer_text = models.TextField(blank=True, default="", verbose_name="정답 텍스트")
+    choices = models.JSONField(default=list, blank=True, verbose_name="보기")
+    correct_index = models.IntegerField(default=0, verbose_name="정답 인덱스")
+    ai_quality_score = models.IntegerField(default=0, verbose_name="AI 품질 점수")
+    ai_quality_json = models.JSONField(default=dict, blank=True, verbose_name="AI 평가")
+    ai_feedback = models.CharField(max_length=255, blank=True, default="", verbose_name="AI 피드백")
+    base_points = models.IntegerField(default=0, verbose_name="기본 점수")
+    status = models.CharField(
+        max_length=12,
+        choices=STATUS_CHOICES,
+        default="draft",
+        verbose_name="상태",
+    )
+    ai_started_at = models.DateTimeField(null=True, blank=True, verbose_name="AI 시작 시각")
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="제출 시각")
+    evaluated_at = models.DateTimeField(null=True, blank=True, verbose_name="평가 시각")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "실시간 게임 문제"
+        verbose_name_plural = "실시간 게임 문제"
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["game", "status", "created_at"]),
+            models.Index(fields=["author", "status"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(correct_index__gte=0) & Q(correct_index__lte=3),
+                name="sq_game_question_correct_index_range",
+            )
+        ]
+
+    def __str__(self):
+        return self.question_text[:40]
+
+
+class SQGameAnswer(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    question = models.ForeignKey(
+        SQGameQuestion,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        verbose_name="문제",
+    )
+    player = models.ForeignKey(
+        SQGamePlayer,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        verbose_name="풀이자",
+    )
+    selected_index = models.IntegerField(verbose_name="선택한 답")
+    is_correct = models.BooleanField(default=False, verbose_name="정답 여부")
+    time_taken_ms = models.PositiveIntegerField(default=0, verbose_name="소요 시간(ms)")
+    points_earned = models.IntegerField(default=0, verbose_name="획득 점수")
+    answered_at = models.DateTimeField(auto_now_add=True, verbose_name="답변 시각")
+
+    class Meta:
+        verbose_name = "실시간 게임 답변"
+        verbose_name_plural = "실시간 게임 답변"
+        unique_together = [("question", "player")]
+        indexes = [models.Index(fields=["question", "player"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(selected_index__gte=0) & Q(selected_index__lte=3),
+                name="sq_game_answer_selected_index_range",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.player.nickname} - {self.question_id}"
+
+
+class SQGameReward(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    game = models.ForeignKey(
+        SQGameRoom,
+        on_delete=models.CASCADE,
+        related_name="rewards",
+        verbose_name="게임",
+    )
+    player = models.ForeignKey(
+        SQGamePlayer,
+        on_delete=models.CASCADE,
+        related_name="rewards",
+        verbose_name="참가자",
+    )
+    rank = models.PositiveIntegerField(verbose_name="순위")
+    seed_amount = models.PositiveIntegerField(default=0, verbose_name="보상 씨앗")
+    request_id = models.UUIDField(default=uuid.uuid4, unique=True, verbose_name="보상 요청 ID")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "실시간 게임 보상"
+        verbose_name_plural = "실시간 게임 보상"
+        unique_together = [("game", "player")]
+        ordering = ["rank", "created_at"]
+
+    def __str__(self):
+        return f"{self.game.title} - {self.player.nickname} ({self.seed_amount})"

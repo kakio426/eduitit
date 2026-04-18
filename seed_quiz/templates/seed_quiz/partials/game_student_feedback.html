@@ -1,0 +1,46 @@
+<section class="space-y-4">
+    <div class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
+        <div class="text-center">
+            <div class="mb-4 text-5xl">{% if answer.is_correct %}🎉{% else %}📘{% endif %}</div>
+            <h2 class="text-2xl font-black text-slate-900">{% if answer.is_correct %}정답{% else %}다음에 맞혀요{% endif %}</h2>
+            <p class="mt-2 text-sm text-slate-500">
+                {% if answer.is_correct %}+{{ answer.points_earned }}점{% else %}정답은 {{ correct_choice }}{% endif %}
+            </p>
+        </div>
+
+        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+            <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">내가 고른 답</p>
+                <p class="mt-2 text-lg font-black text-slate-900">{{ selected_choice }}</p>
+            </div>
+            <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">현재 누적</p>
+                <p class="mt-2 text-lg font-black text-slate-900">{{ player.total_score }}</p>
+            </div>
+        </div>
+
+        <button hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
+                hx-target="#game-area"
+                hx-swap="innerHTML"
+                class="mt-6 w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+            {% if room.status == 'finished' %}결과 보기{% else %}다음 문제{% endif %}
+        </button>
+    </div>
+
+    {% if leaderboard %}
+    <div class="rounded-[28px] bg-slate-950 px-5 py-5 text-white shadow-xl shadow-slate-200">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-bold">상위 5명</h3>
+            <span class="text-xs text-slate-300">실시간</span>
+        </div>
+        <div class="space-y-2">
+            {% for row in leaderboard %}
+            <div class="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
+                <p class="text-base font-black">{{ row.total_score }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</section>

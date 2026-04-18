@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ room.title }}{% endblock %}
+
+{% block content %}
+<section class="service-shell pb-20 px-4 min-h-screen">
+    <div class="max-w-6xl mx-auto space-y-5">
+        <div class="flex flex-col gap-2">
+            <a href="{% url 'seed_quiz:teacher_game_create' classroom_id=classroom.id %}" class="text-sm text-gray-500 hover:text-gray-700">&larr; 실시간 게임 목록</a>
+            <h1 class="text-3xl font-black text-gray-900">{{ room.title }}</h1>
+            <p class="text-sm text-gray-500">{{ classroom.name }}</p>
+        </div>
+
+        <div id="game-room-panel"
+             hx-get="{% url 'seed_quiz:htmx_teacher_game_panel' classroom_id=classroom.id room_id=room.id %}"
+             hx-trigger="load"
+             hx-target="#game-room-panel"
+             hx-swap="innerHTML">
+            <div class="rounded-[28px] border border-slate-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+                운영 화면을 불러오는 중입니다.
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

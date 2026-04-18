@@ -1,6 +1,6 @@
 from django.urls import path
 
-from seed_quiz import views
+from seed_quiz import views, views_game
 
 app_name = "seed_quiz"
 
@@ -10,6 +10,26 @@ urlpatterns = [
 
     # 교사 영역
     path("class/<uuid:classroom_id>/dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path(
+        "class/<uuid:classroom_id>/game/create/",
+        views_game.teacher_game_create,
+        name="teacher_game_create",
+    ),
+    path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/",
+        views_game.teacher_game_room,
+        name="teacher_game_room",
+    ),
+    path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/panel/",
+        views_game.htmx_teacher_game_panel,
+        name="htmx_teacher_game_panel",
+    ),
+    path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/advance/",
+        views_game.htmx_teacher_game_advance,
+        name="htmx_teacher_game_advance",
+    ),
     path(
         "class/<uuid:classroom_id>/student-dashboard/",
         views.teacher_student_dashboard,
@@ -47,6 +67,31 @@ urlpatterns = [
     path("class/<uuid:classroom_id>/htmx/topic-summary/", views.htmx_topic_summary, name="htmx_topic_summary"),
 
     # 학생 영역
+    path("game/join/", views_game.student_game_join, name="student_game_join"),
+    path("game/join/<slug:join_code>/", views_game.student_game_join, name="student_game_join_code"),
+    path("game/start/", views_game.student_game_start, name="student_game_start"),
+    path("game/play/", views_game.student_game_shell, name="student_game_shell"),
+    path("htmx/game/state/", views_game.htmx_student_game_state, name="htmx_student_game_state"),
+    path(
+        "htmx/game/choices/",
+        views_game.htmx_student_game_generate_choices,
+        name="htmx_student_game_generate_choices",
+    ),
+    path(
+        "htmx/game/question/submit/",
+        views_game.htmx_student_game_submit_question,
+        name="htmx_student_game_submit_question",
+    ),
+    path(
+        "htmx/game/question/<uuid:question_id>/status/",
+        views_game.htmx_student_game_question_status,
+        name="htmx_student_game_question_status",
+    ),
+    path(
+        "htmx/game/question/<uuid:question_id>/answer/",
+        views_game.htmx_student_game_answer,
+        name="htmx_student_game_answer",
+    ),
     path("gate/<slug:class_slug>/", views.student_gate, name="student_gate"),
     path("gate/<slug:class_slug>/start/", views.student_start, name="student_start"),
     path("play/", views.student_play_shell, name="student_play"),

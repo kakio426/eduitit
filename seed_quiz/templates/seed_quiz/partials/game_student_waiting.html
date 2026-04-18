@@ -1,0 +1,53 @@
+<section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100"
+         hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
+         hx-trigger="every 3s"
+         hx-target="#game-area"
+         hx-swap="innerHTML">
+    <div class="text-center">
+        {% if room.status == 'waiting' %}
+        <div class="mb-4 text-5xl">👋</div>
+        <h2 class="text-2xl font-black text-slate-900">시작 전</h2>
+        <p class="mt-2 text-sm text-slate-500">선생님이 출제를 열면 바로 문제를 만들 수 있어요.</p>
+        {% elif room.status == 'creating' %}
+        <div class="mb-4 text-5xl">🧠</div>
+        <h2 class="text-2xl font-black text-slate-900">내 문제 제출 완료</h2>
+        <p class="mt-2 text-sm text-slate-500">친구들 문제를 모으는 중입니다.</p>
+        {% elif room.status == 'playing' %}
+        <div class="mb-4 text-5xl">🏁</div>
+        <h2 class="text-2xl font-black text-slate-900">다 풀었어요</h2>
+        <p class="mt-2 text-sm text-slate-500">결과가 정리되면 바로 보여 드릴게요.</p>
+        {% endif %}
+
+        {% if seconds_left != None %}
+        <p class="mt-4 text-xs font-bold text-sky-700">남은 시간 {{ seconds_left }}초</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+            <p class="text-xs font-bold text-slate-500">내 출제</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ create_count }}</p>
+        </div>
+        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
+            <p class="text-xs font-bold text-slate-500">준비된 문제</p>
+            <p class="mt-2 text-2xl font-black text-slate-900">{{ ready_count }}</p>
+        </div>
+    </div>
+
+    {% if leaderboard %}
+    <div class="mt-6 rounded-3xl bg-slate-950 px-5 py-5 text-white">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-bold">상위 5명</h3>
+            <span class="text-xs text-slate-300">실시간</span>
+        </div>
+        <div class="space-y-2">
+            {% for row in leaderboard %}
+            <div class="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
+                <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
+                <p class="text-base font-black">{{ row.total_score }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</section>

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}실시간 게임 만들기{% endblock %}
+
+{% block content %}
+<section class="service-shell pb-20 px-4 min-h-screen">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex flex-col gap-2">
+            <a href="{% url 'seed_quiz:teacher_dashboard' classroom_id=classroom.id %}" class="text-sm text-gray-500 hover:text-gray-700">&larr; 씨앗 퀴즈로 돌아가기</a>
+            <h1 class="text-3xl font-black text-gray-900">실시간 게임</h1>
+            <p class="text-sm text-gray-500">{{ classroom.name }}</p>
+        </div>
+
+        {% if active_room %}
+        <div class="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-xs font-bold text-amber-700">진행 중</p>
+                    <h2 class="text-lg font-bold text-gray-900">{{ active_room.title }}</h2>
+                    <p class="text-sm text-gray-600">{{ active_room.get_status_display }} · 코드 {{ active_room.join_code }}</p>
+                </div>
+                <a href="{% url 'seed_quiz:teacher_game_room' classroom_id=classroom.id room_id=active_room.id %}" class="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700">
+                    운영 화면
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="mb-5">
+                <h2 class="text-xl font-black text-gray-900">새 게임</h2>
+                <p class="mt-1 text-sm text-gray-500">오늘 바로 시작할 설정만 넣습니다.</p>
+            </div>
+
+            {% if error_message %}
+            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                {{ error_message }}
+            </div>
+            {% endif %}
+
+            <form method="post" class="grid gap-5 md:grid-cols-2">
+                {% csrf_token %}
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-bold text-gray-700">이름</label>
+                    <input type="text" name="title" value="{{ defaults.title }}" maxlength="120"
+                           placeholder="예: 3학년 환경 퀴즈"
+                           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">주제</label>
+                    <select name="topic" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                        {% for value, label in topic_choices %}
+                        <option value="{{ value }}" {% if defaults.topic == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">학년</label>
+                    <select name="grade" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                        {% for value, label in grade_choices %}
+                        <option value="{{ value }}" {% if defaults.grade == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">문제 형식</label>
+                    <select name="question_mode" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                        {% for value, label in question_mode_choices %}
+                        <option value="{{ value }}" {% if defaults.question_mode == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">학생당 출제 수</label>
+                    <input type="number" name="questions_per_player" min="1" max="3" value="{{ defaults.questions_per_player }}"
+                           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">학생당 풀이 수</label>
+                    <input type="number" name="solve_target_count" min="1" max="20" value="{{ defaults.solve_target_count }}"
+                           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">출제 시간(분)</label>
+                    <input type="number" name="create_minutes" min="1" max="30" value="{{ defaults.create_minutes }}"
+                           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-gray-700">풀이 시간(분)</label>
+                    <input type="number" name="solve_minutes" min="1" max="30" value="{{ defaults.solve_minutes }}"
+                           class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
+                </div>
+
+                <label class="md:col-span-2 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <input type="checkbox" name="reward_enabled" {% if defaults.reward_enabled %}checked{% endif %} class="h-4 w-4 rounded border-emerald-300 text-emerald-600">
+                    <span>
+                        <span class="block text-sm font-bold text-emerald-900">씨앗 보상</span>
+                        <span class="block text-xs text-emerald-700">게임 종료 후 1~3위 보상을 자동 반영합니다.</span>
+                    </span>
+                </label>
+
+                <div class="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <a href="{% url 'seed_quiz:teacher_dashboard' classroom_id=classroom.id %}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                        취소
+                    </a>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                        게임 만들기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

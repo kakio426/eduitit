@@ -12,6 +12,11 @@ from seed_quiz.models import (
     SQAttempt,
     SQAttemptAnswer,
     SQBatchJob,
+    SQGameAnswer,
+    SQGamePlayer,
+    SQGameQuestion,
+    SQGameReward,
+    SQGameRoom,
     SQGenerationLog,
     SQRagDailyUsage,
     SQQuizBank,
@@ -33,6 +38,27 @@ class SQAttemptAnswerInline(admin.TabularInline):
     extra = 0
     readonly_fields = ["item", "selected_index", "is_correct", "answered_at"]
     can_delete = False
+
+
+class SQGameQuestionInline(admin.TabularInline):
+    model = SQGameQuestion
+    extra = 0
+    fields = [
+        "author",
+        "question_type",
+        "question_text",
+        "status",
+        "ai_quality_score",
+        "base_points",
+    ]
+    readonly_fields = ["status", "ai_quality_score", "base_points", "created_at"]
+
+
+class SQGameAnswerInline(admin.TabularInline):
+    model = SQGameAnswer
+    extra = 0
+    fields = ["player", "selected_index", "is_correct", "points_earned", "answered_at"]
+    readonly_fields = ["answered_at"]
 
 
 class SQQuizBankItemInline(admin.TabularInline):
@@ -288,6 +314,92 @@ class SQGenerationLogAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("quiz_set")
+
+
+@admin.register(SQGameRoom)
+class SQGameRoomAdmin(admin.ModelAdmin):
+    list_display = [
+        "title",
+        "classroom",
+        "topic",
+        "grade",
+        "join_code",
+        "status",
+        "question_mode",
+        "reward_enabled",
+        "created_at",
+    ]
+    list_filter = ["status", "topic", "grade", "question_mode", "reward_enabled"]
+    search_fields = ["title", "classroom__name", "join_code"]
+    raw_id_fields = ["classroom", "created_by"]
+    readonly_fields = ["join_code", "phase_started_at", "finished_at", "created_at", "updated_at"]
+    inlines = [SQGameQuestionInline]
+
+
+@admin.register(SQGamePlayer)
+class SQGamePlayerAdmin(admin.ModelAdmin):
+    list_display = [
+        "nickname",
+        "game",
+        "student",
+        "create_score",
+        "solve_score",
+        "rank",
+        "is_connected",
+        "last_seen_at",
+    ]
+    list_filter = ["game", "is_connected"]
+    search_fields = ["nickname", "student__name", "game__title"]
+    raw_id_fields = ["game", "student"]
+    readonly_fields = ["joined_at", "updated_at"]
+
+
+@admin.register(SQGameQuestion)
+class SQGameQuestionAdmin(admin.ModelAdmin):
+    list_display = [
+        "short_question",
+        "game",
+        "author",
+        "question_type",
+        "status",
+        "ai_quality_score",
+        "base_points",
+        "submitted_at",
+    ]
+    list_filter = ["status", "question_type", "game"]
+    search_fields = ["question_text", "author__nickname", "game__title"]
+    raw_id_fields = ["game", "author"]
+    readonly_fields = ["submitted_at", "evaluated_at", "created_at", "updated_at"]
+    inlines = [SQGameAnswerInline]
+
+    @admin.display(description="문제")
+    def short_question(self, obj):
+        return obj.question_text[:40]
+
+
+@admin.register(SQGameAnswer)
+class SQGameAnswerAdmin(admin.ModelAdmin):
+    list_display = [
+        "question",
+        "player",
+        "selected_index",
+        "is_correct",
+        "points_earned",
+        "answered_at",
+    ]
+    list_filter = ["is_correct", "question__game"]
+    search_fields = ["player__nickname", "question__question_text"]
+    raw_id_fields = ["question", "player"]
+    readonly_fields = ["answered_at"]
+
+
+@admin.register(SQGameReward)
+class SQGameRewardAdmin(admin.ModelAdmin):
+    list_display = ["game", "player", "rank", "seed_amount", "created_at"]
+    list_filter = ["rank", "game"]
+    search_fields = ["player__nickname", "game__title"]
+    raw_id_fields = ["game", "player"]
+    readonly_fields = ["request_id", "created_at"]
 
 
 admin.site.register(
