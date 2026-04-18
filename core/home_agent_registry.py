@@ -587,7 +587,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         action_kind="message-capture-save",
         messenger_flow_key="pipeline",
         messenger_capabilities={
-            "starter_chips": True,
+            "starter_chips": False,
             "multi_step": True,
             "copy_result": True,
             "open_link": True,
@@ -605,10 +605,10 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "secondary_link_label": "보관함 보기",
             "action_label": "메시지 저장",
             "helper": "메시지 보관",
-            "placeholder": "저장할 메시지를 적으세요.",
+            "placeholder": "저장할 메시지를 붙여넣으세요.",
         },
         ui={
-            "empty_prompt": "어떤 메시지를 저장할까요?",
+            "empty_prompt": "메시지를 바로 붙여넣으세요.",
             "preview_line_limit": 8,
         },
         links={

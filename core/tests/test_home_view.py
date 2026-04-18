@@ -1361,6 +1361,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('__capture_id__', message_save_mode['parse_saved_template'])
         self.assertIn('__capture_id__', message_save_mode['commit_template'])
         self.assertTrue(message_save_mode['starter_items'])
+        self.assertFalse(message_save_mode['messenger_capabilities']['starter_chips'])
         self.assertTrue(message_save_mode['capabilities']['message_pipeline'])
 
     @patch(
