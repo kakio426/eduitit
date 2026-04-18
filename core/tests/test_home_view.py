@@ -1341,6 +1341,8 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('home-v6-agent-ai-composer', content)
         self.assertIn('home-v6-agent-ai-starter-chip', content)
         self.assertIn('home-v6-agent-human-chat', content)
+        self.assertNotIn('home-v6-agent-utility-tab', content)
+        self.assertNotIn('home-v6-agent-active-badge', content)
         self.assertIn('humanChatTimelineItems()', content)
         self.assertIn('home-v6-agent-human-drawer', content)
         self.assertIn('home-v6-agent-human-head-chip', content)

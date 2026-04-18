@@ -4,35 +4,6 @@
     data-home-v6-agent-workspace="true"
 >
     <div class="home-v6-card home-v6-agent-card">
-        <aside class="home-v6-agent-utility" aria-label="AI 교무비서 탐색">
-            <button
-                type="button"
-                class="home-v6-agent-utility-brand"
-                @click="selectRailItem('service:' + (activeMode.key || 'notice'))"
-                aria-label="AI 교무비서"
-            >
-                <i class="fa-solid fa-sparkles"></i>
-            </button>
-            <button
-                type="button"
-                class="home-v6-agent-utility-tab"
-                :class="{ 'is-active': !activeConversationItem }"
-                @click="selectRailItem('service:' + (activeMode.key || 'notice'))"
-            >
-                <span>AI</span>
-                <strong x-text="railCountByKind('service')"></strong>
-            </button>
-            <button
-                type="button"
-                class="home-v6-agent-utility-tab"
-                :class="{ 'is-active': !!activeConversationItem }"
-                @click="selectRailItem(firstRailItemKeyByKind('room'))"
-            >
-                <span>톡</span>
-                <strong x-text="railCountByKind('room')"></strong>
-            </button>
-        </aside>
-
         <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true">
             <div class="home-v6-agent-rail-head">
                 <div class="home-v6-agent-brand-copy">
@@ -100,7 +71,6 @@
                     <div class="home-v6-agent-active-copy">
                         <h3 class="home-v6-agent-active-title" x-text="activeHeaderTitle()"></h3>
                         <div class="home-v6-agent-active-meta">
-                            <span class="home-v6-agent-active-badge" x-text="activeHeaderBadge()"></span>
                             <span class="home-v6-agent-active-status">
                                 <span class="home-v6-agent-active-status-dot"></span>
                                 <span x-text="activeHeaderMeta()"></span>

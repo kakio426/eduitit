@@ -1258,21 +1258,6 @@
                 });
             },
 
-            railCountByKind: function (kind) {
-                var targetKind = trimLine(kind);
-                return this.allRailItems().filter(function (item) {
-                    return trimLine(item && item.kind) === targetKind;
-                }).length;
-            },
-
-            firstRailItemKeyByKind: function (kind) {
-                var targetKind = trimLine(kind);
-                var item = this.allRailItems().find(function (entry) {
-                    return trimLine(entry && entry.kind) === targetKind;
-                });
-                return trimLine(item && item.key);
-            },
-
             selectRailItem: async function (itemKey) {
                 var item = this.railItemByKey(itemKey);
                 if (!item) {
@@ -1315,10 +1300,6 @@
                     return trimLine(room && room.room_kind_label) || trimLine(this.activeConversationItem.meta) || '대화';
                 }
                 return trimLine(this.activeMode.helper);
-            },
-
-            activeHeaderBadge: function () {
-                return this.activeConversationItem ? '대화' : 'AI';
             },
 
             activeHeaderPrimaryHref: function () {
