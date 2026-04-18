@@ -124,6 +124,34 @@ class RhwpStudioEmbed {
     return null;
   }
 
+  viewportMetrics() {
+    const frameDoc = this.frameDocument();
+    const scrollContainer = frameDoc?.querySelector("#scroll-container");
+    const canvas = frameDoc?.querySelector("#scroll-container canvas");
+    if (!(scrollContainer instanceof HTMLElement) || !(canvas instanceof HTMLElement)) {
+      return null;
+    }
+    const containerWidth = scrollContainer.getBoundingClientRect().width;
+    const canvasWidth = canvas.getBoundingClientRect().width;
+    if (!containerWidth || !canvasWidth) {
+      return null;
+    }
+    return {
+      containerWidth,
+      canvasWidth,
+      ratio: canvasWidth / containerWidth,
+    };
+  }
+
+  async clickFrameButton(selector) {
+    const button = await this.waitForFrameSelector(selector, 20, 120);
+    if (!(button instanceof HTMLElement)) {
+      return false;
+    }
+    button.click();
+    return true;
+  }
+
   async applyDefaultView(mode = "fitPage") {
     await this.waitForFrameLoad();
     const canvas = await this.waitForFrameSelector("#scroll-container canvas", 50, 120);
@@ -131,12 +159,28 @@ class RhwpStudioEmbed {
       return false;
     }
     const selector = mode === "fitWidth" ? "#sb-zoom-fit-width" : "#sb-zoom-fit";
-    const button = await this.waitForFrameSelector(selector, 20, 120);
-    if (!(button instanceof HTMLElement)) {
+    return this.clickFrameButton(selector);
+  }
+
+  async ensureReadableViewport(minRatio = 0.72, maxSteps = 8) {
+    await this.waitForFrameLoad();
+    const canvas = await this.waitForFrameSelector("#scroll-container canvas", 50, 120);
+    if (!canvas) {
       return false;
     }
-    button.click();
-    return true;
+    for (let step = 0; step < maxSteps; step += 1) {
+      const metrics = this.viewportMetrics();
+      if (metrics && metrics.ratio >= minRatio) {
+        return true;
+      }
+      const zoomed = await this.clickFrameButton("#sb-zoom-in");
+      if (!zoomed) {
+        return false;
+      }
+      await delay(80);
+    }
+    const finalMetrics = this.viewportMetrics();
+    return Boolean(finalMetrics && finalMetrics.ratio >= minRatio);
   }
 
   destroy() {
@@ -247,7 +291,8 @@ class DoccollabRoom {
     if (!this.editor) {
       return;
     }
-    const preferredMode = window.matchMedia("(min-width: 1180px)").matches ? "fitWidth" : "fitPage";
+    const desktopViewport = window.matchMedia("(min-width: 1180px)").matches;
+    const preferredMode = desktopViewport ? "fitWidth" : "fitPage";
     const modes = preferredMode === "fitWidth" ? ["fitWidth", "fitPage"] : ["fitPage", "fitWidth"];
     const delays = [120, 320, 640];
     for (const waitMs of delays) {
@@ -255,6 +300,10 @@ class DoccollabRoom {
       for (const mode of modes) {
         const applied = await this.editor.applyDefaultView(mode).catch(() => false);
         if (applied) {
+          if (desktopViewport) {
+            await delay(80);
+            await this.editor.ensureReadableViewport(0.68, 10).catch(() => false);
+          }
           return;
         }
       }
