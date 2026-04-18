@@ -46,57 +46,19 @@
             ></p>
         </section>
 
+        {% if can_post_top_level and room.room_kind == 'shared' %}
+        <div class="schoolcomm-room-composer-shell is-static mb-5">
+            {% include "schoolcomm/partials/room_composer.html" %}
+        </div>
+        {% endif %}
+
         <div data-schoolcomm-room-fragment="true">
             {% include "schoolcomm/partials/room_content.html" %}
         </div>
 
-        {% if can_post_top_level %}
+        {% if can_post_top_level and room.room_kind != 'shared' %}
         <div class="schoolcomm-room-composer-shell mt-6">
-            <form
-                method="post"
-                action="{% url 'schoolcomm:api_room_messages' room.id %}"
-                enctype="multipart/form-data"
-                id="schoolcomm-room-composer"
-                class="schoolcomm-room-composer {% if room_is_chat %}is-chat{% endif %} rounded-[2rem] p-4 sm:p-5"
-                {% if room_is_chat %}data-schoolcomm-chat-composer="true"{% endif %}
-            >
-                {% csrf_token %}
-                {% if room_is_chat %}
-                <div class="mb-3 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" data-schoolcomm-chat-reply-state="true">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="font-black text-amber-900"><span data-schoolcomm-chat-reply-sender="true"></span>님에게 답글 작성 중</p>
-                            <p class="mt-1 truncate text-xs text-amber-700" data-schoolcomm-chat-reply-preview="true"></p>
-                        </div>
-                        <button type="button" class="rounded-full border border-amber-300 px-3 py-1 text-xs font-black text-amber-800" data-schoolcomm-chat-reply-cancel="true">취소</button>
-                    </div>
-                </div>
-                <input type="hidden" name="parent_message_id" value="" data-schoolcomm-chat-parent-input="true">
-                {% endif %}
-                <label class="mb-2 block text-sm font-black text-slate-900" for="id_text">
-                    {% if room_is_chat %}
-                    메시지 보내기
-                    {% elif room.room_kind == 'shared' %}
-                    자료 올리기
-                    {% else %}
-                    새 메시지
-                    {% endif %}
-                </label>
-                <textarea
-                    id="id_text"
-                    name="text"
-                    rows="3"
-                    class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                    placeholder="{% if room_is_chat %}메시지를 입력하세요.{% elif room.room_kind == 'shared' %}자료 제목이나 메모{% else %}메시지나 파일 설명을 남겨 주세요.{% endif %}"
-                    {% if room_is_chat %}data-schoolcomm-chat-composer-text="true"{% endif %}
-                ></textarea>
-                <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <input type="file" name="files" multiple class="block text-sm text-slate-600">
-                    <button type="submit" class="inline-flex rounded-full bg-slate-900 px-5 py-2.5 text-sm font-black text-white">
-                        {% if room.room_kind == 'shared' %}올리기{% else %}보내기{% endif %}
-                    </button>
-                </div>
-            </form>
+            {% include "schoolcomm/partials/room_composer.html" %}
         </div>
         {% endif %}
     </div>

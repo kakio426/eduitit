@@ -1,10 +1,8 @@
 import calendar as calendar_module
 import hashlib
-import json
 import os
 import secrets
 import uuid
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import date as date_cls, datetime, time, timedelta
 from decimal import Decimal
 from urllib.parse import urlencode
@@ -41,12 +39,6 @@ from .models import (
     WorkspaceInvite,
 )
 
-try:
-    from openai import OpenAI
-except Exception:  # pragma: no cover
-    OpenAI = None
-
-
 SERVICE_ROUTE = "schoolcomm:main"
 SERVICE_TITLE = "끼리끼리 채팅방"
 CALENDAR_COPY_INTEGRATION_SOURCE = "schoolcomm_calendar_copy"
@@ -77,8 +69,6 @@ NOTICE_ROOM_NAME = "공지"
 SHARED_ROOM_NAME = "자료공유"
 USER_SOCKET_GROUP_TEMPLATE = "schoolcomm-user-{user_id}"
 ROOM_SOCKET_GROUP_TEMPLATE = "schoolcomm-room-{room_id}"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-DEEPSEEK_MODEL_NAME = "deepseek-chat"
 CATEGORY_LABELS = {
     UserAssetCategory.Category.UNCLASSIFIED: "미분류",
     UserAssetCategory.Category.LESSON: "수업자료",
@@ -90,7 +80,10 @@ CATEGORY_LABELS = {
 HEURISTIC_CATEGORY_HINTS = [
     (UserAssetCategory.Category.ASSESSMENT, ("평가", "시험", "중간", "기말", "수행", "채점", "정답", "문항")),
     (UserAssetCategory.Category.LESSON, ("수업", "차시", "활동지", "학습", "교과", "지도안", "worksheet", "lesson")),
-    (UserAssetCategory.Category.WORK, ("업무", "공문", "기안", "회의", "결재", "행정", "출장", "안내", "문서")),
+    (
+        UserAssetCategory.Category.WORK,
+        ("업무", "공문", "기안", "회의", "결재", "행정", "출장", "안내", "문서", "동의서", "신청서", "개인정보", "지급"),
+    ),
     ("social", ("친목", "회식", "간식", "축하", "송별", "환영", "모임", "번개", "커피", "다과")),
 ]
 
@@ -109,10 +102,6 @@ class RoomAccessError(SchoolcommError):
 
 class ValidationError(SchoolcommError):
     """Raised when submitted data is invalid."""
-
-
-class CategoryClassifierError(SchoolcommError):
-    """Raised when DeepSeek category classification fails."""
 
 
 def _safe_profile(user):
@@ -931,55 +920,6 @@ def _normalize_category_code(raw_value):
     return mapping.get(value, UserAssetCategory.Category.UNCLASSIFIED)
 
 
-def _run_with_timeout(callable_fn, timeout_seconds):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(callable_fn)
-        try:
-            return future.result(timeout=timeout_seconds)
-        except TimeoutError as exc:  # pragma: no cover
-            raise CategoryClassifierError("분류 요청이 시간 초과되었습니다.") from exc
-
-
-def _call_category_classifier_llm(*, payload, timeout_seconds=20):
-    api_key = os.environ.get("MASTER_DEEPSEEK_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key or OpenAI is None:
-        raise CategoryClassifierError("DeepSeek API key is not configured.")
-
-    prompt = (
-        "당신은 학교 교사들이 주고받은 파일을 분류하는 도우미입니다. "
-        "반드시 JSON 객체만 반환하세요. category, confidence, reason 세 필드만 포함하세요. "
-        "category는 lesson, assessment, work, social, other, unclassified 중 하나만 허용합니다. "
-        "판단 시 파일명에 포함된 연도, 학기, 고사명, 과목명 규칙을 최우선으로 해석하세요."
-    )
-
-    def _request():
-        client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=30.0)
-        response = client.chat.completions.create(
-            model=DEEPSEEK_MODEL_NAME,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-            ],
-            response_format={"type": "json_object"},
-            stream=False,
-        )
-        text = (response.choices[0].message.content or "").strip()
-        if not text:
-            raise CategoryClassifierError("DeepSeek returned an empty response.")
-        return text
-
-    raw_text = _run_with_timeout(_request, timeout_seconds=timeout_seconds)
-    try:
-        result = json.loads(raw_text)
-    except json.JSONDecodeError as exc:  # pragma: no cover
-        raise CategoryClassifierError("DeepSeek returned invalid JSON.") from exc
-    return {
-        "category": _normalize_category_code(result.get("category")),
-        "confidence": Decimal(str(result.get("confidence") or "0")),
-        "reason": str(result.get("reason") or "").strip(),
-    }
-
-
 def _heuristic_category(asset, *, message_text="", room_kind=""):
     basis = " ".join(
         part
@@ -999,24 +939,7 @@ def _heuristic_category(asset, *, message_text="", room_kind=""):
 
 
 def classify_asset(asset, *, message_text="", room_kind=""):
-    payload = {
-        "filename": asset.original_name,
-        "extension": asset.file_extension,
-        "mime_type": getattr(asset.blob, "mime_type", ""),
-        "message_text": str(message_text or "")[:4000],
-        "room_kind": room_kind,
-    }
-    try:
-        result = _call_category_classifier_llm(payload=payload)
-        category = _normalize_category_code(result.get("category"))
-        confidence = Decimal(str(result.get("confidence") or "0"))
-        if category == UserAssetCategory.Category.UNCLASSIFIED:
-            fallback_category, fallback_confidence = _heuristic_category(asset, message_text=message_text, room_kind=room_kind)
-            if fallback_category != UserAssetCategory.Category.OTHER:
-                return fallback_category, max(confidence, fallback_confidence)
-        return category, confidence
-    except CategoryClassifierError:
-        return _heuristic_category(asset, message_text=message_text, room_kind=room_kind)
+    return _heuristic_category(asset, message_text=message_text, room_kind=room_kind)
 
 
 def ensure_user_asset_category(user, asset, *, message_text="", room_kind=""):

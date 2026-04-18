@@ -216,6 +216,35 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(summary.status_code, 200)
         self.assertGreaterEqual(summary.json()["summary"]["total_unread"], 1)
 
+    def test_shared_room_upload_classifies_admin_documents_without_llm(self):
+        upload = SimpleUploadedFile(
+            "참석 교사 교통비 지급을 위한 개인정보수집 이용동의서.hwp",
+            b"hwp-bytes",
+            content_type="application/octet-stream",
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse("schoolcomm:api_room_messages", kwargs={"room_id": self.shared_room.id}),
+            {"text": "교통비 지급 이용 동의서", "files": upload},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["message"]["body"], "교통비 지급 이용 동의서")
+        self.assertEqual(len(payload["message"]["assets"]), 1)
+        self.assertEqual(payload["message"]["assets"][0]["category"], "work")
+        self.assertEqual(
+            payload["message"]["assets"][0]["original_name"],
+            "참석 교사 교통비 지급을 위한 개인정보수집 이용동의서.hwp",
+        )
+
+        detail_response = self.client.get(reverse("schoolcomm:room_detail", kwargs={"room_id": self.shared_room.id}))
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "교통비 지급 이용 동의서")
+
     def test_chat_room_ajax_post_returns_json_without_redirect(self):
         dm_room = get_or_create_dm_room(
             self.workspace,
@@ -316,13 +345,18 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-schoolcomm-shared-board="true"')
         self.assertContains(response, "자료 올리기")
+        self.assertContains(response, "올라온 자료")
+        self.assertContains(response, "정리")
         self.assertContains(response, "수업")
         self.assertContains(response, "친목")
         self.assertContains(response, "대화")
-        self.assertContains(response, "자료 1개 보기")
+        self.assertContains(response, "자료 1개")
+        self.assertNotContains(response, "바로가기")
+        self.assertNotContains(response, "내 기준 바꾸기")
         self.assertNotContains(response, "확인 0")
         self.assertNotContains(response, "이 글 아래에서만 이어집니다.")
-        self.assertNotContains(response, "올라온 자료")
+        content = response.content.decode("utf-8")
+        self.assertLess(content.index('id="schoolcomm-room-composer"'), content.index('data-schoolcomm-room-fragment="true"'))
 
     def test_shared_room_filter_keeps_category_during_fragment_refresh(self):
         social_upload = SimpleUploadedFile("친목_다과_목록.xlsx", b"social", content_type="application/octet-stream")
