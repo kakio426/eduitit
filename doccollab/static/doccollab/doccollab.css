@@ -6,7 +6,7 @@
 }
 
 .doccollab-frame {
-    max-width: 1240px;
+    max-width: 1440px;
     margin: 0 auto;
 }
 
@@ -432,9 +432,8 @@
     position: relative;
     min-height: 62vh;
     border-radius: 24px;
-    background: linear-gradient(180deg, #eef5f8 0%, #f8fbfd 100%);
-    border: 1px solid rgba(203, 213, 225, 0.92);
-    overflow: hidden;
+    background: #f8fafc;
+    padding: 1rem;
 }
 
 .doccollab-editor-surface--failed {
@@ -447,21 +446,17 @@
     margin-top: 0.95rem;
 }
 
-.doccollab-editor-frame {
-    display: block;
-    width: 100%;
-    min-height: 68vh;
-    height: 68vh;
-    border: 0;
-    background: #eef4f8;
-}
-
-.doccollab-editor-surface--readonly .doccollab-editor-frame {
-    filter: saturate(0.92);
-}
-
 .doccollab-upload-status[data-state="error"] {
     color: #b91c1c;
+}
+
+.doccollab-input-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.95rem;
+    margin-bottom: 0.6rem;
 }
 
 .doccollab-load-error {
@@ -496,6 +491,75 @@
     opacity: 0.72;
 }
 
+.doccollab-page {
+    position: relative;
+    margin: 0 auto 1rem;
+    max-width: 960px;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.doccollab-page svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.doccollab-page-overlay {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    appearance: none;
+    cursor: text;
+}
+
+.doccollab-caret {
+    position: absolute;
+    width: 2px;
+    background: #0f766e;
+    pointer-events: none;
+}
+
+.doccollab-input-proxy {
+    position: absolute;
+    z-index: 10;
+    width: 1px;
+    min-width: 1px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    opacity: 0.01;
+    resize: none;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.doccollab-remote-cursor {
+    position: absolute;
+    width: 2px;
+    pointer-events: none;
+}
+
+.doccollab-remote-cursor::before {
+    content: attr(data-name);
+    position: absolute;
+    top: -1.1rem;
+    left: -0.1rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    background: currentColor;
+    color: #fff;
+    font-size: 0.68rem;
+    white-space: nowrap;
+}
+
 @media (max-width: 980px) {
     .doccollab-grid,
     .doccollab-room-layout,
@@ -526,10 +590,5 @@
 
     .doccollab-room-side {
         align-items: flex-start;
-    }
-
-    .doccollab-editor-frame {
-        min-height: 62vh;
-        height: 62vh;
     }
 }
