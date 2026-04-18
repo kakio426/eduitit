@@ -12,6 +12,7 @@ from doccollab.services import (
     append_room_collab_update,
     create_room_from_upload,
     load_room_collab_state,
+    save_room_revision,
 )
 from version_manager.models import DocumentVersion, get_raw_storage
 
@@ -116,6 +117,23 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(room.source_name, "minutes.hwp")
         self.assertEqual(room.source_format, DocRoom.SourceFormat.HWP)
         self.assertEqual(revision.export_format, DocRevision.ExportFormat.SOURCE_HWP)
+
+    def test_create_room_handles_unexpected_service_error_without_500(self):
+        self.client.force_login(self.owner)
+
+        with mock.patch("doccollab.views.create_room_from_upload", side_effect=RuntimeError("boom")):
+            response = self.client.post(
+                reverse("doccollab:create_room"),
+                {
+                    "title": "오류 테스트",
+                    "source_file": hwpx_upload("error.hwpx"),
+                },
+                follow=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        messages = [message.message for message in response.context["messages"]]
+        self.assertIn("문서를 여는 중 오류가 발생했습니다. 다시 시도해 주세요.", messages)
 
     def test_sharing_is_scoped_to_the_room_workspace(self):
         shared_room, _shared_revision = self._create_room(self.owner, "공유 문서", "shared.hwpx")
@@ -223,6 +241,48 @@ class DoccollabViewTests(TestCase):
         self.assertTrue(DocumentVersion.objects.filter(pk=revision.mirrored_version_id).exists())
         self.assertEqual(load_room_collab_state(room)["base_revision_id"], str(revision.id))
         self.assertEqual(load_room_collab_state(room)["updates"], [])
+
+    def test_save_revision_handles_unexpected_error_without_html_500(self):
+        room, _revision = self._create_room(self.owner, "저장 오류", "save-error.hwpx")
+        self.client.force_login(self.owner)
+
+        with mock.patch("doccollab.views.save_room_revision", side_effect=RuntimeError("save boom")):
+            response = self.client.post(
+                reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
+                {
+                    "note": "문서 저장",
+                    "export_file": hwp_upload("save-error.hwp"),
+                },
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["message"], "저장 중 오류가 발생했습니다. 다시 시도해 주세요.")
+
+    def test_create_room_from_upload_survives_mirror_failure(self):
+        with mock.patch("doccollab.services._mirror_revision", side_effect=RuntimeError("mirror fail")):
+            room, revision = create_room_from_upload(
+                user=self.owner,
+                title="미러 실패",
+                uploaded_file=hwpx_upload("mirror-fail.hwpx"),
+            )
+
+        self.assertEqual(room.title, "미러 실패")
+        self.assertIsNone(room.mirrored_document_id)
+        self.assertIsNone(revision.mirrored_version_id)
+
+    def test_save_room_revision_survives_collab_state_reset_failure(self):
+        room, _revision = self._create_room(self.owner, "캐시 실패", "cache-fail.hwpx")
+
+        with mock.patch("doccollab.services.reset_room_collab_state", side_effect=RuntimeError("cache fail")):
+            revision = save_room_revision(
+                room=room,
+                user=self.owner,
+                uploaded_file=hwp_upload("cache-fail.hwp"),
+                export_format=DocRevision.ExportFormat.HWP_EXPORT,
+                note="문서 저장",
+            )
+
+        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
 
     def test_room_payload_reports_source_and_save_formats(self):
         room, _revision = self._create_room(self.owner, "HWP 문서", "school-form.hwp")

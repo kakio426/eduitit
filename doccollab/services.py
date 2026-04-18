@@ -1,3 +1,4 @@
+import logging
 import hashlib
 import json
 import os
@@ -16,6 +17,8 @@ from django.utils import timezone
 from version_manager.models import Document, DocumentGroup, DocumentVersion
 
 from .models import DocEditEvent, DocMembership, DocPresence, DocRevision, DocRoom, DocSnapshot, DocWorkspace
+
+logger = logging.getLogger(__name__)
 
 
 DOC_GROUP_NAME = "HWP 문서실"
@@ -387,8 +390,14 @@ def create_room_from_upload(*, user, title, uploaded_file):
         note="원본 업로드",
         created_by=user,
     )
-    _mirror_revision(room, revision, raw_bytes, user)
-    reset_room_collab_state(room, base_revision=revision)
+    try:
+        _mirror_revision(room, revision, raw_bytes, user)
+    except Exception:
+        logger.exception("doccollab mirror failed during room creation for room=%s", room.id)
+    try:
+        reset_room_collab_state(room, base_revision=revision)
+    except Exception:
+        logger.exception("doccollab collab-state reset failed during room creation for room=%s", room.id)
     return room, revision
 
 
@@ -424,8 +433,14 @@ def save_room_revision(*, room, user, uploaded_file, export_format, note=""):
         note=str(note or "").strip()[:200],
         created_by=user,
     )
-    _mirror_revision(room, revision, raw_bytes, user)
-    reset_room_collab_state(room, base_revision=revision)
+    try:
+        _mirror_revision(room, revision, raw_bytes, user)
+    except Exception:
+        logger.exception("doccollab mirror failed during revision save for room=%s revision=%s", room.id, revision.id)
+    try:
+        reset_room_collab_state(room, base_revision=revision)
+    except Exception:
+        logger.exception("doccollab collab-state reset failed during revision save for room=%s revision=%s", room.id, revision.id)
     room.last_activity_at = timezone.now()
     room.save(update_fields=["last_activity_at", "updated_at"])
     return revision

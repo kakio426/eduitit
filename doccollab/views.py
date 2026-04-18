@@ -1,3 +1,4 @@
+import logging
 import json
 
 from django.contrib import messages
@@ -26,6 +27,8 @@ from .services import (
     serialize_presence_list,
     serialize_revision,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _is_mobile_user_agent(request):
@@ -171,6 +174,10 @@ def create_room(request):
     except ValidationError as exc:
         messages.error(request, str(exc))
         return redirect("doccollab:main")
+    except Exception:
+        logger.exception("doccollab create_room failed for user=%s", getattr(request.user, "id", None))
+        messages.error(request, "문서를 여는 중 오류가 발생했습니다. 다시 시도해 주세요.")
+        return redirect("doccollab:main")
     messages.success(request, "편집 화면을 열었습니다.")
     return redirect("doccollab:room_detail", room_id=room.id)
 
@@ -278,6 +285,13 @@ def save_revision(request, room_id):
             )
     except ValidationError as exc:
         return JsonResponse({"message": str(exc)}, status=400)
+    except Exception:
+        logger.exception(
+            "doccollab save_revision failed for room=%s user=%s",
+            room.id,
+            getattr(request.user, "id", None),
+        )
+        return JsonResponse({"message": "저장 중 오류가 발생했습니다. 다시 시도해 주세요."}, status=500)
     broadcast_room_event(
         room,
         "revision.saved",
