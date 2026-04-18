@@ -69,21 +69,10 @@
                         <a href="{% url 'doccollab:download_source' room.id %}" class="doccollab-secondary">원본 다운로드</a>
                     </div>
 
-                    {% if editing_supported and can_edit %}
-                    <div class="doccollab-input-bar">
-                        <div>
-                            <p class="doccollab-label">문서 입력</p>
-                            <p class="doccollab-footnote">문서를 누르고 바로 입력합니다.</p>
-                        </div>
-                        <span id="doccollab-cursor-label" class="doccollab-chip doccollab-chip--soft">문서를 눌러 입력 위치를 잡아 주세요.</span>
-                    </div>
-                    <textarea id="doccollab-input-proxy" class="doccollab-input-proxy" rows="1" tabindex="-1" aria-label="문서 입력"></textarea>
-                    {% endif %}
-
                     <div class="doccollab-status-row">
                         <span id="doccollab-status-badge" class="doccollab-chip">준비 중</span>
                         <span id="doccollab-snapshot-badge" class="doccollab-chip">자동 저장 대기</span>
-                        <span class="doccollab-footnote">원본 {{ room.get_source_format_display }} · 저장 HWP</span>
+                        <span class="doccollab-footnote">원본 {{ room.get_source_format_display }} · 공식 rhwp 편집기</span>
                     </div>
                 </section>
             </div>
@@ -146,41 +135,6 @@
                         </div>
                     </div>
                 </details>
-
-                {% if editing_supported and can_edit %}
-                <section class="doccollab-support-block">
-                    <div class="doccollab-support-head">
-                        <div>
-                            <p class="doccollab-label">표</p>
-                            <h3 class="doccollab-card-title">표 수정</h3>
-                        </div>
-                        <span class="doccollab-footnote">탐지된 표만</span>
-                    </div>
-                    <label class="doccollab-field">
-                        <span>표</span>
-                        <select id="doccollab-table-select"></select>
-                    </label>
-                    <div class="doccollab-inline-grid">
-                        <label class="doccollab-field">
-                            <span>행</span>
-                            <input id="doccollab-table-row" type="number" min="0" value="0">
-                        </label>
-                        <label class="doccollab-field">
-                            <span>열</span>
-                            <input id="doccollab-table-col" type="number" min="0" value="0">
-                        </label>
-                    </div>
-                    <label class="doccollab-field">
-                        <span>셀 텍스트</span>
-                        <input id="doccollab-cell-text" type="text" placeholder="셀 내용">
-                    </label>
-                    <div class="doccollab-inline-actions">
-                        <button type="button" id="doccollab-cell-apply-button" class="doccollab-secondary">셀 반영</button>
-                        <button type="button" id="doccollab-row-add-button" class="doccollab-secondary">행 추가</button>
-                        <button type="button" id="doccollab-col-add-button" class="doccollab-secondary">열 추가</button>
-                    </div>
-                </section>
-                {% endif %}
 
                 <details id="doccollab-share-members" class="doccollab-disclosure doccollab-disclosure--panel">
                     <summary>문서 공유 {{ shared_members|length }}</summary>

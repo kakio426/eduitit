@@ -259,6 +259,7 @@ class DoccollabViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
+        self.assertEqual(payload["edit_events"][0]["summary"], f"저장본 저장 · r{revision.revision_number}")
         self.assertEqual(
             payload["revision"]["download_url"],
             reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}),
@@ -267,6 +268,13 @@ class DoccollabViewTests(TestCase):
         self.assertTrue(DocumentVersion.objects.filter(pk=revision.mirrored_version_id).exists())
         self.assertEqual(load_room_collab_state(room)["base_revision_id"], str(revision.id))
         self.assertEqual(load_room_collab_state(room)["updates"], [])
+        self.assertTrue(
+            DocEditEvent.objects.filter(
+                room=room,
+                command_id=f"save:{revision.id}",
+                summary=f"저장본 저장 · r{revision.revision_number}",
+            ).exists()
+        )
 
     def test_save_revision_handles_unexpected_error_without_html_500(self):
         room, _revision = self._create_room(self.owner, "저장 오류", "save-error.hwpx")
@@ -314,13 +322,18 @@ class DoccollabViewTests(TestCase):
         room, _revision = self._create_room(self.owner, "HWP 문서", "school-form.hwp")
         self.client.force_login(self.owner)
 
-        response = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
+        response = self.client.get(
+            reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+            HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        )
         payload = response.context["room_payload"]
 
         self.assertEqual(payload["sourceFormat"], "hwp")
         self.assertEqual(payload["sourceName"], "school-form.hwp")
         self.assertEqual(payload["currentRevisionFormat"], "hwp")
         self.assertEqual(payload["saveFormat"], "hwp")
+        self.assertTrue(payload["editingSupported"])
+        self.assertTrue(payload["studioUrl"].endswith("/static/doccollab/rhwp-studio/index.html"))
         self.assertEqual(payload["supportedUploadFormats"], ["hwp", "hwpx"])
         self.assertEqual(
             payload["initialFileUrl"],
@@ -330,6 +343,7 @@ class DoccollabViewTests(TestCase):
             payload["sourceFileUrl"],
             reverse("doccollab:download_source", kwargs={"room_id": room.id}),
         )
+        self.assertTrue(payload["studioUrl"].endswith("/static/doccollab/rhwp-studio/index.html"))
 
     def test_room_detail_does_not_depend_on_storage_url_generation(self):
         room, _revision = self._create_room(self.owner, "URL 방어", "guard.hwpx")
@@ -337,7 +351,10 @@ class DoccollabViewTests(TestCase):
 
         with mock.patch("django.db.models.fields.files.FieldFile.url", new_callable=mock.PropertyMock) as mocked_url:
             mocked_url.side_effect = RuntimeError("storage url failed")
-            response = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
+            response = self.client.get(
+                reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+                HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+            )
 
         self.assertEqual(response.status_code, 200)
         payload = response.context["room_payload"]

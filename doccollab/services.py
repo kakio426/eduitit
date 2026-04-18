@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Max, Q
 from django.middleware.csrf import get_token
+from django.templatetags.static import static as static_url
 from django.urls import reverse
 from django.utils import timezone
 
@@ -79,6 +80,12 @@ def summarize_command(command):
     elif command_type == "insert_table_col":
         col = int(command.get("col") or 0) + 1
         summary = f"표 {col}열 추가"
+    elif command_type == "save_revision":
+        revision_number = int(command.get("revision_number") or 0)
+        summary = f"저장본 저장 · r{revision_number}" if revision_number else "저장본 저장"
+    elif command_type == "publish_revision":
+        revision_number = int(command.get("revision_number") or 0)
+        summary = f"배포본 지정 · r{revision_number}" if revision_number else "배포본 지정"
     else:
         summary = "편집"
     return command_type, summary[:200]
@@ -535,7 +542,7 @@ def broadcast_room_event(room, message_type, payload):
     )
 
 
-def room_payload_for_template(*, room, membership, request):
+def room_payload_for_template(*, room, membership, request, editing_supported):
     current_revision = room.revisions.order_by("-revision_number").first()
     collab_state = load_room_collab_state(room)
     source_format_label = display_source_format(room.source_format)
@@ -550,11 +557,13 @@ def room_payload_for_template(*, room, membership, request):
         "title": room.title,
         "membershipRole": getattr(membership, "role", ""),
         "editingEnabled": getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR},
+        "editingSupported": bool(editing_supported),
         "wsUrl": f"/ws/doccollab/rooms/{room.id}/",
         "initialFileUrl": initial_file_url,
         "sourceFileUrl": reverse("doccollab:download_source", kwargs={"room_id": room.id}),
         "saveRevisionUrl": reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
         "snapshotUrl": reverse("doccollab:create_snapshot", kwargs={"room_id": room.id}),
+        "studioUrl": static_url("doccollab/rhwp-studio/index.html"),
         "csrfToken": get_token(request),
         "displayName": display_name_for_user(request.user),
         "publishedRevision": serialize_revision(room.revisions.filter(is_published=True).order_by("-revision_number").first()) if room.revisions.exists() else None,

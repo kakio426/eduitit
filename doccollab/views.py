@@ -22,7 +22,9 @@ from .services import (
     display_name_for_user,
     get_room_for_user,
     publish_revision,
+    record_edit_events,
     room_payload_for_template,
+    serialize_edit_event,
     save_room_revision,
     serialize_presence_list,
     serialize_revision,
@@ -208,7 +210,12 @@ def room_detail(request, room_id):
         "shared_members": _shared_members_for_room(room),
         "editing_supported": editing_supported,
         "read_only_reason": read_only_reason,
-        "room_payload": room_payload_for_template(room=room, membership=membership, request=request),
+        "room_payload": room_payload_for_template(
+            room=room,
+            membership=membership,
+            request=request,
+            editing_supported=editing_supported,
+        ),
         "can_edit": getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR},
         "can_manage": getattr(membership, "role", "") == DocMembership.Role.OWNER,
         "display_name": display_name_for_user(request.user),
@@ -292,14 +299,29 @@ def save_revision(request, room_id):
             getattr(request.user, "id", None),
         )
         return JsonResponse({"message": "저장 중 오류가 발생했습니다. 다시 시도해 주세요."}, status=500)
+    edit_events = record_edit_events(
+        room=room,
+        user=request.user,
+        display_name=display_name_for_user(request.user),
+        commands=[
+            {
+                "id": f"save:{revision.id}",
+                "type": "save_revision",
+                "revision_number": revision.revision_number,
+                "export_format": revision.export_format,
+            }
+        ],
+    )
+    serialized_edit_events = [serialize_edit_event(event) for event in edit_events]
     broadcast_room_event(
         room,
         "revision.saved",
-        {"revision": serialize_revision(revision)},
+        {"revision": serialize_revision(revision), "edit_events": serialized_edit_events},
     )
     return JsonResponse(
         {
             "revision": serialize_revision(revision),
+            "edit_events": serialized_edit_events,
             "download_url": reverse(
                 "doccollab:download_revision",
                 kwargs={"room_id": room.id, "revision_id": revision.id},
