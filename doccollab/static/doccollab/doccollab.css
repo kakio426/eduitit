@@ -461,10 +461,21 @@
 
 .doccollab-editor-surface {
     position: relative;
-    min-height: 62vh;
+    min-height: clamp(820px, calc(100vh - 280px), 1180px);
     border-radius: 24px;
     background: #f8fafc;
-    padding: 1rem;
+    padding: 0.8rem;
+}
+
+.doccollab-editor-frame,
+#doccollab-editor-frame {
+    display: block;
+    width: 100%;
+    height: clamp(820px, calc(100vh - 280px), 1180px);
+    min-height: clamp(820px, calc(100vh - 280px), 1180px);
+    border: 0;
+    border-radius: 20px;
+    background: #f8fafc;
 }
 
 .doccollab-editor-surface--failed {

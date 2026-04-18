@@ -251,6 +251,7 @@ class DoccollabRoom {
 
   async mountEditor() {
     const iframe = document.createElement("iframe");
+    iframe.id = "doccollab-editor-frame";
     iframe.className = "doccollab-editor-frame";
     iframe.setAttribute("title", "rhwp 문서 편집기");
     iframe.setAttribute("allow", "clipboard-read; clipboard-write");
