@@ -52,3 +52,21 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn(".classcalendar-home-workweek-day-stack--secondary {", content)
         self.assertIn("min-height: 2.04rem;", content)
         self.assertIn("min-height: 2.16rem;", content)
+
+    def test_repeated_reservations_are_condensed_in_home_workweek(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("getHomeWorkweekDisplayItems(items) {", content)
+        self.assertIn("buildCondensedHomeWorkweekReservationItem(items) {", content)
+        self.assertIn("home-week-reservation-group:", content)
+        self.assertIn("displayTitle: `${firstItem.title || '특별실 예약'} ${countLabel}`", content)
+        self.assertIn("displayTooltip: [firstItem.title || '특별실 예약', periodSummary, countLabel].filter(Boolean).join(' · ')", content)
+        self.assertIn("item.displayTitle || item.title", content)
+        self.assertIn("item.displayTooltip || item.title", content)
+        self.assertIn("if (item.isReservationGroup && item.focusDateKey) {", content)

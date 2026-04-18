@@ -1763,10 +1763,10 @@
                                                             @click.stop="openHomeWorkweekItem(item, $event)"
                                                             class="classcalendar-home-workweek-item"
                                                             :class="item.itemClass"
-                                                            :title="item.title"
+                                                            :title="item.displayTooltip || item.title"
                                                         >
                                                             <i x-show="item.iconClass" class="classcalendar-home-workweek-item-icon" :class="item.iconClass"></i>
-                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.title"></span>
+                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.displayTitle || item.title"></span>
                                                         </button>
                                                     </template>
                                                 </div>
@@ -1800,10 +1800,10 @@
                                                             @click.stop="openHomeWorkweekItem(item, $event)"
                                                             class="classcalendar-home-workweek-item"
                                                             :class="item.itemClass"
-                                                            :title="item.title"
+                                                            :title="item.displayTooltip || item.title"
                                                         >
                                                             <i x-show="item.iconClass" class="classcalendar-home-workweek-item-icon" :class="item.iconClass"></i>
-                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.title"></span>
+                                                            <span class="classcalendar-home-workweek-item-title" x-text="item.displayTitle || item.title"></span>
                                                         </button>
                                                     </template>
                                                     <span
@@ -4412,6 +4412,15 @@ function calendarApp() {
             return parts.join(', ');
         },
 
+        getReservationGroupKey(item, extraParts = []) {
+            return [
+                ...extraParts,
+                String(item && (item.item_kind || item.itemKind) ? (item.item_kind || item.itemKind) : ''),
+                String(item && item.title ? item.title : '').trim(),
+                String(item && (item.source_url || item.sourceUrl) ? (item.source_url || item.sourceUrl) : '').split('?')[0],
+            ].join('::');
+        },
+
         buildCondensedReservationHubItem(items) {
             const sourceItems = Array.isArray(items) ? items.filter(Boolean) : [];
             const firstItem = sourceItems[0];
@@ -4441,11 +4450,7 @@ function calendarApp() {
                     displayItems.push(item);
                     return;
                 }
-                const groupKey = [
-                    String(item.item_kind || ''),
-                    String(item.title || '').trim(),
-                    String(item.source_url || '').split('?')[0],
-                ].join('::');
+                const groupKey = this.getReservationGroupKey(item);
                 let group = reservationGroups.get(groupKey);
                 if (!group) {
                     group = [];
@@ -5244,10 +5249,55 @@ function calendarApp() {
                 colEnd: spanMeta.colEnd,
                 colSpan: spanMeta.colSpan,
                 isRange,
+                itemKind: item.item_kind || '',
+                sourceUrl: item.source_url || '',
                 sortValue,
                 iconClass: this.getHomeWorkweekHubIconClass(item),
                 itemClass: this.getHomeWorkweekHubItemClass(item, isRange),
             };
+        },
+        buildCondensedHomeWorkweekReservationItem(items) {
+            const sourceItems = Array.isArray(items) ? items.filter(Boolean) : [];
+            const firstItem = sourceItems[0];
+            if (!firstItem) return null;
+            if (sourceItems.length === 1) {
+                return firstItem;
+            }
+            const periodSummary = this.formatReservationPeriodSummary(
+                sourceItems.map((item) => this.extractReservationPeriodLabel(item))
+            );
+            const countLabel = `${sourceItems.length}건`;
+            return {
+                ...firstItem,
+                id: `home-week-reservation-group:${sourceItems.map((item) => item.sourceId || item.id).join(':')}-${firstItem.focusDateKey}`,
+                clickItem: firstItem,
+                displayTitle: `${firstItem.title || '특별실 예약'} ${countLabel}`,
+                displayTooltip: [firstItem.title || '특별실 예약', periodSummary, countLabel].filter(Boolean).join(' · '),
+                isReservationGroup: true,
+            };
+        },
+        getHomeWorkweekDisplayItems(items) {
+            const displayItems = [];
+            const reservationGroups = new Map();
+
+            (Array.isArray(items) ? items : []).forEach((item) => {
+                if (!item || item.isRange || item.itemKind !== 'reservation') {
+                    displayItems.push(item);
+                    return;
+                }
+                const groupKey = this.getReservationGroupKey(item, [String(item.focusDateKey || '')]);
+                let group = reservationGroups.get(groupKey);
+                if (!group) {
+                    group = [];
+                    reservationGroups.set(groupKey, group);
+                    displayItems.push(group);
+                }
+                group.push(item);
+            });
+
+            return displayItems
+                .map((item) => Array.isArray(item) ? this.buildCondensedHomeWorkweekReservationItem(item) : item)
+                .filter(Boolean);
         },
         buildHomeWorkweekModel(weekDates) {
             const dayBuckets = {};
@@ -5287,6 +5337,9 @@ function calendarApp() {
                     }
                     singleDayItems.push(weekItem);
                 });
+
+            singleDayItems
+                .splice(0, singleDayItems.length, ...this.getHomeWorkweekDisplayItems(singleDayItems));
 
             singleDayItems
                 .sort((left, right) => (
@@ -5352,6 +5405,10 @@ function calendarApp() {
             if (!item) return;
             if (item.focusDateKey) {
                 this.setSelectedDateContext(this.parseDateKey(item.focusDateKey));
+            }
+            if (item.isReservationGroup && item.focusDateKey) {
+                this.handleDayCellClick(this.parseDateKey(item.focusDateKey), triggerEvent);
+                return;
             }
             if (item.sourceKind === 'event') {
                 const event = this.findEventById(item.sourceId);
