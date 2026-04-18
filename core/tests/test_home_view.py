@@ -4115,6 +4115,95 @@ class HomeV6ViewTest(TestCase):
         self.assertIn(f'href="{reverse("schoolprograms:landing")}"', content)
         self.assertIn('학교 체험·행사 찾기', content)
 
+    def test_v6_class_ops_menu_hides_selected_tools_and_places_reservations_third(self):
+        Product.objects.create(
+            title="몽글몽글 미술 수업",
+            description="미술 수업 준비",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='artclass:setup',
+            display_order=10,
+        )
+        Product.objects.create(
+            title="AI 수업자료 메이커",
+            description="수업 자료 제작",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='edu_materials:main',
+            display_order=20,
+        )
+        Product.objects.create(
+            title="교과서 라이브 수업",
+            description="교과서 발표",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='textbooks:main',
+            display_order=25,
+        )
+        Product.objects.create(
+            title="행복의 씨앗",
+            description="학급 보상 관리",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='happy_seed:landing',
+            display_order=30,
+        )
+        Product.objects.create(
+            title="교실 방송 TTS",
+            description="교실 방송 안내",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='tts_announce',
+            display_order=35,
+        )
+        Product.objects.create(
+            title="씨앗 퀴즈",
+            description="퀴즈 진행",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='seed_quiz:landing',
+            display_order=40,
+        )
+        Product.objects.create(
+            title="학교 예약 시스템",
+            description="특별실 예약",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='reservations:dashboard_landing',
+            display_order=90,
+        )
+        self._login('v6classopsmenu')
+
+        response = self.client.get(reverse('home'))
+        nav_sections = response.context['home_nav_sections']
+        class_ops_section = next(section for section in nav_sections if section['key'] == 'class_ops')
+        route_names = [product.launch_route_name for product in class_ops_section['products']]
+        titles = [
+            getattr(product, 'public_service_name', '') or getattr(product, 'title', '')
+            for product in class_ops_section['products']
+        ]
+
+        self.assertNotIn('qrgen:landing', route_names)
+        self.assertNotIn('textbooks:main', route_names)
+        self.assertNotIn('tts_announce', route_names)
+        self.assertEqual(
+            titles[:5],
+            [
+                '몽글몽글 미술 수업',
+                'AI 수업자료 메이커',
+                '학교 예약 시스템',
+                '행복의 씨앗',
+                '씨앗 퀴즈',
+            ],
+        )
+
     def test_v6_home_uses_normalized_icon_fields_across_nav_workbench_and_favorites(self):
         user = self._login('v6iconfields')
         emoji_product = Product.objects.create(

@@ -2148,6 +2148,66 @@ def _build_home_recommendations(companion_items, discovery_items, *, exclude_ids
     return recommendations
 
 
+CLASS_OPS_NAV_HIDDEN_ROUTE_NAMES = {
+    'qrgen:landing',
+    'textbooks:main',
+    'tts_announce',
+}
+
+CLASS_OPS_NAV_HIDDEN_TITLES = {
+    '교과서 라이브 수업',
+    '교실 방송 TTS',
+    '수업 QR 생성기',
+}
+
+CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES = {
+    'reservations:dashboard_landing',
+    'reservations:landing',
+}
+
+CLASS_OPS_NAV_RESERVATION_TITLES = {
+    '학교 예약 시스템',
+}
+
+CLASS_OPS_NAV_RESERVATION_INDEX = 2
+
+
+def _is_hidden_class_ops_nav_product(product):
+    route_name = _product_route_name(product)
+    title = _product_title_text(product)
+    return route_name in CLASS_OPS_NAV_HIDDEN_ROUTE_NAMES or title in CLASS_OPS_NAV_HIDDEN_TITLES
+
+
+def _is_class_ops_reservation_nav_product(product):
+    route_name = _product_route_name(product)
+    title = _product_title_text(product)
+    return (
+        route_name in CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES
+        or title in CLASS_OPS_NAV_RESERVATION_TITLES
+    )
+
+
+def _reorder_class_ops_nav_products(products):
+    visible_products = []
+    reservation_products = []
+
+    for product in list(products or []):
+        if _is_class_ops_reservation_nav_product(product):
+            reservation_products.append(product)
+            continue
+        visible_products.append(product)
+
+    if not reservation_products:
+        return visible_products
+
+    insert_index = min(CLASS_OPS_NAV_RESERVATION_INDEX, len(visible_products))
+    return [
+        *visible_products[:insert_index],
+        *reservation_products,
+        *visible_products[insert_index:],
+    ]
+
+
 def _filter_home_nav_products(section_key, products):
     nav_products = list(products or [])
     if section_key != 'class_ops':
@@ -2155,10 +2215,15 @@ def _filter_home_nav_products(section_key, products):
 
     # The home calendar panel and dedicated utility cards already cover their
     # entry points, so keep the menu focused on the remaining classroom-operation tools.
-    return [
+    filtered_products = [
         product for product in nav_products
-        if not _is_calendar_hub_product(product) and not _is_home_utility_product(product)
+        if (
+            not _is_calendar_hub_product(product)
+            and not _is_home_utility_product(product)
+            and not _is_hidden_class_ops_nav_product(product)
+        )
     ]
+    return _reorder_class_ops_nav_products(filtered_products)
 
 
 DIRECT_HOME_NAV_ROUTE_META = {
