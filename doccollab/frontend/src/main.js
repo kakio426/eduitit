@@ -15,11 +15,11 @@ if (form) {
     const file = fileInput.files?.[0] || null;
     validation = { key: null, ok: false, running: null };
     if (!file) {
-      setStatus("파일을 고르면 바로 편집 화면이 열립니다.");
+      setStatus("파일 선택");
       return;
     }
     if (!isDesktopChrome()) {
-      setStatus("데스크톱 Chrome에서 바로 편집됩니다.");
+      setStatus("데스크톱 편집");
       return;
     }
     void runPreflight(file);
@@ -52,7 +52,7 @@ if (form) {
     validation.key = key;
     validation.ok = false;
     submitButton?.setAttribute("aria-busy", "true");
-    setStatus("파일 확인 중");
+    setStatus("검사 중");
     validation.running = (async () => {
       try {
         const extension = (file.name.split(".").pop() || "").toLowerCase();
@@ -70,7 +70,7 @@ if (form) {
         return true;
       } catch (_error) {
         validation.ok = false;
-        setStatus("브라우저에서 열 수 없는 파일입니다.", true);
+        setStatus("열 수 없음", true);
         return false;
       } finally {
         validation.running = null;

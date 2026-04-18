@@ -163,8 +163,10 @@ class DoccollabViewTests(TestCase):
         self.assertIn(own_room.title, my_card_titles)
         self.assertIn(shared_room.title, shared_card_titles)
         self.assertContains(response, "HWP 문서실")
-        self.assertContains(response, "최근 문서")
-        self.assertContains(response, "공유받은 문서")
+        self.assertNotContains(response, "HWP와 HWPX를 열고 바로 수정한 뒤 HWP로 저장합니다.")
+        self.assertNotContains(response, "파일을 고르면 바로 편집 화면이 열립니다.")
+        self.assertNotContains(response, "최근 문서")
+        self.assertNotContains(response, "공유받은 문서")
         self.assertNotContains(response, "함께문서실")
 
     def test_shared_room_detail_shows_share_owner_members_and_access_label(self):
