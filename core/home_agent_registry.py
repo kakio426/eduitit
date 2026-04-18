@@ -439,73 +439,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         ),
     ),
     HomeAgentServiceDefinition(
-        key="pdf",
-        label="PDF",
-        service_key="hwpxchat",
-        renderer_key="pdf",
-        adapter_key="pdf",
-        preview_strategy="service",
-        selector_hint="핵심 정리",
-        tool_key="pdf",
-        aliases=("PDF", "공문", "문서"),
-        icon_class="fa-regular fa-file-pdf",
-        action_kind="open-service",
-        messenger_flow_key="one-shot",
-        messenger_capabilities={
-            "starter_chips": True,
-            "copy_result": True,
-            "open_link": True,
-        },
-        messenger_ui={
-            "flow_variant": "pdf",
-            "assistant_title": "문서 정리 초안",
-            "reset_label": "새로 쓰기",
-        },
-        copy={
-            "service_label": "PDF 화면 열기",
-            "submit_label": "정리 보기",
-            "confirm_label": "PDF 열기",
-            "action_label": "PDF 열기",
-            "helper": "문서 요약",
-            "placeholder": "문서에서 필요한 내용을 적으세요.",
-        },
-        ui={
-            "empty_prompt": "무엇을 정리할까요?",
-            "preview_line_limit": 8,
-        },
-        links={
-            "service_href": {"source": "tool", "key": "pdf", "field": "href"},
-            "direct_url": {"source": "tool", "key": "pdf", "field": "href"},
-        },
-        capabilities={
-            "preview": True,
-        },
-        runtime_spec={
-            "badge": "PDF",
-            "default_title": "문서 정리 초안",
-            "default_note": "원문을 다시 볼 때 필요한 키워드만 먼저 남겨주세요.",
-            "section_titles": ("핵심", "다음"),
-            "instruction": (
-                "문서나 공문 내용을 교사가 바로 실행할 수 있게 요약합니다. "
-                "첫 번째 sections.items에는 바로 필요한 핵심만 짧게 넣고 설명 문장은 쓰지 마세요."
-            ),
-        },
-        starter_provider_key="pdf",
-        conversation_actions=(
-            {
-                "room_kind": "shared",
-                "label": "PDF",
-                "order": 10,
-            },
-        ),
-        starter_items=_starter_items(
-            {"label": "가정통신문", "text": "가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요."},
-            {"label": "공문", "text": "공문 PDF에서 오늘 처리할 일만 짧게 정리해 주세요."},
-            {"label": "연수 자료", "text": "연수 자료 PDF에서 오늘 수업에 바로 쓸 내용만 정리해 주세요."},
-            {"label": "회의 자료", "text": "회의 자료 PDF에서 공유할 결정 사항만 정리해 주세요."},
-        ),
-    ),
-    HomeAgentServiceDefinition(
         key="tts",
         label="TTS",
         service_key="tts_announce",
@@ -812,7 +745,6 @@ HOME_AGENT_STARTER_PROVIDERS: dict[str, StarterProvider] = {
     "teacher-law": _build_teacher_law_starter_items,
     "reservation": lambda *, definition, request=None: _build_reservation_starter_items(request=request),
     "quickdrop": lambda *, definition, request=None: _clone_starter_items(definition),
-    "pdf": lambda *, definition, request=None: _clone_starter_items(definition),
     "tts": lambda *, definition, request=None: _clone_starter_items(definition),
     "message-save": lambda *, definition, request=None: _clone_starter_items(definition),
 }

@@ -196,18 +196,6 @@ def _generate_teacher_law_preview(*, mode_spec: dict, text: str) -> dict:
     )
 
 
-def _generate_pdf_preview(*, mode_spec: dict, text: str) -> dict:
-    items = _build_pdf_preview_items(text)
-    return _build_service_response(
-        provider="hwpxchat",
-        preview=_build_preview(
-            mode_spec=mode_spec,
-            title="문서 정리 초안",
-            items=items or ["문서 정리 초안"],
-        ),
-    )
-
-
 def _generate_reservation_preview(*, request, mode_spec: dict, text: str, selected_date_label: str) -> dict:
     from reservations.models import SchoolConfig, SpecialRoom
     from reservations.utils import list_user_accessible_schools
@@ -732,25 +720,6 @@ def _build_preview(*, mode_spec: dict, title: str, items: list[str]) -> dict:
     }
 
 
-def _build_pdf_preview_items(text: str) -> list[str]:
-    raw_text = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
-    pieces = re.split(r"\n+|(?<=[.!?])\s+", raw_text)
-    items = []
-    seen = set()
-    for piece in pieces:
-        compact = _compact_text(piece)
-        if not compact or compact in seen:
-            continue
-        seen.add(compact)
-        items.append(compact)
-        if len(items) >= 3:
-            break
-    if items:
-        return items
-    compact_text = _compact_text(raw_text)
-    return [compact_text] if compact_text else []
-
-
 def _decode_json_response(response) -> dict:
     try:
         return json.loads((response.content or b"").decode("utf-8") or "{}")
@@ -1076,19 +1045,11 @@ def _preview_reservation_adapter(*, request, mode_spec: dict, text: str, selecte
     )
 
 
-def _preview_pdf_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
-    return _generate_pdf_preview(
-        mode_spec=mode_spec,
-        text=text,
-    )
-
-
 HOME_AGENT_PREVIEW_ADAPTERS = {
     "notice": _preview_notice_adapter,
     "schedule": _preview_schedule_adapter,
     "teacher-law": _preview_teacher_law_adapter,
     "reservation": _preview_reservation_adapter,
-    "pdf": _preview_pdf_adapter,
 }
 
 

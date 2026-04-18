@@ -31,7 +31,7 @@ class HomeAgentRegistryTests(TestCase):
     def test_service_definitions_expose_required_contract_fields(self):
         definitions = get_home_agent_service_definitions()
 
-        self.assertEqual(len(definitions), 8)
+        self.assertEqual(len(definitions), 7)
         for definition in definitions:
             self.assertTrue(definition.key)
             self.assertTrue(definition.label)
@@ -98,6 +98,6 @@ class HomeAgentRegistryTests(TestCase):
         dm_actions = resolve_home_agent_conversation_actions('dm')
         notice_actions = resolve_home_agent_conversation_actions('notice')
 
-        self.assertEqual([item['mode_key'] for item in shared_actions], ['pdf', 'tts', 'message-save', 'quickdrop'])
+        self.assertEqual([item['mode_key'] for item in shared_actions], ['tts', 'message-save', 'quickdrop'])
         self.assertEqual([item['mode_key'] for item in dm_actions], ['schedule', 'teacher-law', 'reservation', 'quickdrop'])
         self.assertEqual([item['mode_key'] for item in notice_actions], ['notice', 'quickdrop', 'message-save'])

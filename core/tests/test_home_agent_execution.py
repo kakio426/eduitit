@@ -52,21 +52,6 @@ class HomeAgentExecutionTests(TestCase):
         self.assertEqual(result["execution"]["draft"]["room_id"], str(room.id))
         self.assertEqual(result["execution"]["draft"]["period"], "3")
 
-    def test_pdf_preview_keeps_requested_focus(self):
-        result = generate_service_preview(
-            request=self._request(),
-            mode_key="pdf",
-            mode_spec={"badge": "PDF", "default_title": "문서 정리 초안"},
-            text="가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.",
-        )
-
-        self.assertEqual(result["provider"], "hwpxchat")
-        self.assertEqual(result["preview"]["title"], "문서 정리 초안")
-        self.assertIn(
-            "가정통신문 PDF에서 학부모에게 다시 안내할 핵심만 뽑아 주세요.",
-            result["preview"]["sections"][0]["items"],
-        )
-
     def test_home_agent_execute_creates_calendar_event(self):
         response = self.client.post(
             reverse("home_agent_execute"),

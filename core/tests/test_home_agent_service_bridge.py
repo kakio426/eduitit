@@ -70,15 +70,3 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         self.assertIn("학부모총회", result["preview"]["sections"][0]["items"][0])
         self.assertEqual(result["execution"]["kind"], "schedule")
         self.assertTrue(result["execution"]["choices"])
-
-    def test_pdf_mode_returns_document_summary_preview(self):
-        result = generate_service_preview(
-            request=self._request(),
-            mode_key="pdf",
-            mode_spec={"badge": "PDF", "default_title": "문서 정리 초안"},
-            text="체험학습 PDF를 정리해 주세요.",
-        )
-
-        self.assertEqual(result["provider"], "hwpxchat")
-        self.assertEqual(result["preview"]["title"], "문서 정리 초안")
-        self.assertEqual(result["preview"]["sections"][0]["items"], ["체험학습 PDF를 정리해 주세요."])

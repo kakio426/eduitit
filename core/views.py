@@ -1597,14 +1597,6 @@ def _build_home_v7_context_router_preview(
             fallback_route='reservations:dashboard_landing',
             meta='예약 요청 만들기',
         ),
-        'pdf': _build_home_v7_router_tool(
-            request,
-            product_list,
-            title='PDF',
-            preferred_routes=('hwpxchat:main',),
-            fallback_route='hwpxchat:main',
-            meta='문서 요약',
-        ),
         'tts': _build_home_v7_router_tool(
             request,
             product_list,

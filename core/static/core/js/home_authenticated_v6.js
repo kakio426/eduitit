@@ -3893,56 +3893,6 @@
                 this.focusWorkspace();
             },
 
-            pdfUserBubbleText: function () {
-                return trimLine(this.workspaceInput);
-            },
-
-            pdfHasResult: function () {
-                return Boolean(this.previewResultLines().length);
-            },
-
-            pdfHasConversation: function () {
-                return Boolean(this.pdfUserBubbleText() || this.isAgentLoading || this.pdfHasResult());
-            },
-
-            pdfDraftHeading: function () {
-                var preview = this.agentPreview && typeof this.agentPreview === 'object' ? this.agentPreview : {};
-                return trimLine(preview.title || '문서 정리 초안');
-            },
-
-            pdfQuickExamples: function () {
-                return this.activeModeStarterItems();
-            },
-
-            runPdfExample: function (text) {
-                var value = trimLine(text);
-                if (!value) {
-                    return;
-                }
-                this.workspaceInput = value;
-                this.runAgentPreview(value);
-            },
-
-            resetPdfChat: function () {
-                this.workspaceInput = '';
-                this.showIdlePreview();
-                this.focusWorkspace();
-            },
-
-            copyPdfDraft: async function () {
-                var lines = this.previewResultLines();
-                if (!lines.length) {
-                    showFeedback('복사할 정리가 없습니다.', 'info');
-                    return;
-                }
-                try {
-                    await navigator.clipboard.writeText(lines.join('\n'));
-                    showFeedback('정리 내용을 복사했습니다.', 'success');
-                } catch (error) {
-                    showFeedback('복사하지 못했습니다.', 'error');
-                }
-            },
-
             ttsUserBubbleText: function () {
                 return trimLine(this.workspaceInput);
             },
@@ -5179,7 +5129,6 @@
                     'teacher-law': 'buildTeacherLawPreview',
                     'reservation': 'buildReservationPreview',
                     'quickdrop': 'buildQuickdropPreview',
-                    'pdf': 'buildPdfPreview',
                     'tts': 'buildTtsPreview',
                     'message-save': 'buildMessageSavePreview',
                 };
@@ -5397,21 +5346,6 @@
                         {
                             title: '결과',
                             items: reservationItems.slice(0, 6),
-                        },
-                    ],
-                    note: '',
-                });
-            },
-
-            buildPdfPreview: function (text) {
-                var lines = compactSentences(text);
-                return this.buildPreviewSkeleton({
-                    title: '문서 정리 초안',
-                    summary: '',
-                    sections: [
-                        {
-                            title: '결과',
-                            items: lines.slice(0, 3).length ? lines.slice(0, 3) : [text],
                         },
                     ],
                     note: '',
