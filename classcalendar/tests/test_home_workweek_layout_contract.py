@@ -32,3 +32,23 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn("justify-self: center;", content)
         self.assertIn("margin: 0 0 0.24rem;", content)
         self.assertNotIn("margin: 0 0.22rem 0.24rem;", content)
+
+    def test_desktop_workweek_keeps_first_two_single_day_items_in_top_stack(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("getHomeWorkweekTopLimit() {", content)
+        self.assertIn("return this.isCompactMobileViewport() ? 1 : 2;", content)
+        self.assertIn("getHomeWorkweekBottomLimit() {", content)
+        self.assertIn("return this.isCompactMobileViewport() ? 1 : 1;", content)
+        self.assertIn(".classcalendar-home-workweek-day-stack--primary {", content)
+        self.assertIn("min-height: 4.16rem;", content)
+        self.assertIn("min-height: 4.4rem;", content)
+        self.assertIn(".classcalendar-home-workweek-day-stack--secondary {", content)
+        self.assertIn("min-height: 2.04rem;", content)
+        self.assertIn("min-height: 2.16rem;", content)

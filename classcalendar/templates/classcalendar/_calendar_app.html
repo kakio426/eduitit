@@ -347,11 +347,11 @@
     }
 
     .classcalendar-home-workweek-day-stack--primary {
-        min-height: 2.04rem;
+        min-height: 4.16rem;
     }
 
     .classcalendar-home-workweek-day-stack--secondary {
-        min-height: 4.32rem;
+        min-height: 2.04rem;
     }
 
     .classcalendar-home-workweek-range-grid {
@@ -1040,11 +1040,11 @@
         }
 
         .classcalendar-home-workweek-day-stack--primary {
-            min-height: 2.16rem;
+            min-height: 4.4rem;
         }
 
         .classcalendar-home-workweek-day-stack--secondary {
-            min-height: 4.48rem;
+            min-height: 2.16rem;
         }
 
         .classcalendar-home-workweek-item {
@@ -5122,10 +5122,10 @@ function calendarApp() {
             return weeks;
         },
         getHomeWorkweekTopLimit() {
-            return this.isCompactMobileViewport() ? 1 : 1;
+            return this.isCompactMobileViewport() ? 1 : 2;
         },
         getHomeWorkweekBottomLimit() {
-            return this.isCompactMobileViewport() ? 1 : 2;
+            return this.isCompactMobileViewport() ? 1 : 1;
         },
         getHomeWorkweekRangeLimit() {
             return this.isCompactMobileViewport() ? 1 : 1;
