@@ -1562,6 +1562,80 @@ body.teacher-buddy-modal-open {
     padding: 1.25rem;
 }
 
+.teacher-buddy-settings-summary {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border-radius: 1.55rem;
+    border: 1px solid rgba(191, 219, 254, 0.72);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95)),
+        linear-gradient(135deg, rgba(219, 234, 254, 0.24), rgba(221, 214, 254, 0.22));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.teacher-buddy-settings-summary-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.95rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-settings-summary-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.teacher-buddy-settings-summary-avatar-wrap {
+    flex: 0 0 auto;
+}
+
+.teacher-buddy-settings-summary-avatar {
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.teacher-buddy-settings-summary-copy {
+    display: grid;
+    gap: 0.38rem;
+    min-width: 0;
+}
+
+.teacher-buddy-settings-summary-title {
+    margin: 0;
+    color: var(--buddy-text);
+    font-size: 1.08rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.teacher-buddy-settings-summary-note {
+    margin: 0;
+    color: var(--buddy-muted);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.teacher-buddy-settings-summary-badges {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.teacher-buddy-settings-summary-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.teacher-buddy-settings-overview {
+    display: grid;
+    gap: 1rem;
+}
+
 .teacher-buddy-profile-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -1632,6 +1706,13 @@ body.teacher-buddy-modal-open {
     gap: 0.9rem;
 }
 
+.teacher-buddy-settings-draw-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
 .teacher-buddy-settings-quick-card {
     display: flex;
     align-items: center;
@@ -1641,6 +1722,12 @@ body.teacher-buddy-modal-open {
     border-radius: 1.25rem;
     border: 1px solid rgba(203, 213, 225, 0.78);
     background: rgba(255, 255, 255, 0.82);
+}
+
+.teacher-buddy-settings-quick-card--draw {
+    display: grid;
+    align-items: stretch;
+    justify-content: stretch;
 }
 
 .teacher-buddy-settings-section-head {
@@ -2443,6 +2530,8 @@ body.teacher-buddy-modal-open {
     .teacher-buddy-compact-hero,
     .teacher-buddy-head,
     .teacher-buddy-settings-head,
+    .teacher-buddy-settings-summary-head,
+    .teacher-buddy-settings-summary-identity,
     .teacher-buddy-profile-card-head,
     .teacher-buddy-profile-identity,
     .teacher-buddy-settings-toolbar,
@@ -2455,6 +2544,14 @@ body.teacher-buddy-modal-open {
     .teacher-buddy-settings-toolbar-actions {
         width: 100%;
         flex-direction: column;
+    }
+
+    .teacher-buddy-settings-summary-actions {
+        width: 100%;
+    }
+
+    .teacher-buddy-settings-summary-actions .teacher-buddy-share-button {
+        width: 100%;
     }
 
     .teacher-buddy-settings-toolbar-actions > * {

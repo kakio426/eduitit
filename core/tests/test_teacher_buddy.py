@@ -828,19 +828,22 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, "오늘 흐름 위젯")
         self.assertNotContains(response, "홈 도구 3개와 오늘 SNS 글 1개로 메이트 토큰을 모아요.")
 
-    def test_settings_page_shows_representative_buddy_hub_and_share_button(self):
+    def test_settings_page_keeps_buddy_panel_collapsed_until_opened(self):
         self.client.login(username="buddyhome", password="pass1234")
 
         response = self.client.get(reverse("settings"))
         content = response.content.decode("utf-8")
 
-        self.assertContains(response, "메이트 프로필 스튜디오")
+        self.assertContains(response, 'data-buddy-settings-summary="true"')
+        self.assertContains(response, 'data-buddy-summary-name="representative"')
+        self.assertContains(response, "메이트 열기")
+        self.assertContains(response, 'data-buddy-panel-toggle="overview"')
+        self.assertContains(response, 'data-buddy-settings-drawer="overview" hidden')
+        self.assertContains(response, 'data-buddy-settings-drawer="draw" hidden')
         self.assertContains(response, 'data-buddy-preview-card="representative"')
-        self.assertContains(response, "대표 메이트")
-        self.assertContains(response, "대표를 바꾸면 홈, SNS, 공유 카드가 함께 바뀌어요.")
         self.assertContains(response, "선물 쿠폰 등록")
         self.assertContains(response, 'data-buddy-coupon-form="true"')
-        self.assertContains(response, "메이트 뽑기")
+        self.assertContains(response, "뽑기 열기")
         self.assertContains(response, "보조 메뉴")
         self.assertContains(response, "보관함 열기")
         self.assertContains(response, 'data-buddy-draw-form="true"')
@@ -852,6 +855,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertNotContains(response, f'href="{reverse("home")}#teacher-buddy-panel"')
         self.assertContains(response, "자랑하기")
         self.assertContains(response, "스타일 보기")
+        self.assertContains(response, 'data-buddy-summary-sync="true"')
         self.assertNotContains(response, 'data-selection-mode="profile"')
         self.assertNotContains(response, "SNS 대표 선택")
         self.assertNotContains(response, "홈 메이트 선택")
@@ -859,6 +863,7 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, 'data-buddy-settings-style-summary="true"')
         self.assertNotContains(response, 'data-buddy-unlock-form="true"')
         self.assertContains(response, "스타일 조각")
+        self.assertNotContains(response, "메이트 프로필 스튜디오")
         self.assertNotContains(response, "쿠폰 만들기")
         self.assertNotContains(response, "인원 찾는 대시보드")
         self.assertContains(response, 'service-shell--spacious')

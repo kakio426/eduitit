@@ -46,6 +46,17 @@
         button.textContent = open ? closeLabel : openLabel;
     }
 
+    function syncAllPanelToggleButtons(root) {
+        root.querySelectorAll('[data-buddy-panel-toggle]').forEach(function (button) {
+            var key = button.getAttribute('data-buddy-panel-toggle') || '';
+            var drawer = key ? root.querySelector('[data-buddy-settings-drawer="' + key + '"]') : null;
+            if (!drawer) {
+                return;
+            }
+            syncPanelToggleButton(button, drawer);
+        });
+    }
+
     async function submitForm(form) {
         var response = await fetch(form.action, {
             method: 'POST',
@@ -182,6 +193,32 @@
         state.representativeSkinKey = representative.selected_skin_key || '';
     }
 
+    function updateSummaryCard(root, buddy, summaryText) {
+        if (!buddy) {
+            return;
+        }
+        var avatarWrap = root.querySelector('[data-buddy-summary-avatar="representative"]');
+        var avatar = avatarWrap ? avatarWrap.querySelector('.teacher-buddy-settings-summary-avatar') : null;
+        if (avatar) {
+            updateCompactAvatar(avatar, buddy);
+        }
+        root.querySelectorAll('[data-buddy-summary-name="representative"]').forEach(function (name) {
+            name.textContent = buddy.name || '';
+        });
+        root.querySelectorAll('[data-buddy-summary-rarity="representative"]').forEach(function (rarity) {
+            rarity.textContent = buddy.rarity_label || '';
+            rarity.className = 'teacher-buddy-rarity teacher-buddy-rarity--' + (buddy.rarity || 'common');
+        });
+        root.querySelectorAll('[data-buddy-summary-style="representative"]').forEach(function (style) {
+            style.textContent = buddy.selected_skin_short_label || '기본';
+        });
+        if (typeof summaryText === 'string') {
+            root.querySelectorAll('[data-buddy-summary-sync="true"]').forEach(function (summary) {
+                summary.textContent = summaryText;
+            });
+        }
+    }
+
     function updatePreviewCard(root, buddy, captionText, summaryText) {
         if (!buddy) {
             return;
@@ -229,22 +266,29 @@
     }
 
     function updateSummaries(root, payload) {
-        var buddySummary = root.querySelector('[data-buddy-settings-buddy-summary="true"]');
-        var styleSummary = root.querySelector('[data-buddy-settings-style-summary="true"]');
-        if (buddySummary && payload.buddy_collection_summary_text) {
-            buddySummary.textContent = payload.buddy_collection_summary_text;
-        }
-        if (styleSummary && payload.style_collection_summary_text) {
-            styleSummary.textContent = payload.style_collection_summary_text;
-        }
+        root.querySelectorAll('[data-buddy-settings-buddy-summary="true"]').forEach(function (buddySummary) {
+            if (payload.buddy_collection_summary_text) {
+                buddySummary.textContent = payload.buddy_collection_summary_text;
+            }
+        });
+        root.querySelectorAll('[data-buddy-settings-style-summary="true"]').forEach(function (styleSummary) {
+            if (payload.style_collection_summary_text) {
+                styleSummary.textContent = payload.style_collection_summary_text;
+            }
+        });
     }
 
     function updateTokenBadge(root, count) {
-        var badge = root.querySelector('[data-buddy-settings-token="true"]');
-        if (!badge) {
-            return;
-        }
-        badge.textContent = '보유 뽑기권 ' + parseInt(count || 0, 10) + '장';
+        root.querySelectorAll('[data-buddy-settings-token="true"]').forEach(function (badge) {
+            badge.textContent = '보유 뽑기권 ' + parseInt(count || 0, 10) + '장';
+        });
+    }
+
+    function updateDrawAvailability(root, count) {
+        var available = parseInt(count || 0, 10) > 0;
+        root.querySelectorAll('[data-buddy-draw-button="true"]').forEach(function (button) {
+            button.disabled = !available;
+        });
     }
 
     function buildApplyAction(root, buddyKey, skinKey, isSelected) {
@@ -390,16 +434,24 @@
     }
 
     function bindPanelToggles(root) {
+        syncAllPanelToggleButtons(root);
         root.querySelectorAll('[data-buddy-panel-toggle]').forEach(function (button) {
             var key = button.getAttribute('data-buddy-panel-toggle') || '';
             var drawer = key ? root.querySelector('[data-buddy-settings-drawer="' + key + '"]') : null;
             if (!drawer) {
                 return;
             }
-            syncPanelToggleButton(button, drawer);
             button.addEventListener('click', function () {
-                setHidden(drawer, !isHidden(drawer));
-                syncPanelToggleButton(button, drawer);
+                var nextHidden = !isHidden(drawer);
+                setHidden(drawer, nextHidden);
+                if (key === 'overview' && nextHidden) {
+                    root.querySelectorAll('[data-buddy-settings-drawer]').forEach(function (candidate) {
+                        if (candidate !== drawer) {
+                            setHidden(candidate, true);
+                        }
+                    });
+                }
+                syncAllPanelToggleButtons(root);
             });
         });
     }
@@ -419,6 +471,11 @@
                     root,
                     payload.profile_buddy || payload.active_buddy,
                     payload.profile_buddy ? (payload.profile_buddy.share_caption || '') : '',
+                    payload.sync_summary_text || root.dataset.sharedSelectionCopy || '대표를 바꾸면 홈과 SNS가 함께 바뀌어요.'
+                );
+                updateSummaryCard(
+                    root,
+                    payload.profile_buddy || payload.active_buddy,
                     payload.sync_summary_text || root.dataset.sharedSelectionCopy || '대표를 바꾸면 홈과 SNS가 함께 바뀌어요.'
                 );
                 if (payload.collection_item) {
@@ -566,6 +623,7 @@
             try {
                 var payload = await submitForm(form);
                 updateTokenBadge(root, payload.draw_token_count || 0);
+                updateDrawAvailability(root, payload.draw_token_count || 0);
                 if (input) {
                     input.value = '';
                 }
