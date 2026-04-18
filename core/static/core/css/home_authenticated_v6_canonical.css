@@ -1330,6 +1330,8 @@ display: grid;
 .home-v6-page .home-v6-agent-chat-row {
 display: flex;
     justify-content: flex-start;
+    align-items: flex-start;
+    align-self: start;
 }
 
 .home-v6-page .home-v6-agent-chat-row--user {
@@ -3462,8 +3464,9 @@ grid-template-columns: minmax(0, 1fr);
 .home-v6-page .home-v6-agent-quickdrop-chat,
 .home-v6-page .home-v6-agent-reservation-chat {
     gap: 0.9rem;
-    min-height: 36rem;
-    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+    align-content: start;
 }
 
 .home-v6-page .home-v6-agent-notice-thread,
@@ -3734,8 +3737,9 @@ grid-template-columns: minmax(0, 1fr);
 .home-v6-page .home-v6-agent-reservation-chat,
 .home-v6-page .home-v6-agent-human-chat {
     gap: 0.82rem;
-    min-height: 34rem;
-    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+    align-content: start;
 }
 
 .home-v6-page .home-v6-agent-notice-thread,
@@ -4684,10 +4688,10 @@ grid-template-columns: minmax(0, 1fr);
 }
 
 .home-v6-page .home-v6-agent-human-composer-shell {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    display: flex;
     align-items: end;
     gap: 0.42rem;
+    width: 100%;
 }
 
 .home-v6-page .home-v6-agent-human-compose-icon,
@@ -4703,6 +4707,13 @@ grid-template-columns: minmax(0, 1fr);
     color: #55657c;
 }
 
+.home-v6-page .home-v6-agent-human-compose-icon,
+.home-v6-page .home-v6-agent-human-send,
+.home-v6-page .home-v6-agent-ai-compose-icon,
+.home-v6-page .home-v6-agent-ai-send {
+    flex: 0 0 auto;
+}
+
 .home-v6-page .home-v6-agent-human-send {
     border-color: rgba(var(--home-v6-brand-rgb), 0.18);
     background: rgba(241, 236, 255, 0.98);
@@ -4714,6 +4725,9 @@ grid-template-columns: minmax(0, 1fr);
 }
 
 .home-v6-page .home-v6-agent-input--human {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     min-height: 2.5rem;
     max-height: calc((1.48em * 4) + 1rem);
     padding: 0.62rem 0.78rem;
@@ -4815,11 +4829,13 @@ grid-template-columns: minmax(0, 1fr);
 .home-v6-page .home-v6-agent-ai-messenger {
     display: grid;
     gap: 0.76rem;
-    min-height: 35rem;
-    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+    align-content: start;
 }
 
 .home-v6-page .home-v6-agent-ai-thread {
+    align-content: start;
     max-height: 32rem;
     overflow-y: auto;
     display: grid;
@@ -5006,10 +5022,10 @@ grid-template-columns: minmax(0, 1fr);
 
 .home-v6-page .home-v6-agent-ai-composer-shell {
     position: relative;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    display: flex;
     align-items: end;
     gap: 0.42rem;
+    width: 100%;
 }
 
 .home-v6-page .home-v6-agent-ai-composer-shell.is-drag-active {
@@ -5036,6 +5052,9 @@ grid-template-columns: minmax(0, 1fr);
 }
 
 .home-v6-page .home-v6-agent-input--ai {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     min-height: 2.5rem;
     max-height: calc((1.48em * 4) + 1rem);
     padding: 0.62rem 0.78rem;
