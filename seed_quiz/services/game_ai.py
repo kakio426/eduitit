@@ -97,7 +97,14 @@ def generate_distractors(*, question: str, correct_answer: str, topic: str, grad
     return distractors[:3]
 
 
-def build_multiple_choices(*, question: str, correct_answer: str, topic: str, grade: int) -> tuple[list[str], int]:
+def build_multiple_choices(
+    *,
+    question: str,
+    correct_answer: str,
+    topic: str,
+    grade: int,
+) -> tuple[list[str], int, bool]:
+    used_fallback = False
     try:
         distractors = generate_distractors(
             question=question,
@@ -107,8 +114,10 @@ def build_multiple_choices(*, question: str, correct_answer: str, topic: str, gr
         )
     except Exception:
         distractors = _fallback_distractors(correct_answer)
+        used_fallback = True
     choice_pool = _dedupe_choices([correct_answer, *distractors])
     if len(choice_pool) < 4:
+        used_fallback = True
         choice_pool = _dedupe_choices(
             choice_pool + _fallback_distractors(correct_answer),
             exclude=set(),
@@ -118,7 +127,7 @@ def build_multiple_choices(*, question: str, correct_answer: str, topic: str, gr
         choice_pool = [correct_answer, *choice_pool[:3]]
     rnd = random.Random(f"{question}|{correct_answer}|{grade}|{topic}")
     rnd.shuffle(choice_pool)
-    return choice_pool, choice_pool.index(correct_answer)
+    return choice_pool, choice_pool.index(correct_answer), used_fallback
 
 
 def evaluate_question_quality(
@@ -162,12 +171,12 @@ def evaluate_question_quality(
 
 def fallback_quality_result() -> dict:
     return {
-        "relevance": 55,
-        "clarity": 55,
-        "difficulty": 50,
-        "overall": 50,
-        "approved": True,
-        "feedback": "AI 점검을 건너뛰고 기본 점수로 반영했습니다.",
+        "relevance": 0,
+        "clarity": 0,
+        "difficulty": 0,
+        "overall": 0,
+        "approved": False,
+        "feedback": "AI 확인이 늦어져서 선생님 확인으로 넘겼습니다.",
         "fallback_used": True,
     }
 

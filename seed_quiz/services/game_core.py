@@ -4,6 +4,7 @@ import uuid
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from happy_seed.services.engine import add_seeds
@@ -109,6 +110,7 @@ def join_game(*, room: SQGameRoom, student, nickname: str = "") -> SQGamePlayer:
     updates.append("last_seen_at")
     if updates:
         player.save(update_fields=updates + ["updated_at"])
+    recalculate_game_scores(room)
     return player
 
 
@@ -194,8 +196,18 @@ def advance_phase(room: SQGameRoom, *, to_status: str | None = None) -> SQGameRo
     }
     next_status = to_status or transitions.get(room.status, "finished")
 
-    if next_status == "playing" and not room.questions.filter(status="ready").exists():
-        raise ValueError("ready_questions_required")
+    if next_status == "playing":
+        question_counts = room.questions.aggregate(
+            ready=Count("id", filter=Q(status="ready")),
+            pending=Count("id", filter=Q(status="pending_ai")),
+            needs_review=Count("id", filter=Q(status="needs_review")),
+        )
+        if question_counts["pending"] > 0:
+            raise ValueError("pending_ai_remaining")
+        if question_counts["needs_review"] > 0:
+            raise ValueError("needs_review_remaining")
+        if question_counts["ready"] <= 0:
+            raise ValueError("ready_questions_required")
 
     room.status = next_status
     room.phase_started_at = timezone.now()
@@ -211,13 +223,17 @@ def advance_phase(room: SQGameRoom, *, to_status: str | None = None) -> SQGameRo
 
 def _finalize_question(question: SQGameQuestion, quality_result: dict) -> SQGameQuestion:
     overall = int(quality_result.get("overall", 0) or 0)
-    approved = bool(quality_result.get("approved", overall >= 40))
-    base_points = 20 if quality_result.get("fallback_used") else calculate_base_points(overall)
+    approved = bool(quality_result.get("approved", overall >= 40)) and overall >= 40
+    needs_review = bool(quality_result.get("fallback_used")) or not approved
+    base_points = 0 if needs_review else calculate_base_points(overall)
+    feedback = str(quality_result.get("feedback") or "").strip()
+    if needs_review and not feedback:
+        feedback = "선생님 확인 후 사용할 수 있어요."
     question.ai_quality_score = overall
     question.ai_quality_json = quality_result
-    question.ai_feedback = str(quality_result.get("feedback") or "")[:255]
+    question.ai_feedback = feedback[:255]
     question.base_points = base_points if approved else 0
-    question.status = "ready" if approved else "rejected"
+    question.status = "needs_review" if needs_review else "ready"
     question.evaluated_at = timezone.now()
     question.save(
         update_fields=[
@@ -264,6 +280,52 @@ def evaluate_pending_question(question: SQGameQuestion, *, retry_after_seconds: 
 
 
 @transaction.atomic
+def submit_question(
+    *,
+    player: SQGamePlayer,
+    request_id,
+    question_type: str,
+    question_text: str,
+    answer_text: str,
+    choices: list[str],
+    correct_index: int,
+) -> tuple[SQGameQuestion, bool]:
+    player = SQGamePlayer.objects.select_for_update().select_related("game").get(id=player.id)
+    room = player.game
+    try:
+        request_uuid = request_id if isinstance(request_id, uuid.UUID) else uuid.UUID(str(request_id))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("invalid_request_id") from exc
+
+    existing = SQGameQuestion.objects.select_for_update().filter(request_id=request_uuid).first()
+    if existing:
+        if existing.author_id != player.id or existing.game_id != room.id:
+            raise ValueError("request_conflict")
+        return existing, False
+
+    if room.status != "creating":
+        raise ValueError("invalid_phase")
+    if create_slots_left(player) <= 0:
+        raise ValueError("no_slots_left")
+    if correct_index < 0 or correct_index >= len(choices or []):
+        raise ValueError("invalid_correct_index")
+
+    question = SQGameQuestion.objects.create(
+        game=room,
+        author=player,
+        request_id=request_uuid,
+        question_type=question_type,
+        question_text=question_text,
+        answer_text=answer_text,
+        choices=choices,
+        correct_index=correct_index,
+        status="pending_ai",
+        submitted_at=timezone.now(),
+    )
+    return question, True
+
+
+@transaction.atomic
 def submit_answer(
     *,
     player: SQGamePlayer,
@@ -271,26 +333,69 @@ def submit_answer(
     selected_index: int,
     time_taken_ms: int,
 ) -> SQGameAnswer:
+    player = SQGamePlayer.objects.select_for_update().select_related("game").get(id=player.id)
+    question = SQGameQuestion.objects.select_related("author", "game").get(id=question.id)
+    existing = SQGameAnswer.objects.select_for_update().filter(question=question, player=player).first()
+    if existing:
+        return existing
     if question.author_id == player.id:
         raise ValueError("cannot_answer_own_question")
+    if question.game_id != player.game_id or question.status != "ready":
+        raise ValueError("invalid_question")
+    if selected_index < 0 or selected_index >= len(question.choices or []):
+        raise ValueError("invalid_choice")
+    next_question = get_next_question_for_player(player)
+    if not next_question or next_question.id != question.id:
+        raise ValueError("not_assigned_question")
     points = calculate_solver_points(
         is_correct=question.correct_index == selected_index,
         time_taken_ms=time_taken_ms,
         time_limit_seconds=player.game.solve_time_seconds,
     )
-    answer, created = SQGameAnswer.objects.select_for_update().get_or_create(
+    answer = SQGameAnswer.objects.create(
         question=question,
         player=player,
-        defaults={
-            "selected_index": selected_index,
-            "is_correct": question.correct_index == selected_index,
-            "time_taken_ms": max(0, int(time_taken_ms or 0)),
-            "points_earned": points,
-        },
+        selected_index=selected_index,
+        is_correct=question.correct_index == selected_index,
+        time_taken_ms=max(0, int(time_taken_ms or 0)),
+        points_earned=points,
     )
-    if created:
-        recalculate_game_scores(player.game)
+    recalculate_game_scores(player.game)
     return answer
+
+
+@transaction.atomic
+def review_question(*, question: SQGameQuestion, action: str) -> SQGameQuestion:
+    question = SQGameQuestion.objects.select_for_update().select_related("game").get(id=question.id)
+    if question.status != "needs_review":
+        return question
+
+    clean_action = str(action or "").strip()
+    if clean_action == "approve":
+        question.status = "ready"
+        question.base_points = 20
+        if not question.ai_feedback:
+            question.ai_feedback = "선생님이 확인하고 사용 가능으로 바꿨어요."
+    elif clean_action == "reject":
+        question.status = "rejected"
+        question.base_points = 0
+        if not question.ai_feedback:
+            question.ai_feedback = "선생님이 게임에서 제외했어요."
+    else:
+        raise ValueError("invalid_review_action")
+
+    question.evaluated_at = timezone.now()
+    question.save(
+        update_fields=[
+            "status",
+            "base_points",
+            "ai_feedback",
+            "evaluated_at",
+            "updated_at",
+        ]
+    )
+    recalculate_game_scores(question.game)
+    return question
 
 
 def calculate_rankings(room: SQGameRoom) -> list[SQGamePlayer]:
@@ -300,11 +405,6 @@ def calculate_rankings(room: SQGameRoom) -> list[SQGamePlayer]:
 def maybe_auto_advance_room(room: SQGameRoom) -> SQGameRoom:
     room.refresh_from_db()
     deadline = phase_deadline(room)
-    if room.status == "creating":
-        if deadline and timezone.now() >= deadline and room.questions.filter(status="ready").exists():
-            pending_count = room.questions.filter(status="pending_ai").count()
-            if pending_count == 0:
-                return advance_phase(room, to_status="playing")
     if room.status == "playing":
         if (deadline and timezone.now() >= deadline) or all_connected_players_done(room):
             return advance_phase(room, to_status="finished")

@@ -4,18 +4,22 @@
          hx-target="#game-area"
          hx-swap="innerHTML">
     <div class="text-center">
-        {% if room.status == 'waiting' %}
+        {% if waiting_state == 'before_start' %}
         <div class="mb-4 text-5xl">👋</div>
         <h2 class="text-2xl font-black text-slate-900">시작 전</h2>
-        <p class="mt-2 text-sm text-slate-500">선생님이 출제를 열면 바로 문제를 만들 수 있어요.</p>
+        <p class="mt-2 text-sm text-slate-500">선생님이 열면 바로 시작합니다.</p>
+        {% elif waiting_state == 'needs_review' %}
+        <div class="mb-4 text-5xl">🧑‍🏫</div>
+        <h2 class="text-2xl font-black text-slate-900">선생님 확인 중</h2>
+        <p class="mt-2 text-sm text-slate-500">내 문제를 보고 있습니다.</p>
         {% elif room.status == 'creating' %}
         <div class="mb-4 text-5xl">🧠</div>
         <h2 class="text-2xl font-black text-slate-900">내 문제 제출 완료</h2>
-        <p class="mt-2 text-sm text-slate-500">친구들 문제를 모으는 중입니다.</p>
-        {% elif room.status == 'playing' %}
+        <p class="mt-2 text-sm text-slate-500">친구들 문제를 모으는 중</p>
+        {% elif waiting_state == 'result_pending' %}
         <div class="mb-4 text-5xl">🏁</div>
-        <h2 class="text-2xl font-black text-slate-900">다 풀었어요</h2>
-        <p class="mt-2 text-sm text-slate-500">결과가 정리되면 바로 보여 드릴게요.</p>
+        <h2 class="text-2xl font-black text-slate-900">다 풀고 결과 대기</h2>
+        <p class="mt-2 text-sm text-slate-500">결과를 정리하는 중</p>
         {% endif %}
 
         {% if seconds_left != None %}
@@ -34,14 +38,14 @@
         </div>
     </div>
 
-    {% if leaderboard %}
+    {% if top_leaderboard %}
     <div class="mt-6 rounded-3xl bg-slate-950 px-5 py-5 text-white">
         <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold">상위 5명</h3>
             <span class="text-xs text-slate-300">실시간</span>
         </div>
         <div class="space-y-2">
-            {% for row in leaderboard %}
+            {% for row in top_leaderboard %}
             <div class="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
                 <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
                 <p class="text-base font-black">{{ row.total_score }}</p>

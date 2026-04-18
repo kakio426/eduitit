@@ -1,12 +1,13 @@
 <section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
     <div class="text-center">
-        <div class="mb-4 text-5xl">{% if evaluated_question.status == 'ready' %}✅{% else %}🛠️{% endif %}</div>
+        <div class="mb-4 text-5xl">{% if evaluated_question.status == 'ready' %}✅{% else %}🕒{% endif %}</div>
         <h2 class="text-2xl font-black text-slate-900">
-            {% if evaluated_question.status == 'ready' %}문제가 준비됐어요{% else %}다시 다듬어 주세요{% endif %}
+            {% if evaluated_question.status == 'ready' %}문제가 준비됐어요{% else %}선생님 확인 중{% endif %}
         </h2>
         <p class="mt-2 text-sm text-slate-500">{{ evaluated_question.ai_feedback }}</p>
     </div>
 
+    {% if evaluated_question.status == 'ready' %}
     <div class="mt-6 grid gap-3 sm:grid-cols-2">
         <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
             <p class="text-xs font-bold text-slate-500">품질 점수</p>
@@ -32,6 +33,15 @@
          hx-target="#game-area"
          hx-swap="innerHTML">
         친구들 문제를 기다리는 중입니다.
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-center text-sm font-bold text-amber-800"
+         hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
+         hx-trigger="load delay:1500ms, every 3s"
+         hx-target="#game-area"
+         hx-swap="innerHTML">
+        확인이 끝나면 다음 화면으로 바뀝니다.
     </div>
     {% endif %}
 </section>

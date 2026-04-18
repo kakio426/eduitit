@@ -2,11 +2,12 @@
     <div class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
         <div class="text-center">
             <div class="mb-4 text-5xl">🏆</div>
-            <h2 class="text-2xl font-black text-slate-900">게임 종료</h2>
-            <p class="mt-2 text-sm text-slate-500">{{ player.rank }}위 · 총 {{ player.total_score }}점</p>
+            <p class="text-xs font-bold text-sky-700">내 순위</p>
+            <h2 class="mt-1 text-3xl font-black text-slate-900">{{ player.rank }}위</h2>
+            <p class="mt-2 text-sm text-slate-500">총 {{ player.total_score }}점</p>
         </div>
 
-        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="mt-6 grid gap-3 sm:grid-cols-3">
             <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
                 <p class="text-xs font-bold text-slate-500">출제 점수</p>
                 <p class="mt-2 text-2xl font-black text-slate-900">{{ player.create_score }}</p>
@@ -15,23 +16,22 @@
                 <p class="text-xs font-bold text-slate-500">풀이 점수</p>
                 <p class="mt-2 text-2xl font-black text-slate-900">{{ player.solve_score }}</p>
             </div>
+            <div class="rounded-2xl {% if reward %}border border-emerald-200 bg-emerald-50{% else %}bg-slate-50{% endif %} px-4 py-4 text-center">
+                <p class="text-xs font-bold {% if reward %}text-emerald-700{% else %}text-slate-500{% endif %}">보상</p>
+                <p class="mt-2 text-2xl font-black {% if reward %}text-emerald-900{% else %}text-slate-900{% endif %}">
+                    {% if reward %}+{{ reward.seed_amount }}{% else %}0{% endif %}
+                </p>
+            </div>
         </div>
-
-        {% if reward %}
-        <div class="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-5 text-center">
-            <p class="text-xs font-bold text-emerald-700">씨앗 보상</p>
-            <p class="mt-2 text-3xl font-black text-emerald-900">+{{ reward.seed_amount }}</p>
-        </div>
-        {% endif %}
     </div>
 
     <div class="rounded-[28px] bg-slate-950 px-5 py-5 text-white shadow-xl shadow-slate-200">
         <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-bold">최종 리더보드</h3>
-            <span class="text-xs text-slate-300">전체</span>
+            <h3 class="text-sm font-bold">상위 5명</h3>
+            <span class="text-xs text-slate-300">최종</span>
         </div>
         <div class="space-y-2">
-            {% for row in leaderboard %}
+            {% for row in top_leaderboard %}
             <div class="flex items-center justify-between rounded-2xl px-4 py-3 {% if row.id == player.id %}bg-emerald-500/20{% else %}bg-white/10{% endif %}">
                 <div>
                     <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>

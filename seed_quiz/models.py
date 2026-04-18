@@ -594,6 +594,7 @@ class SQGameQuestion(models.Model):
     STATUS_CHOICES = [
         ("draft", "작성중"),
         ("pending_ai", "AI 평가중"),
+        ("needs_review", "교사 확인 필요"),
         ("ready", "사용 가능"),
         ("rejected", "제외"),
     ]
@@ -625,6 +626,7 @@ class SQGameQuestion(models.Model):
     answer_text = models.TextField(blank=True, default="", verbose_name="정답 텍스트")
     choices = models.JSONField(default=list, blank=True, verbose_name="보기")
     correct_index = models.IntegerField(default=0, verbose_name="정답 인덱스")
+    request_id = models.UUIDField(default=uuid.uuid4, unique=True, verbose_name="제출 요청 ID")
     ai_quality_score = models.IntegerField(default=0, verbose_name="AI 품질 점수")
     ai_quality_json = models.JSONField(default=dict, blank=True, verbose_name="AI 평가")
     ai_feedback = models.CharField(max_length=255, blank=True, default="", verbose_name="AI 피드백")

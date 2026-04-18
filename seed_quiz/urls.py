@@ -31,6 +31,11 @@ urlpatterns = [
         name="htmx_teacher_game_advance",
     ),
     path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/questions/<uuid:question_id>/review/",
+        views_game.htmx_teacher_game_review,
+        name="htmx_teacher_game_review",
+    ),
+    path(
         "class/<uuid:classroom_id>/student-dashboard/",
         views.teacher_student_dashboard,
         name="teacher_student_dashboard",

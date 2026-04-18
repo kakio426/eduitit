@@ -4,14 +4,22 @@
 </div>
 {% else %}
 <div class="space-y-3">
-    <input type="hidden" name="correct_index" value="{{ correct_index }}">
+    {% if fallback_used %}
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+        AI 대신 기본 보기로 채웠습니다. 보기와 정답 위치를 직접 고쳐 주세요.
+    </div>
+    {% endif %}
     {% for choice in choices %}
     <label class="block rounded-2xl border px-4 py-3 {% if forloop.counter0 == correct_index %}border-emerald-300 bg-emerald-50{% else %}border-slate-200 bg-white{% endif %}">
-        <span class="mb-2 block text-xs font-bold {% if forloop.counter0 == correct_index %}text-emerald-700{% else %}text-slate-500{% endif %}">
-            {% if forloop.counter0 == correct_index %}정답 보기{% else %}보기 {{ forloop.counter }}{% endif %}
+        <span class="mb-2 flex items-center justify-between gap-3 text-xs font-bold {% if forloop.counter0 == correct_index %}text-emerald-700{% else %}text-slate-500{% endif %}">
+            <span>보기 {{ forloop.counter }}</span>
+            <span class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px]">
+                <input type="radio" name="correct_index" value="{{ forloop.counter0 }}" {% if forloop.counter0 == correct_index %}checked{% endif %} class="h-4 w-4 accent-emerald-600">
+                정답
+            </span>
         </span>
         <input type="text" name="choice_{{ forloop.counter0 }}" value="{{ choice }}"
-               class="w-full bg-transparent text-sm font-bold text-slate-900 outline-none">
+               class="w-full rounded-xl bg-transparent text-sm font-bold text-slate-900 outline-none">
     </label>
     {% endfor %}
 </div>

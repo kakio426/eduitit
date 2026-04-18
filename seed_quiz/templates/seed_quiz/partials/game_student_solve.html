@@ -14,10 +14,17 @@
             {% endif %}
         </div>
 
+        {% if error_message %}
+        <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
         <form id="sqg-answer-form"
               hx-post="{% url 'seed_quiz:htmx_student_game_answer' question_id=next_question.id %}"
               hx-target="#game-area"
               hx-swap="innerHTML"
+              hx-disabled-elt="#sqg-answer-submit"
               class="mt-5 space-y-4">
             <input type="hidden" name="time_taken_ms" id="sqg-time-taken-ms" value="0">
             <div class="rounded-3xl bg-slate-50 px-5 py-5">
@@ -27,13 +34,14 @@
             <div class="space-y-3">
                 {% for choice in next_question.choices %}
                 <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                    <input type="radio" name="selected_index" value="{{ forloop.counter0 }}" required class="h-4 w-4">
+                    <input type="radio" name="selected_index" value="{{ forloop.counter0 }}" required class="h-5 w-5 accent-slate-900">
                     <span class="text-sm font-bold text-slate-900">{{ choice }}</span>
                 </label>
                 {% endfor %}
             </div>
 
-            <button type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+            <button id="sqg-answer-submit" type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+                <span class="htmx-indicator mr-2 text-xs">...</span>
                 정답 보내기
             </button>
         </form>
@@ -61,10 +69,20 @@
 (function () {
     const form = document.getElementById('sqg-answer-form');
     const target = document.getElementById('sqg-time-taken-ms');
+    const submitButton = document.getElementById('sqg-answer-submit');
     if (!form || !target) return;
     const startedAt = Date.now();
     form.addEventListener('submit', function () {
         target.value = String(Date.now() - startedAt);
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-70');
+        }
     }, { once: true });
+    document.body.addEventListener('htmx:responseError', function () {
+        if (!submitButton) return;
+        submitButton.disabled = false;
+        submitButton.classList.remove('opacity-70');
+    });
 })();
 </script>

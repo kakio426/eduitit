@@ -23,13 +23,15 @@
           hx-post="{% url 'seed_quiz:htmx_student_game_submit_question' %}"
           hx-target="#game-area"
           hx-swap="innerHTML"
+          hx-disabled-elt="#sqg-choice-generate-button, #sqg-submit-button"
           class="mt-5 space-y-4">
+        <input type="hidden" name="request_id" value="{{ form_state.request_id }}">
         {% if room.question_mode == 'mixed' %}
         <div>
             <label class="mb-2 block text-sm font-bold text-slate-700">형식</label>
             <select name="question_type" id="sqg-question-type" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm">
-                <option value="mc4">4지선다</option>
-                <option value="ox">O/X</option>
+                <option value="mc4" {% if form_state.question_type == 'mc4' %}selected{% endif %}>4지선다</option>
+                <option value="ox" {% if form_state.question_type == 'ox' %}selected{% endif %}>O/X</option>
             </select>
         </div>
         {% else %}
@@ -43,42 +45,51 @@
             <label class="mb-2 block text-sm font-bold text-slate-700">문제</label>
             <textarea name="question_text" rows="4" required
                       class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                      placeholder="친구들이 읽고 바로 답할 수 있게 짧고 분명하게 적어 주세요."></textarea>
+                      placeholder="친구들이 읽고 바로 답할 수 있게 짧고 분명하게 적어 주세요.">{{ form_state.question_text }}</textarea>
         </div>
 
-        <div id="sqg-mc4-panel" {% if room.question_mode == 'ox' %}class="hidden"{% endif %}>
+        <div id="sqg-mc4-panel" {% if room.question_mode == 'ox' or form_state.question_type == 'ox' %}class="hidden"{% endif %}>
             <label class="mb-2 block text-sm font-bold text-slate-700">정답</label>
             <input type="text" name="answer_text"
                    class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                   value="{{ form_state.answer_text }}"
                    placeholder="정답 한 가지">
             <button type="button"
+                    id="sqg-choice-generate-button"
                     hx-post="{% url 'seed_quiz:htmx_student_game_generate_choices' %}"
                     hx-include="#sqg-create-form"
                     hx-target="#sqg-choice-builder"
                     hx-swap="innerHTML"
+                    hx-disabled-elt="this"
                     class="mt-3 w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-800">
+                <span class="htmx-indicator mr-2 text-xs">...</span>
                 보기 만들기
             </button>
             <div id="sqg-choice-builder" class="mt-3 rounded-3xl bg-slate-50 p-4 text-xs text-slate-500">
+                {% if form_state.choices %}
+                {% include 'seed_quiz/partials/game_choice_builder.html' with choices=form_state.choices correct_index=form_state.correct_index fallback_used=form_state.choice_fallback only %}
+                {% else %}
                 정답을 넣고 보기를 만들면 수정할 수 있습니다.
+                {% endif %}
             </div>
         </div>
 
-        <div id="sqg-ox-panel" {% if room.question_mode == 'mc4' %}class="hidden"{% endif %}>
+        <div id="sqg-ox-panel" {% if room.question_mode == 'mc4' or form_state.question_type != 'ox' %}class="hidden"{% endif %}>
             <p class="mb-2 text-sm font-bold text-slate-700">정답</p>
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-lg font-black text-slate-900">
-                    <input type="radio" name="correct_ox" value="O" checked>
+                    <input type="radio" name="correct_ox" value="O" {% if form_state.correct_ox != 'X' %}checked{% endif %}>
                     O
                 </label>
                 <label class="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-4 text-lg font-black text-slate-900">
-                    <input type="radio" name="correct_ox" value="X">
+                    <input type="radio" name="correct_ox" value="X" {% if form_state.correct_ox == 'X' %}checked{% endif %}>
                     X
                 </label>
             </div>
         </div>
 
-        <button type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+        <button id="sqg-submit-button" type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+            <span class="htmx-indicator mr-2 text-xs">...</span>
             제출
         </button>
     </form>
@@ -87,6 +98,18 @@
 <script>
 (function () {
     const select = document.getElementById('sqg-question-type');
+    const form = document.getElementById('sqg-create-form');
+    const submitButton = document.getElementById('sqg-submit-button');
+    if (form && submitButton) {
+        form.addEventListener('submit', function () {
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-70');
+        });
+        document.body.addEventListener('htmx:responseError', function () {
+            submitButton.disabled = false;
+            submitButton.classList.remove('opacity-70');
+        });
+    }
     if (!select) return;
     const mc4Panel = document.getElementById('sqg-mc4-panel');
     const oxPanel = document.getElementById('sqg-ox-panel');
