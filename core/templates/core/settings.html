@@ -18,8 +18,8 @@
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-6 min-h-screen">
-    <div class="max-w-5xl mx-auto">
+<section class="service-shell--spacious pb-20 px-4 sm:px-6 min-h-screen">
+    <div class="max-w-6xl mx-auto space-y-8">
         <div class="max-w-3xl mb-10" data-aos="fade-right">
             <h1 class="text-5xl font-bold text-gray-700 mb-3 font-round">내 정보와 공용 명부</h1>
             <p class="text-2xl text-gray-400 leading-relaxed">프로필은 여기서 바꾸고, 학생과 보호자 명부는 한 곳에서 관리해 여러 서비스에 같이 쓰세요.</p>
@@ -38,7 +38,7 @@
         </div>
         {% endif %}
 
-        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_380px] gap-8">
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] gap-8 items-start">
             <div class="space-y-8" data-aos="fade-up" data-aos-delay="200">
                 <form id="settings-profile" method="post" class="clay-card p-10 space-y-8 bg-white/60">
                     {% csrf_token %}
@@ -91,11 +91,7 @@
                 </form>
             </div>
 
-            <div class="space-y-8" data-aos="fade-left" data-aos-delay="400">
-                {% if teacher_buddy_settings %}
-                {% include 'core/partials/teacher_buddy_settings_panel.html' %}
-                {% endif %}
-
+            <div class="space-y-8" data-aos="fade-left" data-aos-delay="260">
                 <div id="settings-support" class="clay-card p-8 bg-white/80" data-settings-support-card="true">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex items-center gap-3">
@@ -200,7 +196,13 @@
             </div>
         </div>
 
-        <div class="mt-8" data-aos="fade-up">
+        {% if teacher_buddy_settings %}
+        <div data-aos="fade-up" data-aos-delay="320">
+            {% include 'core/partials/teacher_buddy_settings_panel.html' %}
+        </div>
+        {% endif %}
+
+        <div data-aos="fade-up">
             <div class="clay-card p-10 space-y-6 bg-red-50/30 border-2 border-dashed border-red-100">
                 <div class="flex items-center gap-4 mb-2 text-red-500">
                     <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">

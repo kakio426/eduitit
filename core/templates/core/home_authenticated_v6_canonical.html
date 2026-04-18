@@ -266,6 +266,12 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                     </section>
                     {% endif %}
                     {% endfor %}
+
+                    {% if teacher_buddy_panel %}
+                    <article class="home-v6-mobile-panel" data-home-teacher-buddy-slot="v6-mobile" data-home-v6-rail-card="true">
+                        {% include 'core/partials/home_v6_teacher_buddy_panel_mobile.html' %}
+                    </article>
+                    {% endif %}
                 </section>
 
                 <div class="home-v6-layout" data-home-v6-layout="true">
@@ -372,6 +378,12 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                 {% include 'core/partials/home_v6_action_board.html' with board=home_empty_action_board.workbench surface_key='desktop-workbench' %}
                                 {% endif %}
                             </article>
+
+                            {% if teacher_buddy_panel %}
+                            <section data-home-teacher-buddy-slot="v6-rail" data-home-v6-rail-card="true">
+                                {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
+                            </section>
+                            {% endif %}
 
                             {% if home_user_mode == 'authenticated' and reservation_home_card %}
                             <section class="home-v6-card home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
