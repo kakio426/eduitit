@@ -737,6 +737,9 @@
             agentExecutionFieldErrors: {},
             isAgentLoading: false,
             isAgentExecuting: false,
+            agentModeStateMap: {},
+            agentPreviewRequestId: 0,
+            agentExecuteRequestId: 0,
             noticeBaseInput: '',
             noticeRefinementLabel: '',
             scheduleEditorOpen: false,
@@ -765,7 +768,7 @@
                 if (!this.activeRailKey) {
                     this.activeRailKey = 'service:' + String(this.activeModeKey || '');
                 }
-                this.showIdlePreview();
+                this.restoreModeState(this.activeModeKey);
                 this.scheduleAiComposerResize();
                 this.connectHomeConversationSocket();
                 var self = this;
@@ -3167,6 +3170,107 @@
                 return [prefix || 'home-agent', Math.abs(hash), text.length].join(':');
             },
 
+            buildModeStateSnapshot: function (overrides) {
+                return Object.assign({
+                    workspaceInput: '',
+                    agentPreview: this.buildIdlePreview(),
+                    agentPreviewMeta: {
+                        source: '',
+                        provider: '',
+                        model: '',
+                        providerLabel: '',
+                    },
+                    agentExecution: null,
+                    agentExecutionDraft: {},
+                    agentExecutionFieldErrors: {},
+                    noticeBaseInput: '',
+                    noticeRefinementLabel: '',
+                    scheduleEditorOpen: false,
+                    messageSavePayload: {},
+                    messageSaveStage: '',
+                    messageSaveErrorText: '',
+                    messageSaveSelectedCandidateId: '',
+                    messageSaveCommitResult: {},
+                }, overrides || {});
+            },
+
+            normalizeModeState: function (state) {
+                var source = state && typeof state === 'object' ? state : {};
+                return this.buildModeStateSnapshot({
+                    workspaceInput: typeof source.workspaceInput === 'string' ? source.workspaceInput : '',
+                    agentPreview: source.agentPreview && typeof source.agentPreview === 'object'
+                        ? Object.assign(this.buildIdlePreview(), this.clonePayload(source.agentPreview))
+                        : this.buildIdlePreview(),
+                    agentPreviewMeta: Object.assign({
+                        source: '',
+                        provider: '',
+                        model: '',
+                        providerLabel: '',
+                    }, this.clonePayload(source.agentPreviewMeta)),
+                    agentExecution: source.agentExecution && typeof source.agentExecution === 'object'
+                        ? this.clonePayload(source.agentExecution)
+                        : null,
+                    agentExecutionDraft: source.agentExecutionDraft && typeof source.agentExecutionDraft === 'object'
+                        ? this.clonePayload(source.agentExecutionDraft)
+                        : {},
+                    agentExecutionFieldErrors: this.normalizeFieldErrors(source.agentExecutionFieldErrors),
+                    noticeBaseInput: typeof source.noticeBaseInput === 'string' ? source.noticeBaseInput : '',
+                    noticeRefinementLabel: typeof source.noticeRefinementLabel === 'string' ? source.noticeRefinementLabel : '',
+                    scheduleEditorOpen: Boolean(source.scheduleEditorOpen),
+                    messageSavePayload: source.messageSavePayload && typeof source.messageSavePayload === 'object'
+                        ? this.clonePayload(source.messageSavePayload)
+                        : {},
+                    messageSaveStage: trimLine(source.messageSaveStage),
+                    messageSaveErrorText: trimLine(source.messageSaveErrorText),
+                    messageSaveSelectedCandidateId: String(source.messageSaveSelectedCandidateId || ''),
+                    messageSaveCommitResult: source.messageSaveCommitResult && typeof source.messageSaveCommitResult === 'object'
+                        ? this.clonePayload(source.messageSaveCommitResult)
+                        : {},
+                });
+            },
+
+            captureModeState: function (modeKey) {
+                var targetModeKey = trimLine(modeKey || this.activeModeKey);
+                if (!targetModeKey) {
+                    return;
+                }
+                this.agentModeStateMap[targetModeKey] = this.normalizeModeState({
+                    workspaceInput: this.workspaceInput,
+                    agentPreview: this.agentPreview,
+                    agentPreviewMeta: this.agentPreviewMeta,
+                    agentExecution: this.agentExecution,
+                    agentExecutionDraft: this.agentExecutionDraft,
+                    agentExecutionFieldErrors: this.agentExecutionFieldErrors,
+                    noticeBaseInput: this.noticeBaseInput,
+                    noticeRefinementLabel: this.noticeRefinementLabel,
+                    scheduleEditorOpen: this.scheduleEditorOpen,
+                    messageSavePayload: this.messageSavePayload,
+                    messageSaveStage: this.messageSaveStage,
+                    messageSaveErrorText: this.messageSaveErrorText,
+                    messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
+                    messageSaveCommitResult: this.messageSaveCommitResult,
+                });
+            },
+
+            restoreModeState: function (modeKey) {
+                var targetModeKey = trimLine(modeKey || this.activeModeKey);
+                var nextState = this.normalizeModeState(this.agentModeStateMap[targetModeKey]);
+                this.workspaceInput = nextState.workspaceInput;
+                this.agentPreview = nextState.agentPreview;
+                this.agentPreviewMeta = nextState.agentPreviewMeta;
+                this.agentExecution = nextState.agentExecution;
+                this.agentExecutionDraft = nextState.agentExecutionDraft;
+                this.agentExecutionFieldErrors = nextState.agentExecutionFieldErrors;
+                this.noticeBaseInput = nextState.noticeBaseInput;
+                this.noticeRefinementLabel = nextState.noticeRefinementLabel;
+                this.scheduleEditorOpen = nextState.scheduleEditorOpen;
+                this.messageSavePayload = nextState.messageSavePayload;
+                this.messageSaveStage = nextState.messageSaveStage;
+                this.messageSaveErrorText = nextState.messageSaveErrorText;
+                this.messageSaveSelectedCandidateId = nextState.messageSaveSelectedCandidateId;
+                this.messageSaveCommitResult = nextState.messageSaveCommitResult;
+            },
+
             clearExecution: function () {
                 this.agentExecution = null;
                 this.agentExecutionDraft = {};
@@ -3575,10 +3679,14 @@
                 if (!this.agentExecution) {
                     return;
                 }
+                var modeKey = trimLine(this.activeModeKey || '');
+                var mode = this.modeByKey(modeKey);
+                var requestId = this.agentExecuteRequestId + 1;
+                this.agentExecuteRequestId = requestId;
                 this.normalizeExecutionDraft();
                 var localFieldErrors = this.validateExecutionDraft();
                 if (Object.keys(localFieldErrors).length) {
-                    if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
+                    if (this.modeHasCapability(mode, 'schedule_editor')) {
                         this.scheduleEditorOpen = true;
                     }
                     this.setExecutionFieldErrors(localFieldErrors);
@@ -3603,7 +3711,7 @@
                             'X-Requested-With': 'XMLHttpRequest',
                         },
                         body: JSON.stringify({
-                            mode_key: this.activeModeKey,
+                            mode_key: modeKey,
                             data: this.agentExecutionDraft,
                         }),
                     });
@@ -3613,8 +3721,11 @@
                     } catch (jsonError) {
                         payload = {};
                     }
+                    if (requestId !== this.agentExecuteRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        return;
+                    }
                     if (!response.ok || payload.status !== 'ok') {
-                        if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
+                        if (this.modeHasCapability(mode, 'schedule_editor')) {
                             this.scheduleEditorOpen = true;
                         }
                         this.setExecutionFieldErrors(payload.field_errors);
@@ -3623,7 +3734,7 @@
                     }
                     this.agentPreviewMeta = {
                         source: 'direct',
-                        provider: payload.provider || this.activeMode.service_key || '',
+                        provider: payload.provider || mode.service_key || '',
                         model: payload.model || '',
                         providerLabel: '',
                     };
@@ -3631,9 +3742,14 @@
                     this.clearExecution();
                     showFeedback(payload.message || '저장했습니다.', 'success');
                 } catch (error) {
+                    if (requestId !== this.agentExecuteRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        return;
+                    }
                     showFeedback(error && error.message ? error.message : '저장하지 못했습니다.', 'error');
                 } finally {
-                    this.isAgentExecuting = false;
+                    if (requestId === this.agentExecuteRequestId && modeKey === trimLine(this.activeModeKey || '')) {
+                        this.isAgentExecuting = false;
+                    }
                 }
             },
 
@@ -5138,8 +5254,13 @@
             },
 
             selectAgentMode: function (modeKey) {
+                var nextModeKey = trimLine(modeKey);
+                var currentModeKey = trimLine(this.activeModeKey || '');
                 var currentMode = this.activeMode;
-                var nextMode = this.modeByKey(modeKey);
+                var nextMode = this.modeByKey(nextModeKey);
+                if (!nextModeKey) {
+                    return;
+                }
                 this.activeConversationKey = '';
                 if (this.modeHasCapability(currentMode, 'tts_read') && !this.modeHasCapability(nextMode, 'tts_read')) {
                     this.isTtsReading = false;
@@ -5147,24 +5268,19 @@
                         window.speechSynthesis.cancel();
                     }
                 }
-                if (
-                    this.activeModeKey !== modeKey
-                    && (this.modeHasCapability(currentMode, 'message_pipeline') || this.modeHasCapability(nextMode, 'message_pipeline'))
-                ) {
-                    this.clearMessageSaveState();
+                if (currentModeKey && currentModeKey !== nextModeKey) {
+                    this.captureModeState(currentModeKey);
                 }
                 if (this.modeHasCapability(currentMode, 'file_attach') && !this.modeHasCapability(nextMode, 'file_attach')) {
                     this.resetQuickdropDragState();
                 }
-                this.activeModeKey = modeKey;
-                this.activeRailKey = 'service:' + String(modeKey || '');
+                this.isAgentLoading = false;
+                this.isAgentExecuting = false;
+                this.activeModeKey = nextModeKey;
+                this.activeRailKey = 'service:' + String(nextModeKey || '');
                 this.agentModeMenuOpen = false;
+                this.restoreModeState(nextModeKey);
                 this.scheduleAiComposerResize();
-                if (trimLine(this.workspaceInput)) {
-                    this.runAgentPreview();
-                    return;
-                }
-                this.showIdlePreview();
             },
 
             useExample: function (text) {
@@ -5172,21 +5288,25 @@
                 this.runAgentPreview();
             },
 
-            buildPreviewRequestPayload: function (text) {
+            buildPreviewRequestPayload: function (text, modeKey, modeOverride) {
+                var targetModeKey = trimLine(modeKey || this.activeModeKey);
+                var targetMode = modeOverride && typeof modeOverride === 'object'
+                    ? modeOverride
+                    : this.modeByKey(targetModeKey);
                 var context = this.agentConversationContext && typeof this.agentConversationContext === 'object'
                     ? this.agentConversationContext
                     : {};
                 return {
-                    mode_key: this.activeModeKey,
+                    mode_key: targetModeKey,
                     text: text,
                     selected_date_label: workspaceConfig.selected_date_label || '',
                     provider: workspaceConfig.agent_runtime && workspaceConfig.agent_runtime.provider
                         ? workspaceConfig.agent_runtime.provider
                         : '',
                     context: {
-                        service_key: this.activeMode.service_key || '',
-                        workflow_keys: Array.isArray(this.activeMode.workflow_keys) ? this.activeMode.workflow_keys : [],
-                        tacit_rule_keys: Array.isArray(this.activeMode.tacit_rule_keys) ? this.activeMode.tacit_rule_keys : [],
+                        service_key: targetMode.service_key || '',
+                        workflow_keys: Array.isArray(targetMode.workflow_keys) ? targetMode.workflow_keys : [],
+                        tacit_rule_keys: Array.isArray(targetMode.tacit_rule_keys) ? targetMode.tacit_rule_keys : [],
                         context_questions: Array.isArray(workspaceConfig.context_questions) ? workspaceConfig.context_questions : [],
                         signal_sources: Array.isArray(workspaceConfig.signal_sources) ? workspaceConfig.signal_sources : [],
                         conversation_key: trimLine(context.conversation_key),
@@ -5217,17 +5337,24 @@
             },
 
             runAgentPreview: async function (overrideText) {
+                var modeKey = trimLine(this.activeModeKey || '');
+                var mode = this.modeByKey(modeKey);
                 var text = trimLine(typeof overrideText === 'string' ? overrideText : this.workspaceInput);
-                var previewStrategy = String(this.activeMode.preview_strategy || 'llm').toLowerCase();
+                var previewStrategy = String(mode.preview_strategy || 'llm').toLowerCase();
+                var requestId = 0;
+                if (!modeKey) {
+                    this.showIdlePreview();
+                    return;
+                }
                 if (!text) {
                     this.showIdlePreview();
                     return;
                 }
-                if (this.modeHasCapability(this.activeMode, 'notice_refinement') && typeof overrideText !== 'string') {
+                if (this.modeHasCapability(mode, 'notice_refinement') && typeof overrideText !== 'string') {
                     this.noticeBaseInput = text;
                     this.noticeRefinementLabel = '';
                 }
-                if (this.modeHasCapability(this.activeMode, 'schedule_editor')) {
+                if (this.modeHasCapability(mode, 'schedule_editor')) {
                     this.scheduleEditorOpen = false;
                 }
 
@@ -5245,6 +5372,8 @@
 
                 var runtime = workspaceConfig.agent_runtime || {};
                 var csrfToken = getCsrfToken();
+                requestId = this.agentPreviewRequestId + 1;
+                this.agentPreviewRequestId = requestId;
                 this.isAgentLoading = true;
                 try {
                     if (!runtime.preview_url || !csrfToken) {
@@ -5257,13 +5386,16 @@
                             'X-CSRFToken': csrfToken,
                             'X-Requested-With': 'XMLHttpRequest',
                         },
-                        body: JSON.stringify(this.buildPreviewRequestPayload(text)),
+                        body: JSON.stringify(this.buildPreviewRequestPayload(text, modeKey, mode)),
                     });
                     var payload = {};
                     try {
                         payload = await response.json();
                     } catch (jsonError) {
                         payload = {};
+                    }
+                    if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        return;
                     }
                     if (!response.ok || payload.status !== 'ok') {
                         if (payload && payload.error_code === 'home_agent_quota_exceeded') {
@@ -5276,6 +5408,9 @@
                     this.agentPreviewMeta = this.previewProviderStatus(payload);
                     this.setExecution(payload.execution);
                 } catch (error) {
+                    if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        return;
+                    }
                     if (previewStrategy === 'service') {
                         this.showIdlePreview();
                     } else {
@@ -5289,7 +5424,9 @@
                     }
                     showFeedback(error && error.message ? error.message : 'AI 미리보기를 불러오지 못했습니다.', 'info');
                 } finally {
-                    this.isAgentLoading = false;
+                    if (requestId === this.agentPreviewRequestId && modeKey === trimLine(this.activeModeKey || '')) {
+                        this.isAgentLoading = false;
+                    }
                 }
             },
 

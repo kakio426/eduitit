@@ -76,6 +76,11 @@ def _read_home_v6_css_bundle():
     return '\n'.join(css_parts)
 
 
+def _read_home_v6_js():
+    js_path = Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'js' / 'home_authenticated_v6.js'
+    return js_path.read_text(encoding='utf-8')
+
+
 AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'sections',
     'aux_sections',
@@ -4348,6 +4353,28 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .teacher-buddy-panel[data-panel-variant="v6-rail"] .teacher-buddy-card', css)
         self.assertIn('clip-path: inset(0 round var(--home-v6-radius-panel));', css)
         self.assertIn('border-color: rgba(148, 163, 184, 0.24) !important;', css)
+
+    def test_v6_css_keeps_reservation_split_grid_from_stretching_date_field(self):
+        css = _read_home_v6_css_bundle()
+
+        self.assertIn('.home-v6-page .home-v6-agent-reservation-grid--split {', css)
+        self.assertIn('align-items: start;', css)
+        self.assertIn('.home-v6-page .home-v6-agent-reservation-grid--split > .home-v6-agent-field,', css)
+        self.assertIn('.home-v6-page .home-v6-agent-reservation-grid--split > .home-v6-agent-reservation-field {', css)
+        self.assertIn('align-content: start;', css)
+
+    def test_v6_js_scopes_agent_chat_state_per_tab(self):
+        script = _read_home_v6_js()
+
+        self.assertIn('agentModeStateMap: {},', script)
+        self.assertIn('captureModeState: function (modeKey) {', script)
+        self.assertIn('restoreModeState: function (modeKey) {', script)
+        self.assertIn('this.captureModeState(currentModeKey);', script)
+        self.assertIn('this.restoreModeState(nextModeKey);', script)
+        self.assertNotIn(
+            "if (trimLine(this.workspaceInput)) {\n                    this.runAgentPreview();\n                    return;\n                }\n                this.showIdlePreview();",
+            script,
+        )
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
