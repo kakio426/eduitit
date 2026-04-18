@@ -3,17 +3,18 @@
     id="teacher-buddy-settings"
     class="teacher-buddy-settings-card clay-card p-8 bg-white/85"
     data-teacher-buddy-settings="true"
+    data-teacher-buddy-panel="true"
     data-select-url="{{ teacher_buddy_urls.select }}"
     data-shared-selection-copy="{{ teacher_buddy_settings.shared_selection_copy }}"
+    data-settings-url="{{ teacher_buddy_urls.settings }}"
 >
     <div class="teacher-buddy-settings-head">
         <div>
             <p class="teacher-buddy-settings-eyebrow">교실 메이트</p>
             <h2 class="teacher-buddy-settings-title">{{ teacher_buddy_settings.title }}</h2>
-            <p class="teacher-buddy-settings-subtitle">{{ teacher_buddy_settings.subtitle }}</p>
         </div>
         <div class="teacher-buddy-settings-badges">
-            <span class="teacher-buddy-settings-token" data-buddy-settings-token="true">
+            <span class="teacher-buddy-settings-token" data-buddy-settings-token="true" data-buddy-token-badge="true">
                 보유 뽑기권 {{ teacher_buddy_settings.draw_token_count }}장
             </span>
         </div>
@@ -82,65 +83,85 @@
     </div>
 
     <div class="teacher-buddy-settings-toolbar">
-        <p class="teacher-buddy-mode-help">{{ teacher_buddy_settings.shared_selection_copy }}</p>
         <div class="teacher-buddy-settings-toolbar-actions">
-            <a href="{{ teacher_buddy_urls.home }}" class="teacher-buddy-share-button teacher-buddy-share-button--primary">메이트 뽑기</a>
-            <button type="button" class="teacher-buddy-share-button" data-buddy-share-open="true">자랑하기</button>
+            <form method="post" action="{{ teacher_buddy_urls.draw }}" class="teacher-buddy-draw-form" data-buddy-draw-form="true">
+                {% csrf_token %}
+                <input type="hidden" name="return_to" value="settings">
+                <button
+                    type="submit"
+                    class="teacher-buddy-share-button teacher-buddy-share-button--primary"
+                    data-buddy-draw-button="true"
+                    {% if not teacher_buddy_settings.can_draw %}disabled{% endif %}
+                >{{ teacher_buddy_settings.draw_button_label }}</button>
+            </form>
+            <button type="button" class="teacher-buddy-share-button" data-buddy-panel-toggle="utility" data-open-label="보조 메뉴" data-close-label="보조 메뉴 닫기" aria-expanded="false">보조 메뉴</button>
+        </div>
+    </div>
+
+    <div class="teacher-buddy-settings-drawer teacher-buddy-settings-drawer--utility" data-buddy-settings-drawer="utility" hidden>
+        <div class="teacher-buddy-settings-drawer-grid">
+            <section class="teacher-buddy-settings-quick-card">
+                <div class="teacher-buddy-coupon-copy">
+                    <p class="teacher-buddy-settings-label">자랑</p>
+                    <p class="teacher-buddy-coupon-help">공유는 필요할 때만 열어요.</p>
+                </div>
+                <button type="button" class="teacher-buddy-share-button" data-buddy-share-open="true">자랑하기</button>
+            </section>
+
+            <section class="teacher-buddy-coupon-card">
+                <div class="teacher-buddy-coupon-copy">
+                    <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>
+                    <p class="teacher-buddy-coupon-help">받은 코드만 넣으면 바로 뽑기권이 들어와요.</p>
+                </div>
+                <form method="post" action="{{ teacher_buddy_urls.redeem_coupon }}" class="teacher-buddy-coupon-form" data-buddy-coupon-form="true">
+                    {% csrf_token %}
+                    <label class="teacher-buddy-coupon-field">
+                        <span class="sr-only">메이트 쿠폰 코드</span>
+                        <input
+                            type="text"
+                            name="coupon_code"
+                            class="teacher-buddy-coupon-input"
+                            data-buddy-coupon-input="true"
+                            placeholder="예: MATE-ABCD-92KF"
+                            autocomplete="off"
+                            autocapitalize="characters"
+                            spellcheck="false"
+                        >
+                    </label>
+                    <button type="submit" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-coupon-submit="true">쿠폰 등록</button>
+                </form>
+            </section>
+
+            {% if teacher_buddy_settings.admin_shortcuts %}
+            <section class="teacher-buddy-admin-shortcuts">
+                <div class="teacher-buddy-coupon-copy">
+                    <p class="teacher-buddy-settings-label">관리자 빠른 이동</p>
+                    <p class="teacher-buddy-coupon-help">운영 화면이 필요할 때만 열어요.</p>
+                </div>
+                <div class="teacher-buddy-admin-actions">
+                    {% for shortcut in teacher_buddy_settings.admin_shortcuts %}
+                    <a
+                        href="{{ shortcut.href }}"
+                        class="teacher-buddy-share-button{% if shortcut.is_primary %} teacher-buddy-share-button--primary{% endif %}"
+                    >{{ shortcut.label }}</a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
         </div>
     </div>
 
     <div class="teacher-buddy-settings-section-head">
         <div>
             <p class="teacher-buddy-settings-eyebrow">메이트 보관함</p>
-            <h3 class="teacher-buddy-settings-section-title">대표로 고를 메이트와 스타일</h3>
-            <p class="teacher-buddy-settings-section-subtitle">잠금 해제한 메이트는 바로 적용하고, 스타일이 있는 메이트는 펼쳐서 더 세밀하게 고를 수 있어요.</p>
+            <h3 class="teacher-buddy-settings-section-title">보고 싶을 때만 열기</h3>
         </div>
         <div class="teacher-buddy-settings-section-meta">
             <span class="teacher-buddy-status-chip" data-buddy-settings-buddy-summary="true">{{ teacher_buddy_settings.buddy_collection_summary_text }}</span>
             <span class="teacher-buddy-status-chip teacher-buddy-status-chip--style" data-buddy-settings-style-summary="true">{{ teacher_buddy_settings.style_collection_summary_text }}</span>
+            <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-panel-toggle="collection" data-open-label="보관함 열기" data-close-label="보관함 닫기" aria-expanded="false">보관함 열기</button>
         </div>
     </div>
-
-    {% if teacher_buddy_settings.admin_shortcuts %}
-    <section class="teacher-buddy-admin-shortcuts">
-        <div class="teacher-buddy-coupon-copy">
-            <p class="teacher-buddy-settings-label">관리자 빠른 이동</p>
-            <p class="teacher-buddy-coupon-help">쿠폰 만들기와 인원 관리 화면을 여기서 바로 열 수 있어요.</p>
-        </div>
-        <div class="teacher-buddy-admin-actions">
-            {% for shortcut in teacher_buddy_settings.admin_shortcuts %}
-            <a
-                href="{{ shortcut.href }}"
-                class="teacher-buddy-share-button{% if shortcut.is_primary %} teacher-buddy-share-button--primary{% endif %}"
-            >{{ shortcut.label }}</a>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    <section class="teacher-buddy-coupon-card">
-        <div class="teacher-buddy-coupon-copy">
-            <p class="teacher-buddy-settings-label">선물 쿠폰 등록</p>
-            <p class="teacher-buddy-coupon-help">받은 메이트 쿠폰 코드를 넣으면 뽑기권이 바로 들어와요.</p>
-        </div>
-        <form method="post" action="{{ teacher_buddy_urls.redeem_coupon }}" class="teacher-buddy-coupon-form" data-buddy-coupon-form="true">
-            {% csrf_token %}
-            <label class="teacher-buddy-coupon-field">
-                <span class="sr-only">메이트 쿠폰 코드</span>
-                <input
-                    type="text"
-                    name="coupon_code"
-                    class="teacher-buddy-coupon-input"
-                    data-buddy-coupon-input="true"
-                    placeholder="예: MATE-ABCD-92KF"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    spellcheck="false"
-                >
-            </label>
-            <button type="submit" class="teacher-buddy-share-button teacher-buddy-share-button--primary" data-buddy-coupon-submit="true">쿠폰 등록</button>
-        </form>
-    </section>
 
     <div
         class="teacher-buddy-share-data"
@@ -156,128 +177,182 @@
         data-kakao-js-key="{{ kakao_js_key|default:'' }}"
     ></div>
 
-    <div class="teacher-buddy-settings-grid">
-        {% for item in teacher_buddy_settings.collection_items %}
-        <article
-            class="teacher-buddy-settings-item{% if item.is_locked %} is-locked{% endif %}{% if item.is_profile %} is-profile{% endif %}{% if item.is_active %} is-active{% endif %}"
-            data-buddy-settings-item="true"
-            data-buddy-key="{{ item.key }}"
-            data-buddy-locked="{% if item.is_locked %}true{% else %}false{% endif %}"
-            data-buddy-style-total="{{ item.style_total_count }}"
-        >
-            <div class="teacher-buddy-settings-item-top">
-                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' %}
-                <div class="min-w-0 flex-1">
-                    <div class="teacher-buddy-collection-meta">
-                        <p class="teacher-buddy-collection-name">{{ item.name }}</p>
-                        <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ item.rarity }}">{{ item.rarity_label }}</span>
-                    </div>
-                    <p class="teacher-buddy-settings-item-caption">
-                        {% if item.is_locked %}
-                        아직 잠금 중
-                        {% else %}
-                        {{ item.share_caption }}
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-
-            <div class="teacher-buddy-settings-item-body">
-                {% spaceless %}
-                <pre
-                    class="teacher-buddy-collection-ascii"
-                    style="--teacher-buddy-ascii-start: {{ item.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ item.ascii_tokens.end|default:'#111827' }};"
-                >{% for line in item.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
-                {% endspaceless %}
-            </div>
-
-            <div class="teacher-buddy-settings-item-meta">
-                <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-style-summary="true">{{ item.style_summary_text }}</span>
-            </div>
-
-            {% if not item.is_locked %}
-            <div class="teacher-buddy-settings-item-actions">
-                <div data-buddy-card-actions="true">
-                    {% if item.is_profile %}
-                    <span class="teacher-buddy-status-chip" data-buddy-card-status="true">현재 대표</span>
-                    {% else %}
-                    <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="representative" data-buddy-card-form="true">
-                        {% csrf_token %}
-                        <input type="hidden" name="buddy_key" value="{{ item.key }}">
-                        <input type="hidden" name="skin_key" value="">
-                        <button type="submit" class="teacher-buddy-inline-button">{% if item.style_total_count > 1 %}기본으로 적용{% else %}대표로 적용{% endif %}</button>
-                    </form>
-                    {% endif %}
-                </div>
-                {% if item.style_total_count > 1 %}
-                <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-style-toggle="true" aria-expanded="false">스타일 보기</button>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            {% if not item.is_locked and item.style_total_count > 1 %}
-            <div class="teacher-buddy-style-drawer" data-buddy-style-drawer="true" hidden>
-                <div class="teacher-buddy-style-list">
-                    {% for style in item.style_options %}
-                    {% if not style.is_default %}
-                    <section
-                        class="teacher-buddy-style-option{% if style.is_profile_style %} is-profile{% endif %}{% if style.is_active_style %} is-active{% endif %}"
-                        data-buddy-style-option="true"
-                        data-buddy-key="{{ item.key }}"
-                        data-skin-key="{{ style.skin_key }}"
-                        data-style-unlocked="{% if style.is_unlocked %}true{% else %}false{% endif %}"
-                        data-style-default="{% if style.is_default %}true{% else %}false{% endif %}"
-                        data-style-label="{{ style.label }}"
-                        data-style-cost="{{ style.unlock_cost_dust }}"
-                        data-style-palette="{{ style.palette }}"
-                        data-style-gradient="{{ style.palette_tokens.gradient }}"
-                        data-style-start="{{ style.palette_tokens.bg_start }}"
-                        data-style-end="{{ style.palette_tokens.bg_end }}"
-                        data-style-text="{{ style.palette_tokens.text }}"
-                        data-style-accent="{{ style.palette_tokens.accent }}"
-                        data-style-badge="{{ style.preview_badge }}"
-                    >
-                        <div
-                            class="teacher-buddy-style-preview"
-                            style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }}; --teacher-buddy-ascii-start: {{ style.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ style.ascii_tokens.end|default:'#111827' }};"
-                        >
-                            {% spaceless %}
-                            <pre class="teacher-buddy-style-ascii">{% for line in style.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
-                            {% endspaceless %}
-                            <div class="teacher-buddy-style-copy-wrap">
-                                <p class="teacher-buddy-style-name">{{ style.short_label }}</p>
-                                <p class="teacher-buddy-style-copy">
-                                    {% if style.is_default %}
-                                    기본 스타일
-                                    {% elif style.is_unlocked %}
-                                    해금 완료
-                                    {% else %}
-                                    뽑기로 만나기
-                                    {% endif %}
-                                </p>
-                            </div>
+    <div class="teacher-buddy-settings-drawer teacher-buddy-settings-drawer--collection" data-buddy-settings-drawer="collection" hidden>
+        <div class="teacher-buddy-settings-grid">
+            {% for item in teacher_buddy_settings.collection_items %}
+            <article
+                class="teacher-buddy-settings-item{% if item.is_locked %} is-locked{% endif %}{% if item.is_profile %} is-profile{% endif %}{% if item.is_active %} is-active{% endif %}"
+                data-buddy-settings-item="true"
+                data-buddy-key="{{ item.key }}"
+                data-buddy-locked="{% if item.is_locked %}true{% else %}false{% endif %}"
+                data-buddy-style-total="{{ item.style_total_count }}"
+            >
+                <div class="teacher-buddy-settings-item-top">
+                    {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=item size_class='h-12 w-12' extra_class='teacher-buddy-collection-avatar' %}
+                    <div class="min-w-0 flex-1">
+                        <div class="teacher-buddy-collection-meta">
+                            <p class="teacher-buddy-collection-name">{{ item.name }}</p>
+                            <span class="teacher-buddy-rarity teacher-buddy-rarity--{{ item.rarity }}">{{ item.rarity_label }}</span>
                         </div>
-                        <div class="teacher-buddy-style-actions" data-buddy-style-actions="true">
-                            {% if style.is_unlocked %}
-                            <span class="teacher-buddy-status-chip{% if not style.is_profile_style or not style.is_active_style %} hidden{% endif %}" data-buddy-style-status="representative">현재 대표</span>
-                            <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="representative" {% if style.is_profile_style and style.is_active_style %}hidden{% endif %}>
-                                {% csrf_token %}
-                                <input type="hidden" name="buddy_key" value="{{ item.key }}">
-                                <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
-                                <button type="submit" class="teacher-buddy-inline-button">대표로 적용</button>
-                            </form>
+                        <p class="teacher-buddy-settings-item-caption">
+                            {% if item.is_locked %}
+                            아직 잠금 중
                             {% else %}
-                            <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">메이트 뽑기에서 등장</span>
+                            {{ item.share_caption }}
                             {% endif %}
-                        </div>
-                    </section>
-                    {% endif %}
-                    {% endfor %}
+                        </p>
+                    </div>
                 </div>
+
+                <div class="teacher-buddy-settings-item-body">
+                    {% spaceless %}
+                    <pre
+                        class="teacher-buddy-collection-ascii"
+                        style="--teacher-buddy-ascii-start: {{ item.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ item.ascii_tokens.end|default:'#111827' }};"
+                    >{% for line in item.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                    {% endspaceless %}
+                </div>
+
+                <div class="teacher-buddy-settings-item-meta">
+                    <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft" data-buddy-style-summary="true">{{ item.style_summary_text }}</span>
+                </div>
+
+                {% if not item.is_locked %}
+                <div class="teacher-buddy-settings-item-actions">
+                    <div data-buddy-card-actions="true">
+                        {% if item.is_profile %}
+                        <span class="teacher-buddy-status-chip" data-buddy-card-status="true">현재 대표</span>
+                        {% else %}
+                        <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="representative" data-buddy-card-form="true">
+                            {% csrf_token %}
+                            <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                            <input type="hidden" name="skin_key" value="">
+                            <button type="submit" class="teacher-buddy-inline-button">{% if item.style_total_count > 1 %}기본으로 적용{% else %}대표로 적용{% endif %}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% if item.style_total_count > 1 %}
+                    <button type="button" class="teacher-buddy-inline-button teacher-buddy-inline-button--secondary" data-buddy-style-toggle="true" aria-expanded="false">스타일 보기</button>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if not item.is_locked and item.style_total_count > 1 %}
+                <div class="teacher-buddy-style-drawer" data-buddy-style-drawer="true" hidden>
+                    <div class="teacher-buddy-style-list">
+                        {% for style in item.style_options %}
+                        {% if not style.is_default %}
+                        <section
+                            class="teacher-buddy-style-option{% if style.is_profile_style %} is-profile{% endif %}{% if style.is_active_style %} is-active{% endif %}"
+                            data-buddy-style-option="true"
+                            data-buddy-key="{{ item.key }}"
+                            data-skin-key="{{ style.skin_key }}"
+                            data-style-unlocked="{% if style.is_unlocked %}true{% else %}false{% endif %}"
+                            data-style-default="{% if style.is_default %}true{% else %}false{% endif %}"
+                            data-style-label="{{ style.label }}"
+                            data-style-cost="{{ style.unlock_cost_dust }}"
+                            data-style-palette="{{ style.palette }}"
+                            data-style-gradient="{{ style.palette_tokens.gradient }}"
+                            data-style-start="{{ style.palette_tokens.bg_start }}"
+                            data-style-end="{{ style.palette_tokens.bg_end }}"
+                            data-style-text="{{ style.palette_tokens.text }}"
+                            data-style-accent="{{ style.palette_tokens.accent }}"
+                            data-style-badge="{{ style.preview_badge }}"
+                        >
+                            <div
+                                class="teacher-buddy-style-preview"
+                                style="--teacher-buddy-style-gradient: {{ style.palette_tokens.gradient }}; --teacher-buddy-ascii-start: {{ style.ascii_tokens.start|default:'#111827' }}; --teacher-buddy-ascii-end: {{ style.ascii_tokens.end|default:'#111827' }};"
+                            >
+                                {% spaceless %}
+                                <pre class="teacher-buddy-style-ascii">{% for line in style.idle_ascii|ascii_display_lines %}<span class="teacher-buddy-ascii-line">{{ line }}</span>{% endfor %}</pre>
+                                {% endspaceless %}
+                                <div class="teacher-buddy-style-copy-wrap">
+                                    <p class="teacher-buddy-style-name">{{ style.short_label }}</p>
+                                    <p class="teacher-buddy-style-copy">
+                                        {% if style.is_default %}
+                                        기본 스타일
+                                        {% elif style.is_unlocked %}
+                                        해금 완료
+                                        {% else %}
+                                        뽑기로 만나기
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="teacher-buddy-style-actions" data-buddy-style-actions="true">
+                                {% if style.is_unlocked %}
+                                <span class="teacher-buddy-status-chip{% if not style.is_profile_style or not style.is_active_style %} hidden{% endif %}" data-buddy-style-status="representative">현재 대표</span>
+                                <form method="post" action="{{ teacher_buddy_urls.select }}" data-buddy-apply-form="representative" {% if style.is_profile_style and style.is_active_style %}hidden{% endif %}>
+                                    {% csrf_token %}
+                                    <input type="hidden" name="buddy_key" value="{{ item.key }}">
+                                    <input type="hidden" name="skin_key" value="{{ style.skin_key }}">
+                                    <button type="submit" class="teacher-buddy-inline-button">대표로 적용</button>
+                                </form>
+                                {% else %}
+                                <span class="teacher-buddy-status-chip teacher-buddy-status-chip--soft">메이트 뽑기에서 등장</span>
+                                {% endif %}
+                            </div>
+                        </section>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="teacher-buddy-result" data-buddy-result-modal="true" id="teacher-buddy-settings-result" hidden data-result-stage="sealed" data-result-theme="common">
+        <button type="button" class="teacher-buddy-result-backdrop" data-buddy-result-close="true" aria-label="메이트 결과 닫기"></button>
+        <div class="teacher-buddy-result-dialog" role="dialog" aria-modal="true" aria-labelledby="teacher-buddy-settings-result-title" data-buddy-result-dialog="true" data-result-theme="common">
+            <div class="teacher-buddy-result-stage teacher-buddy-result-stage--sealed" data-buddy-result-stage="sealed">
+                <p class="teacher-buddy-result-eyebrow">메이트 봉투 열기</p>
+                <div class="teacher-buddy-result-envelope" aria-hidden="true">
+                    <span class="teacher-buddy-result-envelope-flap"></span>
+                    <span class="teacher-buddy-result-envelope-core"></span>
+                </div>
+                <p class="teacher-buddy-result-message">오늘의 메이트가 봉투 안에서 기다리고 있어요.</p>
             </div>
-            {% endif %}
-        </article>
-        {% endfor %}
+            <div class="teacher-buddy-result-stage teacher-buddy-result-stage--suspense" data-buddy-result-stage="suspense" hidden>
+                <p class="teacher-buddy-result-eyebrow">짜잔 준비 중</p>
+                <div class="teacher-buddy-result-orbit" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </div>
+                <p class="teacher-buddy-result-message">교실 메이트가 모습을 고르고 있어요.</p>
+            </div>
+            <div class="teacher-buddy-result-stage teacher-buddy-result-stage--reveal" data-buddy-result-stage="reveal" hidden>
+                <div class="teacher-buddy-result-wave" aria-hidden="true"></div>
+                <div class="teacher-buddy-result-rays" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <div class="teacher-buddy-result-effect" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <p class="teacher-buddy-result-eyebrow" data-buddy-result-theme-title="true">메이트 결과</p>
+                <p class="teacher-buddy-result-rarity-chip teacher-buddy-rarity teacher-buddy-rarity--common" data-buddy-result-rarity="true">보통</p>
+                <h3 id="teacher-buddy-settings-result-title" class="teacher-buddy-result-title" data-buddy-result-name="true">교실 메이트</h3>
+                <pre class="teacher-buddy-result-ascii" data-buddy-result-ascii="true"></pre>
+                <p class="teacher-buddy-result-message" data-buddy-result-message="true">메이트 결과를 확인했어요.</p>
+                <button type="button" class="teacher-buddy-result-button" data-buddy-result-close="true" data-buddy-result-confirm="true">확인</button>
+            </div>
+        </div>
     </div>
 
     <div class="teacher-buddy-share-modal" data-buddy-share-modal="true" hidden>

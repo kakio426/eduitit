@@ -789,7 +789,8 @@
     transform: translateY(-1px);
 }
 
-.teacher-buddy-primary:disabled {
+.teacher-buddy-primary:disabled,
+.teacher-buddy-share-button--primary:disabled {
     cursor: not-allowed;
     opacity: 0.56;
     transform: none;
@@ -1595,7 +1596,7 @@ body.teacher-buddy-modal-open {
 .teacher-buddy-settings-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.8rem;
     flex-wrap: wrap;
 }
@@ -1605,6 +1606,41 @@ body.teacher-buddy-modal-open {
     align-items: center;
     gap: 0.6rem;
     flex-wrap: wrap;
+}
+
+.teacher-buddy-draw-form {
+    display: flex;
+}
+
+.teacher-buddy-draw-form .teacher-buddy-share-button {
+    width: 100%;
+}
+
+.teacher-buddy-settings-drawer {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border-radius: 1.45rem;
+    border: 1px solid rgba(203, 213, 225, 0.72);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94)),
+        linear-gradient(135deg, rgba(248, 250, 252, 0.3), rgba(224, 231, 255, 0.14));
+}
+
+.teacher-buddy-settings-drawer-grid {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.teacher-buddy-settings-quick-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 1rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(203, 213, 225, 0.78);
+    background: rgba(255, 255, 255, 0.82);
 }
 
 .teacher-buddy-settings-section-head {
@@ -1623,28 +1659,11 @@ body.teacher-buddy-modal-open {
     line-height: 1.3;
 }
 
-.teacher-buddy-settings-section-subtitle {
-    margin: 0.3rem 0 0;
-    color: var(--buddy-muted);
-    font-size: 0.88rem;
-    line-height: 1.55;
-    max-width: 42rem;
-}
-
 .teacher-buddy-settings-section-meta {
     display: flex;
     align-items: center;
     gap: 0.55rem;
     flex-wrap: wrap;
-}
-
-.teacher-buddy-mode-help {
-    margin: 0;
-    color: var(--buddy-muted);
-    font-size: 0.88rem;
-    font-weight: 800;
-    line-height: 1.55;
-    max-width: 34rem;
 }
 
 .teacher-buddy-coupon-card {
@@ -2440,6 +2459,12 @@ body.teacher-buddy-modal-open {
 
     .teacher-buddy-settings-toolbar-actions > * {
         width: 100%;
+    }
+
+    .teacher-buddy-settings-quick-card,
+    .teacher-buddy-admin-actions {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .teacher-buddy-profile-ascii--hero {

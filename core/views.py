@@ -658,6 +658,11 @@ def _request_payload_data(request):
 
 
 def _teacher_buddy_redirect_response(request):
+    return_to = ""
+    if request.method == "POST":
+        return_to = str(request.POST.get("return_to") or "").strip()
+    if return_to == "settings":
+        return _teacher_buddy_settings_redirect_response()
     return redirect(f"{reverse('home')}#teacher-buddy-panel")
 
 

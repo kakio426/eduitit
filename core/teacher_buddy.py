@@ -1032,6 +1032,8 @@ def build_teacher_buddy_settings_context(user) -> dict[str, object] | None:
         "cosmetic_tier": cosmetic_key,
         "cosmetic_tier_label": cosmetic_label,
         "progress": progress_summary,
+        "can_draw": bool(progress_summary["token_ready"]),
+        "draw_button_label": "메이트 뽑기",
     }
 
 

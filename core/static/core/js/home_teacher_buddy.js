@@ -24,6 +24,16 @@
         }
     }
 
+    function emitRootEvent(root, name, detail) {
+        if (!root || typeof root.dispatchEvent !== 'function' || typeof window.CustomEvent !== 'function') {
+            return;
+        }
+        root.dispatchEvent(new window.CustomEvent(name, {
+            bubbles: true,
+            detail: detail || {}
+        }));
+    }
+
     function wait(ms) {
         return new Promise(function (resolve) {
             window.setTimeout(resolve, ms);
@@ -439,6 +449,7 @@
         if (root.__buddyLastFocus && typeof root.__buddyLastFocus.focus === 'function') {
             root.__buddyLastFocus.focus();
         }
+        emitRootEvent(root, 'teacherBuddy:resultClosed');
     }
 
     async function submitForm(form) {
@@ -498,6 +509,7 @@
             logBuddyUiError('Failed to populate teacher buddy draw result.', error);
         }
         revealResult(root);
+        emitRootEvent(root, 'teacherBuddy:drawCompleted', { payload: payload });
         return payload;
     }
 

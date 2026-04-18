@@ -566,6 +566,18 @@ class TeacherBuddyApiTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.endswith("#teacher-buddy-panel"))
 
+    def test_draw_form_post_with_settings_return_redirects_back_to_settings_anchor(self):
+        self.client.login(username="buddyapi", password="pass1234")
+        record_teacher_buddy_progress(self.user, self.product, "home_quick")
+        state = TeacherBuddyState.objects.get(user=self.user)
+        state.draw_token_count = 1
+        state.save(update_fields=["draw_token_count"])
+
+        response = self.client.post(reverse("teacher_buddy_draw"), {"return_to": "settings"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.endswith("#teacher-buddy-settings"))
+
     def test_track_usage_response_includes_buddy_payload(self):
         self.client.login(username="buddyapi", password="pass1234")
 
@@ -814,11 +826,12 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, "0/1")
         self.assertContains(response, "1/1")
         self.assertContains(response, "뽑기권 1장")
-        self.assertContains(response, "메이트 뽑기")
-        self.assertContains(response, "보관함/프로필 보기")
+        self.assertContains(response, "메이트 설정")
         self.assertContains(response, 'data-buddy-ascii="true"')
-        self.assertContains(response, 'data-buddy-draw-button="true"')
-        self.assertContains(response, 'data-buddy-result-modal="true"')
+        self.assertNotContains(response, "메이트 뽑기")
+        self.assertNotContains(response, 'data-buddy-draw-form="true"')
+        self.assertNotContains(response, 'data-buddy-draw-button="true"')
+        self.assertNotContains(response, 'data-buddy-result-modal="true"')
         self.assertNotContains(response, 'data-buddy-profile-form="true"')
         self.assertNotContains(response, 'data-buddy-home-form="true"')
         self.assertNotContains(response, 'data-buddy-legendary-status="true"')
@@ -839,7 +852,15 @@ class TeacherBuddyHomeRenderTests(TestCase):
         self.assertContains(response, "선물 쿠폰 등록")
         self.assertContains(response, 'data-buddy-coupon-form="true"')
         self.assertContains(response, "메이트 뽑기")
-        self.assertContains(response, f'href="{reverse("home")}#teacher-buddy-panel"')
+        self.assertContains(response, "보조 메뉴")
+        self.assertContains(response, "보관함 열기")
+        self.assertContains(response, 'data-buddy-draw-form="true"')
+        self.assertContains(response, f'action="{reverse("teacher_buddy_draw")}"')
+        self.assertContains(response, 'name="return_to" value="settings"')
+        self.assertContains(response, 'data-buddy-result-modal="true"')
+        self.assertContains(response, 'data-buddy-settings-drawer="utility" hidden')
+        self.assertContains(response, 'data-buddy-settings-drawer="collection" hidden')
+        self.assertNotContains(response, f'href="{reverse("home")}#teacher-buddy-panel"')
         self.assertContains(response, "자랑하기")
         self.assertContains(response, "스타일 보기")
         self.assertNotContains(response, 'data-selection-mode="profile"')

@@ -29,6 +29,23 @@
         }
     }
 
+    function isHidden(node) {
+        return !node || node.hasAttribute('hidden');
+    }
+
+    function syncPanelToggleButton(button, drawer) {
+        var openLabel;
+        var closeLabel;
+        var open = !isHidden(drawer);
+        if (!button) {
+            return;
+        }
+        openLabel = button.getAttribute('data-open-label') || button.textContent || '열기';
+        closeLabel = button.getAttribute('data-close-label') || openLabel;
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        button.textContent = open ? closeLabel : openLabel;
+    }
+
     async function submitForm(form) {
         var response = await fetch(form.action, {
             method: 'POST',
@@ -372,6 +389,21 @@
         });
     }
 
+    function bindPanelToggles(root) {
+        root.querySelectorAll('[data-buddy-panel-toggle]').forEach(function (button) {
+            var key = button.getAttribute('data-buddy-panel-toggle') || '';
+            var drawer = key ? root.querySelector('[data-buddy-settings-drawer="' + key + '"]') : null;
+            if (!drawer) {
+                return;
+            }
+            syncPanelToggleButton(button, drawer);
+            button.addEventListener('click', function () {
+                setHidden(drawer, !isHidden(drawer));
+                syncPanelToggleButton(button, drawer);
+            });
+        });
+    }
+
     function bindForms(root, state) {
         root.addEventListener('submit', async function (event) {
             var form = event.target;
@@ -549,17 +581,34 @@
         });
     }
 
+    function bindDrawRefresh(root) {
+        root.addEventListener('teacherBuddy:drawCompleted', function () {
+            root.__buddyDrawNeedsRefresh = true;
+        });
+        root.addEventListener('teacherBuddy:resultClosed', function () {
+            var targetUrl;
+            if (!root.__buddyDrawNeedsRefresh) {
+                return;
+            }
+            root.__buddyDrawNeedsRefresh = false;
+            targetUrl = root.dataset.settingsUrl || '#teacher-buddy-settings';
+            window.location.assign(targetUrl);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var root = document.querySelector('[data-teacher-buddy-settings="true"]');
         if (!root) {
             return;
         }
         var state = getSelectionState(root);
+        bindPanelToggles(root);
         bindStyleToggles(root);
         bindForms(root, state);
         bindShareModal(root);
         bindShareActions(root);
         bindCouponForm(root);
+        bindDrawRefresh(root);
         updateSelectionUI(root, state);
     });
 })();
