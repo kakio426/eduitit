@@ -687,7 +687,9 @@
             isHumanChatDragActive: false,
             humanChatSelectedMessageIds: [],
             humanChatSelectedAssetIds: [],
-            humanChatUtilityPanel: '',
+            humanChatDrawerState: 'none',
+            humanChatRoomMenuView: 'menu',
+            humanChatActionMenuState: null,
             humanChatInviteEmail: '',
             humanChatInviteRole: '',
             humanChatLatestInviteUrl: '',
@@ -754,6 +756,7 @@
                     this.activeRailKey = 'service:' + String(this.activeModeKey || '');
                 }
                 this.showIdlePreview();
+                this.scheduleAiComposerResize();
                 this.connectHomeConversationSocket();
                 var self = this;
                 window.addEventListener('home-v6:favorites-updated', function (event) {
@@ -771,11 +774,18 @@
                 }, this) || this.agentModes[0] || {};
             },
 
+            get activeServiceRendererKey() {
+                if (this.activeRailItem && this.activeRailItem.kind === 'room') {
+                    return '';
+                }
+                return trimLine(this.activeMode.renderer_key || this.activeMode.key || '');
+            },
+
             get activeRendererKey() {
                 if (this.activeRailItem && this.activeRailItem.kind === 'room') {
                     return trimLine(this.activeRailItem.renderer_key || 'human-chat');
                 }
-                return trimLine(this.activeMode.renderer_key || this.activeMode.key || '');
+                return 'ai-messenger';
             },
 
             modeByKey: function (modeKey) {
@@ -796,6 +806,370 @@
 
             activeModeRefinementActions: function () {
                 return Array.isArray(this.activeMode.refinement_actions) ? this.activeMode.refinement_actions : [];
+            },
+
+            activeMessengerFlowKey: function () {
+                return trimLine(this.activeMode.messenger_flow_key || 'one-shot') || 'one-shot';
+            },
+
+            activeMessengerCapabilities: function () {
+                return this.activeMode && typeof this.activeMode.messenger_capabilities === 'object'
+                    ? this.activeMode.messenger_capabilities
+                    : {};
+            },
+
+            activeMessengerUi: function () {
+                return this.activeMode && typeof this.activeMode.messenger_ui === 'object'
+                    ? this.activeMode.messenger_ui
+                    : {};
+            },
+
+            activeAiFlowVariant: function () {
+                var ui = this.activeMessengerUi();
+                return trimLine(ui.flow_variant || this.activeServiceRendererKey || '');
+            },
+
+            activeAiExecutionVariant: function () {
+                var ui = this.activeMessengerUi();
+                return trimLine(ui.execution_variant || this.activeAiFlowVariant() || '');
+            },
+
+            aiMessengerIsFlow: function (flowKey) {
+                return this.activeMessengerFlowKey() === trimLine(flowKey);
+            },
+
+            activeServiceMethodToken: function (capitalizeFirst) {
+                var rendererKey = trimLine(this.activeServiceRendererKey || '');
+                if (!rendererKey) {
+                    return '';
+                }
+                return rendererKey
+                    .split('-')
+                    .filter(Boolean)
+                    .map(function (part, index) {
+                        var normalized = trimLine(part);
+                        if (!normalized) {
+                            return '';
+                        }
+                        var capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+                        if (capitalizeFirst || index > 0) {
+                            return capitalized;
+                        }
+                        return capitalized.charAt(0).toLowerCase() + capitalized.slice(1);
+                    })
+                    .join('');
+            },
+
+            callActiveServiceMethod: function (prefix, suffix, options) {
+                var settings = options && typeof options === 'object' ? options : {};
+                var token = this.activeServiceMethodToken(Boolean(settings.pascal));
+                var methodName = [prefix || '', token, suffix || ''].join('');
+                var args = Array.isArray(settings.args) ? settings.args : [];
+                var fallback = settings.fallback;
+                if (methodName && typeof this[methodName] === 'function') {
+                    return this[methodName].apply(this, args);
+                }
+                return typeof fallback === 'function' ? fallback.call(this) : fallback;
+            },
+
+            activeAiStarterItems: function () {
+                return this.activeModeStarterItems();
+            },
+
+            activeAiHasStarterChips: function () {
+                return Boolean(this.activeMessengerCapabilities().starter_chips && this.activeAiStarterItems().length);
+            },
+
+            runActiveAiStarter: function (item) {
+                var payload = item && typeof item === 'object' ? item : {};
+                var text = trimLine(payload.text || '');
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    this.runQuickdropExample(payload);
+                    return;
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    this.runMessageSaveExample(text);
+                    return;
+                }
+                this.callActiveServiceMethod('run', 'Example', {
+                    pascal: true,
+                    args: [text],
+                    fallback: function () {
+                        this.workspaceInput = text;
+                        this.runAgentPreview(text);
+                    },
+                });
+            },
+
+            activeAiLoading: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return Boolean(this.isSendingQuickdrop);
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return Boolean(this.isSavingMessageSave || this.isExtractingMessageSave || this.isCommittingMessageSave);
+                }
+                return Boolean(this.isAgentLoading || this.isAgentExecuting);
+            },
+
+            activeAiUserBubbleKind: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return this.quickdropUserBubbleKind();
+                }
+                return this.activeAiUserBubbleText() ? 'text' : '';
+            },
+
+            activeAiUserBubbleText: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return this.quickdropUserBubbleText();
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return this.messageSaveUserBubbleText();
+                }
+                return this.callActiveServiceMethod('', 'UserBubbleText', {
+                    fallback: trimLine(this.workspaceInput),
+                });
+            },
+
+            activeAiHasConversation: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return this.quickdropHasConversation();
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return this.messageSaveHasConversation();
+                }
+                return this.callActiveServiceMethod('', 'HasConversation', {
+                    fallback: function () {
+                        return Boolean(this.activeAiUserBubbleText() || this.activeAiLoading() || this.agentExecution || this.previewResultLines().length);
+                    },
+                });
+            },
+
+            activeAiShouldShowAssistantBubble: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return Boolean(this.isSendingQuickdrop || this.quickdropHasResult());
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return this.messageSaveShouldShowAssistantBubble();
+                }
+                return Boolean(this.activeAiLoading() || this.agentExecution || this.callActiveServiceMethod('', 'HasResult', {
+                    fallback: this.previewResultLines().length,
+                }));
+            },
+
+            activeAiAssistantTitle: function () {
+                var title = '';
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    title = trimLine(this.quickdropResultTitle());
+                } else if (this.aiMessengerIsFlow('pipeline')) {
+                    title = trimLine(this.messageSaveDraftTitle());
+                } else {
+                    title = trimLine(this.callActiveServiceMethod('', 'DraftTitle', { fallback: '' }) || '');
+                    if (!title) {
+                        title = trimLine(this.callActiveServiceMethod('', 'DraftHeading', { fallback: '' }) || '');
+                    }
+                }
+                if (title) {
+                    return title;
+                }
+                return trimLine(this.activeMessengerUi().assistant_title || this.activeMode.helper || this.activeMode.label || 'AI 답변');
+            },
+
+            activeAiCanCopyDraft: function () {
+                if (!this.activeMessengerCapabilities().copy_result) {
+                    return false;
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return Boolean(this.messageSaveDraftLines().length || this.messageSaveResultLines().length || this.messageSaveCandidateList().length);
+                }
+                if (this.aiMessengerIsFlow('guided')) {
+                    return Boolean(this.agentExecution || this.previewResultLines().length);
+                }
+                return Boolean(this.previewResultLines().length);
+            },
+
+            copyActiveAiDraft: function () {
+                if (!this.activeAiCanCopyDraft()) {
+                    showFeedback('복사할 내용이 없습니다.', 'info');
+                    return;
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    this.copyMessageSaveDraft();
+                    return;
+                }
+                this.callActiveServiceMethod('copy', 'Draft', {
+                    pascal: true,
+                    fallback: function () {
+                        var lines = this.previewResultLines();
+                        if (!lines.length) {
+                            showFeedback('복사할 내용이 없습니다.', 'info');
+                            return;
+                        }
+                        navigator.clipboard.writeText(lines.join('\n')).then(function () {
+                            showFeedback('복사했습니다.', 'success');
+                        }).catch(function () {
+                            showFeedback('복사하지 못했습니다.', 'error');
+                        });
+                    },
+                });
+            },
+
+            activeAiOpenHref: function () {
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return trimLine(this.messageSaveOpenHref());
+                }
+                return trimLine(this.agentPreview && this.agentPreview.confirmHref);
+            },
+
+            activeAiOpenLabel: function () {
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return trimLine(this.messageSaveOpenLabel());
+                }
+                return trimLine(
+                    (this.agentPreview && this.agentPreview.confirmLabel)
+                    || this.activeMode.confirm_label
+                    || this.activeMode.service_label
+                    || this.activeMode.label
+                );
+            },
+
+            activeAiHasOpenLink: function () {
+                return Boolean(this.activeMessengerCapabilities().open_link && this.activeAiOpenHref());
+            },
+
+            activeAiResetLabel: function () {
+                return trimLine(this.activeMessengerUi().reset_label || '새로 쓰기');
+            },
+
+            resetActiveAiChat: function () {
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    this.resetMessageSaveChat();
+                    return;
+                }
+                this.callActiveServiceMethod('reset', 'Chat', {
+                    pascal: true,
+                    fallback: function () {
+                        this.workspaceInput = '';
+                        this.showIdlePreview();
+                        this.focusWorkspace();
+                    },
+                });
+            },
+
+            activeAiSubmitLabel: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return trimLine(this.quickdropSubmitLabel());
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return this.isSavingMessageSave ? '저장 중' : '저장';
+                }
+                if (this.aiMessengerIsFlow('guided') && this.activeAiExecutionVariant() === 'teacher-law' && this.teacherLawHasExecution()) {
+                    return this.isAgentExecuting ? '저장 중' : trimLine(this.teacherLawPrimaryActionLabel());
+                }
+                if (this.activeAiLoading()) {
+                    return '생성 중';
+                }
+                return trimLine(this.activeMode.submit_label || '전송');
+            },
+
+            activeAiCanSubmit: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    var hasQueuedFile = Boolean(this.quickdropQueuedFile);
+                    var hasText = Boolean(trimLine(this.workspaceInput));
+                    return Boolean((hasQueuedFile || hasText) && !(hasQueuedFile && hasText) && !this.isSendingQuickdrop);
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return Boolean(this.messageSaveCanSave() && !this.isSavingMessageSave && !this.isExtractingMessageSave && !this.isCommittingMessageSave);
+                }
+                return Boolean(trimLine(this.workspaceInput) && !this.activeAiLoading());
+            },
+
+            runActiveAiPrimaryAction: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    this.sendQuickdropChat();
+                    return;
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    this.saveMessageCaptureChat();
+                    return;
+                }
+                this.runAgentPreview();
+            },
+
+            activeAiErrorText: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return trimLine(this.quickdropErrorText);
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return trimLine(this.messageSaveErrorText);
+                }
+                if (this.activeAiExecutionVariant() === 'teacher-law') {
+                    return trimLine(this.executionFieldError('question'));
+                }
+                return '';
+            },
+
+            activeAiQueuedFileName: function () {
+                return this.aiMessengerIsFlow('direct-send') ? this.quickdropQueuedFileName() : '';
+            },
+
+            activeAiCanAttachFiles: function () {
+                return Boolean(this.activeMessengerCapabilities().file_attach);
+            },
+
+            openActiveAiFilePicker: function () {
+                if (this.activeAiCanAttachFiles()) {
+                    this.openQuickdropFilePicker();
+                }
+            },
+
+            clearActiveAiQueuedFile: function () {
+                if (this.activeAiCanAttachFiles()) {
+                    this.clearQuickdropQueuedFile();
+                }
+            },
+
+            activeAiDragActive: function () {
+                return Boolean(this.activeAiCanAttachFiles() && this.isQuickdropDragActive);
+            },
+
+            handleActiveAiComposerPaste: function (event) {
+                if (this.activeAiCanAttachFiles()) {
+                    this.captureQuickdropWorkspacePaste(event);
+                }
+            },
+
+            handleActiveAiComposerDragEnter: function (event) {
+                if (this.activeAiCanAttachFiles()) {
+                    this.handleQuickdropDragEnter(event);
+                }
+            },
+
+            handleActiveAiComposerDragOver: function (event) {
+                if (this.activeAiCanAttachFiles()) {
+                    this.handleQuickdropDragOver(event);
+                }
+            },
+
+            handleActiveAiComposerDragLeave: function (event) {
+                if (this.activeAiCanAttachFiles()) {
+                    this.handleQuickdropDragLeave(event);
+                }
+            },
+
+            handleActiveAiComposerDrop: function (event) {
+                if (this.activeAiCanAttachFiles()) {
+                    this.handleQuickdropDrop(event);
+                }
+            },
+
+            handleActiveAiComposerInput: function () {
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    this.handleMessageSaveInputChange();
+                }
+                if (this.activeAiExecutionVariant() === 'teacher-law') {
+                    this.clearExecutionFieldError('question');
+                }
+                this.scheduleAiComposerResize();
             },
 
             railSections: function () {
@@ -1181,20 +1555,93 @@
                 return parts.join(' · ');
             },
 
-            toggleHumanChatUtilityPanel: function (panelKey) {
-                var nextKey = trimLine(panelKey);
-                this.humanChatUtilityPanel = this.humanChatUtilityPanel === nextKey ? '' : nextKey;
+            humanChatDrawerIs: function (drawerKey) {
+                return trimLine(this.humanChatDrawerState) === trimLine(drawerKey);
+            },
+
+            toggleHumanChatDrawer: function (drawerKey) {
+                var nextKey = trimLine(drawerKey) || 'none';
+                var isSameDrawer = trimLine(this.humanChatDrawerState) === nextKey;
+                this.humanChatDrawerState = isSameDrawer ? 'none' : nextKey;
+                if (nextKey !== 'room-menu' || isSameDrawer) {
+                    this.humanChatRoomMenuView = 'menu';
+                }
                 this.humanChatInviteErrorText = '';
                 this.humanChatDmErrorText = '';
                 if (!this.humanChatInviteRole) {
                     this.humanChatInviteRole = trimLine(this.humanChatInviteConfig().default_role) || 'member';
                 }
+                this.closeHumanChatActionMenu();
             },
 
-            closeHumanChatUtilityPanel: function () {
-                this.humanChatUtilityPanel = '';
+            openHumanChatDrawer: function (drawerKey) {
+                var nextKey = trimLine(drawerKey) || 'none';
+                this.humanChatDrawerState = nextKey;
+                if (nextKey !== 'room-menu') {
+                    this.humanChatRoomMenuView = 'menu';
+                }
+                if (!this.humanChatInviteRole) {
+                    this.humanChatInviteRole = trimLine(this.humanChatInviteConfig().default_role) || 'member';
+                }
+                this.closeHumanChatActionMenu();
+            },
+
+            closeHumanChatDrawer: function () {
+                this.humanChatDrawerState = 'none';
+                this.humanChatRoomMenuView = 'menu';
                 this.humanChatInviteErrorText = '';
                 this.humanChatDmErrorText = '';
+            },
+
+            openHumanChatAiTools: function () {
+                if (!this.humanChatContextActions().length) {
+                    return;
+                }
+                this.toggleHumanChatDrawer('ai');
+            },
+
+            openHumanChatRoomMenu: function () {
+                this.toggleHumanChatDrawer('room-menu');
+                if (this.humanChatDrawerIs('room-menu')) {
+                    this.humanChatRoomMenuView = 'menu';
+                }
+            },
+
+            openHumanChatDmPanel: function () {
+                this.openHumanChatDrawer('room-menu');
+                this.humanChatRoomMenuView = 'dm';
+            },
+
+            openHumanChatInvitePanel: function () {
+                this.openHumanChatDrawer('room-menu');
+                this.humanChatRoomMenuView = 'invite';
+            },
+
+            humanChatActionMenuMessageId: function () {
+                return trimLine(this.humanChatActionMenuState && this.humanChatActionMenuState.message_id);
+            },
+
+            humanChatIsActionMenuOpen: function (messageId) {
+                return this.humanChatActionMenuMessageId() === trimLine(messageId);
+            },
+
+            toggleHumanChatActionMenu: function (message) {
+                var messageId = trimLine(message && message.id);
+                if (!messageId) {
+                    return;
+                }
+                if (this.humanChatActionMenuMessageId() === messageId) {
+                    this.closeHumanChatActionMenu();
+                    return;
+                }
+                this.closeHumanChatDrawer();
+                this.humanChatActionMenuState = {
+                    message_id: messageId,
+                };
+            },
+
+            closeHumanChatActionMenu: function () {
+                this.humanChatActionMenuState = null;
             },
 
             humanChatIsDmMemberSelected: function (userId) {
@@ -1321,7 +1768,8 @@
                 }
                 this.setAgentConversationContext();
                 this.workspaceInput = this.buildHumanChatContextText();
-                this.humanChatUtilityPanel = '';
+                this.closeHumanChatDrawer();
+                this.closeHumanChatActionMenu();
                 this.selectAgentMode(modeKey);
             },
 
@@ -1336,14 +1784,14 @@
 
             buildShareableAgentPreviewText: function () {
                 var lines = this.previewResultLines().slice();
-                if (this.activeRendererKey === 'schedule' && this.scheduleHasExecution()) {
+                if (this.activeServiceRendererKey === 'schedule' && this.scheduleHasExecution()) {
                     lines = [
                         trimLine(this.agentExecutionDraft && this.agentExecutionDraft.title),
                         trimLine(this.scheduleDraftDateLabel()),
                         trimLine(this.scheduleDraftTimeLabel()),
                     ].filter(Boolean);
                 }
-                if (this.activeRendererKey === 'reservation' && this.reservationHasExecution()) {
+                if (this.activeServiceRendererKey === 'reservation' && this.reservationHasExecution()) {
                     lines = [
                         trimLine(this.reservationRoomLabel()),
                         trimLine(this.reservationDateLabel()),
@@ -1675,6 +2123,7 @@
                     }
                     this.humanChatLatestInviteUrl = trimLine(payload.invite && payload.invite.url);
                     this.humanChatInviteEmail = '';
+                    this.humanChatRoomMenuView = 'invite';
                     showFeedback('초대 링크를 만들었습니다.', 'success');
                 } catch (error) {
                     this.humanChatInviteErrorText = error && error.message ? error.message : '초대 링크를 만들지 못했습니다.';
@@ -1725,7 +2174,7 @@
                     }
                     this.humanChatDmMemberIds = [];
                     this.humanChatDmRoomName = '';
-                    this.closeHumanChatUtilityPanel();
+                    this.closeHumanChatDrawer();
                     await this.refreshConversationRail();
                     if (payload.room && payload.room.id) {
                         await this.selectHumanConversation('room:' + String(payload.room.id));
@@ -1798,7 +2247,9 @@
                 this.humanChatQueuedFiles = [];
                 this.humanChatDragDepth = 0;
                 this.isHumanChatDragActive = false;
-                this.humanChatUtilityPanel = '';
+                this.humanChatDrawerState = 'none';
+                this.humanChatRoomMenuView = 'menu';
+                this.humanChatActionMenuState = null;
                 this.humanChatInviteErrorText = '';
                 this.humanChatDmErrorText = '';
                 this.humanChatLatestInviteUrl = '';
@@ -1807,6 +2258,7 @@
                 this.humanChatDmRoomName = '';
                 this.humanChatApplyingSuggestionIds = [];
                 this.clearHumanChatSelection();
+                this.scheduleHumanChatComposerResize();
             },
 
             humanChatFileInput: function () {
@@ -1929,9 +2381,172 @@
                 return Array.isArray(snapshot.messages) ? snapshot.messages : [];
             },
 
+            humanChatSnapshotRoomKind: function () {
+                var room = this.humanChatSnapshotRoom();
+                return trimLine(room && room.room_kind);
+            },
+
+            humanChatShouldShowClusterSender: function (message) {
+                if (!message || typeof message !== 'object' || Boolean(message.is_mine)) {
+                    return false;
+                }
+                return this.humanChatSnapshotRoomKind() !== 'dm' && Boolean(trimLine(message.sender_name));
+            },
+
+            humanChatMessageTimestamp: function (message) {
+                var rawValue = trimLine(message && message.created_at);
+                if (!rawValue) {
+                    return null;
+                }
+                var parsed = new Date(rawValue);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            },
+
+            humanChatMessageDayKey: function (message) {
+                var timestamp = this.humanChatMessageTimestamp(message);
+                if (!timestamp) {
+                    return '';
+                }
+                return [
+                    timestamp.getFullYear(),
+                    String(timestamp.getMonth() + 1).padStart(2, '0'),
+                    String(timestamp.getDate()).padStart(2, '0'),
+                ].join('-');
+            },
+
+            humanChatMessageDayLabel: function (message) {
+                var timestamp = this.humanChatMessageTimestamp(message);
+                if (!timestamp) {
+                    return trimLine(message && message.created_at_label) || '';
+                }
+                return new Intl.DateTimeFormat('ko-KR', {
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short',
+                }).format(timestamp);
+            },
+
+            humanChatCanClusterMessages: function (previousMessage, nextMessage) {
+                if (!previousMessage || !nextMessage) {
+                    return false;
+                }
+                if (Boolean(previousMessage.is_mine) !== Boolean(nextMessage.is_mine)) {
+                    return false;
+                }
+                if (trimLine(previousMessage.sender_name) !== trimLine(nextMessage.sender_name)) {
+                    return false;
+                }
+                var previousDayKey = this.humanChatMessageDayKey(previousMessage);
+                var nextDayKey = this.humanChatMessageDayKey(nextMessage);
+                if (previousDayKey && nextDayKey && previousDayKey !== nextDayKey) {
+                    return false;
+                }
+                var previousTimestamp = this.humanChatMessageTimestamp(previousMessage);
+                var nextTimestamp = this.humanChatMessageTimestamp(nextMessage);
+                if (!previousTimestamp || !nextTimestamp) {
+                    return false;
+                }
+                return Math.abs(nextTimestamp.getTime() - previousTimestamp.getTime()) <= 10 * 60 * 1000;
+            },
+
+            buildHumanChatCluster: function (message) {
+                var senderName = trimLine(message && message.sender_name);
+                return {
+                    type: 'cluster',
+                    key: 'cluster:' + trimLine(message && message.id),
+                    sender_name: senderName,
+                    is_mine: Boolean(message && message.is_mine),
+                    show_sender: this.humanChatShouldShowClusterSender(message),
+                    messages: [message],
+                    tail_time: trimLine(message && message.created_at_label),
+                    tail_ack_count: Number(message && message.ack_count || 0),
+                };
+            },
+
+            finalizeHumanChatCluster: function (cluster) {
+                if (!cluster || !Array.isArray(cluster.messages) || !cluster.messages.length) {
+                    return null;
+                }
+                var lastMessage = cluster.messages[cluster.messages.length - 1];
+                cluster.tail_time = trimLine(lastMessage && lastMessage.created_at_label);
+                cluster.tail_ack_count = Number(lastMessage && lastMessage.ack_count || 0);
+                return cluster;
+            },
+
+            humanChatTimelineItems: function () {
+                var self = this;
+                var items = [];
+                var currentCluster = null;
+                var currentDayKey = '';
+
+                this.humanChatMessages().forEach(function (message, index) {
+                    var dayKey = self.humanChatMessageDayKey(message);
+                    if (dayKey && dayKey !== currentDayKey) {
+                        if (currentCluster) {
+                            items.push(self.finalizeHumanChatCluster(currentCluster));
+                            currentCluster = null;
+                        }
+                        items.push({
+                            type: 'day_divider',
+                            key: 'day:' + dayKey + ':' + index,
+                            label: self.humanChatMessageDayLabel(message),
+                        });
+                        currentDayKey = dayKey;
+                    }
+
+                    if (!currentCluster || !self.humanChatCanClusterMessages(currentCluster.messages[currentCluster.messages.length - 1], message)) {
+                        if (currentCluster) {
+                            items.push(self.finalizeHumanChatCluster(currentCluster));
+                        }
+                        currentCluster = self.buildHumanChatCluster(message);
+                        return;
+                    }
+
+                    currentCluster.messages.push(message);
+                });
+
+                if (currentCluster) {
+                    items.push(self.finalizeHumanChatCluster(currentCluster));
+                }
+
+                return items.filter(Boolean);
+            },
+
+            humanChatClusterAckLabel: function (cluster) {
+                var ackCount = Number(cluster && cluster.tail_ack_count || 0);
+                return ackCount > 0 ? '확인 ' + ackCount : '';
+            },
+
             humanChatComposerPlaceholder: function () {
                 var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : {};
                 return trimLine(room && room.composer_placeholder) || '메시지 입력';
+            },
+
+            humanChatComposerTextarea: function () {
+                return document.querySelector('[data-home-v6-human-chat-textarea="true"]');
+            },
+
+            scheduleHumanChatComposerResize: function () {
+                var self = this;
+                window.requestAnimationFrame(function () {
+                    self.resizeHumanChatComposer();
+                });
+            },
+
+            resizeHumanChatComposer: function () {
+                var textarea = this.humanChatComposerTextarea();
+                if (!textarea) {
+                    return;
+                }
+                textarea.style.height = 'auto';
+                var styles = window.getComputedStyle(textarea);
+                var lineHeight = parseFloat(styles.lineHeight || '22') || 22;
+                var paddingTop = parseFloat(styles.paddingTop || '0') || 0;
+                var paddingBottom = parseFloat(styles.paddingBottom || '0') || 0;
+                var maxHeight = (lineHeight * 4) + paddingTop + paddingBottom;
+                var nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+                textarea.style.height = nextHeight + 'px';
+                textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
             },
 
             humanChatReplyTargetId: function (message) {
@@ -1951,6 +2566,7 @@
                     body: trimLine(message.body || message.parent_preview),
                 };
                 this.humanChatErrorText = '';
+                this.closeHumanChatActionMenu();
             },
 
             clearHumanChatReply: function () {
@@ -1986,6 +2602,13 @@
                         this.humanChatInviteRole = trimLine(payload && payload.invite_actions && payload.invite_actions.default_role) || 'member';
                     }
                     this.syncHumanChatSelection();
+                    this.closeHumanChatActionMenu();
+                    if (this.humanChatDrawerIs('assets') && !this.humanChatHasAssetsPanel()) {
+                        this.closeHumanChatDrawer();
+                    }
+                    if (this.humanChatDrawerIs('calendar') && !this.humanChatCalendarSuggestions().length) {
+                        this.closeHumanChatDrawer();
+                    }
                     this.connectActiveRoomSocket();
                     this.humanChatErrorText = '';
                     this.updateRailItem(item.key, function (current) {
@@ -2000,6 +2623,7 @@
                     if (!(options && options.preserveReply)) {
                         this.humanChatReplyTo = null;
                     }
+                    this.scheduleHumanChatComposerResize();
                 } catch (error) {
                     this.humanChatErrorText = error && error.message ? error.message : '대화를 불러오지 못했습니다.';
                     showFeedback(this.humanChatErrorText, 'error');
@@ -2083,6 +2707,7 @@
                     this.humanChatDraftText = '';
                     this.humanChatReplyTo = null;
                     this.humanChatQueuedFiles = [];
+                    this.closeHumanChatActionMenu();
                     await this.refreshHumanConversation({ preserveReply: false });
                 } catch (error) {
                     this.humanChatErrorText = error && error.message ? error.message : '전송하지 못했습니다.';
@@ -2221,6 +2846,33 @@
                 if (textarea && typeof textarea.focus === 'function') {
                     textarea.focus();
                 }
+            },
+
+            aiComposerTextarea: function () {
+                return document.querySelector('[data-home-v6-ai-composer-textarea="true"]');
+            },
+
+            scheduleAiComposerResize: function () {
+                var self = this;
+                window.requestAnimationFrame(function () {
+                    self.resizeAiComposer();
+                });
+            },
+
+            resizeAiComposer: function () {
+                var textarea = this.aiComposerTextarea();
+                if (!textarea) {
+                    return;
+                }
+                textarea.style.height = 'auto';
+                var styles = window.getComputedStyle(textarea);
+                var lineHeight = parseFloat(styles.lineHeight || '22') || 22;
+                var paddingTop = parseFloat(styles.paddingTop || '0') || 0;
+                var paddingBottom = parseFloat(styles.paddingBottom || '0') || 0;
+                var maxHeight = (lineHeight * 4) + paddingTop + paddingBottom;
+                var nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+                textarea.style.height = nextHeight + 'px';
+                textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
             },
 
             normalizeModeAlias: function (value) {
@@ -2532,7 +3184,9 @@
 
             focusAgentExecutionField: function (fieldName) {
                 var target = fieldName
-                    ? document.querySelector('[data-home-v6-agent-field="' + String(fieldName) + '"]')
+                    ? Array.prototype.slice.call(document.querySelectorAll('[data-home-v6-agent-field="' + String(fieldName) + '"]')).find(function (node) {
+                        return node && node.offsetParent !== null;
+                    })
                     : null;
                 if (!target) {
                     return;
@@ -2970,7 +3624,9 @@
             },
 
             quickdropFileInput: function () {
-                return document.querySelector('[data-home-v6-agent-quickdrop-file-input="true"]');
+                return Array.prototype.slice.call(document.querySelectorAll('[data-home-v6-agent-quickdrop-file-input="true"]')).find(function (node) {
+                    return node && node.offsetParent !== null;
+                }) || null;
             },
 
             openQuickdropFilePicker: function () {
@@ -4493,6 +5149,7 @@
                 this.activeModeKey = modeKey;
                 this.activeRailKey = 'service:' + String(modeKey || '');
                 this.agentModeMenuOpen = false;
+                this.scheduleAiComposerResize();
                 if (trimLine(this.workspaceInput)) {
                     this.runAgentPreview();
                     return;
@@ -4545,7 +5202,7 @@
                     'tts': 'buildTtsPreview',
                     'message-save': 'buildMessageSavePreview',
                 };
-                var methodName = builderMap[this.activeRendererKey] || 'buildNoticePreview';
+                var methodName = builderMap[this.activeServiceRendererKey] || 'buildNoticePreview';
                 var builder = typeof this[methodName] === 'function' ? this[methodName] : this.buildNoticePreview;
                 return builder.call(this, text);
             },

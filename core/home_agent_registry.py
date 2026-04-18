@@ -25,6 +25,9 @@ class HomeAgentServiceDefinition:
     action_kind: str = ""
     copy: dict = field(default_factory=dict)
     ui: dict = field(default_factory=dict)
+    messenger_flow_key: str = "one-shot"
+    messenger_capabilities: dict = field(default_factory=dict)
+    messenger_ui: dict = field(default_factory=dict)
     links: dict = field(default_factory=dict)
     capabilities: dict = field(default_factory=dict)
     runtime_spec: dict = field(default_factory=dict)
@@ -49,6 +52,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         tool_key="notice",
         aliases=("알림장", "알림", "가정통신문"),
         icon_class="fa-solid fa-note-sticky",
+        messenger_flow_key="one-shot",
+        messenger_capabilities={
+            "starter_chips": True,
+            "copy_result": True,
+            "open_link": True,
+            "refine": True,
+        },
+        messenger_ui={
+            "flow_variant": "notice",
+            "assistant_title": "알림장 초안",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "알림장 열기",
             "submit_label": "알림 문구 생성",
@@ -111,6 +126,21 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         tool_key="schedule",
         aliases=("일정", "캘린더", "시간표"),
         icon_class="fa-regular fa-calendar",
+        messenger_flow_key="guided",
+        messenger_capabilities={
+            "starter_chips": True,
+            "multi_step": True,
+            "inline_edit": True,
+            "copy_result": True,
+            "open_link": True,
+            "execute": True,
+        },
+        messenger_ui={
+            "flow_variant": "schedule",
+            "execution_variant": "schedule",
+            "assistant_title": "일정 후보",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "캘린더 열기",
             "submit_label": "일정 찾기",
@@ -176,6 +206,20 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         tool_key="teacher-law",
         aliases=("교사 법률", "법률", "교권", "민원"),
         icon_class="fa-solid fa-scale-balanced",
+        messenger_flow_key="guided",
+        messenger_capabilities={
+            "starter_chips": True,
+            "multi_step": True,
+            "copy_result": True,
+            "open_link": True,
+            "execute": True,
+        },
+        messenger_ui={
+            "flow_variant": "teacher-law",
+            "execution_variant": "teacher-law",
+            "assistant_title": "법률 검토 메모",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "법률 가이드 열기",
             "submit_label": "답변 보기",
@@ -236,6 +280,21 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         tool_key="reservation",
         aliases=("특별실 예약", "특별실", "예약"),
         icon_class="fa-regular fa-clock",
+        messenger_flow_key="guided",
+        messenger_capabilities={
+            "starter_chips": True,
+            "multi_step": True,
+            "inline_edit": True,
+            "copy_result": True,
+            "open_link": True,
+            "execute": True,
+        },
+        messenger_ui={
+            "flow_variant": "reservation",
+            "execution_variant": "reservation",
+            "assistant_title": "예약 요청 후보",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "예약 화면 열기",
             "submit_label": "예약 확인",
@@ -293,6 +352,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         aliases=("바로 전송", "바로전송", "전송", "링크 보내기"),
         icon_class="fa-solid fa-paper-plane",
         action_kind="quickdrop-send",
+        messenger_flow_key="direct-send",
+        messenger_capabilities={
+            "starter_chips": True,
+            "file_attach": True,
+            "copy_result": False,
+            "open_link": True,
+        },
+        messenger_ui={
+            "flow_variant": "quickdrop",
+            "assistant_title": "바로전송 준비",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "전송함 열기",
             "submit_label": "내용 보기",
@@ -379,6 +450,17 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         aliases=("PDF", "공문", "문서"),
         icon_class="fa-regular fa-file-pdf",
         action_kind="open-service",
+        messenger_flow_key="one-shot",
+        messenger_capabilities={
+            "starter_chips": True,
+            "copy_result": True,
+            "open_link": True,
+        },
+        messenger_ui={
+            "flow_variant": "pdf",
+            "assistant_title": "문서 정리 초안",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "PDF 화면 열기",
             "submit_label": "정리 보기",
@@ -435,6 +517,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         aliases=("TTS", "읽어주기", "방송", "음성"),
         icon_class="fa-solid fa-volume-high",
         action_kind="tts-read",
+        messenger_flow_key="one-shot",
+        messenger_capabilities={
+            "starter_chips": True,
+            "copy_result": True,
+            "open_link": True,
+            "read_result": True,
+        },
+        messenger_ui={
+            "flow_variant": "tts",
+            "assistant_title": "읽기 문구",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "TTS 열기",
             "submit_label": "문구 보기",
@@ -491,6 +585,18 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         aliases=("메시지 저장", "메시지 보관", "보관함", "받은 메시지"),
         icon_class="fa-regular fa-folder-open",
         action_kind="message-capture-save",
+        messenger_flow_key="pipeline",
+        messenger_capabilities={
+            "starter_chips": True,
+            "multi_step": True,
+            "copy_result": True,
+            "open_link": True,
+        },
+        messenger_ui={
+            "flow_variant": "message-save",
+            "assistant_title": "메시지 보관",
+            "reset_label": "새로 쓰기",
+        },
         copy={
             "service_label": "보관함 열기",
             "submit_label": "내용 보기",
@@ -756,6 +862,8 @@ def build_home_agent_mode_payload(
 ) -> dict:
     copy = deepcopy(definition.copy or {})
     ui = deepcopy(definition.ui or {})
+    messenger_capabilities = deepcopy(definition.messenger_capabilities or {})
+    messenger_ui = deepcopy(definition.messenger_ui or {})
     capabilities = deepcopy(definition.capabilities or {})
     resolved_links = deepcopy(links or {})
     items = [dict(item) for item in (starter_items or [])]
@@ -775,6 +883,9 @@ def build_home_agent_mode_payload(
         "action_kind": definition.action_kind,
         "copy": copy,
         "ui": ui,
+        "messenger_flow_key": str(definition.messenger_flow_key or "one-shot"),
+        "messenger_capabilities": messenger_capabilities,
+        "messenger_ui": messenger_ui,
         "links": resolved_links,
         "capabilities": capabilities,
         "starter_provider_key": str(definition.starter_provider_key or ""),

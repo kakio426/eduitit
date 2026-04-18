@@ -71,7 +71,7 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         self.assertEqual(result["execution"]["kind"], "schedule")
         self.assertTrue(result["execution"]["choices"])
 
-    def test_pdf_mode_shows_native_upload_entry(self):
+    def test_pdf_mode_returns_document_summary_preview(self):
         result = generate_service_preview(
             request=self._request(),
             mode_key="pdf",
@@ -80,5 +80,5 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         )
 
         self.assertEqual(result["provider"], "hwpxchat")
-        self.assertEqual(result["preview"]["title"], "문서 업로드")
-        self.assertEqual(result["preview"]["sections"][0]["items"], ["문서는 PDF 화면에서 올립니다."])
+        self.assertEqual(result["preview"]["title"], "문서 정리 초안")
+        self.assertEqual(result["preview"]["sections"][0]["items"], ["체험학습 PDF를 정리해 주세요."])
