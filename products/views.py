@@ -20,6 +20,7 @@ from django.views.decorators.http import require_POST
 from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import build_product_detail_seo, build_product_list_page_seo, build_route_page_seo
 from core.product_visibility import filter_discoverable_products
+from core.storage_urls import safe_storage_url
 
 from .dutyticker_scope import apply_classroom_scope, get_active_classroom_for_request, get_or_create_settings_for_scope
 from .models import DTStudentGamesLaunchTicket, DTSchedule, Product, ServiceManual
@@ -82,12 +83,7 @@ def _summarize_detail_text(value, *, limit=100):
 
 
 def _safe_media_url(file_field):
-    if not file_field:
-        return ""
-    try:
-        return file_field.url or ""
-    except ValueError:
-        return ""
+    return safe_storage_url(file_field)
 
 
 def _build_product_value_proposition(product):

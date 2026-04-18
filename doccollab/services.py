@@ -525,14 +525,19 @@ def room_payload_for_template(*, room, membership, request):
     collab_state = load_room_collab_state(room)
     source_format_label = display_source_format(room.source_format)
     current_revision_format = file_format_for_revision(current_revision) if current_revision else room.source_format
+    initial_file_url = (
+        reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": current_revision.id})
+        if current_revision
+        else reverse("doccollab:download_source", kwargs={"room_id": room.id})
+    )
     return {
         "roomId": str(room.id),
         "title": room.title,
         "membershipRole": getattr(membership, "role", ""),
         "editingEnabled": getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR},
         "wsUrl": f"/ws/doccollab/rooms/{room.id}/",
-        "initialFileUrl": current_revision.file.url if current_revision and current_revision.file else room.source_file.url,
-        "sourceFileUrl": room.source_file.url,
+        "initialFileUrl": initial_file_url,
+        "sourceFileUrl": reverse("doccollab:download_source", kwargs={"room_id": room.id}),
         "saveRevisionUrl": reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
         "snapshotUrl": reverse("doccollab:create_snapshot", kwargs={"room_id": room.id}),
         "csrfToken": get_token(request),

@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -232,6 +234,43 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(payload["currentRevisionFormat"], "hwp")
         self.assertEqual(payload["saveFormat"], "hwp")
         self.assertEqual(payload["supportedUploadFormats"], ["hwp", "hwpx"])
+        self.assertEqual(
+            payload["initialFileUrl"],
+            reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": room.revisions.first().id}),
+        )
+        self.assertEqual(
+            payload["sourceFileUrl"],
+            reverse("doccollab:download_source", kwargs={"room_id": room.id}),
+        )
+
+    def test_room_detail_does_not_depend_on_storage_url_generation(self):
+        room, _revision = self._create_room(self.owner, "URL 방어", "guard.hwpx")
+        self.client.force_login(self.owner)
+
+        with mock.patch("django.db.models.fields.files.FieldFile.url", new_callable=mock.PropertyMock) as mocked_url:
+            mocked_url.side_effect = RuntimeError("storage url failed")
+            response = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.context["room_payload"]
+        self.assertEqual(
+            payload["initialFileUrl"],
+            reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": room.revisions.first().id}),
+        )
+        self.assertEqual(
+            payload["sourceFileUrl"],
+            reverse("doccollab:download_source", kwargs={"room_id": room.id}),
+        )
+
+    def test_download_source_streams_original_upload(self):
+        room, _revision = self._create_room(self.owner, "원본 다운로드", "source-check.hwp")
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("doccollab:download_source", kwargs={"room_id": room.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response.headers["Content-Disposition"])
+        self.assertIn("source-check.hwp", response.headers["Content-Disposition"])
 
     def test_room_detail_shows_recent_edit_history(self):
         room, revision = self._create_room(self.owner, "이력 문서", "history.hwpx")

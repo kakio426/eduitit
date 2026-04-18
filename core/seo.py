@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils.html import strip_tags
 
 from .discovery_policy import has_public_search_canonical_route, is_sensitive_discovery_target
+from .storage_urls import safe_storage_url
 
 
 SITE_CANONICAL_BASE_URL = "https://eduitit.site"
@@ -90,12 +91,7 @@ def _serialize_structured_data(value: dict[str, Any]) -> str:
 
 
 def _image_field_url(image_field: Any) -> str:
-    if not image_field:
-        return ""
-    try:
-        return image_field.url or ""
-    except ValueError:
-        return ""
+    return safe_storage_url(image_field)
 
 
 def _publisher_structured_data() -> dict[str, Any]:

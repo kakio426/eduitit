@@ -240,6 +240,17 @@ def download_revision(request, room_id, revision_id):
 
 
 @login_required
+@require_GET
+def download_source(request, room_id):
+    room, _membership = _load_room_or_404(request, room_id)
+    try:
+        handle = room.source_file.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404("파일을 찾을 수 없습니다.") from exc
+    return FileResponse(handle, as_attachment=True, filename=room.source_name)
+
+
+@login_required
 @require_POST
 def save_revision(request, room_id):
     room, membership = _load_room_or_404(request, room_id)
