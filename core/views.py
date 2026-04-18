@@ -116,7 +116,6 @@ from .teacher_buddy import (
     TeacherBuddyError,
     attach_teacher_buddy_avatar_context,
     build_teacher_buddy_avatar_context,
-    build_teacher_buddy_panel_context,
     build_teacher_buddy_public_share_context,
     build_teacher_buddy_settings_context,
     build_teacher_buddy_share_svg,
@@ -526,22 +525,12 @@ def _get_home_layout_version():
 
 
 def _get_teacher_buddy_home_context(user):
-    panel = build_teacher_buddy_panel_context(user)
-    if not panel:
-        return {
-            'teacher_buddy_panel': None,
-            'teacher_buddy_urls': {},
-            'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
-                user,
-                source='teacher buddy home empty panel',
-            ),
-        }
     return {
-        'teacher_buddy_panel': panel,
-        'teacher_buddy_urls': build_teacher_buddy_urls(),
+        'teacher_buddy_panel': None,
+        'teacher_buddy_urls': {},
         'teacher_buddy_current_avatar': _build_teacher_buddy_avatar_context_safe(
             user,
-            source='teacher buddy home panel',
+            source='teacher buddy home hidden panel',
         ),
     }
 
@@ -663,7 +652,7 @@ def _teacher_buddy_redirect_response(request):
         return_to = str(request.POST.get("return_to") or "").strip()
     if return_to == "settings":
         return _teacher_buddy_settings_redirect_response()
-    return redirect(f"{reverse('home')}#teacher-buddy-panel")
+    return _teacher_buddy_settings_redirect_response()
 
 
 def _teacher_buddy_settings_redirect_response():

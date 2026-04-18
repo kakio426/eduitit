@@ -1044,7 +1044,7 @@ def build_teacher_buddy_urls() -> dict[str, str]:
         "select": reverse("teacher_buddy_select"),
         "select_profile": reverse("teacher_buddy_select_profile"),
         "unlock_skin": reverse("teacher_buddy_unlock_skin"),
-        "home": f"{reverse('home')}#teacher-buddy-panel",
+        "home": f"{reverse('settings')}#teacher-buddy-settings",
         "settings": f"{reverse('settings')}#teacher-buddy-settings",
     }
 

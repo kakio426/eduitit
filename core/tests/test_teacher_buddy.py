@@ -564,7 +564,7 @@ class TeacherBuddyApiTests(TestCase):
         response = self.client.post(reverse("teacher_buddy_draw"))
 
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.endswith("#teacher-buddy-panel"))
+        self.assertTrue(response.url.endswith("#teacher-buddy-settings"))
 
     def test_draw_form_post_with_settings_return_redirects_back_to_settings_anchor(self):
         self.client.login(username="buddyapi", password="pass1234")
@@ -706,17 +706,15 @@ class TeacherBuddyHomeRenderTests(TestCase):
             launch_route_name="fairy_games:play_reversi",
         )
 
-    def test_v2_places_buddy_panel_before_game_zone(self):
+    def test_v2_hides_buddy_panel_from_home(self):
         self.client.login(username="buddyhome", password="pass1234")
         response = self.client.get(reverse("home"))
-        content = response.content.decode("utf-8")
 
-        buddy_index = content.index('data-home-teacher-buddy-slot="v2-primary"')
-        game_index = content.index('data-home-v2-game-section="true"')
-        self.assertLess(buddy_index, game_index)
+        self.assertNotContains(response, 'data-home-teacher-buddy-slot="v2-primary"')
+        self.assertNotContains(response, 'data-teacher-buddy-panel="true"')
 
     @override_settings(HOME_LAYOUT_VERSION="v4")
-    def test_v4_places_buddy_panel_before_sns(self):
+    def test_v4_hides_buddy_panel_from_home(self):
         Product.objects.create(
             title="바로전송",
             description="공유",
@@ -727,24 +725,20 @@ class TeacherBuddyHomeRenderTests(TestCase):
         )
         self.client.login(username="buddyhome", password="pass1234")
         response = self.client.get(reverse("home"))
-        content = response.content.decode("utf-8")
 
-        buddy_index = content.index('data-home-teacher-buddy-slot="v4-side"')
-        sns_index = content.index('data-home-v4-sns-panel="true"')
-        self.assertLess(buddy_index, sns_index)
+        self.assertNotContains(response, 'data-home-teacher-buddy-slot="v4-side"')
+        self.assertNotContains(response, 'data-teacher-buddy-panel="true"')
 
     @override_settings(HOME_LAYOUT_VERSION="v5")
-    def test_v5_mobile_places_buddy_panel_before_sns(self):
+    def test_v5_mobile_hides_buddy_panel_from_home(self):
         self.client.login(username="buddyhome", password="pass1234")
         response = self.client.get(reverse("home"))
-        content = response.content.decode("utf-8")
 
-        buddy_index = content.index('data-home-teacher-buddy-slot="v5-mobile"')
-        sns_index = content.index('data-home-v5-mobile-sns="true"')
-        self.assertLess(buddy_index, sns_index)
+        self.assertNotContains(response, 'data-home-teacher-buddy-slot="v5-mobile"')
+        self.assertNotContains(response, 'data-teacher-buddy-panel="true"')
 
     @override_settings(HOME_LAYOUT_VERSION="v5")
-    def test_v5_desktop_places_buddy_panel_before_sns(self):
+    def test_v5_desktop_hides_buddy_panel_from_home(self):
         Product.objects.create(
             title="바로전송",
             description="공유",
@@ -755,11 +749,9 @@ class TeacherBuddyHomeRenderTests(TestCase):
         )
         self.client.login(username="buddyhome", password="pass1234")
         response = self.client.get(reverse("home"))
-        content = response.content.decode("utf-8")
 
-        buddy_index = content.index('data-home-teacher-buddy-slot="v5-left-rail"')
-        sns_index = content.index('data-home-v4-sns-panel="true"')
-        self.assertLess(buddy_index, sns_index)
+        self.assertNotContains(response, 'data-home-teacher-buddy-slot="v5-left-rail"')
+        self.assertNotContains(response, 'data-teacher-buddy-panel="true"')
 
     @override_settings(HOME_LAYOUT_VERSION="v5")
     def test_v5_mobile_preview_posts_keep_buddy_avatar_context(self):
@@ -818,17 +810,14 @@ class TeacherBuddyHomeRenderTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(TeacherBuddyUnlock.objects.filter(user=self.user).count(), 1)
-        self.assertContains(response, "오늘 반짝 조각")
-        self.assertContains(response, "0/3")
-        self.assertContains(response, "3개면 뽑기 1회")
-        self.assertContains(response, "오늘 SNS")
-        self.assertContains(response, "오늘 출석")
-        self.assertContains(response, "0/1")
-        self.assertContains(response, "1/1")
-        self.assertContains(response, "뽑기권 1장")
-        self.assertContains(response, "메이트 설정")
-        self.assertContains(response, 'data-buddy-ascii="true"')
-        self.assertNotContains(response, "메이트 뽑기")
+        self.assertNotContains(response, "오늘 반짝 조각")
+        self.assertNotContains(response, "3개면 뽑기 1회")
+        self.assertNotContains(response, "오늘 SNS")
+        self.assertNotContains(response, "오늘 출석")
+        self.assertNotContains(response, "뽑기권 1장")
+        self.assertNotContains(response, "메이트 설정")
+        self.assertNotContains(response, 'data-teacher-buddy-panel="true"')
+        self.assertNotContains(response, 'data-buddy-ascii="true"')
         self.assertNotContains(response, 'data-buddy-draw-form="true"')
         self.assertNotContains(response, 'data-buddy-draw-button="true"')
         self.assertNotContains(response, 'data-buddy-result-modal="true"')
