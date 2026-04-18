@@ -7,6 +7,7 @@ class DoccollabRoom {
   constructor(rootEl, payload) {
     this.rootEl = rootEl;
     this.payload = payload;
+    this.runtimeEditingEnabled = Boolean(payload.editingEnabled);
     this.pageEls = new Map();
     this.remoteSelections = new Map();
     this.appliedCommandIds = new Set();
@@ -175,7 +176,7 @@ class DoccollabRoom {
   }
 
   bindInputProxy() {
-    if (!this.inputProxy || !this.payload.editingEnabled) {
+    if (!this.inputProxy || !this.runtimeEditingEnabled) {
       return;
     }
     this.inputProxy.addEventListener("keydown", (event) => this.handleEditorKeyDown(event));
@@ -198,7 +199,7 @@ class DoccollabRoom {
   }
 
   handleEditorKeyDown(event) {
-    if (!this.payload.editingEnabled) {
+    if (!this.runtimeEditingEnabled) {
       return;
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
@@ -223,7 +224,7 @@ class DoccollabRoom {
   }
 
   handleBeforeInput(event) {
-    if (!this.payload.editingEnabled || this.isComposing) {
+    if (!this.runtimeEditingEnabled || this.isComposing) {
       return;
     }
     if (event.inputType === "insertText" && event.data) {
@@ -238,7 +239,7 @@ class DoccollabRoom {
   }
 
   handlePaste(event) {
-    if (!this.payload.editingEnabled) {
+    if (!this.runtimeEditingEnabled) {
       return;
     }
     event.preventDefault();
@@ -330,6 +331,7 @@ class DoccollabRoom {
     const bytes = new Uint8Array(await response.arrayBuffer());
     try {
       this.document = new HwpDocument(bytes);
+      this.configureDocumentForBrowser();
       this.pageCount = this.document.pageCount();
       if (!this.pageCount) {
         throw new Error("empty page count");
@@ -344,6 +346,34 @@ class DoccollabRoom {
       this.sendSelection();
     } catch (_error) {
       throw new Error("브라우저에서 열 수 없는 파일입니다.");
+    }
+  }
+
+  configureDocumentForBrowser() {
+    if (!this.document) {
+      return;
+    }
+    // Keep missing Hangul fonts from collapsing layout in Chrome.
+    this.document.setFallbackFont(DOCCOLLAB_FALLBACK_FONT);
+    if (!this.runtimeEditingEnabled) {
+      return;
+    }
+    try {
+      this.document.convertToEditable();
+    } catch (error) {
+      console.warn("rhwp convertToEditable failed", error);
+      this.runtimeEditingEnabled = false;
+      this.rootEl.classList.add("doccollab-editor-surface--readonly");
+      if (this.saveButton) {
+        this.saveButton.disabled = true;
+      }
+      if (this.snapshotBadge) {
+        this.snapshotBadge.textContent = "보기 전용";
+      }
+      if (this.cursorLabel) {
+        this.cursorLabel.textContent = "이 문서는 브라우저에서 보기만 가능합니다.";
+      }
+      this.setStatus("보기 전용", true);
     }
   }
 
@@ -365,7 +395,7 @@ class DoccollabRoom {
       this.pageEls.set(pageIndex, pageEl);
       this.rootEl.appendChild(pageEl);
     }
-    if (this.inputProxy && this.payload.editingEnabled) {
+    if (this.inputProxy && this.runtimeEditingEnabled) {
       this.rootEl.appendChild(this.inputProxy);
     }
     this.renderCursor();
@@ -488,7 +518,7 @@ class DoccollabRoom {
   }
 
   positionInputProxy(pageEl, position) {
-    if (!this.inputProxy || !this.payload.editingEnabled) {
+    if (!this.inputProxy || !this.runtimeEditingEnabled) {
       return;
     }
     this.inputProxy.style.left = `${pageEl.offsetLeft + position.x}px`;
@@ -505,7 +535,7 @@ class DoccollabRoom {
   }
 
   focusInputProxy() {
-    if (!this.inputProxy || !this.payload.editingEnabled) {
+    if (!this.inputProxy || !this.runtimeEditingEnabled) {
       return;
     }
     this.inputProxy.focus({ preventScroll: true });
@@ -698,7 +728,7 @@ class DoccollabRoom {
   }
 
   applyInsertText(cursor, text) {
-    const result = this.safeJson(() => this.document.insertText(
+    const result = this.readDocumentResult(() => this.document.insertText(
       cursor.sectionIndex,
       cursor.paragraphIndex,
       cursor.charOffset,
@@ -712,7 +742,7 @@ class DoccollabRoom {
   }
 
   applyDeleteText(cursor, count) {
-    const result = this.safeJson(() => this.document.deleteText(
+    const result = this.readDocumentResult(() => this.document.deleteText(
       cursor.sectionIndex,
       cursor.paragraphIndex,
       cursor.charOffset,
@@ -726,7 +756,7 @@ class DoccollabRoom {
   }
 
   applySplitParagraph(cursor) {
-    const result = this.safeJson(() => this.document.splitParagraph(
+    const result = this.readDocumentResult(() => this.document.splitParagraph(
       cursor.sectionIndex,
       cursor.paragraphIndex,
       cursor.charOffset,
@@ -1084,16 +1114,27 @@ class DoccollabRoom {
 
   safeJson(fn) {
     try {
-      const value = fn();
-      if (typeof value === "string") {
-        if (!value) {
-          return null;
-        }
-        return JSON.parse(value);
-      }
-      return value;
+      return this.parseDocumentValue(fn());
     } catch (_error) {
       return null;
+    }
+  }
+
+  readDocumentResult(fn) {
+    return this.parseDocumentValue(fn());
+  }
+
+  parseDocumentValue(value) {
+    if (typeof value !== "string") {
+      return value;
+    }
+    if (!value) {
+      return null;
+    }
+    try {
+      return JSON.parse(value);
+    } catch (_error) {
+      return value;
     }
   }
 
@@ -1108,6 +1149,7 @@ class DoccollabRoom {
 
 
 const REMOTE_COLORS = ["#0f766e", "#2563eb", "#9333ea", "#ea580c", "#e11d48"];
+const DOCCOLLAB_FALLBACK_FONT = '"Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
 
 function getCsrfToken(seed) {
   if (seed) {
@@ -1148,9 +1190,10 @@ if (root && payloadEl) {
       if (!context) {
         return String(text || "").length * 8;
       }
-      if (font !== lastFont) {
-        context.font = font;
-        lastFont = font;
+      const resolvedFont = appendFallbackFont(font);
+      if (resolvedFont !== lastFont) {
+        context.font = resolvedFont;
+        lastFont = resolvedFont;
       }
       return context.measureText(String(text || "")).width;
     };
@@ -1166,4 +1209,15 @@ if (root && payloadEl) {
     console.error(error);
     app.showLoadError(error);
   }
+}
+
+function appendFallbackFont(font) {
+  const value = String(font || "").trim();
+  if (!value) {
+    return `16px ${DOCCOLLAB_FALLBACK_FONT}`;
+  }
+  if (value.includes("Malgun Gothic") || value.includes("Apple SD Gothic Neo") || value.includes("Noto Sans KR")) {
+    return value;
+  }
+  return `${value}, ${DOCCOLLAB_FALLBACK_FONT}`;
 }

@@ -511,6 +511,10 @@
 .doccollab-page-overlay {
     position: absolute;
     inset: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    appearance: none;
     cursor: text;
 }
 
