@@ -4,6 +4,7 @@
     data-inline-error-target="#post-edit-inline-error-{{ post.id }}"
     data-inline-error-action="게시글 수정"
     class="bg-white p-4 rounded-2xl border border-indigo-200 shadow-md transition-all">
+    {% csrf_token %}
     {% if surface_variant %}
     <input type="hidden" name="surface_variant" value="{{ surface_variant }}">
     {% endif %}

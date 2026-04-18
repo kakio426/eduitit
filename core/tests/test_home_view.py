@@ -38,7 +38,7 @@ from core.views import (
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
-from core.models import Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
+from core.models import Comment, Post, ProductFavorite, ProductUsageLog, UserPolicyConsent, UserProfile
 from reservations.models import ReservationCollaborator, School, SchoolConfig
 
 
@@ -879,6 +879,69 @@ class HomeV2ViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('상세 보기 테스트', content)
+
+    def test_post_edit_accepts_body_csrf_token_when_header_is_stale(self):
+        user = _create_onboarded_user('posteditcsrfuser')
+        post = Post.objects.create(author=user, content='수정 전')
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(user)
+
+        response = csrf_client.get(
+            reverse('post_edit', args=[post.id]),
+            HTTP_HX_REQUEST='true',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        match = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', response.content.decode('utf-8'))
+        self.assertIsNotNone(match)
+        csrf_token = match.group(1)
+
+        response = csrf_client.post(
+            reverse('post_edit', args=[post.id]),
+            {
+                'content': '수정 후',
+                'csrfmiddlewaretoken': csrf_token,
+            },
+            HTTP_HX_REQUEST='true',
+            HTTP_X_CSRFTOKEN='stale-token',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        post.refresh_from_db()
+        self.assertEqual(post.content, '수정 후')
+        self.assertIn('수정 후', response.content.decode('utf-8'))
+
+    def test_comment_edit_accepts_body_csrf_token_when_header_is_stale(self):
+        user = _create_onboarded_user('commenteditcsrfuser')
+        post = Post.objects.create(author=user, content='원글')
+        comment = Comment.objects.create(post=post, author=user, content='수정 전 댓글')
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(user)
+
+        response = csrf_client.get(
+            reverse('comment_edit', args=[comment.id]),
+            HTTP_HX_REQUEST='true',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        match = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', response.content.decode('utf-8'))
+        self.assertIsNotNone(match)
+        csrf_token = match.group(1)
+
+        response = csrf_client.post(
+            reverse('comment_edit', args=[comment.id]),
+            {
+                'content': '수정 후 댓글',
+                'csrfmiddlewaretoken': csrf_token,
+            },
+            HTTP_HX_REQUEST='true',
+            HTTP_X_CSRFTOKEN='stale-token',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        comment.refresh_from_db()
+        self.assertEqual(comment.content, '수정 후 댓글')
+        self.assertIn('수정 후 댓글', response.content.decode('utf-8'))
 
     def test_v2_authenticated_uses_compact_top_row_without_large_greeting(self):
         """V2 로그인 홈은 큰 인사말 대신 압축된 상단 행을 사용"""

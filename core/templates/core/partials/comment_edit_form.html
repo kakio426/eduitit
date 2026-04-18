@@ -3,6 +3,7 @@
     data-inline-error-target="#comment-edit-inline-error-{{ comment.id }}"
     data-inline-error-action="댓글 수정"
     class="flex gap-2 text-sm w-full">
+    {% csrf_token %}
     {% if surface_variant %}
     <input type="hidden" name="surface_variant" value="{{ surface_variant }}">
     {% endif %}
