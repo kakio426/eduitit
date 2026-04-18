@@ -207,11 +207,61 @@ class DoccollabViewTests(TestCase):
         self.assertIn(own_room.title, my_card_titles)
         self.assertIn(shared_room.title, shared_card_titles)
         self.assertContains(response, "HWP 문서실")
-        self.assertContains(response, "최근 문서")
+        self.assertContains(response, "최근 수정한 문서")
         self.assertContains(response, "공유받은 문서")
         self.assertContains(response, "파일 열기")
         self.assertContains(response, "선택 후 바로 열림")
+        self.assertContains(response, reverse("doccollab:remove_room", kwargs={"room_id": own_room.id}))
+        self.assertContains(response, reverse("doccollab:remove_room", kwargs={"room_id": shared_room.id}))
+        self.assertContains(response, "수정")
+        self.assertContains(response, "삭제")
+        self.assertContains(response, "제거")
         self.assertNotContains(response, "함께문서실")
+
+    def test_remove_room_archives_owned_document_from_dashboard(self):
+        own_room, _ = self._create_room(self.owner, "지울 문서", "remove-me.hwpx")
+
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("doccollab:remove_room", kwargs={"room_id": own_room.id}), follow=True)
+
+        own_room.refresh_from_db()
+        own_room.workspace.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(own_room.status, DocRoom.Status.ARCHIVED)
+        self.assertEqual(own_room.workspace.status, own_room.workspace.Status.ARCHIVED)
+        self.assertFalse(
+            DocMembership.objects.filter(
+                workspace=own_room.workspace,
+                user=self.owner,
+                status=DocMembership.Status.ACTIVE,
+            ).exists()
+        )
+        self.assertNotContains(response, "지울 문서")
+
+    def test_remove_room_disables_shared_membership_only_for_current_user(self):
+        shared_room, _ = self._create_room(self.other_teacher, "공유 제거 문서", "shared-remove.hwpx")
+        owner_membership = DocMembership.objects.get(workspace=shared_room.workspace, user=self.other_teacher)
+        shared_membership = DocMembership.objects.create(
+            workspace=shared_room.workspace,
+            user=self.owner,
+            role=DocMembership.Role.EDITOR,
+            status=DocMembership.Status.ACTIVE,
+            invited_by=self.other_teacher,
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse("doccollab:remove_room", kwargs={"room_id": shared_room.id}), follow=True)
+
+        shared_room.refresh_from_db()
+        shared_membership.refresh_from_db()
+        owner_membership.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(shared_room.status, DocRoom.Status.ACTIVE)
+        self.assertEqual(shared_membership.status, DocMembership.Status.DISABLED)
+        self.assertEqual(owner_membership.status, DocMembership.Status.ACTIVE)
+        self.assertNotContains(response, "공유 제거 문서")
 
     def test_shared_room_detail_shows_share_owner_members_and_access_label(self):
         shared_room, _ = self._create_room(self.other_teacher, "공유 수정 문서", "shared-edit.hwpx")

@@ -141,6 +141,10 @@ def accessible_rooms_queryset(user):
             Q(workspace__memberships__user=user, workspace__memberships__status=DocMembership.Status.ACTIVE)
             | Q(created_by=user)
         )
+        .filter(
+            workspace__status=DocWorkspace.Status.ACTIVE,
+            status=DocRoom.Status.ACTIVE,
+        )
         .distinct()
     )
 
@@ -157,6 +161,8 @@ def get_room_for_user(room_id, user):
         .first()
     )
     if room is None:
+        return None, None
+    if room.status != DocRoom.Status.ACTIVE or room.workspace.status != DocWorkspace.Status.ACTIVE:
         return None, None
     membership = get_membership_for_workspace(room.workspace, user)
     if membership is None and room.created_by_id != getattr(user, "id", None):

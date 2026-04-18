@@ -8,6 +8,7 @@ app_name = "doccollab"
 urlpatterns = [
     path("", views.main, name="main"),
     path("create/", views.create_room, name="create_room"),
+    path("rooms/<uuid:room_id>/remove/", views.remove_room, name="remove_room"),
     path("rooms/<uuid:room_id>/", views.room_detail, name="room_detail"),
     path("rooms/<uuid:room_id>/source/download/", views.download_source, name="download_source"),
     path("rooms/<uuid:room_id>/revisions/", views.room_revisions, name="room_revisions"),

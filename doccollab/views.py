@@ -70,10 +70,14 @@ def _room_card(room, user):
     current_revision = revisions[0] if revisions else None
     owner_name = _teacher_name_label(room.created_by)
     is_mine = room.created_by_id == getattr(user, "id", None)
+    can_edit = is_mine or getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR}
     return {
         "id": room.id,
         "title": room.title,
         "url": reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+        "open_label": "수정" if can_edit else "보기",
+        "delete_label": "삭제" if is_mine else "제거",
+        "delete_url": reverse("doccollab:remove_room", kwargs={"room_id": room.id}),
         "is_today": timezone.localtime(room.last_activity_at).date() == timezone.localdate(),
         "scope_label": "내 문서" if is_mine else "공유받은 문서",
         "role_label": membership.get_role_display() if membership else "보기",
@@ -239,6 +243,28 @@ def room_revisions(request, room_id):
             "revisions": room.revisions.order_by("-revision_number"),
         },
     )
+
+
+@login_required
+@require_POST
+def remove_room(request, room_id):
+    room, membership = _load_room_or_404(request, room_id)
+    is_owner = getattr(membership, "role", "") == DocMembership.Role.OWNER and room.created_by_id == request.user.id
+
+    if is_owner:
+        room.status = room.Status.ARCHIVED
+        room.save(update_fields=["status", "updated_at"])
+        room.workspace.status = room.workspace.Status.ARCHIVED
+        room.workspace.save(update_fields=["status", "updated_at"])
+        room.workspace.memberships.update(status=DocMembership.Status.DISABLED)
+        messages.success(request, "문서를 목록에서 지웠습니다.")
+    else:
+        if membership is None:
+            raise Http404("문서를 찾을 수 없습니다.")
+        membership.status = DocMembership.Status.DISABLED
+        membership.save(update_fields=["status", "updated_at"])
+        messages.success(request, "공유 문서를 목록에서 뺐습니다.")
+    return redirect("doccollab:main")
 
 
 @login_required

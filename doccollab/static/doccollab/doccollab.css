@@ -250,6 +250,11 @@
     min-width: 0;
 }
 
+.doccollab-room-main--link {
+    display: block;
+    color: inherit;
+}
+
 .doccollab-room-heading {
     display: flex;
     align-items: flex-start;
@@ -275,6 +280,32 @@
     align-items: flex-end;
     gap: 0.25rem;
     white-space: nowrap;
+}
+
+.doccollab-room-side--actions {
+    gap: 0.55rem;
+}
+
+.doccollab-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.doccollab-secondary--row {
+    min-width: 4.5rem;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.84rem;
+}
+
+.doccollab-secondary--danger {
+    color: #991b1b;
+    border-color: rgba(248, 113, 113, 0.34);
+    background: #fff5f5;
+}
+
+.doccollab-secondary--danger:hover {
+    background: #fee2e2;
 }
 
 .doccollab-room-meta,
@@ -590,5 +621,10 @@
 
     .doccollab-room-side {
         align-items: flex-start;
+        white-space: normal;
+    }
+
+    .doccollab-row-actions {
+        width: 100%;
     }
 }

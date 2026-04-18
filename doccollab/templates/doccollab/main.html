@@ -55,14 +55,14 @@
                     <div class="doccollab-card-head">
                         <div>
                             <p class="doccollab-label">최근</p>
-                            <h2 class="doccollab-card-title">최근 문서</h2>
+                            <h2 class="doccollab-card-title">최근 수정한 문서</h2>
                         </div>
                     </div>
                     {% if my_room_cards %}
                     <div class="doccollab-list">
                         {% for room in my_room_cards %}
-                        <a href="{{ room.url }}" class="doccollab-room-row doccollab-room-row--workspace">
-                            <div class="doccollab-room-main">
+                        <div class="doccollab-room-row doccollab-room-row--workspace">
+                            <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
                                 <div class="doccollab-room-heading">
                                     <span class="doccollab-room-title">{{ room.title }}</span>
                                     <div class="doccollab-room-badges">
@@ -73,12 +73,19 @@
                                     </div>
                                 </div>
                                 <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
-                            </div>
-                            <div class="doccollab-room-side">
+                            </a>
+                            <div class="doccollab-room-side doccollab-room-side--actions">
                                 <span class="doccollab-room-meta">{{ room.revision_label }}</span>
                                 <span class="doccollab-room-meta">{{ room.activity_label }}</span>
+                                <div class="doccollab-row-actions">
+                                    <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
+                                    <form method="post" action="{{ room.delete_url }}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
+                                    </form>
+                                </div>
                             </div>
-                        </a>
+                        </div>
                         {% endfor %}
                     </div>
                     {% else %}
@@ -96,8 +103,8 @@
                     {% if shared_room_cards %}
                     <div class="doccollab-list">
                         {% for room in shared_room_cards %}
-                        <a href="{{ room.url }}" class="doccollab-room-row doccollab-room-row--workspace">
-                            <div class="doccollab-room-main">
+                        <div class="doccollab-room-row doccollab-room-row--workspace">
+                            <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
                                 <div class="doccollab-room-heading">
                                     <span class="doccollab-room-title">{{ room.title }}</span>
                                     <div class="doccollab-room-badges">
@@ -105,12 +112,19 @@
                                     </div>
                                 </div>
                                 <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
-                            </div>
-                            <div class="doccollab-room-side">
+                            </a>
+                            <div class="doccollab-room-side doccollab-room-side--actions">
                                 <span class="doccollab-room-meta">{{ room.revision_label }}</span>
                                 <span class="doccollab-room-meta">{{ room.activity_label }}</span>
+                                <div class="doccollab-row-actions">
+                                    <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
+                                    <form method="post" action="{{ room.delete_url }}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
+                                    </form>
+                                </div>
                             </div>
-                        </a>
+                        </div>
                         {% endfor %}
                     </div>
                     {% else %}
