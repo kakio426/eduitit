@@ -70,3 +70,20 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn("item.displayTitle || item.title", content)
         self.assertIn("item.displayTooltip || item.title", content)
         self.assertIn("if (item.isReservationGroup && item.focusDateKey) {", content)
+
+    def test_home_calendar_today_uses_distinct_cell_and_badge_states(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn(".classcalendar-home-workweek-hitcell.is-today {", content)
+        self.assertIn("background: linear-gradient(180deg, rgba(239, 246, 255, 0.88) 0%, rgba(255, 255, 255, 0) 38%);", content)
+        self.assertIn(".classcalendar-home-workweek-date.is-today {", content)
+        self.assertIn("box-shadow: inset 0 0 0 1.5px #93c5fd, 0 1px 2px rgba(37, 99, 235, 0.08);", content)
+        self.assertIn("isToday(date) ? 'is-today' : '',", content)
+        self.assertIn(".classcalendar-home-mobile-day--today {", content)
+        self.assertIn(".classcalendar-home-mobile-day--today.classcalendar-home-mobile-day--selected {", content)

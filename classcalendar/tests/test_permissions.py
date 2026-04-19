@@ -354,6 +354,16 @@ class PermissionTest(TestCase):
             any("체육관 열쇠 챙기기" in (item.get("note") or "") for item in response.context["events_json"])
         )
 
+    def test_main_view_defaults_selected_date_to_today_even_when_date_query_exists(self):
+        response = self.client_teacher.get(
+            reverse("calendar_main"),
+            {"date": "2026-03-01"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["initial_selected_date"], timezone.localdate().isoformat())
+
     def test_today_review_route_redirects_to_home_surface_with_same_source(self):
         event = self._create_event(title="다시 볼 메모 일정")
         event.start_time = timezone.now() - timedelta(hours=2)

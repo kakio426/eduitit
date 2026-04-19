@@ -3219,20 +3219,6 @@ def _build_calendar_hub_payload(*, request_user, visible_owner_ids, editable_own
     return sorted_items, _build_day_markers(sorted_items)
 
 
-def _choose_default_selected_date_from_day_markers(day_markers, *, fallback_date):
-    fallback_key = fallback_date.isoformat()
-    keys = sorted(str(key) for key in (day_markers or {}).keys())
-    if fallback_key in day_markers:
-        return fallback_key
-    future_keys = [key for key in keys if key > fallback_key]
-    past_keys = [key for key in keys if key < fallback_key]
-    if future_keys:
-        return future_keys[0]
-    if past_keys:
-        return past_keys[-1]
-    return fallback_key
-
-
 def _get_integration_setting_for_user(user):
     return get_or_create_integration_setting(user)
 
@@ -3499,11 +3485,7 @@ def build_calendar_surface_context(
     initial_focus_search = _parse_bool_value(request.GET.get("focus_search", ""))
     initial_search_query = str(request.GET.get("q") or "").strip()
     today_date = timezone.localdate()
-    requested_date = str(request.GET.get("date") or "").strip()
-    initial_selected_date = requested_date or _choose_default_selected_date_from_day_markers(
-        day_markers,
-        fallback_date=today_date,
-    )
+    initial_selected_date = today_date.isoformat()
     initial_holiday_payload = _build_initial_holiday_payload(
         selected_date_key=initial_selected_date,
         fallback_date=today_date,
