@@ -14,7 +14,7 @@
             <span class="rg-brand-icon">⚡</span>
             <div>
                 <h1>탭 순발력 챌린지</h1>
-                <p>신호가 뜨면 가장 빠르게 터치하세요</p>
+                <p>신호 후 터치</p>
             </div>
         </div>
         <div class="rg-top-actions">
@@ -26,11 +26,11 @@
         <div class="rg-card-grid">
             <button id="rg-open-single" type="button" class="rg-mode-card">
                 <strong>기록 도전</strong>
-                <span>혼자 반응속도를 측정합니다</span>
+                <span>혼자 기록 측정</span>
             </button>
             <button id="rg-open-battle" type="button" class="rg-mode-card rg-mode-card-alt">
                 <strong>1:1 대결</strong>
-                <span>화면 양쪽을 잡고 먼저 터치하세요</span>
+                <span>양쪽 대결</span>
             </button>
         </div>
 
@@ -51,7 +51,7 @@
             tabindex="0"
             aria-label="싱글 모드 게임 스테이지"
         >
-            <p id="rg-single-main" class="rg-stage-main">시작 버튼을 눌러 준비하세요</p>
+            <p id="rg-single-main" class="rg-stage-main">시작 대기</p>
             <p id="rg-single-sub" class="rg-stage-sub">신호 전에 누르면 반칙 처리됩니다.</p>
             <button id="rg-single-start" type="button" class="rg-btn rg-btn-primary">시작</button>
             <button id="rg-single-retry" type="button" class="rg-btn rg-btn-primary is-hidden">다시 시작</button>
@@ -79,7 +79,7 @@
                 <strong id="rg-battle-p2-result">대기</strong>
             </button>
         </div>
-        <p class="rg-note">탭 사인 전에 누르면 반칙으로 즉시 패배합니다.</p>
+        <p class="rg-note">사인 전 터치 = 반칙</p>
     </section>
 </main>
 {% endblock %}
@@ -87,4 +87,3 @@
 {% block extra_js %}
 <script src="{% static 'reflex_game/js/main.js' %}"></script>
 {% endblock %}
-

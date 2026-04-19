@@ -732,7 +732,6 @@
                 </a>
                 <div class="mt-5 space-y-3">
                     <h1 class="text-4xl md:text-5xl font-black text-slate-950 leading-tight">공문을 오늘 할 일로 바로 정리하기</h1>
-                    <p class="text-base md:text-lg leading-8 text-slate-600">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
                 </div>
             </div>
         </div>
@@ -764,7 +763,7 @@
                             @drop.prevent="onDrop($event)"
                             :class="{ 'is-active': isDragActive }"
                         >
-                            <p class="text-sm text-slate-500 mb-3">파일을 여기로 끌어다 놓거나 아래에서 선택해 주세요.</p>
+                            <p class="text-sm text-slate-500 mb-3">HWPX 선택</p>
                             <input
                                 id="hwpx-file-input"
                                 type="file"
@@ -799,9 +798,7 @@
                 <details class="hwpx-help-details">
                     <summary>HWPX로 저장하는 방법</summary>
                     <div class="hwpx-help-body">
-                        <p>1. 한글 문서를 엽니다.</p>
-                        <p>2. <strong>다른 이름으로 저장</strong>에서 <strong>HWPX</strong>를 선택합니다.</p>
-                        <p>3. 파일을 올리고, 나온 결과를 바로 다듬어 사용합니다.</p>
+                        <p>한글에서 <strong>다른 이름으로 저장 → HWPX</strong> 후 올리면 됩니다.</p>
                     </div>
                 </details>
             </aside>
@@ -810,8 +807,7 @@
                 <div class="hwpx-stage-header">
                     <div>
                         <p class="hwpx-stage-label">2단계 작업 공간</p>
-                        <h2 class="hwpx-stage-title">업무 카드와 추가 질문을 여기서 이어갑니다</h2>
-                        <p class="hwpx-stage-copy">올린 문서의 결과를 바로 확인하고 필요한 것만 이어서 물어보면 됩니다.</p>
+                        <h2 class="hwpx-stage-title">업무 카드</h2>
                     </div>
                     {% if current_document %}
                     <div class="hwpx-stage-actions">
@@ -843,7 +839,7 @@
 <div id="hwpx-chat-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
     <div class="hwpx-panel px-6 py-5 flex items-center gap-3">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
-        <span class="text-slate-700 font-bold">문서를 읽고 해야 할 일을 정리하고 있어요...</span>
+        <span class="text-slate-700 font-bold">문서 정리 중...</span>
     </div>
 </div>
 
@@ -1266,7 +1262,7 @@
                 </div>
                 <div class="hwpx-empty-state">
                     <p class="hwpx-empty-state-title">문서를 다시 올려 주세요.</p>
-                    <p class="hwpx-empty-state-copy">잠시 후 다시 시도해도 같으면 파일 형식이 HWPX인지 먼저 확인해 주세요.</p>
+                    <p class="hwpx-empty-state-copy">잠시 후 다시 시도해도 같으면 파일 형식이 HWPX인지 확인해 주세요.</p>
                 </div>
             </div>
         `;

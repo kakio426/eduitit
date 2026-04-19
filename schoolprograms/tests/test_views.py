@@ -112,7 +112,8 @@ class SchoolProgramsLandingTests(TestCase):
         response = self.client.get(reverse("schoolprograms:landing"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "지역, 학년, 방식으로 고르기")
+        self.assertContains(response, "학교 체험 업체 찾기")
+        self.assertNotContains(response, "지역, 학년, 방식으로 고르기")
         self.assertContains(response, self.provider.provider_name)
         self.assertContains(response, "조건 더 보기")
         self.assertNotContains(response, "업체 등록 안내 보기")

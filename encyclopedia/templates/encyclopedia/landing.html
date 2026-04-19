@@ -17,43 +17,12 @@
                 {% endif %}
             </div>
             <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"교사 백과사전" }}</h1>
-            <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
-                {{ service.lead_text|default:"NotebookLM 기반 AI 백과사전을 공유하고 활용하세요!" }}
-            </p>
         </div>
 
-        <!-- 설명 카드 -->
-        <div class="clay-card p-4 md:p-8 mb-8" data-aos="zoom-in">
-            <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl p-5 md:p-6 mb-6">
-                <p class="text-base md:text-lg text-gray-700 leading-relaxed break-keep">
-                    {{ service.description|default:"Google NotebookLM으로 만든 AI 백과사전을 등록하고, 다른 선생님들과 공유하세요. 교육 자료, 매뉴얼, 가이드를 AI가 요약·검색해주는 NotebookLM의 힘을 교실에서 활용할 수 있습니다."|linebreaksbr }}
-                </p>
-            </div>
-
-            <!-- 사용 안내 -->
-            <div class="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
-                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
-                    <i class="fa-solid fa-plus-circle text-blue-500 text-lg mt-0.5"></i>
-                    <div>
-                        <p class="font-bold text-gray-700 mb-1">등록하기</p>
-                        <p>로그인 후 NotebookLM 링크와 제목을 입력하면 바로 등록됩니다.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
-                    <i class="fa-solid fa-share-nodes text-blue-500 text-lg mt-0.5"></i>
-                    <div>
-                        <p class="font-bold text-gray-700 mb-1">공유하기</p>
-                        <p>등록된 백과사전은 모든 사용자가 볼 수 있고, 클릭하면 NotebookLM으로 이동합니다.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
-                    <i class="fa-solid fa-robot text-blue-500 text-lg mt-0.5"></i>
-                    <div>
-                        <p class="font-bold text-gray-700 mb-1">AI 활용</p>
-                        <p>NotebookLM에서 업로드한 자료에 대해 AI에게 질문하고 답변을 받을 수 있습니다.</p>
-                    </div>
-                </div>
-            </div>
+        <div class="mb-8 flex flex-wrap justify-center gap-2" data-aos="zoom-in">
+            <span class="rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-gray-700 shadow-sm">등록</span>
+            <span class="rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-gray-700 shadow-sm">공유</span>
+            <span class="rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-gray-700 shadow-sm">열기</span>
         </div>
 
         <!-- 새 항목 등록 (로그인 사용자만) -->
@@ -79,10 +48,7 @@
                     <div>
                         <label class="block text-sm font-bold text-gray-600 mb-1">{{ form.notebook_url.label }}</label>
                         {{ form.notebook_url }}
-                        <p class="text-xs text-gray-400 mt-1">
-                            <i class="fa-solid fa-circle-info mr-1"></i>
-                            Google NotebookLM에서 "공유" 버튼을 눌러 얻은 링크를 붙여넣으세요.
-                        </p>
+                        <p class="text-xs text-gray-400 mt-1">NotebookLM 공유 링크</p>
                     </div>
 
                     <div>
@@ -109,7 +75,7 @@
         </div>
         {% else %}
         <div class="clay-card p-6 mb-8 text-center" data-aos="fade-up">
-            <p class="text-gray-500 mb-4">백과사전을 등록하려면 로그인이 필요합니다.</p>
+            <p class="text-gray-500 mb-4">로그인 필요</p>
             <a href="{% url 'account_login' %}?next={% url 'encyclopedia:landing' %}" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-bold hover:shadow-lg transition">
                 <i class="fa-solid fa-sign-in-alt mr-2"></i>로그인하기
             </a>
@@ -163,8 +129,7 @@
             {% else %}
             <div class="text-center py-12 text-gray-400">
                 <i class="fa-solid fa-folder-open text-5xl mb-4"></i>
-                <p class="text-lg">아직 등록된 백과사전이 없습니다.</p>
-                <p>위에서 새 백과사전을 등록해보세요!</p>
+                <p class="text-lg">등록된 백과사전 없음</p>
             </div>
             {% endif %}
         </div>

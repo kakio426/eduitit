@@ -238,21 +238,21 @@ function renderCode(workspace) {
   try {
     code = Blockly.JavaScript.workspaceToCode(workspace).trim();
   } catch (error) {
-    code = "코드 생성 중 오류가 발생했습니다.";
-    safeStatus("코드 생성 중 오류가 발생했습니다. 블록 연결을 다시 확인해 주세요.");
+    code = "코드 생성 오류";
+    safeStatus("코드 생성 오류");
   }
 
   if (!code) {
-    codeOutput.textContent = "블록을 배치하면 코드가 여기에 표시됩니다.";
+    codeOutput.textContent = "코드 대기";
     if (codeSummary) {
-      codeSummary.textContent = "아직 코드가 없습니다. 블록을 하나 더 놓아 보세요.";
+      codeSummary.textContent = "코드 대기";
     }
     return;
   }
 
   codeOutput.textContent = code;
   if (codeSummary) {
-    codeSummary.textContent = `${code.split("\n").length}줄 코드가 만들어졌습니다.`;
+    codeSummary.textContent = `${code.split("\n").length}줄 코드`;
   }
 }
 
@@ -271,12 +271,10 @@ function updateSummary(workspace) {
     topCountEl.textContent = String(topCount);
   }
   if (stageSummary) {
-    stageSummary.textContent = `${blockCount}개의 블록과 ${topCount}개의 상단 흐름을 배치했습니다.`;
+    stageSummary.textContent = blockCount > 0 ? `${blockCount}개 블록 · ${topCount}개 흐름` : "템플릿 대기";
   }
   if (nextStep) {
-    nextStep.textContent = blockCount > 0
-      ? "블록을 더 정리한 뒤 JSON 저장이나 활동판 저장으로 이어가세요."
-      : "왼쪽 템플릿을 먼저 눌러 기본 흐름을 불러오세요.";
+    nextStep.textContent = blockCount > 0 ? "저장 가능" : "템플릿 선택";
   }
   renderCode(workspace);
 }
@@ -284,7 +282,7 @@ function updateSummary(workspace) {
 function loadTemplate(workspace, key) {
   const xmlText = BLOCKCLASS_TEMPLATES[key];
   if (!xmlText) {
-    safeStatus("템플릿을 찾지 못했습니다.");
+    safeStatus("템플릿 없음");
     return;
   }
 
@@ -300,14 +298,14 @@ function loadTemplate(workspace, key) {
     if: "조건",
     loop: "반복",
   };
-  safeStatus(`${labels[key]} 템플릿을 불러왔습니다.`);
+  safeStatus(`${labels[key]} 템플릿 불러옴`);
 }
 
 function saveWorkspaceJson(workspace) {
   const data = Blockly.serialization.workspaces.save(workspace);
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
   downloadFile("blockclass-workspace.json", blob);
-  safeStatus("현재 워크스페이스를 JSON으로 저장했습니다.");
+  safeStatus("JSON 저장됨");
 }
 
 function restoreWorkspaceJson(workspace, rawText) {
@@ -316,7 +314,7 @@ function restoreWorkspaceJson(workspace, rawText) {
     data = JSON.parse(rawText);
   } catch (error) {
     window.alert("JSON 파일을 읽지 못했습니다. 다시 선택해 주세요.");
-    safeStatus("JSON 파일을 읽지 못했습니다.");
+    safeStatus("JSON 읽기 실패");
     return;
   }
 
@@ -325,7 +323,7 @@ function restoreWorkspaceJson(workspace, rawText) {
   scheduleWorkspaceResize(workspace);
   updateSummary(workspace);
   syncWorkspaceViewport(workspace);
-  safeStatus("JSON 파일에서 워크스페이스를 불러왔습니다.");
+  safeStatus("JSON 불러옴");
 }
 
 function saveWorkspaceSvg(workspace) {
@@ -335,7 +333,7 @@ function saveWorkspaceSvg(workspace) {
   const serializer = new XMLSerializer();
   const blob = new Blob([serializer.serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
   downloadFile("blockclass-workspace.svg", blob);
-  safeStatus("활동판을 SVG 이미지로 저장했습니다.");
+  safeStatus("SVG 저장됨");
 }
 
 function initBlockclass() {

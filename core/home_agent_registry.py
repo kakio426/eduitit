@@ -69,6 +69,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "submit_label": "알림 문구 생성",
             "confirm_label": "알림장 열기",
             "helper": "알림장 초안",
+            "usage_hint": "보낼 내용을 적으면 학부모용 알림 문구를 바로 정리합니다.",
             "placeholder": "보낼 내용을 적으세요.",
         },
         ui={
@@ -147,6 +148,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "confirm_label": "캘린더 열기",
             "secondary_link_label": "받은 메시지",
             "helper": "추출 후보",
+            "usage_hint": "메시지를 붙여 넣으면 날짜와 시간을 일정 후보로 뽑습니다.",
             "placeholder": "메시지를 붙여 넣으세요.",
         },
         ui={
@@ -225,6 +227,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "submit_label": "답변 보기",
             "confirm_label": "법률 가이드",
             "helper": "대응 메모",
+            "usage_hint": "상황을 적으면 먼저 확인할 대응 순서를 짚어줍니다.",
             "placeholder": "상황을 적으세요.",
         },
         ui={
@@ -300,6 +303,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "submit_label": "예약 확인",
             "confirm_label": "예약 화면",
             "helper": "예약 후보",
+            "usage_hint": "예약할 내용을 적으면 날짜와 시간, 장소를 정리합니다.",
             "placeholder": "예약할 내용을 적으세요.",
         },
         ui={
@@ -372,6 +376,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "secondary_link_label": "오늘 보낸 내용",
             "action_label": "바로 전송",
             "helper": "텍스트 전송",
+            "usage_hint": "보낼 글이나 파일을 넣고 연결된 기기로 바로 보냅니다.",
             "placeholder": "보낼 내용을 적으세요.",
         },
         ui={
@@ -468,6 +473,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "confirm_label": "TTS 열기",
             "action_label": "바로 읽기",
             "helper": "방송 문구",
+            "usage_hint": "읽을 문장을 적으면 방송용 문구로 다듬고 바로 읽습니다.",
             "placeholder": "읽을 문장을 적으세요.",
         },
         ui={
@@ -538,6 +544,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "secondary_link_label": "보관함 보기",
             "action_label": "메시지 저장",
             "helper": "메시지 보관",
+            "usage_hint": "메시지를 붙여 넣으면 보관하고 다음 일정 확인까지 이어갑니다.",
             "placeholder": "저장할 메시지를 붙여넣으세요.",
         },
         ui={
@@ -839,6 +846,7 @@ def build_home_agent_mode_payload(
         "parse_saved_template": str(resolved_links.get("parse_saved_template") or ""),
         "commit_template": str(resolved_links.get("commit_template") or ""),
         "helper": str(copy.get("helper") or ""),
+        "usage_hint": str(copy.get("usage_hint") or ""),
         "placeholder": str(copy.get("placeholder") or ""),
         "empty_prompt": str(ui.get("empty_prompt") or ""),
         "preview_line_limit": int(ui.get("preview_line_limit") or 8),

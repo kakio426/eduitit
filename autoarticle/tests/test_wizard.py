@@ -1,14 +1,18 @@
-from django.test import TestCase, Client
+from django.contrib.auth.models import User
+from django.test import Client, TestCase
 from django.urls import reverse
+
 
 class AutoArticleWizardTest(TestCase):
     def setUp(self):
         self.client = Client()
+        self.user = User.objects.create_user(username='wizarduser', password='password')
+        self.client.login(username='wizarduser', password='password')
 
     def test_wizard_step1_render(self):
         response = self.client.get(reverse('autoarticle:create'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "정보 입력")
+        self.assertContains(response, "기사 정보")
         self.assertTemplateUsed(response, 'autoarticle/wizard/step1.html')
 
     def test_wizard_step1_to_step2_flow(self):
@@ -31,4 +35,4 @@ class AutoArticleWizardTest(TestCase):
         # Verify it went to step 2 URL or session indicates step 2
         # current implementation might fail this if it jumps to step 3
         self.assertIn('step=2', response.request.get('QUERY_STRING', ''))
-        self.assertContains(response, "Gemini가 기사를 작성하고 있습니다")
+        self.assertContains(response, "베테랑 기자 AI가 열심히 취재 중이에요")

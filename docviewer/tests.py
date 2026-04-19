@@ -31,8 +31,8 @@ class DocviewerViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "서비스 목록으로 돌아가기")
-        self.assertContains(response, "교사 작업 흐름")
-        self.assertContains(response, "PDF를 선택하면 오른쪽에서 바로 확인할 수 있어요.")
+        self.assertContains(response, "문서 열기")
+        self.assertContains(response, "미리보기 화면")
         self.assertContains(response, 'id="docviewer-file-input"', html=False)
         self.assertContains(response, 'id="docviewer-prev-button"', html=False)
         self.assertContains(response, 'id="docviewer-next-button"', html=False)

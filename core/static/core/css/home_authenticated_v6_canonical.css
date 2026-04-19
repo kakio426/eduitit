@@ -3436,6 +3436,15 @@ grid-template-columns: minmax(0, 1fr);
     line-height: 1.02;
 }
 
+.home-v6-page .home-v6-agent-active-description {
+    margin: 0;
+    max-width: 42rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
 .home-v6-page .home-v6-agent-active-meta,
 .home-v6-page .home-v6-agent-head-actions {
     display: flex;

@@ -491,9 +491,9 @@ class TimetableViewTests(TestCase):
         response = self.client.get(reverse("timetable:class_edit", args=[link.token]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "3-1반 시간표 입력")
-        self.assertContains(response, "1 주간 기본 시간표")
-        self.assertContains(response, "2 날짜별 일정")
-        self.assertContains(response, "3 입력 완료")
+        self.assertContains(response, "주간 기본")
+        self.assertContains(response, "날짜별 변경")
+        self.assertContains(response, "입력 완료")
 
         link.is_active = False
         link.save(update_fields=["is_active", "updated_at"])

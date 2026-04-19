@@ -9,12 +9,10 @@
         <div class="text-center mb-8">
             <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
             <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'잇티QR' }}</h1>
-            <p class="text-gray-500 mt-3 text-sm md:text-base">
-                기본은 링크 1개 생성입니다. 필요할 때 링크를 추가해 자동 전환으로 QR을 보여주세요.
-            </p>
-            <p class="mt-3 text-xs font-bold text-amber-700">
-                localhost, 사설 IP, 학교 내부망 주소는 QR로 만들 수 없습니다. 학생에게 보여줄 공개 링크만 사용해 주세요.
-            </p>
+            <div class="mt-4 flex flex-wrap justify-center gap-2 text-xs font-bold">
+                <span class="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">링크 1개부터</span>
+                <span class="rounded-full bg-amber-50 px-3 py-1.5 text-amber-700">공개 링크만</span>
+            </div>
         </div>
 
         <div class="clay-card p-5 md:p-6 mb-5">

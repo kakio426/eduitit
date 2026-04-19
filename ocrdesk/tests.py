@@ -59,7 +59,7 @@ class OCRDeskViewTests(TestCase):
         response = self.client.get(reverse("ocrdesk:main"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "사진 한 장 올리고 바로 글자 확인")
+        self.assertContains(response, "사진으로 글자 읽기")
         self.assertContains(response, "여기에 사진을 놓거나 눌러서 고르세요")
         self.assertContains(response, "지금 글자 읽기")
         self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
@@ -74,8 +74,9 @@ class OCRDeskViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "숙제")
         self.assertContains(response, "수학 익힘책 12쪽")
+        self.assertContains(response, "읽은 결과")
+        self.assertContains(response, "수정 후 복사")
         self.assertContains(response, "결과 복사")
-        self.assertContains(response, "결과가 여기 채워집니다.")
         mocked_extract.assert_called_once()
 
     @patch("ocrdesk.views.extract_text_from_upload", return_value="준비물\n색연필")

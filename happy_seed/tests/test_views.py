@@ -64,8 +64,8 @@ class HappySeedViewTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "내 교실 1개")
         self.assertContains(res, "새 교실 만들기")
-        self.assertContains(res, "교실 열기")
-        self.assertContains(res, "처음이면 사용 안내 보기")
+        self.assertContains(res, "학생·동의·꽃피움")
+        self.assertNotContains(res, "안내 보기")
         self.assertNotContains(res, "빠른 시작:")
         self.assertNotContains(res, "꽃밭 대시보드:")
 

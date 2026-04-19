@@ -1384,6 +1384,13 @@
                 return trimLine(this.activeMode.helper);
             },
 
+            activeHeaderDescription: function () {
+                if (this.activeConversationItem) {
+                    return '';
+                }
+                return trimLine(this.activeMode.usage_hint);
+            },
+
             activeHeaderPrimaryHref: function () {
                 var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : null;
                 if (this.activeConversationItem) {

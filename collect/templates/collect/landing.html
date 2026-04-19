@@ -9,9 +9,6 @@
         <header class="text-center mb-12" data-aos="fade-up">
             <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📥" }}</div>
             <h1 id="collect-landing-title" class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"잇티수합" }}</h1>
-            <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
-                {{ service.lead_text|default:"QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 수합하세요." }}
-            </p>
             <div class="mt-5 flex flex-wrap justify-center gap-2.5">
                 <span class="inline-flex items-center rounded-full bg-teal-100 px-4 py-2 text-sm font-black text-teal-700">제출 참여는 비로그인</span>
                 <span class="inline-flex items-center rounded-full bg-white/70 px-4 py-2 text-sm font-black text-gray-700">요청 만들기는 로그인 후</span>
@@ -30,7 +27,7 @@
                             <h3 class="text-xl md:text-2xl font-bold text-gray-800">제출 참여</h3>
                         </div>
                     </header>
-                    <p class="text-sm md:text-base text-gray-600 mb-4 leading-relaxed">코드 입력 또는 QR</p>
+                    <p class="text-sm md:text-base text-gray-600 mb-4 leading-relaxed">입장코드 / QR</p>
 
                     {% if error %}
                     <div class="bg-red-100 text-red-700 p-3 rounded-xl mb-4 text-sm font-medium">
@@ -52,7 +49,7 @@
                         <div class="text-3xl md:text-4xl mb-2">
                             <i class="fa-solid fa-qrcode text-teal-500"></i>
                         </div>
-                        <p class="text-xs md:text-sm text-gray-600 font-medium">QR은 교사가 공유</p>
+                        <p class="text-xs md:text-sm text-gray-600 font-medium">교사 공유 QR</p>
                     </div>
                 </article>
 
@@ -66,7 +63,6 @@
                             <h3 class="text-xl md:text-2xl font-bold text-gray-800">요청 만들기</h3>
                         </div>
                     </header>
-                    <p class="text-sm md:text-base text-gray-600 mb-6 leading-relaxed">새 요청 생성과 제출 확인</p>
                     {% if user.is_authenticated %}
                     <a href="{% url 'collect:dashboard' %}" class="block w-full py-3 md:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-base md:text-lg text-center hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         대시보드 가기 <i class="fa-solid fa-arrow-right ml-2"></i>
