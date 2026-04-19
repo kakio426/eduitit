@@ -5,7 +5,11 @@ from products.models import Product
 
 
 def landing(request):
-    service = Product.objects.filter(title='수업 QR 생성기').first()
+    service = (
+        Product.objects.filter(launch_route_name="qrgen:landing").first()
+        or Product.objects.filter(title="잇티QR").first()
+        or Product.objects.filter(title="수업 QR 생성기").first()
+    )
     features = service.features.all() if service else []
     return render(
         request,

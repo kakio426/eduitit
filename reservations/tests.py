@@ -233,7 +233,7 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, '최근 열어본 예약판')
         self.assertContains(response, 'Test School')
         self.assertContains(response, 'Second School')
-        self.assertContains(response, '학교 예약')
+        self.assertContains(response, '잇티예약')
         self.assertNotContains(response, '학교 예약 시스템')
         self.assertNotContains(response, '내 학교 목록')
 
@@ -241,7 +241,7 @@ class ReservationsViewTest(TestCase):
         response = self.client.get(reverse('reservations:dashboard_landing'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '학교 예약')
+        self.assertContains(response, '잇티예약')
         self.assertContains(response, '내 학교')
         self.assertNotContains(response, '학교 예약 시스템')
         self.assertNotContains(response, '내 학교 목록')

@@ -11,15 +11,20 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('[Reservations Product Setup]'))
         self.stdout.write('=' * 70)
 
-        title = '학교 예약 시스템'
+        title = '잇티예약'
         
         # Check if product exists
-        product = Product.objects.filter(title=title).first()
+        product = (
+            Product.objects.filter(launch_route_name=self.LAUNCH_ROUTE).first()
+            or Product.objects.filter(title=title).first()
+            or Product.objects.filter(title='학교 예약 시스템').first()
+        )
 
         if product:
             self.stdout.write(self.style.WARNING(f'[!] Found existing Reservations product (ID: {product.id})'))
-            
+
             # Update fields that are safe to update (Code-driven)
+            product.title = title
             product.lead_text = '복잡한 특별실 예약, 이제 클릭 한 번으로!'
             product.description = '과학실, 컴퓨터실 등 특별실 예약을 실시간으로 확인하고 간편하게 신청하세요. 선생님들의 업무가 줄어듭니다.'
             product.icon = '🏫'
@@ -36,7 +41,7 @@ class Command(BaseCommand):
             # Ensure external_url is empty for internal app
             if product.external_url:
                 product.external_url = ''
-            
+
             product.save()
             self.stdout.write(self.style.SUCCESS('[OK] Updated Reservations product (Skipped Admin-managed fields)'))
 

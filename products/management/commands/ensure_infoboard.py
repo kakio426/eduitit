@@ -12,12 +12,16 @@ class Command(BaseCommand):
 
         product = (
             Product.objects.filter(launch_route_name='infoboard:dashboard').first()
+            or Product.objects.filter(title='잇티보드').first()
             or Product.objects.filter(title='인포보드').first()
         )
 
         if product:
             self.stdout.write(f'[!] Found existing InfoBoard product (ID: {product.id})')
             changed_fields = []
+            if product.title != '잇티보드':
+                product.title = '잇티보드'
+                changed_fields.append('title')
             if product.launch_route_name != 'infoboard:dashboard':
                 product.launch_route_name = 'infoboard:dashboard'
                 changed_fields.append('launch_route_name')
@@ -30,8 +34,8 @@ class Command(BaseCommand):
         else:
             self.stdout.write('[!] InfoBoard product not found, creating...')
             product = Product.objects.create(
-                title='인포보드',
-                lead_text='자료를 모으고, 정리하고, 공유하세요! 패들릿보다 강력한 정보 모음 보드.',
+                title='잇티보드',
+                lead_text='자료를 모으고, 정리하고, 공유하세요! 패들릿보다 강력한 잇티보드.',
                 description='보드에 링크, 파일, 이미지, 메모를 카드로 추가하고 태그로 정리하세요. '
                             '공유 링크와 QR 코드로 동료 교사나 학생과 간편하게 공유하고, '
                             '학생 카드 제출 기능으로 수업 중 자료 수집에도 활용할 수 있어요.',
@@ -85,8 +89,8 @@ class Command(BaseCommand):
         manual, manual_created = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                'title': '인포보드 사용법',
-                'description': '자료를 모으고 정리하고 공유하는 인포보드 활용 가이드',
+                'title': '잇티보드 사용법',
+                'description': '자료를 모으고 정리하고 공유하는 잇티보드 활용 가이드',
                 'is_published': True,
             },
         )
@@ -100,7 +104,7 @@ class Command(BaseCommand):
                 manual=manual,
                 title='시작하기',
                 content=(
-                    '1. 인포보드에 들어가면 "새 보드" 버튼을 눌러 첫 보드를 만드세요.\n'
+                    '1. 잇티보드에 들어가면 "새 보드" 버튼을 눌러 첫 보드를 만드세요.\n'
                     '2. 보드 이름, 아이콘, 색상을 선택하고 "만들기"를 누르세요.\n'
                     '3. 보드 안에서 "카드 추가"를 눌러 링크, 파일, 이미지, 메모를 추가하세요.'
                 ),

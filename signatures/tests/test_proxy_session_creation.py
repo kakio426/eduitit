@@ -88,7 +88,7 @@ class SignatureProxySessionCreationTests(TestCase):
 
         response = self.client.get(reverse("signatures:create"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교사 대신 바로 이어받을 요청을 준비할 수 있습니다.")
+        self.assertContains(response, "교사 선택 후 저장")
         html = response.content.decode("utf-8")
         self.assertLess(html.find('<form method="post"'), html.find('name="acting_for_user"'))
         self.assertLess(html.find('<form method="post"'), html.find('name="proxy_participants_text"'))
@@ -101,7 +101,7 @@ class SignatureProxySessionCreationTests(TestCase):
 
         response = self.client.get(reverse("signatures:create"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "교사 대신 바로 이어받을 요청을 준비할 수 있습니다.")
+        self.assertNotContains(response, "교사 선택 후 저장")
 
     def test_kakio_can_create_session_for_teacher_with_pasted_participants(self):
         self.client.force_login(self.kakio)

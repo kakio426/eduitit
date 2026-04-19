@@ -2,14 +2,15 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from doccollab.models import DocRoom
+from doccollab.services import DOC_GROUP_NAME
 from products.models import ManualSection, Product, ProductFeature, ServiceManual
 from version_manager.models import Document, DocumentGroup
 
 
-SERVICE_TITLE = "HWP 문서실"
+SERVICE_TITLE = "잇티한글"
 LEGACY_SERVICE_TITLE = "함께문서실"
 LAUNCH_ROUTE = "doccollab:main"
-MANUAL_TITLE = "HWP 문서실 사용 가이드"
+MANUAL_TITLE = "잇티한글 사용 가이드"
 MANUAL_DESCRIPTION = "HWP 또는 HWPX를 열고 온라인에서 수정하고 HWP로 저장하는 빠른 시작입니다."
 
 
@@ -28,11 +29,11 @@ def _unique_document_base_name(group, desired_name, *, exclude_id=None):
 
 
 def ensure_document_group(stdout):
-    current_group = DocumentGroup.objects.filter(name=SERVICE_TITLE).order_by("id").first()
+    current_group = DocumentGroup.objects.filter(name=DOC_GROUP_NAME).order_by("id").first()
     legacy_group = DocumentGroup.objects.filter(name=LEGACY_SERVICE_TITLE).order_by("id").first()
 
     if legacy_group and current_group is None:
-        legacy_group.name = SERVICE_TITLE
+        legacy_group.name = DOC_GROUP_NAME
         legacy_group.slug = ""
         legacy_group.save()
         stdout.write("[OK] Renamed legacy doccollab document group.")
@@ -55,7 +56,7 @@ def ensure_document_group(stdout):
         return current_group
 
     if current_group is None:
-        current_group = DocumentGroup.objects.create(name=SERVICE_TITLE)
+        current_group = DocumentGroup.objects.create(name=DOC_GROUP_NAME)
         stdout.write("[OK] Created doccollab document group.")
     return current_group
 
@@ -70,7 +71,7 @@ class Command(BaseCommand):
         defaults = {
             "lead_text": "HWP와 HWPX 문서를 열고 온라인에서 바로 고칩니다.",
             "description": (
-                "HWP 문서실은 HWP와 HWPX 문서를 데스크톱 Chrome에서 열어 바로 수정하고, "
+                "잇티한글은 HWP와 HWPX 문서를 데스크톱 Chrome에서 열어 바로 수정하고, "
                 "필요할 때 공유하고, 저장본과 배포본을 관리하는 온라인 편집 공간입니다."
             ),
             "price": 0.00,
@@ -105,8 +106,7 @@ class Command(BaseCommand):
                 product.save(update_fields=changed)
                 self.stdout.write(self.style.SUCCESS(f"[OK] Updated doccollab fields: {', '.join(changed)}"))
 
-        if LEGACY_SERVICE_TITLE != SERVICE_TITLE:
-            Product.objects.filter(title=LEGACY_SERVICE_TITLE).exclude(id=product.id).delete()
+        Product.objects.filter(title__in={LEGACY_SERVICE_TITLE, "HWP 문서실"}).exclude(id=product.id).delete()
 
         features = [
             {
@@ -206,7 +206,7 @@ class Command(BaseCommand):
         for room in DocRoom.objects.select_related("mirrored_document__group").exclude(mirrored_document__isnull=True):
             document = room.mirrored_document
             if document and document.group.name == LEGACY_SERVICE_TITLE:
-                target_group = DocumentGroup.objects.get(name=SERVICE_TITLE)
+                target_group = DocumentGroup.objects.get(name=DOC_GROUP_NAME)
                 if Document.objects.filter(group=target_group, base_name=document.base_name).exclude(id=document.id).exists():
                     document.base_name = _unique_document_base_name(target_group, document.base_name, exclude_id=document.id)
                 document.group = target_group

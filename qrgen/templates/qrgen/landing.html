@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title|default:'수업 QR 생성기 - Eduitit' }}{% endblock %}
+{% block title %}{{ page_title|default:'잇티QR - Eduitit' }}{% endblock %}
 
 {% block content %}
 <section class="service-shell pb-20 px-4 min-h-screen">
     <div class="max-w-6xl mx-auto" x-data="createQrgenApp()" x-init="init()" @keydown.window.escape="closeCycleMode()">
         <div class="text-center mb-8">
             <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
-            <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'수업 QR 생성기' }}</h1>
+            <h1 class="text-3xl md:text-5xl font-black text-gray-800 font-title">{{ service.title|default:'잇티QR' }}</h1>
             <p class="text-gray-500 mt-3 text-sm md:text-base">
                 기본은 링크 1개 생성입니다. 필요할 때 링크를 추가해 자동 전환으로 QR을 보여주세요.
             </p>

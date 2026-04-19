@@ -4,10 +4,10 @@ from products.models import ManualSection, Product, ProductFeature, ServiceManua
 
 
 class Command(BaseCommand):
-    help = "Ensure 수업 QR 생성기 product exists in database"
+    help = "Ensure 잇티QR product exists in database"
 
     def handle(self, *args, **options):
-        title = "수업 QR 생성기"
+        title = "잇티QR"
         defaults = {
             "lead_text": "기본 링크 1개를 QR로 만들고, 필요하면 여러 링크를 추가해 자동 전환으로 보여주세요.",
             "description": (
@@ -43,10 +43,20 @@ class Command(BaseCommand):
             "time_text",
         ]
 
-        product, created = Product.objects.get_or_create(
-            title=title,
-            defaults=defaults,
+        product = (
+            Product.objects.filter(launch_route_name="qrgen:landing").order_by("id").first()
+            or Product.objects.filter(title=title).order_by("id").first()
+            or Product.objects.filter(title="수업 QR 생성기").order_by("id").first()
         )
+
+        if product is None:
+            product = Product.objects.create(title=title, **defaults)
+            created = True
+        else:
+            created = False
+            if product.title != title:
+                product.title = title
+                product.save(update_fields=["title"])
 
         if created:
             self.stdout.write(self.style.SUCCESS(f"Created product: {product.title}"))
@@ -114,7 +124,7 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "수업 QR 생성기 사용법",
+                "title": "잇티QR 사용법",
                 "description": target_manual_description,
                 "is_published": True,
             },

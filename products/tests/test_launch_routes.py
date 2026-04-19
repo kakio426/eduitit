@@ -44,7 +44,7 @@ class ProductLaunchRouteTests(TestCase):
 
     def test_resolver_no_longer_uses_title_based_fallback(self):
         product = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="desc",
             price=0,
             is_active=True,

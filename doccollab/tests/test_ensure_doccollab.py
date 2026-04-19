@@ -17,7 +17,7 @@ class EnsureDoccollabCommandTests(TestCase):
     def test_command_creates_product_manual_and_features(self):
         call_command("ensure_doccollab")
 
-        product = Product.objects.get(title="HWP 문서실")
+        product = Product.objects.get(title="잇티한글")
         manual = ServiceManual.objects.get(product=product)
 
         self.assertEqual(product.launch_route_name, "doccollab:main")
@@ -25,7 +25,7 @@ class EnsureDoccollabCommandTests(TestCase):
         self.assertTrue(product.is_active)
         self.assertIn("온라인에서 바로 고칩니다", product.lead_text)
         self.assertTrue(manual.is_published)
-        self.assertEqual(manual.title, "HWP 문서실 사용 가이드")
+        self.assertEqual(manual.title, "잇티한글 사용 가이드")
         self.assertIn("온라인에서 수정", manual.description)
         self.assertCountEqual(
             list(product.features.values_list("title", flat=True)),

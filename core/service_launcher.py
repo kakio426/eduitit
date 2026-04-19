@@ -14,6 +14,14 @@ PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "messagebox:main": "AI 업무 메시지 보관함",
     "schoolcomm:main": "끼리끼리 채팅방",
     "quickdrop:landing": "바로전송",
+    "collect:landing": "잇티수합",
+    "docsign:list": "잇티PDF사인",
+    "signatures:list": "잇티하게 서명 톡",
+    "doccollab:main": "잇티한글",
+    "reservations:dashboard_landing": "잇티예약",
+    "reservations:landing": "잇티예약",
+    "qrgen:landing": "잇티QR",
+    "infoboard:dashboard": "잇티보드",
 }
 
 CLASS_ACTIVITY_ROUTE_NAMES = {

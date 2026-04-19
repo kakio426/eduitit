@@ -26,7 +26,7 @@ class HomeSectionRoutingTests(SimpleTestCase):
 
     def test_docsign_route_maps_to_collect_sign(self):
         product = Product(
-            title="인쇄 NONO 온라인 사인",
+            title="잇티PDF사인",
             description="desc",
             price=0,
             service_type="collect_sign",

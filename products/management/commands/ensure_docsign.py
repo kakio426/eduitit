@@ -7,27 +7,40 @@ class Command(BaseCommand):
     help = "Ensure Docsign product exists in database"
 
     def handle(self, *args, **options):
-        product, created = Product.objects.get_or_create(
-            title="인쇄 NONO 온라인 사인",
-            defaults={
-                "lead_text": "PDF를 올리고 내가 바로 사인한 뒤 내려받습니다.",
-                "description": "내 문서를 올린 뒤 사인 위치를 잡고, 직접 서명한 PDF를 바로 다운로드합니다.",
-                "price": 0.00,
-                "is_active": True,
-                "is_featured": False,
-                "is_guest_allowed": False,
-                "icon": "fa-solid fa-file-signature",
-                "color_theme": "blue",
-                "card_size": "small",
-                "display_order": 22,
-                "service_type": "collect_sign",
-                "external_url": "",
-                "launch_route_name": "docsign:list",
-                "solve_text": "내 문서에 바로 사인",
-                "result_text": "사인된 PDF",
-                "time_text": "3분",
-            },
-        )
+        defaults = {
+            "lead_text": "PDF를 올리고 내가 바로 사인한 뒤 내려받습니다.",
+            "description": "내 문서를 올린 뒤 사인 위치를 잡고, 직접 서명한 PDF를 바로 다운로드합니다.",
+            "price": 0.00,
+            "is_active": True,
+            "is_featured": False,
+            "is_guest_allowed": False,
+            "icon": "fa-solid fa-file-signature",
+            "color_theme": "blue",
+            "card_size": "small",
+            "display_order": 22,
+            "service_type": "collect_sign",
+            "external_url": "",
+            "launch_route_name": "docsign:list",
+            "solve_text": "내 문서에 바로 사인",
+            "result_text": "사인된 PDF",
+            "time_text": "3분",
+        }
+        product = Product.objects.filter(launch_route_name="docsign:list").order_by("id").first()
+        created = product is None
+        if product is None:
+            product = Product.objects.create(title="잇티PDF사인", **defaults)
+        else:
+            changed_fields = []
+            if product.title != "잇티PDF사인":
+                product.title = "잇티PDF사인"
+                changed_fields.append("title")
+            for field_name, expected in defaults.items():
+                if getattr(product, field_name) != expected:
+                    setattr(product, field_name, expected)
+                    changed_fields.append(field_name)
+            if changed_fields:
+                product.save(update_fields=changed_fields)
+        Product.objects.filter(title="인쇄 NONO 온라인 사인").exclude(id=product.id).delete()
 
         updates = {
             "external_url": "",
@@ -59,12 +72,15 @@ class Command(BaseCommand):
         manual, _ = ServiceManual.objects.get_or_create(
             product=product,
             defaults={
-                "title": "인쇄 NONO 온라인 사인 사용 가이드",
+                "title": "잇티PDF사인 사용 가이드",
                 "description": "PDF 업로드부터 다운로드까지 바로 이어갑니다.",
                 "is_published": True,
             },
         )
         manual_updates = []
+        if manual.title != "잇티PDF사인 사용 가이드":
+            manual.title = "잇티PDF사인 사용 가이드"
+            manual_updates.append("title")
         if manual.description != "PDF 업로드부터 다운로드까지 바로 이어갑니다.":
             manual.description = "PDF 업로드부터 다운로드까지 바로 이어갑니다."
             manual_updates.append("description")

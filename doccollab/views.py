@@ -143,7 +143,7 @@ def _build_dashboard_context(request):
     recent_revisions = DocRevision.objects.filter(room__in=rooms).select_related("room").order_by("-created_at")[:8]
     today_rooms = today_rooms_qs[:8]
     return {
-        "service_title": "HWP 문서실",
+        "service_title": "잇티한글",
         "my_rooms": my_rooms,
         "shared_rooms": shared_rooms,
         "recent_revisions": recent_revisions,

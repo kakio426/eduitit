@@ -19,7 +19,7 @@ from .models import Board, Card, CardComment, Collection, SharedLink, Tag
 logger = logging.getLogger(__name__)
 
 SERVICE_ROUTE = 'infoboard:dashboard'
-SERVICE_TITLE = '인포보드'
+SERVICE_TITLE = '잇티보드'
 SUBMIT_ACCESS_LEVELS = ('submit', 'edit')
 COMMENT_RATE_LIMITS = ((15, 1), (3600, 20))
 

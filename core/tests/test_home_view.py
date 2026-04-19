@@ -359,7 +359,7 @@ class HomeV2ViewTest(TestCase):
             icon='fa-solid fa-note-sticky',
         )
         collect = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="제출 수합",
             price=0,
             is_active=True,
@@ -372,7 +372,7 @@ class HomeV2ViewTest(TestCase):
 
     def _create_try_now_support_products(self):
         qr = Product.objects.create(
-            title="수업 QR 생성기",
+            title="잇티QR",
             description="QR 생성",
             price=0,
             is_active=True,
@@ -479,7 +479,7 @@ class HomeV2ViewTest(TestCase):
         primary_action_card = response.context.get('public_primary_action_card')
 
         self.assertIsNotNone(primary_action_card)
-        self.assertEqual(primary_action_card['title'], '간편 수합')
+        self.assertEqual(primary_action_card['title'], '잇티수합')
         self.assertEqual(primary_action_card['access_status_label'], '비로그인 참여')
         self.assertEqual(primary_action_card['cta_label'], '참여 열기')
         self.assertIn('입장코드나 QR이 있으면 바로 제출에 참여합니다.', primary_action_card['description'])
@@ -1733,7 +1733,7 @@ class HomeV2ViewTest(TestCase):
             service_type='classroom',
         )
         reservation_system = Product.objects.create(
-            title="학교 예약 시스템",
+            title="잇티예약",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -1760,17 +1760,17 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
-        self.assertIn('title="학교 예약 시스템">학교 예약</p>', favorites_block)
+        self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
 
     def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
         self.assertEqual(build_favorite_service_title("반짝반짝 우리반 알림판"), "알림판")
-        self.assertEqual(build_favorite_service_title("가뿐하게 서명 톡"), "서명")
+        self.assertEqual(build_favorite_service_title("잇티하게 서명 톡"), "서명")
         self.assertEqual(build_favorite_service_title("두뇌 풀가동! 교실 체스"), "체스")
         self.assertEqual(build_favorite_service_title("두뇌 풀가동! 교실 장기"), "장기")
         self.assertEqual(build_favorite_service_title("왁자지껄 교실 윷놀이"), "윷놀이")
         self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
-        self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약")
+        self.assertEqual(build_favorite_service_title("잇티예약"), "잇티예약")
         self.assertEqual(build_favorite_service_title("AI 업무 메시지 보관함"), "메시지 보관")
 
     def test_v2_usage_based_quick_actions(self):
@@ -2282,7 +2282,7 @@ class HomeSupplementaryViewTest(TestCase):
 
     def test_home_search_payload_uses_is_active_and_public_names(self):
         Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="수합 설명",
             price=0,
             is_active=True,
@@ -2310,7 +2310,7 @@ class HomeSupplementaryViewTest(TestCase):
         payload = json.loads(response.context['service_launcher_json'])
         titles = [item['title'] for item in payload]
 
-        self.assertIn('간편 수합', titles)
+        self.assertIn('잇티수합', titles)
         self.assertIn('학급 캘린더', titles)
         self.assertNotIn('숨김 학급 운영 캘린더', titles)
 
@@ -2607,7 +2607,7 @@ class HomeV4ViewTest(TestCase):
             icon='fa-solid fa-palette',
         )
         self.reservations_product = Product.objects.create(
-            title="학교 예약 시스템",
+            title="잇티예약",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -2616,7 +2616,7 @@ class HomeV4ViewTest(TestCase):
             icon='fa-solid fa-calendar-check',
         )
         self.collect_product = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="서명과 수합",
             price=0,
             is_active=True,
@@ -2634,7 +2634,7 @@ class HomeV4ViewTest(TestCase):
             icon='fa-solid fa-file-signature',
         )
         self.signature_product = Product.objects.create(
-            title="가뿐하게 서명 톡",
+            title="잇티하게 서명 톡",
             description="링크 서명",
             price=0,
             is_active=True,
@@ -2737,9 +2737,9 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('home-v6-side-stack', content)
         self.assertIn('data-home-v6-mobile-summary-button="true"', content)
         self.assertNotIn('오늘 바로 쓰는 메뉴', content)
-        self.assertIn('간편 수합', content)
+        self.assertIn('잇티수합', content)
         self.assertIn('동의서는 나에게 맡겨', content)
-        self.assertIn('가뿐하게 서명 톡', content)
+        self.assertIn('잇티하게 서명 톡', content)
         self.assertIn('배부 체크', content)
         self.assertNotIn('>Representative<', content)
         self.assertIn('data-home-v6-sns-rail="true"', content)
@@ -3159,7 +3159,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertGreaterEqual(collect_section['count'], 4)
         self.assertTrue(
-            {'간편 수합', '동의서는 나에게 맡겨', '가뿐하게 서명 톡', '배부 체크'}.issubset(
+            {'잇티수합', '동의서는 나에게 맡겨', '잇티하게 서명 톡', '배부 체크'}.issubset(
                 {product.title for product in collect_section['products']}
             )
         )
@@ -3300,7 +3300,7 @@ class HomeV4ViewTest(TestCase):
 
         self.assertIn('data-home-v6-tool-item="collect_sign"', content)
         self.assertIn('data-home-v6-tool-favorite-badge="true"', content)
-        self.assertIn('aria-label="간편 수합 즐겨찾기 토글"', content)
+        self.assertIn('aria-label="잇티수합 즐겨찾기 토글"', content)
         self.assertIn('favorite-toggle-btn', content)
 
     def test_v4_anonymous_home_uses_public_v6_template(self):
@@ -3319,7 +3319,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
-            ['미술 수업 도우미', '학교 예약 시스템', '간편 수합', '가뿐하게 서명 톡'],
+            ['미술 수업 도우미', '잇티예약', '잇티수합', '잇티하게 서명 톡'],
         )
 
     def test_v4_anonymous_featured_service_uses_access_matched_cta(self):
@@ -3366,8 +3366,8 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertNotIn('업무 둘러보기', content)
         self.assertIn('LOGIN', content)
-        self.assertIn('간편 수합', content)
-        self.assertIn('가뿐하게 서명 톡', content)
+        self.assertIn('잇티수합', content)
+        self.assertIn('잇티하게 서명 톡', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_rotation_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -3415,7 +3415,7 @@ class HomeV5ViewTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.collect_product = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="서명과 수합",
             price=0,
             is_active=True,
@@ -3433,7 +3433,7 @@ class HomeV5ViewTest(TestCase):
             icon='fa-solid fa-file-signature',
         )
         self.signature_product = Product.objects.create(
-            title="가뿐하게 서명 톡",
+            title="잇티하게 서명 톡",
             description="링크 서명",
             price=0,
             is_active=True,
@@ -3746,7 +3746,7 @@ class HomeV5ViewTest(TestCase):
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
         reservations_product = Product.objects.create(
-            title='학교 예약 시스템',
+            title='잇티예약',
             description='학교 예약 바로가기',
             price=0,
             is_active=True,
@@ -4239,7 +4239,7 @@ class HomeV6ViewTest(TestCase):
             display_order=40,
         )
         Product.objects.create(
-            title="학교 예약 시스템",
+            title="잇티예약",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -4266,7 +4266,7 @@ class HomeV6ViewTest(TestCase):
             [
                 '몽글몽글 미술 수업',
                 'AI 수업자료 메이커',
-                '학교 예약 시스템',
+                '잇티예약',
                 '행복의 씨앗',
                 '씨앗 퀴즈',
             ],

@@ -16,13 +16,13 @@ SENSITIVE_DISCOVERY_ROUTE_NAMES = {
 }
 
 SENSITIVE_DISCOVERY_PRODUCT_TITLES = {
-    "가뿐하게 서명 톡",
-    "간편 수합",
+    "잇티하게 서명 톡",
+    "잇티수합",
     "동의서는 나에게 맡겨",
-    "인쇄 NONO 온라인 사인",
+    "잇티PDF사인",
     "우리반BTI",
     "전담 시간표·특별실 배치 도우미",
-    "학교 예약 시스템",
+    "잇티예약",
     "학급 캘린더",
     "학부모 소통 허브",
 }

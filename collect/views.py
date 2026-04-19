@@ -472,17 +472,21 @@ def _build_choice_stats(collection_req, submissions):
 
 def get_collect_service():
     """서비스 정보 로드"""
-    return Product.objects.filter(title__icontains="간편 수합").first()
+    return (
+        Product.objects.filter(launch_route_name="collect:landing").first()
+        or Product.objects.filter(title__icontains="잇티수합").first()
+        or Product.objects.filter(title__icontains="간편 수합").first()
+    )
 
 
 def _build_collect_landing_seo(request, service):
     return build_public_service_landing_seo(
         request,
         product=service,
-        title="가뿐 수합 - Eduitit",
+        title="잇티수합 - Eduitit",
         description="QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모으는 교사용 수합 도구입니다.",
         route_name="collect:landing",
-        landing_name="가뿐 수합",
+        landing_name="잇티수합",
     )
 
 
@@ -490,7 +494,7 @@ def _build_collect_join_error_seo(request, service):
     return build_product_route_page_seo(
         request,
         product=service,
-        title="가뿐 수합 - Eduitit",
+        title="잇티수합 - Eduitit",
         description="입장코드를 다시 확인하고 참여 링크로 접속해 주세요.",
         route_name="collect:landing",
         robots="noindex,follow",

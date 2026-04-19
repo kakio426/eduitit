@@ -57,7 +57,7 @@ class SeoFoundationTests(TestCase):
             is_published=True,
         )
         self.collect_service = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모읍니다.",
             price=0,
             is_active=True,
@@ -258,7 +258,7 @@ class SeoFoundationTests(TestCase):
         cases = (
             ("prompt_lab", "AI 프롬프트 레시피 | Eduitit", "https://eduitit.site/prompts/"),
             ("noticegen:main", "알림장·주간학습 멘트 생성기 | Eduitit", "https://eduitit.site/noticegen/"),
-            ("qrgen:landing", "수업 QR 생성기 | Eduitit", "https://eduitit.site/qrgen/"),
+            ("qrgen:landing", "잇티QR | Eduitit", "https://eduitit.site/qrgen/"),
         )
 
         for route_name, title, canonical in cases:
@@ -495,7 +495,7 @@ class SeoFoundationTests(TestCase):
         cases = (
             (
                 reverse("collect:landing"),
-                "가뿐 수합 - Eduitit",
+                "잇티수합 - Eduitit",
                 "https://eduitit.site/collect/",
                 "QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 모으는 교사용 수합 도구입니다.",
             ),

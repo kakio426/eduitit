@@ -187,7 +187,7 @@ class ProductDetailHeroTests(TestCase):
 
     def test_product_detail_marks_login_only_route_as_login_required_even_when_guest_flag_is_on(self):
         product = Product.objects.create(
-            title="인포보드",
+            title="잇티보드",
             lead_text="자료를 모으고 정리합니다.",
             description="교사용 대시보드에서 보드를 관리합니다.",
             solve_text="교실 자료를 모아 관리하고 싶어요",
@@ -249,7 +249,7 @@ class ProductDetailHeroTests(TestCase):
 
     def test_collect_detail_explains_guest_join_and_teacher_login_separately(self):
         product = Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             lead_text="파일과 링크, 응답을 모읍니다.",
             description="QR과 입장코드로 제출을 받고, 교사는 대시보드에서 확인합니다.",
             solve_text="안내 뒤 제출을 빠르게 받고 싶어요",

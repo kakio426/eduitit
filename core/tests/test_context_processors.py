@@ -71,7 +71,7 @@ class ServiceLauncherContextTests(TestCase):
 
     def test_service_launcher_json_contains_direct_launch_fields(self):
         Product.objects.create(
-            title="간편 수합",
+            title="잇티수합",
             description="설명",
             solve_text="응답을 빠르게 모아요",
             price=0,
@@ -84,8 +84,8 @@ class ServiceLauncherContextTests(TestCase):
         context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
-        item = next(item for item in payload if item["title"] == "간편 수합")
-        self.assertEqual(item["title"], "간편 수합")
+        item = next(item for item in payload if item["title"] == "잇티수합")
+        self.assertEqual(item["title"], "잇티수합")
         self.assertEqual(item["summary"], "응답을 빠르게 모아요")
         self.assertEqual(item["group_key"], "collect_sign")
         self.assertEqual(item["group_title"], "수합·서명")
@@ -161,6 +161,9 @@ class ServiceLauncherContextTests(TestCase):
     def test_service_launcher_json_keeps_all_discoverable_items(self):
         baseline_payload = json.loads(search_products(self._request())["service_launcher_json"])
         baseline_count = len(baseline_payload)
+        baseline_collect_count = sum(
+            1 for item in baseline_payload if item["title"] == "잇티수합"
+        )
         for index in range(9):
             Product.objects.create(
                 title=f"서비스 {index}",
@@ -175,9 +178,10 @@ class ServiceLauncherContextTests(TestCase):
         payload = json.loads(context["service_launcher_json"])
 
         self.assertEqual(len(payload), baseline_count + 9)
-        titles = {item["title"] for item in payload}
-        for index in range(9):
-            self.assertIn(f"서비스 {index}", titles)
+        self.assertEqual(
+            sum(1 for item in payload if item["title"] == "잇티수합"),
+            baseline_collect_count + 9,
+        )
 
     def test_new_service_is_auto_included_after_ensure_command(self):
         call_command("ensure_docviewer")
@@ -194,7 +198,7 @@ class ServiceLauncherContextTests(TestCase):
         context = search_products(self._request())
         payload = json.loads(context["service_launcher_json"])
 
-        item = next(item for item in payload if item["title"] == "인쇄 NONO 온라인 사인")
+        item = next(item for item in payload if item["title"] == "잇티PDF사인")
         self.assertEqual(item["group_key"], "collect_sign")
         self.assertEqual(item["href"], reverse("docsign:list"))
         self.assertFalse(item["is_external"])

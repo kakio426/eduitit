@@ -59,8 +59,8 @@ FORTUNE_MANUAL_UPDATE = ManualPayload(
 
 
 MANUAL_UPDATES: dict[str, ManualPayload] = {
-    "가뿐하게 서명 톡": ManualPayload(
-        title="연수 서명 톡 사용 가이드",
+    "잇티하게 서명 톡": ManualPayload(
+        title="잇티하게 서명 톡 사용 가이드",
         description=(
             "연수 생성부터 링크 공유, 서명 확인, 출력까지 실제 운영 흐름만 간단히 정리했습니다."
         ),
@@ -432,9 +432,9 @@ class Command(BaseCommand):
         return True, len(payload.sections)
 
     def _update_signature_modal_copy(self) -> bool:
-        product = Product.objects.filter(title="가뿐하게 서명 톡").first()
+        product = Product.objects.filter(title="잇티하게 서명 톡").first()
         if not product:
-            self.stdout.write(self.style.WARNING("[SKIP] Product not found: 가뿐하게 서명 톡"))
+            self.stdout.write(self.style.WARNING("[SKIP] Product not found: 잇티하게 서명 톡"))
             return False
 
         changed_fields: list[str] = []

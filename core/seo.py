@@ -872,7 +872,7 @@ def build_noticegen_page_seo(request) -> PageSeoMeta:
 
 def build_qrgen_page_seo(request) -> PageSeoMeta:
     return _build_page_seo(
-        title="수업 QR 생성기 | Eduitit",
+        title="잇티QR | Eduitit",
         description="수업 자료 링크를 바로 QR 코드로 바꿔 교실에서 빠르게 공유할 수 있습니다.",
         canonical_url=_absolute_url(reverse("qrgen:landing")),
     )

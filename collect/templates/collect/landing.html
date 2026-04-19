@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}가뿐 수합 - Eduitit{% endblock %}
+{% block title %}잇티수합 - Eduitit{% endblock %}
 
 {% block content %}
 <main id="main-content" tabindex="-1" aria-labelledby="collect-landing-title" class="service-shell pb-20 px-6 md:px-8 min-h-screen overflow-x-hidden bg-[#E0E5EC]">
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-12" data-aos="fade-up">
             <div class="text-7xl mb-4 float-icon">{{ service.icon|default:"📥" }}</div>
-            <h1 id="collect-landing-title" class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"가뿐 수합" }}</h1>
+            <h1 id="collect-landing-title" class="text-5xl md:text-6xl font-bold text-gray-800 mb-4 font-title">{{ service.title|default:"잇티수합" }}</h1>
             <p class="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed break-keep">
                 {{ service.lead_text|default:"QR 또는 입장코드로 파일, 링크, 텍스트, 선택형 응답을 빠르게 수합하세요." }}
             </p>
@@ -115,7 +115,7 @@
         </section>
         {% endif %}
 
-        <nav class="text-center mt-8" aria-label="가뿐 수합 이동">
+        <nav class="text-center mt-8" aria-label="잇티수합 이동">
             <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <i class="fa-solid fa-arrow-left"></i>
                 <span class="font-medium">서비스 목록으로 돌아가기</span>

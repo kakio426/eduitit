@@ -206,7 +206,7 @@ class DoccollabViewTests(TestCase):
 
         self.assertIn(own_room.title, my_card_titles)
         self.assertIn(shared_room.title, shared_card_titles)
-        self.assertContains(response, "HWP 문서실")
+        self.assertContains(response, "잇티한글")
         self.assertContains(response, "최근 수정한 문서")
         self.assertContains(response, "공유받은 문서")
         self.assertContains(response, "파일 열기")

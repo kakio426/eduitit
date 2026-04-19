@@ -956,8 +956,8 @@ HOME_TRY_NOW_CARD_SPECS = [
     },
     {
         "key": "collect",
-        "service_name": "간편 수합",
-        "title": "간편 수합",
+        "service_name": "잇티수합",
+        "title": "잇티수합",
         "description": "파일·링크·응답을 한 번에 모읍니다.",
         "icon": "fa-solid fa-inbox",
         "preferred_routes": ["collect:landing"],
@@ -970,8 +970,8 @@ HOME_TRY_NOW_CARD_SPECS = [
 HOME_TRY_NOW_SUPPORT_CARD_SPECS = [
     {
         "key": "qrgen",
-        "service_name": "수업 QR 생성기",
-        "title": "수업 QR 생성기",
+        "service_name": "잇티QR",
+        "title": "잇티QR",
         "description": "수업 링크를 QR로 바로 엽니다.",
         "icon": "fa-solid fa-qrcode",
         "preferred_routes": ["qrgen:landing"],
@@ -2151,7 +2151,7 @@ CLASS_OPS_NAV_HIDDEN_ROUTE_NAMES = {
 CLASS_OPS_NAV_HIDDEN_TITLES = {
     '교과서 라이브 수업',
     '교실 방송 TTS',
-    '수업 QR 생성기',
+    '잇티QR',
 }
 
 CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES = {
@@ -2160,7 +2160,7 @@ CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES = {
 }
 
 CLASS_OPS_NAV_RESERVATION_TITLES = {
-    '학교 예약 시스템',
+    '잇티예약',
 }
 
 CLASS_OPS_NAV_RESERVATION_INDEX = 2
@@ -3290,9 +3290,9 @@ PUBLIC_HOME_PRIMARY_ACTION_ROUTE_PRIORITY = (
 )
 
 PUBLIC_HOME_PRIMARY_ACTION_TITLE_PRIORITY = (
-    "간편 수합",
+    "잇티수합",
     "알림장 & 주간학습 멘트 생성기",
-    "수업 QR 생성기",
+    "잇티QR",
     "행복의 씨앗",
     "전담 시간표·특별실 배치 도우미",
     "쌤BTI",
@@ -3311,19 +3311,19 @@ PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS = (
     },
     {
         "route_names": ("collect:landing",),
-        "titles": ("간편 수합",),
+        "titles": ("잇티수합",),
     },
     {
         "route_names": ("docsign:list",),
-        "titles": ("인쇄 NONO 온라인 사인",),
+        "titles": ("잇티PDF사인",),
     },
     {
         "route_names": ("signatures:list",),
-        "titles": ("가뿐하게 서명 톡",),
+        "titles": ("잇티하게 서명 톡",),
     },
     {
         "route_names": ("reservations:dashboard_landing", "reservations:landing"),
-        "titles": ("학교 예약 시스템",),
+        "titles": ("잇티예약",),
     },
     {
         "route_names": ("classcalendar:main",),
@@ -3349,7 +3349,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "title": "수합·서명",
         "summary": "응답과 서명을 바로 받습니다.",
         "preferred_routes": ("collect:landing", "consent:landing", "docsign:list", "signatures:list", "handoff:landing"),
-        "preferred_titles": ("간편 수합", "동의서는 나에게 맡겨", "인쇄 NONO 온라인 사인", "가뿐하게 서명 톡", "배부 체크"),
+        "preferred_titles": ("잇티수합", "동의서는 나에게 맡겨", "잇티PDF사인", "잇티하게 서명 톡", "배부 체크"),
         "fallback_group_keys": ("collect_sign",),
     },
     {
@@ -3365,7 +3365,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "title": "일정·예약",
         "summary": "일정과 예약을 한 번에 봅니다.",
         "preferred_routes": ("classcalendar:main", "reservations:dashboard_landing", "reservations:landing"),
-        "preferred_titles": ("학급 캘린더", "학교 예약 시스템", "교무수첩"),
+        "preferred_titles": ("학급 캘린더", "잇티예약", "교무수첩"),
         "fallback_group_keys": ("schedule_reservation",),
     },
     {
@@ -3373,7 +3373,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "title": "문서·자료 정리",
         "summary": "문서와 자료를 빠르게 정리합니다.",
         "preferred_routes": ("quickdrop:landing", "hwpxchat:main", "infoboard:dashboard"),
-        "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "인포보드"),
+        "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "잇티보드"),
         "fallback_group_keys": ("records", "family_contact"),
     },
     {
@@ -3842,15 +3842,15 @@ def _build_home_public_representative_products(product_list, *, login_url):
         },
         {
             "route_names": {"reservations:dashboard_landing", "reservations:landing"},
-            "titles": {"학교 예약 시스템"},
+            "titles": {"잇티예약"},
         },
         {
             "route_names": {"collect:landing", "collect:dashboard"},
-            "titles": {"간편 수합"},
+            "titles": {"잇티수합"},
         },
         {
             "route_names": {"signatures:list"},
-            "titles": {"가뿐하게 서명 톡"},
+            "titles": {"잇티하게 서명 톡"},
         },
     ]
     seen_ids = set()
@@ -4189,7 +4189,7 @@ def _build_authenticated_home_default_actions(*, product_list, calendar_surface)
         [
             _build_home_action_from_card(
                 cards_by_key.get("collect"),
-                cta_label="간편 수합 시작",
+                cta_label="잇티수합 시작",
             ),
             _build_home_today_primary_action(
                 home_user_mode="authenticated",
