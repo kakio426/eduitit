@@ -569,8 +569,7 @@
                             x-model="humanChatDraftText"
                             @input="resizeHumanChatComposer()"
                             @paste="captureHumanChatPaste($event)"
-                            @keydown.ctrl.enter.prevent="sendHumanChat()"
-                            @keydown.meta.enter.prevent="sendHumanChat()"
+                            @keydown="handleWorkspaceComposerKeydown($event, 'human-chat')"
                         ></textarea>
                         <button
                             type="button"
@@ -974,8 +973,7 @@
                             :placeholder="activeMode.placeholder || ''"
                             x-model="workspaceInput"
                             @input="handleActiveAiComposerInput()"
-                            @keydown.ctrl.enter.prevent="runActiveAiPrimaryAction()"
-                            @keydown.meta.enter.prevent="runActiveAiPrimaryAction()"
+                            @keydown="handleWorkspaceComposerKeydown($event, 'active-ai')"
                         ></textarea>
 
                         <button
@@ -1081,8 +1079,7 @@
                         data-home-v7-workspace-input="true"
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--notice">
                         <button
@@ -1273,8 +1270,7 @@
                         data-home-v7-workspace-input="true"
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--schedule">
                         <button
@@ -1463,8 +1459,7 @@
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
                         @input="clearExecutionFieldError('question')"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('question')" x-text="executionFieldError('question')"></p>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--law">
@@ -1782,8 +1777,7 @@
                         data-home-v7-workspace-input="true"
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--reservation">
                         <button
@@ -1872,8 +1866,7 @@
                         data-home-v7-workspace-input="true"
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--tts">
                         <button
@@ -1992,8 +1985,7 @@
                                 data-home-v7-workspace-input="true"
                                 :placeholder="activeMode.placeholder || ''"
                                 x-model="workspaceInput"
-                                @keydown.ctrl.enter.prevent="sendQuickdropChat()"
-                                @keydown.meta.enter.prevent="sendQuickdropChat()"
+                                @keydown="handleWorkspaceComposerKeydown($event, 'quickdrop')"
                             ></textarea>
 
                             <div class="home-v6-agent-quickdrop-selected-file" x-cloak x-show="quickdropQueuedFileName()">
@@ -2190,8 +2182,7 @@
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
                         @input="handleMessageSaveInputChange()"
-                        @keydown.ctrl.enter.prevent="saveMessageCaptureChat()"
-                        @keydown.meta.enter.prevent="saveMessageCaptureChat()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'message-save')"
                     ></textarea>
                     <p class="home-v6-agent-field-error" x-cloak x-show="messageSaveErrorText" x-text="messageSaveErrorText"></p>
                     <div class="home-v6-agent-action-row home-v6-agent-action-row--message-save">
@@ -2222,8 +2213,7 @@
                         data-home-v7-workspace-input="true"
                         :placeholder="activeMode.placeholder || ''"
                         x-model="workspaceInput"
-                        @keydown.ctrl.enter.prevent="runAgentPreview()"
-                        @keydown.meta.enter.prevent="runAgentPreview()"
+                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
                     ></textarea>
                     <div class="home-v6-agent-action-row">
                         <button

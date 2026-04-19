@@ -1177,6 +1177,43 @@
                 this.runAgentPreview();
             },
 
+            shouldSubmitComposerOnEnter: function (event) {
+                if (!event || event.key !== 'Enter') {
+                    return false;
+                }
+                if (event.shiftKey || event.isComposing || event.keyCode === 229) {
+                    return false;
+                }
+                event.preventDefault();
+                if (event.repeat) {
+                    return false;
+                }
+                return true;
+            },
+
+            handleWorkspaceComposerKeydown: function (event, action) {
+                if (!this.shouldSubmitComposerOnEnter(event)) {
+                    return;
+                }
+                if (action === 'human-chat') {
+                    this.sendHumanChat();
+                    return;
+                }
+                if (action === 'active-ai') {
+                    this.runActiveAiPrimaryAction();
+                    return;
+                }
+                if (action === 'quickdrop') {
+                    this.sendQuickdropChat();
+                    return;
+                }
+                if (action === 'message-save') {
+                    this.saveMessageCaptureChat();
+                    return;
+                }
+                this.runAgentPreview();
+            },
+
             activeAiErrorText: function () {
                 if (this.aiMessengerIsFlow('direct-send')) {
                     return trimLine(this.quickdropErrorText);
