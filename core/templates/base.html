@@ -149,8 +149,8 @@
 
         <!-- Navbar -->
         {% if not hide_navbar %}
-        <nav id="mainNav" class="shell-nav-wrap absolute w-full z-50 left-0"
-            style="top: var(--global-banner-height, 0px);">
+        <nav id="mainNav" class="shell-nav-wrap fixed w-full z-50 left-0 transition-all duration-300"
+            style="will-change: transform, opacity; top: var(--global-banner-height, 0px);">
             <div
                 class="max-w-7xl mx-auto shell-nav-frame shell-nav-surface shell-nav-bar flex justify-between items-center">
                 <div class="flex items-center shell-nav-brand">
@@ -169,7 +169,7 @@
                 <nav class="shell-nav-primary shell-nav-primary--desktop hidden lg:flex" aria-label="주요 메뉴">
                     <a href="{% url 'portfolio:list' %}" class="shell-link shell-link--nav transition{% if current_view == 'portfolio:list' %} shell-link--nav-active{% endif %}"{% if current_view == 'portfolio:list' %} aria-current="page"{% endif %}>포트폴리오</a>
                 </nav>
-                <div class="shell-nav-secondary shell-nav-secondary--desktop hidden lg:flex">
+                <div class="shell-nav-secondary shell-nav-secondary--desktop hidden lg:flex min-w-0">
                         {% if service_launcher_json %}
                         <button type="button"
                             onclick="if(window.openServiceLauncher) openServiceLauncher()"
@@ -209,7 +209,7 @@
                             aria-expanded="false"
                             aria-controls="desktopClassroomMenu">
                             <i class="fa-solid fa-chalkboard-user shell-nav-utility-icon"></i>
-                            <span id="desktopClassroomCurrentLabel" data-classroom-current-label class="max-w-[110px] truncate">
+                            <span id="desktopClassroomCurrentLabel" data-classroom-current-label class="max-w-[126px] truncate xl:max-w-[150px]">
                                 {% if active_classroom %}{{ active_classroom.name }}{% else %}학급 선택{% endif %}
                             </span>
                             <i data-classroom-menu-icon class="fa-solid fa-chevron-down text-[11px] transition-transform"></i>
@@ -256,8 +256,8 @@
                                 class="shell-nav-avatar shell-avatar flex items-center justify-center text-xs shadow-sm">
                                 <i class="fa-solid fa-user"></i>
                             </div>
-                            <span class="shell-nav-user-label max-w-[110px] truncate">
-                                {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{ user.username }}{% else %}사용자{% endif %}님
+                            <span class="shell-nav-user-label max-w-[138px] truncate xl:max-w-[176px]">
+                                {% if user.userprofile.nickname %}{{ user.userprofile.nickname }}{% elif user.username %}{{ user.username }}{% else %}사용자{% endif %}
                             </span>
                             <i class="fa-solid fa-chevron-down text-[11px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
                         </button>

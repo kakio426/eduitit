@@ -493,19 +493,19 @@ h4,
 
 .shell-nav-wrap {
     padding-inline: 0;
-    padding-top: calc(0.38rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
     padding-bottom: 0;
-    background: transparent;
-    border-bottom: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background: linear-gradient(180deg, rgba(252, 250, 255, 0.96) 0%, rgba(247, 243, 252, 0.92) 100%);
+    border-bottom: 1px solid rgba(45, 35, 72, 0.08);
+    box-shadow: 0 10px 22px -24px rgba(31, 21, 56, 0.42);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 .shell-nav-bar {
     gap: var(--space-shell-nav-gap);
-    min-height: 3.45rem;
-    padding: 0.5rem clamp(1rem, 2vw, 1.55rem);
+    min-height: 3.5rem;
+    padding: 0.62rem clamp(1rem, 2vw, 1.55rem);
 }
 
 .shell-nav-brand {
@@ -524,7 +524,7 @@ h4,
     border-radius: 999px;
     color: var(--color-accent-strong);
     border: 1px solid rgba(52, 37, 95, 0.08);
-    background: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.42);
     box-shadow: none;
     transition:
         transform var(--motion-duration-fast) var(--motion-ease-standard),
@@ -537,7 +537,7 @@ h4,
 .shell-nav-brand-link:focus-visible .shell-nav-brand-icon {
     transform: translateY(var(--motion-lift-subtle));
     color: var(--color-accent-strong);
-    background: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.56);
     border-color: rgba(52, 37, 95, 0.12);
 }
 
