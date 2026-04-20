@@ -81,6 +81,12 @@
         color: #334155;
     }
 
+    .classcalendar-day-range-row--continuation {
+        min-height: 0.42rem;
+        padding: 0 0.55rem;
+        opacity: 0.82;
+    }
+
     .classcalendar-day-range-label {
         display: block;
         min-width: 0;
@@ -361,7 +367,7 @@
     }
 
     .classcalendar-home-workweek-day-stack--primary {
-        min-height: 4.16rem;
+        min-height: 8.56rem;
     }
 
     .classcalendar-home-workweek-day-stack--secondary {
@@ -1025,6 +1031,11 @@
             font-size: 0.68rem;
         }
 
+        .classcalendar-day-range-row--continuation {
+            min-height: 0.5rem;
+            padding: 0 0.65rem;
+        }
+
         .classcalendar-day-preview-row {
             gap: 0.42rem;
             padding: 0.46rem 0.58rem;
@@ -1065,7 +1076,7 @@
         }
 
         .classcalendar-home-workweek-day-stack--primary {
-            min-height: 4.4rem;
+            min-height: 8.72rem;
         }
 
         .classcalendar-home-workweek-day-stack--secondary {
@@ -1795,6 +1806,11 @@
                                                             <span class="classcalendar-home-workweek-item-title" x-text="item.displayTitle || item.title"></span>
                                                         </button>
                                                     </template>
+                                                    <span
+                                                        x-show="!week.showSecondaryRow && week.dayBuckets[dateKey(date)].overflow > 0"
+                                                        class="classcalendar-home-workweek-more"
+                                                        x-text="`+${week.dayBuckets[dateKey(date)].overflow}`"
+                                                    ></span>
                                                 </div>
                                             </template>
                                         </div>
@@ -1817,7 +1833,7 @@
                                                 </button>
                                             </template>
                                         </div>
-                                        <div class="classcalendar-home-workweek-day-grid classcalendar-home-workweek-day-grid--secondary">
+                                        <div x-show="week.showSecondaryRow" class="classcalendar-home-workweek-day-grid classcalendar-home-workweek-day-grid--secondary">
                                             <template x-for="date in week.dates" :key="`secondary-${date.toISOString()}`">
                                                 <div class="classcalendar-home-workweek-day-stack classcalendar-home-workweek-day-stack--secondary">
                                                     <template x-for="item in week.dayBuckets[dateKey(date)].secondary" :key="item.id">
@@ -1886,7 +1902,7 @@
                                 <template x-for="row in getDayPreviewRows(date)" :key="row.id">
                                     <div
                                         class="min-w-0"
-                                        :class="row.kind === 'range' ? `classcalendar-day-range-row ${row.rowClass}` : `classcalendar-day-preview-row ${row.rowClass}`"
+                                        :class="row.kind === 'range' ? `classcalendar-day-range-row ${row.showLabel ? '' : 'classcalendar-day-range-row--continuation'} ${row.rowClass}` : `classcalendar-day-preview-row ${row.rowClass}`"
                                         :title="row.title"
                                     >
                                         <template x-if="row.kind === 'range'">
@@ -5140,10 +5156,10 @@ function calendarApp() {
             return weeks;
         },
         getHomeWorkweekTopLimit() {
-            return this.isCompactMobileViewport() ? 1 : 2;
+            return this.isCompactMobileViewport() ? 1 : 4;
         },
         getHomeWorkweekBottomLimit() {
-            return this.isCompactMobileViewport() ? 1 : 1;
+            return this.isCompactMobileViewport() ? 1 : 0;
         },
         getHomeWorkweekRangeLimit() {
             return this.isCompactMobileViewport() ? 1 : 1;
@@ -5412,6 +5428,7 @@ function calendarApp() {
                 dayBuckets,
                 rangeItems: placedRangeItems,
                 rangeGridStyle: `grid-template-rows: repeat(${Math.max(lanes.length, 1)}, 2.05rem);`,
+                showSecondaryRow: Object.values(dayBuckets).some((bucket) => bucket.secondary.length > 0),
             };
         },
         openHomeWorkweekItem(item, triggerEvent = null) {
@@ -5691,17 +5708,26 @@ function calendarApp() {
         },
         getDayPreviewRows(date) {
             const rowLimit = this.getDayPreviewRowLimit();
+            const labeledRangeRows = [];
+            const continuedRangeRows = [];
             const rows = [];
 
             this.getRangeEventsForDate(date).forEach((event) => {
-                rows.push({
+                const rangeRow = {
                     id: `range-${event.id}-${this.dateKey(date)}`,
                     kind: 'range',
                     title: event.title,
                     rowClass: this.getRangeStrokeClass(event, date),
                     showLabel: this.shouldShowRangePreviewLabel(event, date),
-                });
+                };
+                if (rangeRow.showLabel) {
+                    labeledRangeRows.push(rangeRow);
+                    return;
+                }
+                continuedRangeRows.push(rangeRow);
             });
+
+            rows.push(...labeledRangeRows);
 
             this.getEventsForDate(date)
                 .filter((event) => !this.isRangeEvent(event))
@@ -5724,8 +5750,10 @@ function calendarApp() {
                     badge: item.serviceLabel,
                     badgeClass: this.getDayHubPreviewBadgeClass(item),
                     rowClass: this.getDayHubPreviewClass(item),
+                    });
                 });
-            });
+
+            rows.push(...continuedRangeRows);
 
             return rows.slice(0, rowLimit);
         },

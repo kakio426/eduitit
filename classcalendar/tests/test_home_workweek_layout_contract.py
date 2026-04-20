@@ -33,7 +33,7 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn("margin: 0 0 0.24rem;", content)
         self.assertNotIn("margin: 0 0.22rem 0.24rem;", content)
 
-    def test_desktop_workweek_keeps_first_two_single_day_items_in_top_stack(self):
+    def test_desktop_workweek_keeps_first_four_single_day_items_in_top_stack(self):
         template_path = (
             Path(__file__).resolve().parents[1]
             / "templates"
@@ -43,15 +43,17 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         content = template_path.read_text(encoding="utf-8")
 
         self.assertIn("getHomeWorkweekTopLimit() {", content)
-        self.assertIn("return this.isCompactMobileViewport() ? 1 : 2;", content)
+        self.assertIn("return this.isCompactMobileViewport() ? 1 : 4;", content)
         self.assertIn("getHomeWorkweekBottomLimit() {", content)
-        self.assertIn("return this.isCompactMobileViewport() ? 1 : 1;", content)
+        self.assertIn("return this.isCompactMobileViewport() ? 1 : 0;", content)
         self.assertIn(".classcalendar-home-workweek-day-stack--primary {", content)
-        self.assertIn("min-height: 4.16rem;", content)
-        self.assertIn("min-height: 4.4rem;", content)
+        self.assertIn("min-height: 8.56rem;", content)
+        self.assertIn("min-height: 8.72rem;", content)
         self.assertIn(".classcalendar-home-workweek-day-stack--secondary {", content)
         self.assertIn("min-height: 2.04rem;", content)
         self.assertIn("min-height: 2.16rem;", content)
+        self.assertIn("x-show=\"!week.showSecondaryRow && week.dayBuckets[dateKey(date)].overflow > 0\"", content)
+        self.assertIn("showSecondaryRow: Object.values(dayBuckets).some((bucket) => bucket.secondary.length > 0),", content)
 
     def test_repeated_reservations_are_condensed_in_home_workweek(self):
         template_path = (
@@ -87,3 +89,19 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn("isToday(date) ? 'is-today' : '',", content)
         self.assertIn(".classcalendar-home-mobile-day--today {", content)
         self.assertIn(".classcalendar-home-mobile-day--today.classcalendar-home-mobile-day--selected {", content)
+
+    def test_month_preview_keeps_continued_range_rows_from_splitting_cards(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn(".classcalendar-day-range-row--continuation {", content)
+        self.assertIn("const labeledRangeRows = [];", content)
+        self.assertIn("const continuedRangeRows = [];", content)
+        self.assertIn("rows.push(...labeledRangeRows);", content)
+        self.assertIn("rows.push(...continuedRangeRows);", content)
+        self.assertIn("row.showLabel ? '' : 'classcalendar-day-range-row--continuation'", content)
