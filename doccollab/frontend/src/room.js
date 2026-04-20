@@ -979,9 +979,9 @@ class DoccollabRoom {
           </div>
         </div>
         <span class="doccollab-room-submeta">${escapeHtml(event.summary || "편집")}</span>
-      </div>
-      <div class="doccollab-room-side">
-        <span class="doccollab-room-meta">${formatDateTime(event.created_at)}</span>
+        <div class="doccollab-room-meta-row">
+          <span class="doccollab-room-meta">${formatDateTime(event.created_at)}</span>
+        </div>
       </div>
     `;
     return row;

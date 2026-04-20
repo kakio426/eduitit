@@ -286,6 +286,46 @@
     gap: 0.55rem;
 }
 
+.doccollab-room-row--history {
+    display: block;
+}
+
+.doccollab-room-row--history .doccollab-room-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.doccollab-room-row--history .doccollab-room-heading {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.doccollab-room-row--history .doccollab-room-title {
+    min-width: 0;
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
+.doccollab-room-row--history .doccollab-room-submeta {
+    margin-top: 0;
+    line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.doccollab-room-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.doccollab-room-row--history .doccollab-room-meta {
+    white-space: nowrap;
+}
+
 .doccollab-row-actions {
     display: flex;
     align-items: center;
@@ -637,6 +677,10 @@
         flex-direction: column;
     }
 
+    .doccollab-room-row--history .doccollab-room-heading {
+        flex-direction: row;
+    }
+
     .doccollab-room-row--workspace {
         grid-template-columns: 1fr;
     }
@@ -648,5 +692,10 @@
 
     .doccollab-row-actions {
         width: 100%;
+    }
+
+    .doccollab-room-row--history .doccollab-room-title,
+    .doccollab-room-row--history .doccollab-room-meta {
+        white-space: normal;
     }
 }

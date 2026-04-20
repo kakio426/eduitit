@@ -124,9 +124,9 @@
                                         </div>
                                     </div>
                                     <span class="doccollab-room-submeta">{{ event.summary }}</span>
-                                </div>
-                                <div class="doccollab-room-side">
-                                    <span class="doccollab-room-meta">{{ event.created_at|date:"m.d H:i" }}</span>
+                                    <div class="doccollab-room-meta-row">
+                                        <span class="doccollab-room-meta">{{ event.created_at|date:"Y. n. j. A g:i:s" }}</span>
+                                    </div>
                                 </div>
                             </div>
                             {% empty %}

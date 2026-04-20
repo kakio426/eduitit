@@ -61,6 +61,8 @@ const TABLE_COMMAND_IDS = new Set([
   'table:delete-col',
 ]);
 
+const EDIT_ALIGNMENT_FALLBACKS = new Set(['distribute', 'split']);
+
 export function installDoccollabBridge(options: InstallOptions): DoccollabBridgeController {
   const {
     dispatcher,
@@ -88,6 +90,9 @@ export function installDoccollabBridge(options: InstallOptions): DoccollabBridge
     : null;
 
   inputHandler.executeOperation = ((descriptor: unknown) => {
+    if (!bridgeState.applyingRemoteBatch && !readOnlyMode) {
+      stabilizeDescriptorLayout(descriptor as Record<string, unknown>, wasm);
+    }
     originalExecuteOperation(descriptor as never);
     if (bridgeState.applyingRemoteBatch || readOnlyMode) {
       return;
@@ -368,6 +373,7 @@ function normalizeTableDispatch(
 
 function applyCommand(command: DoccollabBridgeCommand, inputHandler: InputHandler, wasm: WasmBridge): boolean {
   try {
+    stabilizeCommandLayout(command, wasm);
     switch (command.type) {
       case 'insert_text':
         if (!command.position) {
@@ -504,6 +510,129 @@ function buildMergeCommand(position: DocumentPosition, forwardDelete: boolean) {
   return forwardDelete
     ? new MergeNextParagraphCommand(position)
     : new MergeParagraphCommand(position);
+}
+
+function stabilizeDescriptorLayout(
+  descriptor: Record<string, unknown> | null,
+  wasm: WasmBridge,
+): void {
+  const command = descriptor?.command as Record<string, unknown> | undefined;
+  if (!command || typeof command.type !== 'string') {
+    return;
+  }
+  switch (command.type) {
+    case 'insertText':
+    case 'deleteText':
+    case 'insertTab':
+    case 'splitParagraph':
+    case 'splitParagraphInCell':
+    case 'mergeParagraph':
+    case 'mergeNextParagraph':
+    case 'mergeParagraphInCell':
+    case 'mergeNextParagraphInCell':
+      stabilizePositionLayout(clonePosition((command.position as DocumentPosition | undefined) || null), wasm);
+      break;
+    case 'deleteSelection':
+      stabilizePositionLayout(clonePosition((command.start as DocumentPosition | undefined) || null), wasm);
+      stabilizePositionLayout(clonePosition((command.end as DocumentPosition | undefined) || null), wasm);
+      break;
+    default:
+      break;
+  }
+}
+
+function stabilizeCommandLayout(command: DoccollabBridgeCommand, wasm: WasmBridge): void {
+  switch (command.type) {
+    case 'insert_text':
+    case 'delete_text':
+    case 'insert_tab':
+    case 'split_paragraph':
+    case 'merge_paragraph':
+    case 'table_cell_text':
+    case 'table_row_insert':
+    case 'table_row_delete':
+    case 'table_col_insert':
+    case 'table_col_delete':
+      stabilizePositionLayout(clonePosition(command.position || null), wasm);
+      break;
+    case 'delete_selection':
+      stabilizePositionLayout(clonePosition(command.start || null), wasm);
+      stabilizePositionLayout(clonePosition(command.end || null), wasm);
+      break;
+    default:
+      break;
+  }
+}
+
+function stabilizePositionLayout(position: DocumentPosition | null, wasm: WasmBridge): void {
+  if (!position) {
+    return;
+  }
+  try {
+    if ((position.cellPath?.length ?? 0) > 1) {
+      return;
+    }
+    if (position.parentParaIndex !== undefined) {
+      const props = readCellParagraphProperties(position, wasm);
+      if (!EDIT_ALIGNMENT_FALLBACKS.has(String(props?.alignment || ''))) {
+        return;
+      }
+      applyCellParagraphAlignment(position, wasm, 'justify');
+      return;
+    }
+    const props = wasm.getParaPropertiesAt(position.sectionIndex, position.paragraphIndex);
+    if (!EDIT_ALIGNMENT_FALLBACKS.has(String(props?.alignment || ''))) {
+      return;
+    }
+    wasm.applyParaFormat(
+      position.sectionIndex,
+      position.paragraphIndex,
+      JSON.stringify({ alignment: 'justify' }),
+    );
+  } catch (error) {
+    console.warn('[doccollab-bridge] paragraph alignment stabilization failed', error);
+  }
+}
+
+function readCellParagraphProperties(position: DocumentPosition, wasm: WasmBridge) {
+  if (
+    position.parentParaIndex == null
+    || position.controlIndex == null
+    || position.cellIndex == null
+    || position.cellParaIndex == null
+  ) {
+    return null;
+  }
+  return wasm.getCellParaPropertiesAt(
+    position.sectionIndex,
+    position.parentParaIndex,
+    position.controlIndex,
+    position.cellIndex,
+    position.cellParaIndex,
+  );
+}
+
+function applyCellParagraphAlignment(
+  position: DocumentPosition,
+  wasm: WasmBridge,
+  alignment: 'justify',
+): void {
+  if (
+    position.parentParaIndex == null
+    || position.controlIndex == null
+    || position.cellIndex == null
+    || position.cellParaIndex == null
+  ) {
+    return;
+  }
+  wasm.applyParaFormatInCell(
+    position.sectionIndex,
+    position.parentParaIndex,
+    position.controlIndex,
+    position.cellIndex,
+    position.cellParaIndex,
+    JSON.stringify({ alignment }),
+  );
 }
 
 function resolveCellInfo(wasm: WasmBridge, position: DocumentPosition): CellInfo | null {
