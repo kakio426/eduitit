@@ -166,20 +166,20 @@
 
                 <!-- Desktop Navigation -->
                 {% with current_view=request.resolver_match.view_name|default:'' %}
-                <div class="shell-nav-actions hidden lg:flex min-w-0">
-                    <nav class="shell-nav-primary" aria-label="주요 메뉴">
-                        <a href="{% url 'portfolio:list' %}" class="shell-link shell-link--nav transition{% if current_view == 'portfolio:list' %} shell-link--nav-active{% endif %}"{% if current_view == 'portfolio:list' %} aria-current="page"{% endif %}>포트폴리오</a>
-                    </nav>
-                    <div class="shell-nav-secondary">
+                <nav class="shell-nav-primary shell-nav-primary--desktop hidden lg:flex" aria-label="주요 메뉴">
+                    <a href="{% url 'portfolio:list' %}" class="shell-link shell-link--nav transition{% if current_view == 'portfolio:list' %} shell-link--nav-active{% endif %}"{% if current_view == 'portfolio:list' %} aria-current="page"{% endif %}>포트폴리오</a>
+                </nav>
+                <div class="shell-nav-secondary shell-nav-secondary--desktop hidden lg:flex">
                         {% if service_launcher_json %}
                         <button type="button"
                             onclick="if(window.openServiceLauncher) openServiceLauncher()"
-                            class="shell-utility-button shell-utility-button--icon"
+                            class="shell-utility-button shell-utility-button--search"
                             data-global-service-launcher-trigger="true"
                             title="서비스 찾기 (Ctrl+K)"
                             aria-label="서비스 찾기 열기"
                             aria-keyshortcuts="Control+K Meta+K">
                             <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                            <span>서비스 찾기</span>
                         </button>
                         {% endif %}
                         {% if user.is_authenticated and home_agent_limit_nav_action %}
@@ -192,9 +192,6 @@
                             <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
                         </a>
                         {% endif %}
-                        <div class="shell-nav-clock" aria-live="off">
-                            <span id="navbarClock">--:--:--</span>
-                        </div>
                     {% if user.is_authenticated %}
 
                     {% if has_hs_classrooms %}
@@ -327,7 +324,6 @@
                         <i class="fa-solid fa-user-lock text-[11px]"></i> 로그인
                     </a>
                     {% endif %}
-                    </div>
                 </div>
                 {% endwith %}
 
