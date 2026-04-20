@@ -3,7 +3,7 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<main class="min-h-screen bg-slate-50 pt-32 pb-20">
+<main class="service-shell min-h-screen bg-slate-50 pb-20">
     <section class="mx-auto max-w-7xl px-4 sm:px-6">
         <div class="mb-5 flex flex-wrap items-center gap-3 text-sm font-bold text-slate-500">
             <a href="{% url 'schoolprograms:provider_detail' listing.provider.slug %}?activity={{ listing.slug }}" class="rounded-full bg-white px-4 py-2 shadow-sm">업체 문의</a>
@@ -180,7 +180,7 @@
                 {% endif %}
             </div>
 
-            <aside class="xl:sticky xl:top-32">
+            <aside class="xl:sticky" style="top: calc(var(--main-nav-height, 88px) + 1rem);">
                 <div class="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-lg shadow-slate-100">
                     <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">문의 카드</p>
                     <h2 class="mt-2 text-2xl font-black text-slate-900">희망 조건 남기기</h2>

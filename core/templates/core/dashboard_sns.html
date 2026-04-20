@@ -21,16 +21,13 @@
 {% endblock %}
 
 {% block content %}
-<!-- Adjusting main container for 2-column layout (SNS Left, Dashboard Right) -->
-<!-- We override the default "min-h-screen" padding on body/main from base if needed, 
-     but here we will just create a flex container that fits within the existing structure.
-     Since base.html usually has a header, we need to respect the top padding (pt-32).
--->
-<div class="flex flex-col md:flex-row min-h-screen pt-24 max-w-[1920px] mx-auto bg-[#F1F5F9] font-[Pretendard]">
+<!-- Shared shell spacing should follow the measured navbar height. -->
+<div class="service-shell--compact flex flex-col md:flex-row min-h-screen max-w-[1920px] mx-auto bg-[#F1F5F9] font-[Pretendard]">
 
     <!-- [Left Area] SNS 위젯 (Fixed width on desktop, full on mobile) -->
     <aside
-        class="w-full md:w-[380px] flex flex-col h-auto md:h-[calc(100vh-6rem)] md:sticky md:top-24 z-20 flex-shrink-0 bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        class="w-full md:w-[380px] flex flex-col h-auto md:sticky z-20 flex-shrink-0 bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+        style="top: calc(var(--main-nav-height, 88px) + 0.75rem); min-height: calc(100vh - var(--main-nav-height, 88px) - 0.75rem); min-height: calc(100dvh - var(--main-nav-height, 88px) - 0.75rem);">
 
         <!-- 1. Header -->
         <div

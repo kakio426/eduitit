@@ -223,12 +223,13 @@ class HomeViewTest(TestCase):
         self.assertIn('테스트 서비스', locked_titles)
         self.assertIn('업무별로 바로 찾는 에듀잇티', content)
 
-    def test_home_nav_contains_single_help_hub_link(self):
+    def test_home_nav_shows_portfolio_without_help_hub_link(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('이용 안내', content)
-        self.assertIn('https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv', content)
+        self.assertIn('포트폴리오', content)
+        self.assertNotIn('이용 안내', content)
+        self.assertNotIn('https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv', content)
 
     def test_home_authenticated_200(self):
         """로그인 홈 200 응답"""

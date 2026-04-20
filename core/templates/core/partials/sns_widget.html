@@ -3,7 +3,7 @@
 {% if embed_mode == 'full' %}
 <section class="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
 {% else %}
-<aside class="xl:w-[340px] 2xl:w-[380px] flex flex-col h-auto sticky top-32 z-20 flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden">
+<aside class="xl:w-[340px] 2xl:w-[380px] flex flex-col h-auto sticky z-20 flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden" style="top: calc(var(--main-nav-height, 88px) + 1rem);">
 {% endif %}
 
     <div class="flex items-center justify-between border-b border-slate-100 bg-white/90 p-5 backdrop-blur {% if embed_mode != 'full' %}sticky top-0 z-10 shrink-0{% endif %}" style="will-change: transform;">

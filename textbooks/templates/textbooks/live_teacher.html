@@ -19,7 +19,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="live-shell min-h-screen px-4 pt-24 pb-8 text-white">
+<section class="live-shell service-shell min-h-screen px-4 pb-8 text-white">
     <div class="max-w-[1800px] mx-auto space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -127,7 +127,7 @@
             </aside>
         </div>
     </div>
-    <div id="toast-stack" class="fixed right-5 top-24 z-[80] space-y-2"></div>
+    <div id="toast-stack" class="fixed right-5 z-[80] space-y-2" style="top: calc(var(--main-nav-height, 88px) + 0.75rem);"></div>
 </section>
 {{ session.id|json_script:"textbooks-session-id" }}
 {% endblock %}
@@ -150,4 +150,3 @@ window.TextbookLiveSessionApp.init({
 });
 </script>
 {% endblock %}
-
