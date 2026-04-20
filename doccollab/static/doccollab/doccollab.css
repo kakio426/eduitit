@@ -303,7 +303,10 @@
 }
 
 .doccollab-room-row--history .doccollab-room-title {
+    flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
     word-break: keep-all;
 }
@@ -694,7 +697,10 @@
         width: 100%;
     }
 
-    .doccollab-room-row--history .doccollab-room-title,
+    .doccollab-room-row--history .doccollab-room-title {
+        white-space: nowrap;
+    }
+
     .doccollab-room-row--history .doccollab-room-meta {
         white-space: normal;
     }

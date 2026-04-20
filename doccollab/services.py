@@ -2,6 +2,7 @@ import logging
 import hashlib
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from asgiref.sync import async_to_sync
@@ -13,6 +14,7 @@ from django.db.models import Max, Q
 from django.middleware.csrf import get_token
 from django.templatetags.static import static as static_url
 from django.urls import reverse
+from django.utils import formats
 from django.utils import timezone
 
 from version_manager.models import Document, DocumentGroup, DocumentVersion
@@ -30,6 +32,25 @@ MAX_RECENT_BATCH_IDS = 400
 SUPPORTED_UPLOAD_FORMATS = {
     ".hwp": DocRoom.SourceFormat.HWP,
     ".hwpx": DocRoom.SourceFormat.HWPX,
+}
+EDIT_HISTORY_GROUP_WINDOW = timedelta(seconds=90)
+EDIT_HISTORY_TEXT_TYPES = {
+    "insert_text",
+    "delete_text",
+    "split_paragraph",
+    "merge_paragraph",
+    "delete_selection",
+    "insert_tab",
+}
+EDIT_HISTORY_TABLE_TYPES = {
+    "set_cell_text",
+    "table_cell_text",
+    "insert_table_row",
+    "insert_table_col",
+    "table_row_insert",
+    "table_row_delete",
+    "table_col_insert",
+    "table_col_delete",
 }
 
 
@@ -118,6 +139,84 @@ def summarize_command(command):
     else:
         summary = "편집"
     return command_type, summary[:200]
+
+
+def edit_history_family(command_type):
+    normalized = str(command_type or "").strip()
+    if normalized in EDIT_HISTORY_TEXT_TYPES:
+        return "text_edit"
+    if normalized in EDIT_HISTORY_TABLE_TYPES:
+        return "table_edit"
+    if normalized == "save_revision":
+        return "save_revision"
+    if normalized == "publish_revision":
+        return "publish_revision"
+    return "edit"
+
+
+def edit_history_label(command_type):
+    family = str(command_type or "").strip() or "edit"
+    if family not in {"text_edit", "table_edit", "save_revision", "publish_revision", "edit"}:
+        family = edit_history_family(family)
+    if family == "text_edit":
+        return "본문"
+    if family == "table_edit":
+        return "표"
+    if family == "save_revision":
+        return "저장"
+    if family == "publish_revision":
+        return "배포"
+    return "수정"
+
+
+def _edit_history_summary(family, events):
+    count = len(events)
+    if family == "text_edit":
+        return "본문 수정" if count == 1 else f"본문 수정 {count}건"
+    if family == "table_edit":
+        return "표 수정" if count == 1 else f"표 수정 {count}건"
+    if family == "save_revision":
+        return events[0].summary or "저장본 저장"
+    if family == "publish_revision":
+        return events[0].summary or "배포본 지정"
+    return "문서 수정" if count == 1 else f"문서 수정 {count}건"
+
+
+def _edit_history_timestamp(dt):
+    local_dt = timezone.localtime(dt)
+    return formats.date_format(local_dt, "Y. n. j. A g:i:s")
+
+
+def _edit_history_actor_key(event):
+    if getattr(event, "user_id", None):
+        return f"user:{event.user_id}"
+    return f"name:{str(event.display_name or '').strip()}"
+
+
+def _can_rollup_edit_history(group, event, family):
+    if family != group["family"] or family in {"save_revision", "publish_revision"}:
+        return False
+    if _edit_history_actor_key(event) != group["actor_key"]:
+        return False
+    oldest_at = group.get("oldest_at")
+    if oldest_at is None or event.created_at is None:
+        return False
+    return (oldest_at - event.created_at) <= EDIT_HISTORY_GROUP_WINDOW
+
+
+def _serialize_edit_history_group(group):
+    newest_event = group["events"][0]
+    family = group["family"]
+    return {
+        "id": f"group:{newest_event.id}",
+        "command_type": family,
+        "command_label": edit_history_label(family),
+        "display_name": newest_event.display_name,
+        "summary": _edit_history_summary(family, group["events"]),
+        "event_count": len(group["events"]),
+        "created_at": newest_event.created_at.isoformat(),
+        "created_at_display": _edit_history_timestamp(newest_event.created_at),
+    }
 
 
 def display_name_for_user(user):
@@ -335,17 +434,37 @@ def serialize_edit_event(event):
         "id": str(event.id),
         "command_id": event.command_id,
         "command_type": event.command_type,
+        "command_label": edit_history_label(event.command_type),
         "display_name": event.display_name,
         "summary": event.summary,
         "created_at": event.created_at.isoformat(),
     }
 
 
-def serialize_edit_history(room, *, limit=20):
-    return [
-        serialize_edit_event(event)
-        for event in room.edit_events.select_related("user").order_by("-created_at")[:limit]
-    ]
+def serialize_edit_history(room, *, limit=10):
+    raw_limit = max(limit * 20, 80)
+    raw_events = list(room.edit_events.select_related("user").order_by("-created_at")[:raw_limit])
+    groups = []
+    current_group = None
+    for event in raw_events:
+        family = edit_history_family(event.command_type)
+        if current_group and _can_rollup_edit_history(current_group, event, family):
+            current_group["events"].append(event)
+            current_group["oldest_at"] = event.created_at
+            continue
+        if current_group is not None:
+            groups.append(_serialize_edit_history_group(current_group))
+            if len(groups) >= limit:
+                return groups
+        current_group = {
+            "family": family,
+            "actor_key": _edit_history_actor_key(event),
+            "events": [event],
+            "oldest_at": event.created_at,
+        }
+    if current_group is not None and len(groups) < limit:
+        groups.append(_serialize_edit_history_group(current_group))
+    return groups
 
 
 def serialize_room(room, membership=None):

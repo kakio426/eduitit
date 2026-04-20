@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import DocEditEvent, DocMembership, DocRevision
+from .models import DocMembership, DocRevision
 from .services import (
     accessible_rooms_queryset,
     assert_editor_membership,
@@ -25,6 +25,7 @@ from .services import (
     record_edit_events,
     room_payload_for_template,
     serialize_edit_event,
+    serialize_edit_history,
     save_room_revision,
     serialize_presence_list,
     serialize_revision,
@@ -199,7 +200,7 @@ def room_detail(request, room_id):
     elif not editing_supported:
         read_only_reason = "데스크톱 Chrome에서 편집 가능합니다."
     revisions = room.revisions.order_by("-revision_number")[:10]
-    edit_history = DocEditEvent.objects.filter(room=room).order_by("-created_at")[:20]
+    edit_history = serialize_edit_history(room, limit=10)
     current_revision = revisions[0] if revisions else None
     published_revision = room.revisions.filter(is_published=True).order_by("-revision_number").first()
     access_context = _room_access_context(room, membership)
@@ -339,15 +340,21 @@ def save_revision(request, room_id):
         ],
     )
     serialized_edit_events = [serialize_edit_event(event) for event in edit_events]
+    serialized_edit_history = serialize_edit_history(room, limit=10)
     broadcast_room_event(
         room,
         "revision.saved",
-        {"revision": serialize_revision(revision), "edit_events": serialized_edit_events},
+        {
+            "revision": serialize_revision(revision),
+            "edit_events": serialized_edit_events,
+            "edit_history": serialized_edit_history,
+        },
     )
     return JsonResponse(
         {
             "revision": serialize_revision(revision),
             "edit_events": serialized_edit_events,
+            "edit_history": serialized_edit_history,
             "download_url": reverse(
                 "doccollab:download_revision",
                 kwargs={"room_id": room.id, "revision_id": revision.id},

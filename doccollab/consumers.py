@@ -9,6 +9,7 @@ from .services import (
     record_edit_events,
     room_group_name,
     serialize_edit_event,
+    serialize_edit_history,
     serialize_revision,
     serialize_presence_list,
     serialize_room,
@@ -97,7 +98,7 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                     return
                 await self.send_json({"type": "error", "payload": {"message": reason or "invalid command batch"}})
                 return
-            edit_events = await self._record_edit_events(commands)
+            event_payload = await self._record_edit_events(commands)
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -111,7 +112,8 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                             "sender": display_name_for_user(self.scope.get("user")),
                             "commands": commands,
                             "selection": payload.get("selection") or {},
-                            "edit_events": edit_events,
+                            "edit_events": event_payload["edit_events"],
+                            "edit_history": event_payload["edit_history"],
                         },
                     },
                 },
@@ -201,7 +203,10 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
             display_name=display_name_for_user(self.scope.get("user")),
             commands=commands,
         )
-        return [serialize_edit_event(event) for event in events]
+        return {
+            "edit_events": [serialize_edit_event(event) for event in events],
+            "edit_history": serialize_edit_history(self.room, limit=10),
+        }
 
     @database_sync_to_async
     def _revision_payload(self, revision_id, fallback_edit_events=None):
@@ -219,4 +224,5 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
         return {
             "revision": serialize_revision(revision),
             "edit_events": edit_events,
+            "edit_history": serialize_edit_history(self.room, limit=10),
         }

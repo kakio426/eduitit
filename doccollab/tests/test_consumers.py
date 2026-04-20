@@ -124,13 +124,14 @@ class DoccollabConsumerTests(TransactionTestCase):
             self.assertEqual(echoed_to_owner["payload"]["senderSessionKey"], "owner-session")
             self.assertEqual(echoed_to_owner["payload"]["commands"][0]["type"], "insert_text")
             self.assertEqual(echoed_to_owner["payload"]["edit_events"][0]["summary"], "문장 입력 · 첫 문장")
+            self.assertEqual(echoed_to_owner["payload"]["edit_history"][0]["summary"], "본문 수정")
 
             editor = await self._connect(self.editor_cookie)
             snapshot = await editor.receive_json_from(timeout=1)
             self.assertEqual(snapshot["type"], "room.snapshot")
             self.assertEqual(snapshot["payload"]["collab_state"]["updates"][0]["batchId"], "batch-1")
             self.assertEqual(snapshot["payload"]["collab_state"]["updates"][0]["commands"][0]["type"], "insert_text")
-            self.assertEqual(snapshot["payload"]["edit_history"][0]["summary"], "문장 입력 · 첫 문장")
+            self.assertEqual(snapshot["payload"]["edit_history"][0]["summary"], "본문 수정")
             await self._drain(owner, editor)
 
             await owner.send_json_to(
@@ -149,6 +150,7 @@ class DoccollabConsumerTests(TransactionTestCase):
             self.assertEqual(echoed["payload"]["batchId"], "batch-2")
             self.assertEqual(echoed["payload"]["commands"][0]["type"], "split_paragraph")
             self.assertEqual(echoed["payload"]["edit_events"][0]["summary"], "새 문단")
+            self.assertEqual(echoed["payload"]["edit_history"][0]["summary"], "본문 수정 2건")
 
             await self._disconnect(owner)
             await self._disconnect(editor)
@@ -295,6 +297,7 @@ class DoccollabConsumerTests(TransactionTestCase):
             self.assertEqual(editor_echo["payload"]["revision"]["id"], str(latest_revision.id))
             self.assertEqual(editor_echo["payload"]["revision"]["export_format"], "hwp_export")
             self.assertEqual(editor_echo["payload"]["edit_events"][0]["summary"], f"저장본 저장 · r{latest_revision.revision_number}")
+            self.assertEqual(editor_echo["payload"]["edit_history"][0]["summary"], f"저장본 저장 · r{latest_revision.revision_number}")
 
             await self._disconnect(owner)
             await self._disconnect(editor)

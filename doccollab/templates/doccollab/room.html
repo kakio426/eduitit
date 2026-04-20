@@ -120,12 +120,15 @@
                                     <div class="doccollab-room-heading">
                                         <span class="doccollab-room-title">{{ event.display_name|default:"사용자" }}</span>
                                         <div class="doccollab-room-badges">
-                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_type }}</span>
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_label|default:"수정" }}</span>
+                                            {% if event.event_count > 1 %}
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.event_count }}건</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <span class="doccollab-room-submeta">{{ event.summary }}</span>
                                     <div class="doccollab-room-meta-row">
-                                        <span class="doccollab-room-meta">{{ event.created_at|date:"Y. n. j. A g:i:s" }}</span>
+                                        <span class="doccollab-room-meta">{{ event.created_at_display }}</span>
                                     </div>
                                 </div>
                             </div>

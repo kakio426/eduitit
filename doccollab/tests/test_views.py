@@ -441,12 +441,23 @@ class DoccollabViewTests(TestCase):
             summary="문장 입력 · 회의 안내",
             command_json={"type": "insert_text", "text": "회의 안내"},
         )
+        DocEditEvent.objects.create(
+            room=room,
+            base_revision=revision,
+            user=self.owner,
+            command_id="history-2",
+            command_type="delete_text",
+            display_name="문서주인",
+            summary="삭제 · 1자",
+            command_json={"type": "delete_text", "count": 1},
+        )
         self.client.force_login(self.owner)
 
         response = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
 
         self.assertContains(response, "편집 기록")
-        self.assertContains(response, "문장 입력 · 회의 안내")
+        self.assertContains(response, "본문 수정 2건")
+        self.assertNotContains(response, "문장 입력 · 회의 안내")
         self.assertContains(response, "배포본")
 
     def test_mobile_room_is_read_only(self):

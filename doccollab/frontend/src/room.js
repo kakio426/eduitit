@@ -485,7 +485,9 @@ class DoccollabRoom {
         this.upsertRevision(payload.revision);
         this.broadcastSavedRevision(payload.revision.id || "", payload.edit_events || []);
       }
-      if (Array.isArray(payload.edit_events)) {
+      if (Array.isArray(payload.edit_history)) {
+        this.replaceEditHistory(payload.edit_history);
+      } else if (Array.isArray(payload.edit_events)) {
         this.prependEditHistory(payload.edit_events);
       }
       this.isDirty = false;
@@ -560,7 +562,9 @@ class DoccollabRoom {
   }
 
   handleBroadcastCommand(payload) {
-    if (Array.isArray(payload.edit_events)) {
+    if (Array.isArray(payload.edit_history)) {
+      this.replaceEditHistory(payload.edit_history);
+    } else if (Array.isArray(payload.edit_events)) {
       this.prependEditHistory(payload.edit_events);
     }
     const batchId = String(payload.batchId || "").trim();
@@ -591,7 +595,9 @@ class DoccollabRoom {
     if (payload.revision) {
       const revisionId = payload.revision.id || "";
       this.upsertRevision(payload.revision);
-      if (Array.isArray(payload.edit_events)) {
+      if (Array.isArray(payload.edit_history)) {
+        this.replaceEditHistory(payload.edit_history);
+      } else if (Array.isArray(payload.edit_events)) {
         this.prependEditHistory(payload.edit_events);
       }
       if (payload.published) {
@@ -975,12 +981,13 @@ class DoccollabRoom {
         <div class="doccollab-room-heading">
           <span class="doccollab-room-title">${escapeHtml(event.display_name || "사용자")}</span>
           <div class="doccollab-room-badges">
-            <span class="doccollab-chip doccollab-chip--soft">${escapeHtml(event.command_type || "edit")}</span>
+            <span class="doccollab-chip doccollab-chip--soft">${escapeHtml(event.command_label || event.command_type || "수정")}</span>
+            ${Number(event.event_count || 0) > 1 ? `<span class="doccollab-chip doccollab-chip--soft">${escapeHtml(String(event.event_count))}건</span>` : ""}
           </div>
         </div>
         <span class="doccollab-room-submeta">${escapeHtml(event.summary || "편집")}</span>
         <div class="doccollab-room-meta-row">
-          <span class="doccollab-room-meta">${formatDateTime(event.created_at)}</span>
+          <span class="doccollab-room-meta">${escapeHtml(event.created_at_display || formatDateTime(event.created_at))}</span>
         </div>
       </div>
     `;
