@@ -62,9 +62,9 @@
         display: flex;
         flex: 1 1 auto;
         min-height: 0;
-        margin-top: 0.55rem;
+        margin-top: 0.48rem;
         flex-direction: column;
-        gap: 0.35rem;
+        gap: 0.18rem;
     }
 
     .classcalendar-day-range-row {
@@ -100,24 +100,24 @@
         width: 100%;
         min-width: 0;
         align-items: center;
-        gap: 0.35rem;
-        padding: 0.38rem 0.45rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.8rem;
-        background: #f8fafc;
+        gap: 0.38rem;
+        padding: 0.08rem 0;
         text-align: left;
     }
 
-    .classcalendar-day-preview-badge {
-        display: inline-flex;
+    .classcalendar-day-preview-marker {
+        width: 0.4rem;
+        height: 0.4rem;
         flex: 0 0 auto;
-        align-items: center;
-        justify-content: center;
-        max-width: 4.25rem;
-        padding: 0.12rem 0.38rem;
         border-radius: 9999px;
-        border: 1px solid transparent;
-        font-size: 0.6rem;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.92);
+    }
+
+    .classcalendar-day-preview-prefix {
+        flex: 0 0 auto;
+        min-width: 0;
+        white-space: nowrap;
+        font-size: 0.59rem;
         line-height: 1;
         font-weight: 800;
         letter-spacing: -0.01em;
@@ -136,7 +136,7 @@
     }
 
     .classcalendar-day-preview-overflow {
-        padding-left: 0.15rem;
+        padding-left: 0.78rem;
         font-size: 0.68rem;
         line-height: 1;
         font-weight: 800;
@@ -981,6 +981,55 @@
         padding-right: 0.25rem;
     }
 
+    .classcalendar-center-summary-list {
+        display: grid;
+        gap: 0.65rem;
+        max-height: min(54vh, 36rem);
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    .classcalendar-center-summary-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        min-height: 2rem;
+        padding: 0.48rem 0.78rem;
+        border: 1px solid #dbe3ec;
+        border-radius: 9999px;
+        background: #ffffff;
+        color: #334155;
+        font-size: 0.78rem;
+        line-height: 1;
+        font-weight: 800;
+    }
+
+    .classcalendar-agenda-item.classcalendar-center-summary-item {
+        border-radius: 1.15rem;
+        padding: 0.85rem 0.95rem;
+    }
+
+    .classcalendar-center-summary-item-kind {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.18rem 0.48rem;
+        border-radius: 9999px;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.66rem;
+        line-height: 1;
+        font-weight: 800;
+    }
+
+    .classcalendar-center-summary-empty {
+        border: 1px dashed #cbd5e1;
+        border-radius: 1.25rem;
+        background: #f8fafc;
+        padding: 1rem;
+        text-align: center;
+    }
+
     .classcalendar-agenda-date-group {
         border-top: 1px solid #e2e8f0;
         padding-top: 0.9rem;
@@ -1021,34 +1070,37 @@
         }
 
         .classcalendar-day-preview {
-            margin-top: 0.65rem;
-            gap: 0.45rem;
+            margin-top: 0.58rem;
+            gap: 0.22rem;
         }
 
         .classcalendar-day-range-row {
-            min-height: 1.35rem;
-            padding: 0 0.65rem;
-            font-size: 0.68rem;
+            min-height: 1.28rem;
+            padding: 0 0.58rem;
+            font-size: 0.66rem;
         }
 
         .classcalendar-day-range-row--continuation {
             min-height: 0.5rem;
-            padding: 0 0.65rem;
+            padding: 0 0.58rem;
         }
 
         .classcalendar-day-preview-row {
             gap: 0.42rem;
-            padding: 0.46rem 0.58rem;
-            border-radius: 0.9rem;
+            padding: 0.1rem 0;
         }
 
-        .classcalendar-day-preview-badge {
-            max-width: 4.8rem;
-            font-size: 0.64rem;
+        .classcalendar-day-preview-marker {
+            width: 0.46rem;
+            height: 0.46rem;
+        }
+
+        .classcalendar-day-preview-prefix {
+            font-size: 0.62rem;
         }
 
         .classcalendar-day-preview-title {
-            font-size: 0.76rem;
+            font-size: 0.78rem;
         }
 
         .classcalendar-home-workweek-toolbar {
@@ -1252,7 +1304,7 @@
         }
 
         .classcalendar-center-layout {
-            grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.9fr);
+            grid-template-columns: minmax(0, 1fr) clamp(320px, 28vw, 360px);
             align-items: start;
         }
 
@@ -1902,7 +1954,7 @@
                                 <template x-for="row in getDayPreviewRows(date)" :key="row.id">
                                     <div
                                         class="min-w-0"
-                                        :class="row.kind === 'range' ? `classcalendar-day-range-row ${row.showLabel ? '' : 'classcalendar-day-range-row--continuation'} ${row.rowClass}` : `classcalendar-day-preview-row ${row.rowClass}`"
+                                        :class="row.kind === 'range' ? `classcalendar-day-range-row ${row.showLabel ? '' : 'classcalendar-day-range-row--continuation'} ${row.rowClass}` : 'classcalendar-day-preview-row'"
                                         :title="row.title"
                                     >
                                         <template x-if="row.kind === 'range'">
@@ -1914,7 +1966,8 @@
                                         </template>
                                         <template x-if="row.kind !== 'range'">
                                             <div class="flex min-w-0 items-center gap-1.5">
-                                                <span class="classcalendar-day-preview-badge" :class="row.badgeClass" x-text="row.badge"></span>
+                                                <span class="classcalendar-day-preview-marker" :class="row.markerClass"></span>
+                                                <span class="classcalendar-day-preview-prefix" :class="row.prefixClass" x-text="row.prefixText"></span>
                                                 <span class="classcalendar-day-preview-title" x-text="row.title"></span>
                                             </div>
                                         </template>
@@ -1935,7 +1988,7 @@
                         </div>
                     </div>
 
-                    <aside class="classcalendar-center-agenda-panel p-4 sm:p-5" data-classcalendar-agenda-panel="true">
+                    <aside class="classcalendar-center-agenda-panel p-4 sm:p-5" data-classcalendar-agenda-panel="true" x-bind:data-classcalendar-agenda-panel-mode="agendaPanelMode">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h2 class="classcalendar-copy text-xl font-extrabold text-slate-900">일정 찾기</h2>
@@ -1952,7 +2005,8 @@
                                 id="calendar-search"
                                 type="search"
                                 x-model.trim="agendaQuery"
-                                @input.debounce.150ms="rebuildAgendaSections()"
+                                @focus="openAgendaResults()"
+                                @input.debounce.150ms="handleAgendaQueryInput()"
                                 placeholder="일정명, 메모를 검색"
                                 autocomplete="off"
                             >
@@ -1970,14 +2024,64 @@
 
                         <div class="mt-4 space-y-3">
                             <div class="classcalendar-filter-row">
-                                <button type="button" @click.prevent.stop="setAgendaScope('today')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'today' }">오늘</button>
-                                <button type="button" @click.prevent.stop="setAgendaScope('week')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'week' }">이번 주</button>
-                                <button type="button" @click.prevent.stop="setAgendaScope('month')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'month' }">이번 달</button>
-                                <button type="button" @click.prevent.stop="setAgendaScope('upcoming')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaScope === 'upcoming' }">다가오는 일정</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('today')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaPanelMode === 'results' && agendaScope === 'today' }">오늘</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('week')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaPanelMode === 'results' && agendaScope === 'week' }">이번 주</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('month')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaPanelMode === 'results' && agendaScope === 'month' }">이번 달</button>
+                                <button type="button" @click.prevent.stop="setAgendaScope('upcoming')" class="classcalendar-filter-chip" :class="{ 'is-active': agendaPanelMode === 'results' && agendaScope === 'upcoming' }">다가오는 일정</button>
                             </div>
                         </div>
 
-                        <div x-ref="agendaResults" class="mt-5 classcalendar-center-agenda-results">
+                        <div x-show="agendaPanelMode === 'summary'" x-cloak class="mt-5 space-y-4">
+                            <section class="rounded-[1.45rem] border border-slate-200 bg-white/95 px-4 py-4 shadow-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">선택한 날짜</p>
+                                        <h3 class="mt-2 classcalendar-copy text-lg font-black text-slate-900" x-text="getAgendaSummaryDateLabel()"></h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        @click="openCreateModalForSelectedDate($event)"
+                                        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        새 일정
+                                    </button>
+                                </div>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <span class="classcalendar-center-summary-chip">일정 <span x-text="getSelectedDateEventCount()"></span></span>
+                                    <span x-show="getSelectedDateDirectHubCount() > 0" class="classcalendar-center-summary-chip">연결 항목 <span x-text="getSelectedDateDirectHubCount()"></span></span>
+                                </div>
+                            </section>
+
+                            <div class="classcalendar-center-summary-list">
+                                <template x-if="getAgendaSummaryItems().length === 0">
+                                    <section class="classcalendar-center-summary-empty">
+                                        <p class="text-sm font-black text-slate-800">등록된 일정 없음</p>
+                                    </section>
+                                </template>
+
+                                <template x-for="item in getAgendaSummaryItems()" :key="`agenda-summary-${item.id}`">
+                                    <button
+                                        type="button"
+                                        @click="openAgendaItem(item, selectedDateKey || dateKey(new Date()), $event)"
+                                        class="classcalendar-agenda-item classcalendar-center-summary-item"
+                                    >
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="classcalendar-center-summary-item-kind" x-text="item.serviceLabel"></span>
+                                                <span
+                                                    x-show="getAgendaItemSummaryText(item, selectedDateKey || dateKey(new Date()))"
+                                                    class="text-[11px] font-semibold text-slate-400"
+                                                    x-text="getAgendaItemSummaryText(item, selectedDateKey || dateKey(new Date()))"
+                                                ></span>
+                                            </div>
+                                            <p class="mt-2 classcalendar-copy text-sm font-black text-slate-900" x-text="item.title"></p>
+                                        </div>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div x-show="agendaPanelMode === 'results'" x-cloak x-ref="agendaResults" class="mt-5 classcalendar-center-agenda-results">
                             <template x-if="agendaDateSections.length === 0">
                                 <section class="rounded-[1.4rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
                                     <p class="text-base font-black text-slate-800" x-text="getAgendaEmptyMessage()"></p>
@@ -2593,6 +2697,7 @@ function calendarApp() {
         calendarEmbedMode: '{{ calendar_embed_mode|default:"page"|escapejs }}',
         initialFocusSearch: {{ initial_focus_search|yesno:"true,false" }},
         agendaQuery: '{{ initial_search_query|default:""|escapejs }}',
+        agendaPanelMode: 'summary',
         agendaScope: 'month',
         agendaDateSections: [],
         surfaceAllowsManage: true,
@@ -2719,6 +2824,9 @@ function calendarApp() {
             this.loadHolidayMarkersFromScript();
             this.selectedDateKey = this.initialSelectedDateKey || this.dateKey(new Date());
             this.currentDate = new Date(this.parseDateKey(this.selectedDateKey).getFullYear(), this.parseDateKey(this.selectedDateKey).getMonth(), 1);
+            const hasInitialAgendaQuery = !!String(this.agendaQuery || '').trim();
+            const shouldShowAgendaResults = this.initialFocusSearch || hasInitialAgendaQuery;
+            this.agendaPanelMode = shouldShowAgendaResults ? 'results' : 'summary';
             this.ensureHolidayYearLoaded(this.currentDate.getFullYear());
             if (this.initialHighlightedEventId) {
                 this.highlightSavedEventById(this.initialHighlightedEventId, { persist: true });
@@ -4080,6 +4188,10 @@ function calendarApp() {
         },
 
         handleDayCellClick(date, triggerEvent = null) {
+            if (!this.isCompactMobileViewport() && this.calendarEmbedMode === 'page') {
+                this.selectCenterDate(date);
+                return;
+            }
             if (this.isCompactMobileViewport()) {
                 if (this.hasDayOverviewContent(date)) {
                     this.openDayOverview(date, triggerEvent);
@@ -4093,6 +4205,19 @@ function calendarApp() {
                 return;
             }
             this.openCreateModal(date, triggerEvent);
+        },
+
+        selectCenterDate(date) {
+            this.setSelectedDateContext(date);
+            if (!this.initialFocusSearch && !String(this.agendaQuery || '').trim()) {
+                this.agendaPanelMode = 'summary';
+            }
+            this.syncPageState({
+                date: this.selectedDateKey,
+                action: '',
+                open_event: '',
+                open_task: '',
+            });
         },
 
         scrollAgendaResultsToTop() {
@@ -4126,17 +4251,31 @@ function calendarApp() {
             }
         },
 
+        openAgendaResults() {
+            this.agendaPanelMode = 'results';
+        },
+
+        handleAgendaQueryInput() {
+            this.agendaPanelMode = 'results';
+            this.rebuildAgendaSections();
+        },
+
         clearAgendaQuery() {
             this.agendaQuery = '';
             this.rebuildAgendaSections();
-            this.focusAgendaSearch();
-            this.scrollAgendaResultsToTop();
+            if (this.initialFocusSearch) {
+                this.agendaPanelMode = 'results';
+                this.focusAgendaSearch();
+                this.scrollAgendaResultsToTop();
+                return;
+            }
+            this.agendaPanelMode = 'summary';
         },
 
         setAgendaScope(scope) {
             const nextScope = ['today', 'week', 'month', 'upcoming'].includes(scope) ? scope : 'month';
-            this.setSelectedDateContext(new Date());
             this.agendaScope = nextScope;
+            this.agendaPanelMode = 'results';
             this.rebuildAgendaSections();
             this.scrollAgendaResultsToTop();
         },
@@ -4239,6 +4378,16 @@ function calendarApp() {
                 .filter((item) => this.agendaItemMatchesScope(item))
                 .filter((item) => this.agendaItemMatchesQuery(item))
                 .sort((left, right) => this.sortHubItems(left, right));
+        },
+
+        getAgendaSummaryDateLabel() {
+            return this.selectedDateKey
+                ? this.formatAgendaDate(this.selectedDateKey)
+                : this.formatAgendaDate(this.dateKey(new Date()));
+        },
+
+        getAgendaSummaryItems() {
+            return this.getSelectedDateHubItems().filter((item) => item.item_kind !== 'task');
         },
 
         getAgendaDateKeysForItemWithinBounds(item, bounds = null) {
@@ -5669,13 +5818,53 @@ function calendarApp() {
                 .sort((left, right) => this.sortHubItems(left, right));
         },
         getDayPreviewRowLimit() {
-            return this.isCompactMobileViewport() ? 2 : 4;
+            return this.isCompactMobileViewport() ? 2 : 5;
         },
         shouldShowRangePreviewLabel(event, date) {
             const dateKey = this.dateKey(date);
             const startKey = this.dateKey(event.start_time);
             if (startKey === dateKey) return true;
             return date.getDay() === 1 || date.getDate() === 1;
+        },
+        getDayEventPreviewMarkerClass(event) {
+            const map = {
+                indigo: 'bg-indigo-500',
+                rose: 'bg-rose-500',
+                amber: 'bg-amber-500',
+                emerald: 'bg-emerald-500',
+                sky: 'bg-sky-500',
+            };
+            return map[event.color] || map.indigo;
+        },
+        getDayEventPreviewPrefixClass(event) {
+            const map = {
+                collect_deadline: 'text-amber-700',
+                consent_expiry: 'text-rose-700',
+                reservation: 'text-emerald-700',
+                signatures_training: 'text-sky-700',
+                schoolcomm_calendar_copy: 'text-emerald-700',
+            };
+            return map[event.integration_source || ''] || 'text-slate-500';
+        },
+        getDayHubPreviewMarkerClass(item) {
+            const map = {
+                collect: 'bg-amber-500',
+                signature: 'bg-sky-500',
+                consent: 'bg-rose-500',
+                reservation: 'bg-emerald-500',
+                message: 'bg-slate-400',
+            };
+            return map[item.item_kind || 'message'] || map.message;
+        },
+        getDayHubPreviewPrefixClass(item) {
+            const map = {
+                collect: 'text-amber-700',
+                signature: 'text-sky-700',
+                consent: 'text-rose-700',
+                reservation: 'text-emerald-700',
+                message: 'text-slate-500',
+            };
+            return map[item.item_kind || 'message'] || map.message;
         },
         getDayEventPreviewClass(event) {
             const map = {
@@ -5736,9 +5925,9 @@ function calendarApp() {
                         id: `event-${event.id}`,
                         kind: 'event',
                         title: event.title,
-                        badge: this.getEventSourceLabel(event),
-                        badgeClass: this.getEventSourceBadgeClass(event),
-                        rowClass: this.getDayEventPreviewClass(event),
+                        prefixText: this.getEventSourceLabel(event),
+                        prefixClass: this.getDayEventPreviewPrefixClass(event),
+                        markerClass: this.getDayEventPreviewMarkerClass(event),
                     });
                 });
 
@@ -5747,11 +5936,11 @@ function calendarApp() {
                     id: `hub-${item.id}`,
                     kind: 'hub',
                     title: item.title,
-                    badge: item.serviceLabel,
-                    badgeClass: this.getDayHubPreviewBadgeClass(item),
-                    rowClass: this.getDayHubPreviewClass(item),
-                    });
+                    prefixText: item.serviceLabel,
+                    prefixClass: this.getDayHubPreviewPrefixClass(item),
+                    markerClass: this.getDayHubPreviewMarkerClass(item),
                 });
+            });
 
             rows.push(...continuedRangeRows);
 

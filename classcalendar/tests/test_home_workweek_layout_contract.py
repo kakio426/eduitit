@@ -90,7 +90,7 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn(".classcalendar-home-mobile-day--today {", content)
         self.assertIn(".classcalendar-home-mobile-day--today.classcalendar-home-mobile-day--selected {", content)
 
-    def test_month_preview_keeps_continued_range_rows_from_splitting_cards(self):
+    def test_month_preview_uses_compact_text_rows_without_splitting_range_flow(self):
         template_path = (
             Path(__file__).resolve().parents[1]
             / "templates"
@@ -100,8 +100,19 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         content = template_path.read_text(encoding="utf-8")
 
         self.assertIn(".classcalendar-day-range-row--continuation {", content)
+        self.assertIn(".classcalendar-day-preview-marker {", content)
+        self.assertIn(".classcalendar-day-preview-prefix {", content)
+        self.assertIn("return this.isCompactMobileViewport() ? 2 : 5;", content)
         self.assertIn("const labeledRangeRows = [];", content)
         self.assertIn("const continuedRangeRows = [];", content)
         self.assertIn("rows.push(...labeledRangeRows);", content)
         self.assertIn("rows.push(...continuedRangeRows);", content)
         self.assertIn("row.showLabel ? '' : 'classcalendar-day-range-row--continuation'", content)
+        self.assertIn("class=\"classcalendar-day-preview-marker\" :class=\"row.markerClass\"", content)
+        self.assertIn("class=\"classcalendar-day-preview-prefix\" :class=\"row.prefixClass\" x-text=\"row.prefixText\"", content)
+        self.assertIn("prefixText: this.getEventSourceLabel(event),", content)
+        self.assertIn("markerClass: this.getDayEventPreviewMarkerClass(event),", content)
+        self.assertIn("prefixClass: this.getDayEventPreviewPrefixClass(event),", content)
+        self.assertIn("prefixText: item.serviceLabel,", content)
+        self.assertIn("markerClass: this.getDayHubPreviewMarkerClass(item),", content)
+        self.assertIn("prefixClass: this.getDayHubPreviewPrefixClass(item),", content)
