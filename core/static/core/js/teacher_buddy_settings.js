@@ -33,28 +33,39 @@
         return !node || node.hasAttribute('hidden');
     }
 
-    function syncPanelToggleButton(button, drawer) {
-        var openLabel;
-        var closeLabel;
-        var open = !isHidden(drawer);
-        if (!button) {
+    function syncEntryToggle(root) {
+        var button = root.querySelector('[data-buddy-entry-toggle="true"]');
+        var sections = root.querySelector('[data-buddy-settings-sections="true"]');
+        if (!button || !sections) {
             return;
         }
-        openLabel = button.getAttribute('data-open-label') || button.textContent || '열기';
-        closeLabel = button.getAttribute('data-close-label') || openLabel;
-        button.setAttribute('aria-expanded', open ? 'true' : 'false');
-        button.textContent = open ? closeLabel : openLabel;
+        button.setAttribute('aria-expanded', isHidden(sections) ? 'false' : 'true');
     }
 
-    function syncAllPanelToggleButtons(root) {
-        root.querySelectorAll('[data-buddy-panel-toggle]').forEach(function (button) {
-            var key = button.getAttribute('data-buddy-panel-toggle') || '';
-            var drawer = key ? root.querySelector('[data-buddy-settings-drawer="' + key + '"]') : null;
-            if (!drawer) {
-                return;
-            }
-            syncPanelToggleButton(button, drawer);
-        });
+    function setSectionOpen(section, open) {
+        var button;
+        var body;
+        if (!section) {
+            return;
+        }
+        button = section.querySelector('[data-buddy-section-toggle]');
+        body = section.querySelector('[data-buddy-section-body="true"]');
+        section.classList.toggle('is-open', !!open);
+        if (button) {
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        setHidden(body, !open);
+    }
+
+    function openSection(root, key) {
+        var section = key ? root.querySelector('[data-buddy-section="' + key + '"]') : null;
+        var sections = root.querySelector('[data-buddy-settings-sections="true"]');
+        if (!section || !sections) {
+            return;
+        }
+        setHidden(sections, false);
+        syncEntryToggle(root);
+        setSectionOpen(section, true);
     }
 
     async function submitForm(form) {
@@ -193,29 +204,35 @@
         state.representativeSkinKey = representative.selected_skin_key || '';
     }
 
-    function updateSummaryCard(root, buddy, summaryText) {
+    function updateEntryRow(root, buddy, activeBuddy, summaryText) {
+        var avatarWrap;
+        var avatar;
+        var isSynced = true;
+        var syncChip;
         if (!buddy) {
             return;
         }
-        var avatarWrap = root.querySelector('[data-buddy-summary-avatar="representative"]');
-        var avatar = avatarWrap ? avatarWrap.querySelector('.teacher-buddy-settings-summary-avatar') : null;
+        avatarWrap = root.querySelector('[data-buddy-entry-avatar="representative"]');
+        avatar = avatarWrap ? avatarWrap.querySelector('.teacher-buddy-settings-entry-avatar') : null;
         if (avatar) {
             updateCompactAvatar(avatar, buddy);
         }
-        root.querySelectorAll('[data-buddy-summary-name="representative"]').forEach(function (name) {
+        root.querySelectorAll('[data-buddy-entry-name="representative"]').forEach(function (name) {
             name.textContent = buddy.name || '';
         });
-        root.querySelectorAll('[data-buddy-summary-rarity="representative"]').forEach(function (rarity) {
+        root.querySelectorAll('[data-buddy-entry-rarity="representative"]').forEach(function (rarity) {
             rarity.textContent = buddy.rarity_label || '';
             rarity.className = 'teacher-buddy-rarity teacher-buddy-rarity--' + (buddy.rarity || 'common');
         });
-        root.querySelectorAll('[data-buddy-summary-style="representative"]').forEach(function (style) {
-            style.textContent = buddy.selected_skin_short_label || '기본';
-        });
-        if (typeof summaryText === 'string') {
-            root.querySelectorAll('[data-buddy-summary-sync="true"]').forEach(function (summary) {
-                summary.textContent = summaryText;
-            });
+        isSynced = !!activeBuddy &&
+            (activeBuddy.key || '') === (buddy.key || '') &&
+            (activeBuddy.selected_skin_key || '') === (buddy.selected_skin_key || '');
+        if (!activeBuddy && typeof summaryText === 'string') {
+            isSynced = summaryText.indexOf('달라') === -1;
+        }
+        syncChip = root.querySelector('[data-buddy-entry-sync-chip="true"]');
+        if (syncChip) {
+            setHidden(syncChip, !!isSynced);
         }
     }
 
@@ -433,25 +450,49 @@
         });
     }
 
-    function bindPanelToggles(root) {
-        syncAllPanelToggleButtons(root);
-        root.querySelectorAll('[data-buddy-panel-toggle]').forEach(function (button) {
-            var key = button.getAttribute('data-buddy-panel-toggle') || '';
-            var drawer = key ? root.querySelector('[data-buddy-settings-drawer="' + key + '"]') : null;
-            if (!drawer) {
+    function bindEntryToggle(root) {
+        var button = root.querySelector('[data-buddy-entry-toggle="true"]');
+        var sections = root.querySelector('[data-buddy-settings-sections="true"]');
+        function toggleSections() {
+            setHidden(sections, !isHidden(sections));
+            syncEntryToggle(root);
+        }
+        if (!button || !sections) {
+            return;
+        }
+        syncEntryToggle(root);
+        button.addEventListener('click', function () {
+            toggleSections();
+        });
+        button.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') {
                 return;
             }
+            event.preventDefault();
+            toggleSections();
+        });
+    }
+
+    function bindSectionToggles(root) {
+        root.querySelectorAll('[data-buddy-section-toggle]').forEach(function (button) {
             button.addEventListener('click', function () {
-                var nextHidden = !isHidden(drawer);
-                setHidden(drawer, nextHidden);
-                if (key === 'overview' && nextHidden) {
-                    root.querySelectorAll('[data-buddy-settings-drawer]').forEach(function (candidate) {
-                        if (candidate !== drawer) {
-                            setHidden(candidate, true);
-                        }
-                    });
+                var key = button.getAttribute('data-buddy-section-toggle') || '';
+                var section = key ? root.querySelector('[data-buddy-section="' + key + '"]') : null;
+                var isOpen;
+                if (!section) {
+                    return;
                 }
-                syncAllPanelToggleButtons(root);
+                isOpen = section.classList.contains('is-open');
+                setSectionOpen(section, !isOpen);
+            });
+        });
+    }
+
+    function bindSectionShortcuts(root) {
+        root.querySelectorAll('[data-buddy-section-open]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var key = button.getAttribute('data-buddy-section-open') || '';
+                openSection(root, key);
             });
         });
     }
@@ -473,9 +514,10 @@
                     payload.profile_buddy ? (payload.profile_buddy.share_caption || '') : '',
                     payload.sync_summary_text || root.dataset.sharedSelectionCopy || '대표를 바꾸면 홈과 SNS가 함께 바뀌어요.'
                 );
-                updateSummaryCard(
+                updateEntryRow(
                     root,
                     payload.profile_buddy || payload.active_buddy,
+                    payload.active_buddy || payload.profile_buddy,
                     payload.sync_summary_text || root.dataset.sharedSelectionCopy || '대표를 바꾸면 홈과 SNS가 함께 바뀌어요.'
                 );
                 if (payload.collection_item) {
@@ -538,8 +580,7 @@
         var instagramCopy = shareData.dataset.shareInstagram || shareDescription;
         var kakaoJsKey = shareData.dataset.kakaoJsKey || '';
 
-        var kakaoButton = root.querySelector('[data-buddy-share-kakao="true"]');
-        if (kakaoButton) {
+        root.querySelectorAll('[data-buddy-share-kakao="true"]').forEach(function (kakaoButton) {
             kakaoButton.addEventListener('click', async function () {
                 if (!(window.Kakao && kakaoJsKey)) {
                     await copyText(shareUrl, '카카오 SDK가 없어 링크를 복사해 드렸어요.');
@@ -570,31 +611,27 @@
                     ]
                 });
             });
-        }
+        });
 
-        var copyLinkButton = root.querySelector('[data-buddy-copy-link="true"]');
-        if (copyLinkButton) {
+        root.querySelectorAll('[data-buddy-copy-link="true"]').forEach(function (copyLinkButton) {
             copyLinkButton.addEventListener('click', function () {
                 copyText(shareUrl, '공유 링크를 복사했어요.');
             });
-        }
+        });
 
-        var indischoolButton = root.querySelector('[data-buddy-copy-indischool="true"]');
-        if (indischoolButton) {
+        root.querySelectorAll('[data-buddy-copy-indischool="true"]').forEach(function (indischoolButton) {
             indischoolButton.addEventListener('click', function () {
                 copyText(indischoolCopy, '인디스쿨용 문구를 복사했어요.');
             });
-        }
+        });
 
-        var instagramButton = root.querySelector('[data-buddy-copy-instagram="true"]');
-        if (instagramButton) {
+        root.querySelectorAll('[data-buddy-copy-instagram="true"]').forEach(function (instagramButton) {
             instagramButton.addEventListener('click', function () {
                 copyText(instagramCopy, '인스타그램용 문구를 복사했어요.');
             });
-        }
+        });
 
-        var downloadButton = root.querySelector('[data-buddy-download-image="true"]');
-        if (downloadButton) {
+        root.querySelectorAll('[data-buddy-download-image="true"]').forEach(function (downloadButton) {
             downloadButton.addEventListener('click', function () {
                 var link = document.createElement('a');
                 link.href = shareImageUrl;
@@ -604,7 +641,7 @@
                 document.body.removeChild(link);
                 showFeedback('공유 이미지를 저장했어요.', 'success');
             });
-        }
+        });
     }
 
     function bindCouponForm(root) {
@@ -660,7 +697,9 @@
             return;
         }
         var state = getSelectionState(root);
-        bindPanelToggles(root);
+        bindEntryToggle(root);
+        bindSectionToggles(root);
+        bindSectionShortcuts(root);
         bindStyleToggles(root);
         bindForms(root, state);
         bindShareModal(root);
