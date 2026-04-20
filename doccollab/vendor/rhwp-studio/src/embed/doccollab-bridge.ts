@@ -574,20 +574,24 @@ function stabilizePositionLayout(position: DocumentPosition | null, wasm: WasmBr
     }
     if (position.parentParaIndex !== undefined) {
       const props = readCellParagraphProperties(position, wasm);
-      if (!EDIT_ALIGNMENT_FALLBACKS.has(String(props?.alignment || ''))) {
+      const alignment = String(props?.alignment || '').trim();
+      if (!EDIT_ALIGNMENT_FALLBACKS.has(alignment)) {
         return;
       }
-      applyCellParagraphAlignment(position, wasm, 'justify');
+      // Reapply the existing fallback alignment to trigger re-layout
+      // without mutating the teacher's original paragraph formatting.
+      applyCellParagraphAlignment(position, wasm, alignment);
       return;
     }
     const props = wasm.getParaPropertiesAt(position.sectionIndex, position.paragraphIndex);
-    if (!EDIT_ALIGNMENT_FALLBACKS.has(String(props?.alignment || ''))) {
+    const alignment = String(props?.alignment || '').trim();
+    if (!EDIT_ALIGNMENT_FALLBACKS.has(alignment)) {
       return;
     }
     wasm.applyParaFormat(
       position.sectionIndex,
       position.paragraphIndex,
-      JSON.stringify({ alignment: 'justify' }),
+      JSON.stringify({ alignment }),
     );
   } catch (error) {
     console.warn('[doccollab-bridge] paragraph alignment stabilization failed', error);
@@ -615,7 +619,7 @@ function readCellParagraphProperties(position: DocumentPosition, wasm: WasmBridg
 function applyCellParagraphAlignment(
   position: DocumentPosition,
   wasm: WasmBridge,
-  alignment: 'justify',
+  alignment: string,
 ): void {
   if (
     position.parentParaIndex == null
