@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from .models import DocMembership
 from .services import (
-    append_room_collab_update,
+    append_room_command_batch,
     display_name_for_user,
     get_room_for_user,
     record_edit_events,
@@ -36,7 +36,10 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json(
             {
                 "type": "room.snapshot",
-                "payload": await self._build_snapshot(),
+                "payload": {
+                    **(await self._build_snapshot()),
+                    "session_key": self.session_key,
+                },
             }
         )
         await self.channel_layer.group_send(
@@ -77,9 +80,22 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json({"type": "error", "payload": {"message": "editor only"}})
                 return
             await self._touch_presence(True)
-            update = content.get("payload", {}).get("update") or []
-            commands = content.get("payload", {}).get("commands") or []
-            await self._append_collab_update(update)
+            payload = content.get("payload", {}) or {}
+            commands = payload.get("commands") or []
+            state, accepted, reason = await self._append_command_batch(
+                {
+                    "batchId": payload.get("batchId"),
+                    "baseRevisionId": payload.get("baseRevisionId"),
+                    "senderSessionKey": payload.get("senderSessionKey") or self.session_key,
+                    "commands": commands,
+                    "selection": payload.get("selection") or {},
+                }
+            )
+            if not accepted:
+                if reason == "duplicate batchId":
+                    return
+                await self.send_json({"type": "error", "payload": {"message": reason or "invalid command batch"}})
+                return
             edit_events = await self._record_edit_events(commands)
             await self.channel_layer.group_send(
                 self.group_name,
@@ -88,8 +104,12 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                     "message": {
                         "type": "editor.command",
                         "payload": {
+                            "batchId": payload.get("batchId"),
+                            "baseRevisionId": payload.get("baseRevisionId") or state.get("base_revision_id"),
+                            "senderSessionKey": payload.get("senderSessionKey") or self.session_key,
                             "sender": display_name_for_user(self.scope.get("user")),
-                            "update": update,
+                            "commands": commands,
+                            "selection": payload.get("selection") or {},
                             "edit_events": edit_events,
                         },
                     },
@@ -98,6 +118,7 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
             return
         if event_type == "editor.selection":
             await self._touch_presence(True)
+            payload = content.get("payload", {}) or {}
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -105,8 +126,9 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                     "message": {
                         "type": "editor.selection",
                         "payload": {
+                            "senderSessionKey": payload.get("senderSessionKey") or self.session_key,
                             "sender": display_name_for_user(self.scope.get("user")),
-                            "cursor": content.get("payload", {}).get("cursor") or {},
+                            "selection": payload.get("selection") or {},
                         },
                     },
                 },
@@ -143,8 +165,8 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def _append_collab_update(self, update):
-        append_room_collab_update(self.room, update)
+    def _append_command_batch(self, batch):
+        return append_room_command_batch(self.room, batch)
 
     @database_sync_to_async
     def _record_edit_events(self, commands):

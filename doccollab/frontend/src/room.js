@@ -112,6 +112,27 @@ class RhwpStudioEmbed {
     return this.request("focusEditor", {}, 5000);
   }
 
+  async applyCommandBatch(batchId, commands) {
+    return this.request(
+      "applyCommandBatch",
+      {
+        batchId,
+        commands,
+      },
+      30000,
+    );
+  }
+
+  async setCollaborationState(participantCount) {
+    return this.request(
+      "setCollaborationState",
+      {
+        participantCount,
+      },
+      5000,
+    );
+  }
+
   async waitForFrameSelector(selector, attempts = 40, delayMs = 120) {
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const frameDoc = this.frameDocument();
@@ -122,25 +143,6 @@ class RhwpStudioEmbed {
       await delay(delayMs);
     }
     return null;
-  }
-
-  viewportMetrics() {
-    const frameDoc = this.frameDocument();
-    const scrollContainer = frameDoc?.querySelector("#scroll-container");
-    const canvas = frameDoc?.querySelector("#scroll-container canvas");
-    if (!(scrollContainer instanceof HTMLElement) || !(canvas instanceof HTMLElement)) {
-      return null;
-    }
-    const containerWidth = scrollContainer.getBoundingClientRect().width;
-    const canvasWidth = canvas.getBoundingClientRect().width;
-    if (!containerWidth || !canvasWidth) {
-      return null;
-    }
-    return {
-      containerWidth,
-      canvasWidth,
-      ratio: canvasWidth / containerWidth,
-    };
   }
 
   async clickFrameButton(selector) {
@@ -160,27 +162,6 @@ class RhwpStudioEmbed {
     }
     const selector = mode === "fitWidth" ? "#sb-zoom-fit-width" : "#sb-zoom-fit";
     return this.clickFrameButton(selector);
-  }
-
-  async ensureReadableViewport(minRatio = 0.72, maxSteps = 8) {
-    await this.waitForFrameLoad();
-    const canvas = await this.waitForFrameSelector("#scroll-container canvas", 50, 120);
-    if (!canvas) {
-      return false;
-    }
-    for (let step = 0; step < maxSteps; step += 1) {
-      const metrics = this.viewportMetrics();
-      if (metrics && metrics.ratio >= minRatio) {
-        return true;
-      }
-      const zoomed = await this.clickFrameButton("#sb-zoom-in");
-      if (!zoomed) {
-        return false;
-      }
-      await delay(80);
-    }
-    const finalMetrics = this.viewportMetrics();
-    return Boolean(finalMetrics && finalMetrics.ratio >= minRatio);
   }
 
   destroy() {
@@ -226,9 +207,17 @@ class DoccollabRoom {
     this.intentionalClose = false;
     this.isDirty = false;
     this.isSaving = false;
+    this.documentLoaded = false;
+    this.requiresCollabRefresh = false;
     this.lastChangedAt = null;
     this.lastKnownPageCount = 0;
     this.lastLocalRevisionId = "";
+    this.baseRevisionId = payload.collabState?.base_revision_id || payload.currentRevision?.id || "";
+    this.pendingReplayBatches = [];
+    this.localBatchIds = new Set();
+    this.participantCount = 1;
+    this.clientSessionKey = createSessionKey();
+    this.serverSessionKey = "";
     this.boundFrameEvent = (event) => this.handleFrameEvent(event);
     this.boundBeforeUnload = () => this.handleBeforeUnload();
   }
@@ -278,7 +267,10 @@ class DoccollabRoom {
       const result = await this.editor.loadFile(bytes, this.initialFileName());
       this.lastKnownPageCount = Number(result?.pageCount || 0);
       this.snapshotBadge.textContent = this.runtimeEditingEnabled ? "편집 중" : "보기 모드";
+      this.documentLoaded = true;
       await this.applyOpeningViewport();
+      await this.replayPendingBatches();
+      await this.syncCollaborationState();
       if (this.runtimeEditingEnabled) {
         void this.editor.focus().catch(() => undefined);
       }
@@ -292,19 +284,13 @@ class DoccollabRoom {
     if (!this.editor) {
       return;
     }
-    const desktopViewport = window.matchMedia("(min-width: 1180px)").matches;
-    const preferredMode = desktopViewport ? "fitWidth" : "fitPage";
-    const modes = preferredMode === "fitWidth" ? ["fitWidth", "fitPage"] : ["fitPage", "fitWidth"];
+    const modes = ["fitPage", "fitWidth"];
     const delays = [120, 320, 640];
     for (const waitMs of delays) {
       await delay(waitMs);
       for (const mode of modes) {
         const applied = await this.editor.applyDefaultView(mode).catch(() => false);
         if (applied) {
-          if (desktopViewport) {
-            await delay(80);
-            await this.editor.ensureReadableViewport(0.68, 10).catch(() => false);
-          }
           return;
         }
       }
@@ -323,6 +309,12 @@ class DoccollabRoom {
       case "documentChanged":
         this.onDocumentChanged(message.payload || {});
         break;
+      case "commandExecuted":
+        this.onCommandExecuted(message.payload || {});
+        break;
+      case "selectionChanged":
+        this.onSelectionChanged(message.payload || {});
+        break;
       case "saveRequested":
         if (this.runtimeEditingEnabled) {
           void this.saveRevision();
@@ -332,6 +324,8 @@ class DoccollabRoom {
         if (message.payload?.pageCount) {
           this.lastKnownPageCount = Number(message.payload.pageCount || 0);
           void this.applyOpeningViewport().catch(() => undefined);
+          void this.replayPendingBatches().catch(() => undefined);
+          void this.syncCollaborationState().catch(() => undefined);
         }
         break;
       default:
@@ -347,8 +341,34 @@ class DoccollabRoom {
     this.lastChangedAt = payload.changedAt || new Date().toISOString();
     this.lastKnownPageCount = Number(payload.pageCount || this.lastKnownPageCount || 0);
     this.snapshotBadge.textContent = "자동 저장 예정";
-    this.setStatus("수정 중");
+    this.setStatus(this.requiresCollabRefresh ? "새 저장본 확인 필요" : "수정 중");
     this.scheduleSnapshot();
+  }
+
+  onCommandExecuted(payload) {
+    if (!this.runtimeEditingEnabled) {
+      return;
+    }
+    const commands = Array.isArray(payload.commands) ? payload.commands.filter(Boolean) : [];
+    if (!commands.length) {
+      return;
+    }
+    this.sendCommandBatch(commands, payload.selection || {});
+  }
+
+  onSelectionChanged(payload) {
+    if (!this.runtimeEditingEnabled || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "editor.selection",
+        payload: {
+          senderSessionKey: this.sessionKey(),
+          selection: payload || {},
+        },
+      }),
+    );
   }
 
   scheduleSnapshot() {
@@ -444,6 +464,9 @@ class DoccollabRoom {
       const payload = await response.json();
       if (payload.revision) {
         this.lastLocalRevisionId = payload.revision.id || "";
+        this.baseRevisionId = payload.revision.id || this.baseRevisionId;
+        this.requiresCollabRefresh = false;
+        this.pendingReplayBatches = [];
         this.upsertRevision(payload.revision);
       }
       if (Array.isArray(payload.edit_events)) {
@@ -487,35 +510,166 @@ class DoccollabRoom {
     const message = JSON.parse(event.data || "{}");
     switch (message.type) {
       case "room.snapshot":
-        this.updateParticipants(message.payload?.presence || []);
-        this.syncRevisionState(message.payload || {});
-        this.replaceEditHistory(message.payload?.edit_history || []);
+        this.handleRoomSnapshot(message.payload || {});
         break;
       case "presence.join":
       case "presence.leave":
         this.updateParticipants(message.payload?.participants || []);
         break;
+      case "editor.command":
+        this.handleBroadcastCommand(message.payload || {});
+        break;
+      case "editor.selection":
+        this.handleBroadcastSelection(message.payload || {});
+        break;
       case "revision.saved":
-        if (message.payload?.revision) {
-          const revisionId = message.payload.revision.id || "";
-          this.upsertRevision(message.payload.revision);
-          if (Array.isArray(message.payload.edit_events)) {
-            this.prependEditHistory(message.payload.edit_events);
-          }
-          if (revisionId && revisionId !== this.lastLocalRevisionId && !this.isSaving) {
-            this.setStatus("새 저장본이 생겼습니다. 다시 열면 최신본이 반영됩니다.");
-          }
-        }
-        if (message.payload?.published && message.payload?.revision) {
-          this.syncPublishedRevision(message.payload.revision);
-        }
+        this.handleRevisionSaved(message.payload || {});
         break;
       case "error":
-        this.setStatus(message.payload?.message || "연결 오류", true);
+        this.handleSocketError(message.payload || {});
         break;
       default:
         break;
     }
+  }
+
+  handleRoomSnapshot(payload) {
+    if (payload.session_key) {
+      this.serverSessionKey = String(payload.session_key);
+    }
+    this.updateParticipants(payload.presence || []);
+    this.syncRevisionState(payload || {});
+    this.replaceEditHistory(payload.edit_history || []);
+    this.queueSnapshotBatches(payload.collab_state || {});
+  }
+
+  handleBroadcastCommand(payload) {
+    if (Array.isArray(payload.edit_events)) {
+      this.prependEditHistory(payload.edit_events);
+    }
+    const batchId = String(payload.batchId || "").trim();
+    if (!batchId) {
+      return;
+    }
+    if (this.localBatchIds.has(batchId)) {
+      this.localBatchIds.delete(batchId);
+      return;
+    }
+    if (payload.baseRevisionId && this.baseRevisionId && payload.baseRevisionId !== this.baseRevisionId) {
+      this.requiresCollabRefresh = true;
+      this.setStatus("다른 저장본 기준의 수정이 들어왔습니다. 저장 후 다시 열어 주세요.", true);
+      return;
+    }
+    this.pendingReplayBatches.push({
+      batchId,
+      commands: Array.isArray(payload.commands) ? payload.commands : [],
+    });
+    void this.replayPendingBatches().catch(() => undefined);
+  }
+
+  handleBroadcastSelection(_payload) {
+    // Presence metadata only for now. Remote caret rendering is a follow-up.
+  }
+
+  handleRevisionSaved(payload) {
+    if (payload.revision) {
+      const revisionId = payload.revision.id || "";
+      this.upsertRevision(payload.revision);
+      if (Array.isArray(payload.edit_events)) {
+        this.prependEditHistory(payload.edit_events);
+      }
+      if (payload.published) {
+        this.syncPublishedRevision(payload.revision);
+      }
+      if (revisionId === this.lastLocalRevisionId) {
+        this.baseRevisionId = revisionId;
+        this.requiresCollabRefresh = false;
+        return;
+      }
+      if (this.isDirty) {
+        this.requiresCollabRefresh = true;
+        this.setStatus("새 저장본이 생겼습니다. 저장 후 다시 열면 최신본이 맞춰집니다.");
+        return;
+      }
+      this.baseRevisionId = revisionId || this.baseRevisionId;
+      this.requiresCollabRefresh = false;
+      this.setStatus("최신 저장본으로 맞춰졌습니다.");
+    }
+  }
+
+  handleSocketError(payload) {
+    const message = String(payload.message || "연결 오류");
+    if (message.includes("stale base revision")) {
+      this.requiresCollabRefresh = true;
+      this.setStatus("다른 저장본 기준이라 함께 수정이 잠시 멈췄습니다. 저장 후 다시 열어 주세요.", true);
+      return;
+    }
+    this.setStatus(message, true);
+  }
+
+  queueSnapshotBatches(collabState) {
+    if (collabState?.base_revision_id) {
+      this.baseRevisionId = collabState.base_revision_id;
+    }
+    const updates = Array.isArray(collabState?.updates) ? collabState.updates : [];
+    this.pendingReplayBatches = updates
+      .filter((batch) => batch && batch.batchId)
+      .map((batch) => ({
+        batchId: String(batch.batchId),
+        commands: Array.isArray(batch.commands) ? batch.commands : [],
+      }));
+    void this.replayPendingBatches().catch(() => undefined);
+  }
+
+  async replayPendingBatches() {
+    if (!this.documentLoaded || !this.editor || !this.pendingReplayBatches.length) {
+      return;
+    }
+    while (this.pendingReplayBatches.length) {
+      const batch = this.pendingReplayBatches.shift();
+      if (!batch?.batchId) {
+        continue;
+      }
+      await this.editor.applyCommandBatch(batch.batchId, batch.commands || []);
+    }
+  }
+
+  sendCommandBatch(commands, selection) {
+    if (
+      !this.socket
+      || this.socket.readyState !== WebSocket.OPEN
+      || !Array.isArray(commands)
+      || !commands.length
+    ) {
+      return;
+    }
+    if (this.requiresCollabRefresh) {
+      this.setStatus("새 저장본 확인 전에는 함께 수정이 잠시 멈춥니다.", true);
+      return;
+    }
+    const batchId = this.nextBatchId();
+    this.localBatchIds.add(batchId);
+    trimSet(this.localBatchIds, 180);
+    this.socket.send(
+      JSON.stringify({
+        type: "editor.command",
+        payload: {
+          batchId,
+          baseRevisionId: this.baseRevisionId || this.payload.currentRevision?.id || "",
+          senderSessionKey: this.sessionKey(),
+          commands,
+          selection: selection || {},
+        },
+      }),
+    );
+  }
+
+  nextBatchId() {
+    return `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  sessionKey() {
+    return this.serverSessionKey || this.clientSessionKey;
   }
 
   scheduleReconnect() {
@@ -542,23 +696,31 @@ class DoccollabRoom {
   }
 
   updateParticipants(participants) {
-    if (!this.participantList) {
+    this.participantCount = Math.max(1, participants.length || 0);
+    if (this.participantList) {
+      this.participantList.innerHTML = "";
+      if (!participants.length) {
+        this.participantList.innerHTML = '<div class="doccollab-empty">아직 접속 중인 사람이 없습니다.</div>';
+      } else {
+        participants.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "doccollab-room-row";
+          row.innerHTML = `
+            <span class="doccollab-room-title">${escapeHtml(item.display_name || "사용자")}</span>
+            <span class="doccollab-room-meta">${escapeHtml(item.role || "")}</span>
+          `;
+          this.participantList.appendChild(row);
+        });
+      }
+    }
+    void this.syncCollaborationState().catch(() => undefined);
+  }
+
+  async syncCollaborationState() {
+    if (!this.editor) {
       return;
     }
-    this.participantList.innerHTML = "";
-    if (!participants.length) {
-      this.participantList.innerHTML = '<div class="doccollab-empty">아직 접속 중인 사람이 없습니다.</div>';
-      return;
-    }
-    participants.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "doccollab-room-row";
-      row.innerHTML = `
-        <span class="doccollab-room-title">${escapeHtml(item.display_name || "사용자")}</span>
-        <span class="doccollab-room-meta">${escapeHtml(item.role || "")}</span>
-      `;
-      this.participantList.appendChild(row);
-    });
+    await this.editor.setCollaborationState(this.participantCount).catch(() => undefined);
   }
 
   syncRevisionState(payload) {
@@ -567,6 +729,9 @@ class DoccollabRoom {
     }
     if (payload.published_revision) {
       this.syncPublishedRevision(payload.published_revision);
+    }
+    if (payload.collab_state?.base_revision_id) {
+      this.baseRevisionId = payload.collab_state.base_revision_id;
     }
   }
 
@@ -777,14 +942,28 @@ function delay(ms) {
   });
 }
 
+function trimSet(set, limit) {
+  while (set.size > limit) {
+    const [first] = set;
+    set.delete(first);
+  }
+}
+
+function createSessionKey() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 const rootEl = document.getElementById("doccollab-editor-app");
 const payloadEl = document.getElementById("doccollab-room-payload");
 
 if (rootEl && payloadEl) {
   const payload = JSON.parse(payloadEl.textContent || "{}");
-  const room = new DoccollabRoom(rootEl, payload);
-  room.start().catch((error) => {
+  const app = new DoccollabRoom(rootEl, payload);
+  app.start().catch((error) => {
     console.error(error);
-    room.showLoadError(error);
+    app.showLoadError(error);
   });
 }

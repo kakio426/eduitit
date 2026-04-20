@@ -461,7 +461,7 @@
 
 .doccollab-editor-surface {
     position: relative;
-    min-height: clamp(820px, calc(100vh - 280px), 1180px);
+    min-height: clamp(920px, calc(100vh - 220px), 1320px);
     border-radius: 24px;
     background: #f8fafc;
     padding: 0.8rem;
@@ -471,8 +471,8 @@
 #doccollab-editor-frame {
     display: block;
     width: 100%;
-    height: clamp(820px, calc(100vh - 280px), 1180px);
-    min-height: clamp(820px, calc(100vh - 280px), 1180px);
+    height: clamp(920px, calc(100vh - 220px), 1320px);
+    min-height: clamp(920px, calc(100vh - 220px), 1320px);
     border: 0;
     border-radius: 20px;
     background: #f8fafc;

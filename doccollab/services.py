@@ -26,6 +26,7 @@ DOC_GROUP_NAME = "HWP 문서실"
 MAX_SOURCE_FILE_BYTES = 20 * 1024 * 1024
 MAX_CONTROL_SCAN = 12
 MAX_LIVE_UPDATES = 250
+MAX_RECENT_BATCH_IDS = 400
 SUPPORTED_UPLOAD_FORMATS = {
     ".hwp": DocRoom.SourceFormat.HWP,
     ".hwpx": DocRoom.SourceFormat.HWPX,
@@ -67,6 +68,10 @@ def summarize_command(command):
         summary = f"삭제 · {count}자"
     elif command_type == "split_paragraph":
         summary = "새 문단"
+    elif command_type == "merge_paragraph":
+        summary = "문단 합치기"
+    elif command_type == "delete_selection":
+        summary = "선택 삭제"
     elif command_type == "set_cell_text":
         row = int(command.get("row") or 0) + 1
         col = int(command.get("col") or 0) + 1
@@ -74,12 +79,36 @@ def summarize_command(command):
         summary = f"표 {row},{col} 셀 수정"
         if text:
             summary = f"{summary} · {text}"
+    elif command_type == "table_cell_text":
+        row = int(command.get("row") or 0) + 1
+        col = int(command.get("col") or 0) + 1
+        action = str(command.get("action") or "insert")
+        if action == "delete":
+            count = int(command.get("count") or 1)
+            summary = f"표 {row},{col} 셀 삭제 · {count}자"
+        else:
+            text = str(command.get("text") or "").replace("\n", " ").strip()[:30]
+            summary = f"표 {row},{col} 셀 입력"
+            if text:
+                summary = f"{summary} · {text}"
     elif command_type == "insert_table_row":
         row = int(command.get("row") or 0) + 1
         summary = f"표 {row}행 추가"
     elif command_type == "insert_table_col":
         col = int(command.get("col") or 0) + 1
         summary = f"표 {col}열 추가"
+    elif command_type == "table_row_insert":
+        row = int(command.get("row") or 0) + 1
+        summary = f"표 {row}행 추가"
+    elif command_type == "table_row_delete":
+        row = int(command.get("row") or 0) + 1
+        summary = f"표 {row}행 삭제"
+    elif command_type == "table_col_insert":
+        col = int(command.get("col") or 0) + 1
+        summary = f"표 {col}열 추가"
+    elif command_type == "table_col_delete":
+        col = int(command.get("col") or 0) + 1
+        summary = f"표 {col}열 삭제"
     elif command_type == "save_revision":
         revision_number = int(command.get("revision_number") or 0)
         summary = f"저장본 저장 · r{revision_number}" if revision_number else "저장본 저장"
@@ -197,9 +226,13 @@ def load_room_collab_state(room):
     updates = cached.get("updates")
     if not isinstance(updates, list):
         updates = []
+    recent_batch_ids = cached.get("recent_batch_ids")
+    if not isinstance(recent_batch_ids, list):
+        recent_batch_ids = []
     return {
         "base_revision_id": cached.get("base_revision_id"),
         "updates": updates[-MAX_LIVE_UPDATES:],
+        "recent_batch_ids": recent_batch_ids[-MAX_RECENT_BATCH_IDS:],
         "updated_at": cached.get("updated_at"),
     }
 
@@ -208,6 +241,7 @@ def reset_room_collab_state(room, *, base_revision=None):
     payload = {
         "base_revision_id": str(base_revision.id) if getattr(base_revision, "id", None) else None,
         "updates": [],
+        "recent_batch_ids": [],
         "updated_at": timezone.now().isoformat(),
     }
     cache.set(room_collab_state_cache_key(room), payload, timeout=60 * 60 * 12)
@@ -217,11 +251,49 @@ def reset_room_collab_state(room, *, base_revision=None):
 def append_room_collab_update(room, update):
     payload = load_room_collab_state(room)
     updates = payload["updates"]
-    updates.append(list(update or []))
+    if isinstance(update, dict):
+        updates.append(dict(update))
+    else:
+        updates.append(list(update or []))
     payload["updates"] = updates[-MAX_LIVE_UPDATES:]
     payload["updated_at"] = timezone.now().isoformat()
     cache.set(room_collab_state_cache_key(room), payload, timeout=60 * 60 * 12)
     return payload
+
+
+def append_room_command_batch(room, batch):
+    payload = load_room_collab_state(room)
+    batch_id = str(batch.get("batchId") or "").strip()
+    sender_session_key = str(batch.get("senderSessionKey") or "").strip()
+    commands = [command for command in (batch.get("commands") or []) if isinstance(command, dict)]
+    selection = batch.get("selection") if isinstance(batch.get("selection"), dict) else {}
+    if not batch_id:
+        return payload, False, "missing batchId"
+    if not commands:
+        return payload, False, "empty commands"
+    recent_batch_ids = payload["recent_batch_ids"]
+    if batch_id in recent_batch_ids:
+        return payload, False, "duplicate batchId"
+    current_base_revision_id = str(payload.get("base_revision_id") or "").strip()
+    requested_base_revision_id = str(batch.get("baseRevisionId") or "").strip()
+    if current_base_revision_id and requested_base_revision_id and current_base_revision_id != requested_base_revision_id:
+        return payload, False, "stale base revision"
+    entry = {
+        "batchId": batch_id,
+        "baseRevisionId": requested_base_revision_id or current_base_revision_id or None,
+        "senderSessionKey": sender_session_key,
+        "commands": commands,
+        "selection": selection,
+        "receivedAt": timezone.now().isoformat(),
+    }
+    updates = payload["updates"]
+    updates.append(entry)
+    payload["updates"] = updates[-MAX_LIVE_UPDATES:]
+    recent_batch_ids.append(batch_id)
+    payload["recent_batch_ids"] = recent_batch_ids[-MAX_RECENT_BATCH_IDS:]
+    payload["updated_at"] = timezone.now().isoformat()
+    cache.set(room_collab_state_cache_key(room), payload, timeout=60 * 60 * 12)
+    return payload, True, None
 
 
 def serialize_presence_list(room):

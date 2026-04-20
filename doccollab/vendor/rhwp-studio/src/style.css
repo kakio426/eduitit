@@ -1,0 +1,79 @@
+@import './styles/base.css';
+@import './styles/menu-bar.css';
+@import './styles/toolbar.css';
+@import './styles/style-bar.css';
+@import './styles/editor.css';
+@import './styles/status-bar.css';
+@import './styles/dialogs.css';
+@import './styles/char-shape-dialog.css';
+@import './styles/table-selection.css';
+@import './styles/para-shape-dialog.css';
+@import './styles/picture-props.css';
+@import './styles/numbering-dialog.css';
+@import './styles/style-dialog.css';
+@import './styles/options-dialog.css';
+@import './styles/font-set-dialog.css';
+@import './styles/table-cell-props.css';
+@import './styles/form-overlay.css';
+@import './styles/find-dialog.css';
+@import './styles/symbols-dialog.css';
+@import './styles/bookmark-dialog.css';
+@import './styles/shape-picker.css';
+@import './styles/command-palette.css';
+@import './styles/responsive.css';
+
+html[data-embed='doccollab'] body {
+  background: #eef4f8;
+}
+
+html[data-embed='doccollab'] #studio-root {
+  height: 100vh;
+  height: 100dvh;
+}
+
+html[data-embed='doccollab'] #menu-bar {
+  padding-inline: 8px;
+}
+
+html[data-embed='doccollab'] #icon-toolbar {
+  height: 52px;
+  padding: 4px 8px;
+}
+
+html[data-embed='doccollab'] .tb-btn {
+  min-width: 44px;
+  padding: 3px 4px;
+}
+
+html[data-embed='doccollab'] .tb-label {
+  font-size: 10px;
+}
+
+html[data-embed='doccollab'] #style-bar {
+  min-height: 34px;
+  padding: 3px 8px;
+}
+
+html[data-embed='doccollab'] #status-bar {
+  min-height: 26px;
+}
+
+html[data-embed='doccollab'] .stb-item,
+html[data-embed='doccollab'] .stb-message {
+  line-height: 26px;
+}
+
+html[data-embed='doccollab'] .stb-icon-btn {
+  height: 24px;
+}
+
+html[data-embed='doccollab'] #scroll-container {
+  min-height: 0;
+}
+
+html[data-readonly='1'] #menu-bar,
+html[data-readonly='1'] #icon-toolbar,
+html[data-readonly='1'] #style-bar {
+  pointer-events: none;
+  opacity: 0.58;
+}
