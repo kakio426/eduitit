@@ -283,6 +283,8 @@ class DoccollabViewTests(TestCase):
         self.assertContains(response, "문서 편집")
         self.assertContains(response, "공유받은 문서")
         self.assertContains(response, "문서 공유")
+        self.assertContains(response, "표 수정")
+        self.assertContains(response, "아래 행")
 
     def test_same_title_rooms_keep_separate_mirrored_documents(self):
         first_room, _ = self._create_room(self.owner, "같은 제목", "same-1.hwpx")

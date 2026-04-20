@@ -10,7 +10,7 @@ from django.test import TransactionTestCase
 
 from config.asgi import application
 from doccollab.models import DocEditEvent, DocMembership
-from doccollab.services import create_room_from_upload, save_room_revision
+from doccollab.services import create_room_from_upload, save_room_revision, serialize_edit_event
 
 
 User = get_user_model()
@@ -248,3 +248,55 @@ class DoccollabConsumerTests(TransactionTestCase):
 
         asyncio.run(runner())
         self.assertFalse(DocEditEvent.objects.filter(room=self.room, command_id="stale-cmd").exists())
+
+    def test_revision_saved_event_is_relayed_to_other_tabs(self):
+        latest_revision = save_room_revision(
+            room=self.room,
+            user=self.owner,
+            uploaded_file=hwpx_upload("saved-after-collab.hwp", content=b"saved hwp bytes"),
+            export_format="hwp_export",
+            note="새 저장본",
+        )
+        save_event = DocEditEvent.objects.create(
+            room=self.room,
+            user=self.owner,
+            display_name="doc-owner-ws",
+            command_id=f"save:{latest_revision.id}",
+            command_type="save_revision",
+            summary=f"저장본 저장 · r{latest_revision.revision_number}",
+        )
+
+        async def runner():
+            owner = await self._connect(self.owner_cookie)
+            owner_snapshot = await owner.receive_json_from(timeout=1)
+            self.assertEqual(owner_snapshot["type"], "room.snapshot")
+
+            editor = await self._connect(self.editor_cookie)
+            editor_snapshot = await editor.receive_json_from(timeout=1)
+            self.assertEqual(editor_snapshot["type"], "room.snapshot")
+            await self._drain(owner, editor)
+
+            await owner.send_json_to(
+                {
+                    "type": "revision.saved",
+                    "payload": {
+                        "revisionId": str(latest_revision.id),
+                        "editEvents": [serialize_edit_event(save_event)],
+                    },
+                }
+            )
+
+            owner_echo = await owner.receive_json_from(timeout=1)
+            editor_echo = await editor.receive_json_from(timeout=1)
+
+            self.assertEqual(owner_echo["type"], "revision.saved")
+            self.assertEqual(editor_echo["type"], "revision.saved")
+            self.assertEqual(owner_echo["payload"]["revision"]["id"], str(latest_revision.id))
+            self.assertEqual(editor_echo["payload"]["revision"]["id"], str(latest_revision.id))
+            self.assertEqual(editor_echo["payload"]["revision"]["export_format"], "hwp_export")
+            self.assertEqual(editor_echo["payload"]["edit_events"][0]["summary"], f"저장본 저장 · r{latest_revision.revision_number}")
+
+            await self._disconnect(owner)
+            await self._disconnect(editor)
+
+        asyncio.run(runner())

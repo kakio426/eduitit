@@ -123,6 +123,10 @@ class RhwpStudioEmbed {
     );
   }
 
+  async selectionState() {
+    return this.request("selectionState", {}, 5000);
+  }
+
   async setCollaborationState(participantCount) {
     return this.request(
       "setCollaborationState",
@@ -190,6 +194,8 @@ class DoccollabRoom {
     this.loadErrorEl = document.getElementById("doccollab-load-error");
     this.loadErrorMessageEl = document.getElementById("doccollab-load-error-message");
     this.saveButton = document.getElementById("doccollab-save-button");
+    this.tableSelectionLabel = document.getElementById("doccollab-table-selection");
+    this.tableCommandButtons = Array.from(document.querySelectorAll("[data-doccollab-table-command]"));
     this.renderedRevisionIds = new Set(
       Array.from(document.querySelectorAll("[data-revision-id]"))
         .map((node) => node.dataset.revisionId)
@@ -216,6 +222,7 @@ class DoccollabRoom {
     this.pendingReplayBatches = [];
     this.localBatchIds = new Set();
     this.participantCount = 1;
+    this.selectionState = null;
     this.clientSessionKey = createSessionKey();
     this.serverSessionKey = "";
     this.boundFrameEvent = (event) => this.handleFrameEvent(event);
@@ -236,6 +243,12 @@ class DoccollabRoom {
     this.saveButton?.addEventListener("click", () => {
       void this.saveRevision();
     });
+    this.tableCommandButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        void this.applyTableCommand(button.dataset.doccollabTableCommand || "");
+      });
+    });
+    this.updateTablePanel();
   }
 
   async mountEditor() {
@@ -271,6 +284,7 @@ class DoccollabRoom {
       await this.applyOpeningViewport();
       await this.replayPendingBatches();
       await this.syncCollaborationState();
+      await this.refreshSelectionState();
       if (this.runtimeEditingEnabled) {
         void this.editor.focus().catch(() => undefined);
       }
@@ -357,6 +371,7 @@ class DoccollabRoom {
   }
 
   onSelectionChanged(payload) {
+    void this.refreshSelectionState(payload || {});
     if (!this.runtimeEditingEnabled || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -468,6 +483,7 @@ class DoccollabRoom {
         this.requiresCollabRefresh = false;
         this.pendingReplayBatches = [];
         this.upsertRevision(payload.revision);
+        this.broadcastSavedRevision(payload.revision.id || "", payload.edit_events || []);
       }
       if (Array.isArray(payload.edit_events)) {
         this.prependEditHistory(payload.edit_events);
@@ -584,16 +600,19 @@ class DoccollabRoom {
       if (revisionId === this.lastLocalRevisionId) {
         this.baseRevisionId = revisionId;
         this.requiresCollabRefresh = false;
+        this.updateTablePanel();
         return;
       }
       if (this.isDirty) {
         this.requiresCollabRefresh = true;
         this.setStatus("새 저장본이 생겼습니다. 저장 후 다시 열면 최신본이 맞춰집니다.");
+        this.updateTablePanel();
         return;
       }
       this.baseRevisionId = revisionId || this.baseRevisionId;
       this.requiresCollabRefresh = false;
       this.setStatus("최신 저장본으로 맞춰졌습니다.");
+      this.updateTablePanel();
     }
   }
 
@@ -602,9 +621,116 @@ class DoccollabRoom {
     if (message.includes("stale base revision")) {
       this.requiresCollabRefresh = true;
       this.setStatus("다른 저장본 기준이라 함께 수정이 잠시 멈췄습니다. 저장 후 다시 열어 주세요.", true);
+      this.updateTablePanel();
       return;
     }
     this.setStatus(message, true);
+  }
+
+  broadcastSavedRevision(revisionId, editEvents = []) {
+    if (!revisionId || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "revision.saved",
+        payload: {
+          revisionId,
+          editEvents,
+        },
+      }),
+    );
+  }
+
+  async refreshSelectionState(fallback = null) {
+    const nextState = { ...(fallback || {}) };
+    if (this.editor) {
+      try {
+        const state = await this.editor.selectionState();
+        Object.assign(nextState, state || {});
+      } catch (_error) {
+        // Keep the latest known selection state when the editor is still settling.
+      }
+    }
+    this.selectionState = {
+      ...(this.selectionState || {}),
+      ...nextState,
+    };
+    this.updateTablePanel();
+  }
+
+  updateTablePanel() {
+    const canUseTableTools = Boolean(
+      this.runtimeEditingEnabled
+      && this.documentLoaded
+      && this.selectionState?.inTable
+      && this.selectionState?.cellInfo
+      && this.selectionState?.cursor,
+    );
+    if (this.tableSelectionLabel) {
+      if (canUseTableTools) {
+        const row = Number(this.selectionState.cellInfo.row || 0) + 1;
+        const col = Number(this.selectionState.cellInfo.col || 0) + 1;
+        this.tableSelectionLabel.textContent = `${row}행 ${col}열`;
+      } else {
+        this.tableSelectionLabel.textContent = this.runtimeEditingEnabled ? "셀 선택 필요" : "보기 모드";
+      }
+    }
+    this.tableCommandButtons.forEach((button) => {
+      button.disabled = !canUseTableTools || this.requiresCollabRefresh;
+    });
+  }
+
+  buildTableCommand(commandName) {
+    const cursor = this.selectionState?.cursor ? JSON.parse(JSON.stringify(this.selectionState.cursor)) : null;
+    const cellInfo = this.selectionState?.cellInfo || null;
+    if (!cursor || !cellInfo) {
+      return null;
+    }
+    const row = Number(cellInfo.row || 0);
+    const col = Number(cellInfo.col || 0);
+    const commandId = `${commandName}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    switch (commandName) {
+      case "insert-row-below":
+        return { id: commandId, type: "table_row_insert", position: cursor, row, below: true };
+      case "insert-col-right":
+        return { id: commandId, type: "table_col_insert", position: cursor, col, right: true };
+      case "delete-row":
+        return { id: commandId, type: "table_row_delete", position: cursor, row };
+      case "delete-col":
+        return { id: commandId, type: "table_col_delete", position: cursor, col };
+      default:
+        return null;
+    }
+  }
+
+  async applyTableCommand(commandName) {
+    if (!this.runtimeEditingEnabled || !this.editor) {
+      return;
+    }
+    const command = this.buildTableCommand(commandName);
+    if (!command) {
+      this.setStatus("표 셀을 먼저 선택해 주세요.", true);
+      await this.refreshSelectionState();
+      return;
+    }
+    if (this.requiresCollabRefresh) {
+      this.setStatus("새 저장본 확인 전에는 표 수정이 잠시 멈춥니다.", true);
+      return;
+    }
+    const batchId = this.nextBatchId();
+    this.localBatchIds.add(batchId);
+    trimSet(this.localBatchIds, 180);
+    const applied = await this.editor.applyCommandBatch(batchId, [command]).catch(() => null);
+    if (!applied?.applied) {
+      this.localBatchIds.delete(batchId);
+      this.setStatus("표 수정이 반영되지 않았습니다.", true);
+      await this.refreshSelectionState();
+      return;
+    }
+    this.sendExistingBatch(batchId, [command], this.selectionState || {});
+    this.setStatus("표 수정 반영 중");
+    await this.refreshSelectionState();
   }
 
   queueSnapshotBatches(collabState) {
@@ -630,7 +756,11 @@ class DoccollabRoom {
       if (!batch?.batchId) {
         continue;
       }
-      await this.editor.applyCommandBatch(batch.batchId, batch.commands || []);
+      const result = await this.editor.applyCommandBatch(batch.batchId, batch.commands || []);
+      if (!result?.applied) {
+        this.setStatus("다른 탭 수정 반영 실패", true);
+        return;
+      }
     }
   }
 
@@ -650,6 +780,18 @@ class DoccollabRoom {
     const batchId = this.nextBatchId();
     this.localBatchIds.add(batchId);
     trimSet(this.localBatchIds, 180);
+    this.sendExistingBatch(batchId, commands, selection);
+  }
+
+  sendExistingBatch(batchId, commands, selection) {
+    if (
+      !this.socket
+      || this.socket.readyState !== WebSocket.OPEN
+      || !Array.isArray(commands)
+      || !commands.length
+    ) {
+      return;
+    }
     this.socket.send(
       JSON.stringify({
         type: "editor.command",

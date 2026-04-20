@@ -1,7 +1,7 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-from .models import DocMembership
+from .models import DocEditEvent, DocMembership
 from .services import (
     append_room_command_batch,
     display_name_for_user,
@@ -9,6 +9,7 @@ from .services import (
     record_edit_events,
     room_group_name,
     serialize_edit_event,
+    serialize_revision,
     serialize_presence_list,
     serialize_room,
     update_presence,
@@ -134,6 +135,30 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
                 },
             )
             return
+        if event_type == "revision.saved":
+            if self.membership.role not in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR}:
+                await self.send_json({"type": "error", "payload": {"message": "editor only"}})
+                return
+            await self._touch_presence(True)
+            payload = content.get("payload", {}) or {}
+            revision_payload = await self._revision_payload(
+                payload.get("revisionId"),
+                payload.get("editEvents"),
+            )
+            if revision_payload is None:
+                await self.send_json({"type": "error", "payload": {"message": "invalid revision"}})
+                return
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "doccollab.event",
+                    "message": {
+                        "type": "revision.saved",
+                        "payload": revision_payload,
+                    },
+                },
+            )
+            return
         await self.send_json({"type": "error", "payload": {"message": "unsupported event"}})
 
     async def doccollab_event(self, event):
@@ -177,3 +202,21 @@ class DoccollabRoomConsumer(AsyncJsonWebsocketConsumer):
             commands=commands,
         )
         return [serialize_edit_event(event) for event in events]
+
+    @database_sync_to_async
+    def _revision_payload(self, revision_id, fallback_edit_events=None):
+        if not revision_id:
+            return None
+        revision = self.room.revisions.filter(id=revision_id).first()
+        if revision is None:
+            return None
+        edit_events = [
+            serialize_edit_event(event)
+            for event in DocEditEvent.objects.filter(room=self.room, command_id=f"save:{revision.id}").order_by("-created_at")
+        ]
+        if not edit_events and isinstance(fallback_edit_events, list):
+            edit_events = [item for item in fallback_edit_events if isinstance(item, dict)]
+        return {
+            "revision": serialize_revision(revision),
+            "edit_events": edit_events,
+        }

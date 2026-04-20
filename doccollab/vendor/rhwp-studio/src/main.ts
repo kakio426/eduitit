@@ -1,5 +1,5 @@
 import { WasmBridge } from '@/core/wasm-bridge';
-import type { DocumentInfo } from '@/core/types';
+import type { CellInfo, DocumentInfo, DocumentPosition } from '@/core/types';
 import { EventBus } from '@/core/event-bus';
 import { CanvasView } from '@/view/canvas-view';
 import { InputHandler } from '@/engine/input-handler';
@@ -76,6 +76,45 @@ function getContext(): EditorContext {
     zoom: canvasView?.getViewportManager().getZoom() ?? 1.0,
     showControlCodes: wasm.getShowControlCodes(),
   };
+}
+
+function getSelectionState(): Record<string, unknown> {
+  const cursor = (inputHandler?.getCursorPosition?.() ?? null) as DocumentPosition | null;
+  const cellInfo = resolveSelectionCellInfo(cursor);
+  return {
+    cursor,
+    cellInfo,
+    hasSelection: inputHandler?.hasSelection() ?? false,
+    inTable: inputHandler?.isInTable() ?? false,
+    inCellSelectionMode: inputHandler?.isInCellSelectionMode() ?? false,
+    inTableObjectSelection: inputHandler?.isInTableObjectSelection() ?? false,
+    inPictureObjectSelection: inputHandler?.isInPictureObjectSelection() ?? false,
+    inField: inputHandler?.isInField() ?? false,
+    canUndo: inputHandler?.canUndo() ?? false,
+    canRedo: inputHandler?.canRedo() ?? false,
+  };
+}
+
+function resolveSelectionCellInfo(position: DocumentPosition | null): CellInfo | null {
+  if (!position || position.parentParaIndex == null) {
+    return null;
+  }
+  if ((position.cellPath?.length ?? 0) > 1) {
+    return wasm.getCellInfoByPath(
+      position.sectionIndex,
+      position.parentParaIndex,
+      JSON.stringify(position.cellPath || []),
+    );
+  }
+  if (position.controlIndex == null || position.cellIndex == null) {
+    return null;
+  }
+  return wasm.getCellInfo(
+    position.sectionIndex,
+    position.parentParaIndex,
+    position.controlIndex,
+    position.cellIndex,
+  );
 }
 
 const commandServices: CommandServices = {
@@ -655,6 +694,10 @@ window.addEventListener('message', async (e) => {
       case 'pageCount':
         await initializePromise;
         reply(wasm.pageCount);
+        break;
+      case 'selectionState':
+        await initializePromise;
+        reply(getSelectionState());
         break;
       case 'getPageSvg':
         await initializePromise;

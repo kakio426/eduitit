@@ -439,6 +439,17 @@
     margin-bottom: 0.55rem;
 }
 
+.doccollab-table-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.doccollab-secondary--table {
+    width: 100%;
+    justify-content: center;
+}
+
 .doccollab-meta-list div {
     display: flex;
     justify-content: space-between;

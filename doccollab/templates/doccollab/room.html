@@ -136,6 +136,25 @@
                     </div>
                 </details>
 
+                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
+                    <summary>표 수정</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div class="doccollab-support-block">
+                            <div class="doccollab-table-head">
+                                <span class="doccollab-room-title">선택 셀</span>
+                                <span id="doccollab-table-selection" class="doccollab-chip doccollab-chip--soft">{% if can_edit and editing_supported %}셀 선택 필요{% else %}보기 모드{% endif %}</span>
+                            </div>
+                            <div class="doccollab-table-actions">
+                                <button type="button" class="doccollab-secondary doccollab-secondary--table" data-doccollab-table-command="insert-row-below" {% if not can_edit or not editing_supported %}disabled{% endif %}>아래 행</button>
+                                <button type="button" class="doccollab-secondary doccollab-secondary--table" data-doccollab-table-command="insert-col-right" {% if not can_edit or not editing_supported %}disabled{% endif %}>오른쪽 열</button>
+                                <button type="button" class="doccollab-secondary doccollab-secondary--table" data-doccollab-table-command="delete-row" {% if not can_edit or not editing_supported %}disabled{% endif %}>행 삭제</button>
+                                <button type="button" class="doccollab-secondary doccollab-secondary--table" data-doccollab-table-command="delete-col" {% if not can_edit or not editing_supported %}disabled{% endif %}>열 삭제</button>
+                            </div>
+                            <p class="doccollab-footnote">표 셀을 선택하면 바로 반영됩니다.</p>
+                        </div>
+                    </div>
+                </details>
+
                 <details id="doccollab-share-members" class="doccollab-disclosure doccollab-disclosure--panel">
                     <summary>문서 공유 {{ shared_members|length }}</summary>
                     <div class="doccollab-disclosure-body">
