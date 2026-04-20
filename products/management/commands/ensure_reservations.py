@@ -11,7 +11,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('[Reservations Product Setup]'))
         self.stdout.write('=' * 70)
 
-        title = '잇티예약'
+        title = '학교 예약 시스템'
         
         # Check if product exists
         product = (
