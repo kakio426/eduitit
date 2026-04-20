@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.db import DatabaseError
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -406,6 +407,8 @@ def _build_search_display(search_results, user):
 
 
 def _build_ws_path(path):
+    if not getattr(settings, "ENABLE_WEBSOCKETS", False):
+        return ""
     return f"/{path.lstrip('/')}"
 
 

@@ -11,10 +11,10 @@
             ✍️ {{ title }}
         </span>
         <h1 class="text-6xl md:text-7xl font-bold text-gray-700 font-hand text-shadow mb-2 leading-none">
-            Insight Form
+            교실 AI 인사이트
         </h1>
         <p class="text-2xl md:text-3xl text-gray-400 font-hand max-w-2xl mx-auto leading-tight">
-            유튜브 링크와 함께 나만의 인사이트를 기록하세요.
+            바로 쓰는 AI, 수업 사례, 운영 노트를 함께 기록합니다.
         </p>
     </header>
 
@@ -56,17 +56,48 @@
             </div>
 
             <!-- Category -->
-            <div>
-                <label class="block text-2xl font-bold text-gray-600 mb-3">
-                    {{ form.category.label }}
-                </label>
-                {{ form.category }}
-                {% if form.category.errors %}
-                <p class="mt-2 text-red-500 text-lg">{{ form.category.errors.0 }}</p>
-                {% endif %}
+            <div class="grid gap-8 md:grid-cols-2">
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-3">
+                        {{ form.track.label }}
+                    </label>
+                    {{ form.track }}
+                    {% if form.track.errors %}
+                    <p class="mt-2 text-red-500 text-lg">{{ form.track.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-3">
+                        {{ form.category.label }}
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                    <p class="mt-2 text-red-500 text-lg">{{ form.category.errors.0 }}</p>
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Video URL -->
+            <div class="grid gap-8 md:grid-cols-2">
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-3">
+                        {{ form.series_name.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>
+                    </label>
+                    {{ form.series_name }}
+                    {% if form.series_name.errors %}
+                    <p class="mt-2 text-red-500 text-lg">{{ form.series_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-2xl font-bold text-gray-600 mb-3">
+                        {{ form.deck.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>
+                    </label>
+                    {{ form.deck }}
+                    {% if form.deck.errors %}
+                    <p class="mt-2 text-red-500 text-lg">{{ form.deck.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
             <div>
                 <label class="block text-2xl font-bold text-gray-600 mb-3">
                     {{ form.video_url.label }} <span class="text-gray-400 text-lg font-normal">(선택사항)</span>

@@ -1525,6 +1525,15 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(payload['rail_section']['key'], 'rooms')
         self.assertEqual(payload['rail_section']['items'][0]['renderer_key'], 'human-chat')
 
+    @override_settings(ENABLE_WEBSOCKETS=False)
+    def test_home_agent_workspace_omits_user_socket_when_websockets_disabled(self):
+        self._login('conversationwithoutws')
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+        conversations = response.context['home_v7_agent_workspace']['conversations']
+        self.assertEqual(conversations['user_ws_url'], '')
+
     def test_v2_agent_workspace_accepts_new_registry_service_without_template_changes(self):
         self._login('agentregistryextension')
         existing_definitions = get_home_agent_service_definitions()

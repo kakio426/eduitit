@@ -7,29 +7,43 @@
 {% endif %}
     <div class="flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur">
         <div class="flex min-w-0 items-center gap-2">
-            <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                 <i class="ph-fill ph-chat-circle-text text-lg"></i>
             </span>
             <div class="min-w-0">
-                <h2 class="truncate text-base font-black text-slate-800">실시간 소통</h2>
-                <p class="text-[11px] font-medium text-slate-400">바로 쓰고 바로 훑어봅니다</p>
+                <h2 class="truncate text-base font-black text-slate-800">SNS 반응</h2>
+                <p class="text-[11px] font-medium text-slate-400">공지와 반응만 짧게 봅니다</p>
             </div>
         </div>
-        <button
-            type="button"
-            aria-label="소통 피드 새로고침"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-50 hover:text-indigo-600"
-            hx-get="{% url 'home' %}?target={{ list_target_id }}"
-            hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "compact_posts": {{ compact_posts|yesno:"true,false" }}, "surface_variant": "home_rail"}'
-            hx-target="#{{ list_target_id }}"
-            hx-swap="outerHTML"
-        >
-            <i class="ph ph-arrows-clockwise text-lg"></i>
-        </button>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'community_feed' %}" class="home-v6-inline-secondary-action home-v6-inline-secondary-action--compact">
+                전체 소통
+                <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
+            </a>
+            <button
+                type="button"
+                aria-label="소통 피드 새로고침"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-50 hover:text-indigo-600"
+                hx-get="{% url 'home' %}?target={{ list_target_id }}"
+                hx-vals='js:{"feed_scope": (document.getElementById("{{ list_target_id }}") ? document.getElementById("{{ list_target_id }}").dataset.feedScope : "all"), "compact_posts": {{ compact_posts|yesno:"true,false" }}, "surface_variant": "home_rail"}'
+                hx-target="#{{ list_target_id }}"
+                hx-swap="outerHTML"
+            >
+                <i class="ph ph-arrows-clockwise text-lg"></i>
+            </button>
+        </div>
     </div>
 
     <div class="{% if embed_mode == 'full' %}bg-slate-50/60 p-4{% else %}flex-1 bg-slate-50/60 p-4{% endif %} space-y-4" id="feed-scroll-container">
         {% if user.is_authenticated %}
+        <details class="home-v6-sns-compose-shell" data-home-v6-sns-compose-shell="true">
+            <summary class="home-v6-sns-compose-summary">
+                <span class="home-v6-sns-compose-summary-copy">
+                    <i class="ph ph-pencil-simple-line"></i>
+                    <span>글 남기기</span>
+                </span>
+                <span class="home-v6-sns-compose-summary-hint">필요할 때만 열기</span>
+            </summary>
         <form
             hx-post="{% url 'post_create' %}"
             hx-target="#{{ list_target_id }}"
@@ -174,6 +188,7 @@
                 </button>
             </div>
         </form>
+        </details>
         {% else %}
         <div class="rounded-[1.6rem] border border-indigo-100 bg-indigo-50 p-5 text-center shadow-sm">
             <div class="mb-3">
@@ -191,6 +206,13 @@
         {% endif %}
 
         {% include 'core/partials/post_feed_container.html' with post_list_target_id=list_target_id feed_scope=feed_scope compact_posts=compact_posts surface_variant='home_rail' %}
+
+        <div class="home-v6-sns-rail-foot">
+            <a href="{% url 'community_feed' %}" class="home-v6-sns-rail-foot-link">
+                긴 대화와 글쓰기는 전체 소통에서 이어보기
+                <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
+            </a>
+        </div>
     </div>
 {% if embed_mode == 'full' %}
 </section>

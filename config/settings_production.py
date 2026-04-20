@@ -26,6 +26,12 @@ TESTING = 'test' in sys.argv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
+_enable_websockets_env = os.environ.get('ENABLE_WEBSOCKETS')
+if _enable_websockets_env is None:
+    ENABLE_WEBSOCKETS = TESTING or not DEBUG
+else:
+    ENABLE_WEBSOCKETS = _enable_websockets_env.lower() in ('true', '1', 'yes', 'on')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 # Render blueprint uses SECRET_KEY, while older local tooling may still set DJANGO_SECRET_KEY.
 SECRET_KEY = (

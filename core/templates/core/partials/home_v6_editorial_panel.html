@@ -1,0 +1,67 @@
+{% if home_editorial_panel %}
+<article
+    class="{% if panel_variant == 'mobile' %}home-v6-mobile-panel{% else %}home-v6-card{% endif %} home-v6-editorial-panel"
+    data-home-v6-editorial-panel="true"
+    data-home-v6-editorial-variant="{{ panel_variant|default:'desktop' }}"
+>
+    <div class="home-v6-editorial-head">
+        <div class="home-v6-editorial-head-copy">
+            <p class="home-v6-editorial-eyebrow">{{ home_editorial_panel.eyebrow }}</p>
+            <h2 class="home-v6-editorial-title">교실 AI 인사이트</h2>
+        </div>
+        <a
+            href="{% url 'insights:list' %}"
+            class="home-v6-inline-secondary-action home-v6-inline-secondary-action--compact"
+        >
+            전체 보기
+            <i class="fa-solid fa-chevron-right text-[10px]" aria-hidden="true"></i>
+        </a>
+    </div>
+
+    <div class="home-v6-editorial-feature">
+        {% if home_editorial_panel.image_url %}
+        <a href="{{ home_editorial_panel.href }}" class="home-v6-editorial-cover">
+            <img src="{{ home_editorial_panel.image_url }}" alt="{{ home_editorial_panel.title }}" loading="lazy">
+        </a>
+        {% endif %}
+
+        <div class="home-v6-editorial-body">
+            <div class="home-v6-editorial-meta">
+                <span class="home-v6-editorial-track">{{ home_editorial_panel.track_label }}</span>
+                {% if home_editorial_panel.series_name %}
+                <span class="home-v6-editorial-series">{{ home_editorial_panel.series_name }}</span>
+                {% endif %}
+            </div>
+            <a href="{{ home_editorial_panel.href }}" class="home-v6-editorial-feature-link">
+                <h3 class="home-v6-editorial-feature-title">{{ home_editorial_panel.title }}</h3>
+            </a>
+            {% if home_editorial_panel.deck %}
+            <p class="home-v6-editorial-deck">{{ home_editorial_panel.deck }}</p>
+            {% endif %}
+            {% if home_editorial_panel.summary %}
+            <p class="home-v6-editorial-summary">{{ home_editorial_panel.summary }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="home-v6-editorial-actions">
+        <a href="{{ home_editorial_panel.href }}" class="home-v6-editorial-primary-action">
+            {{ home_editorial_panel.cta_label|default:'읽기' }}
+        </a>
+        <a href="{{ home_editorial_panel.assistant_href|default:'#home-v6-agent-workspace' }}" class="home-v6-editorial-secondary-action">
+            {{ home_editorial_panel.assistant_label|default:'교무비서로 이어쓰기' }}
+        </a>
+    </div>
+
+    {% if home_editorial_links %}
+    <div class="home-v6-editorial-link-list">
+        {% for item in home_editorial_links %}
+        <a href="{{ item.href }}" class="home-v6-editorial-link">
+            <span class="home-v6-editorial-link-label">{{ item.label }}</span>
+            <span class="home-v6-editorial-link-description">{{ item.description }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</article>
+{% endif %}

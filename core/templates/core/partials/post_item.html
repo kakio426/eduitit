@@ -32,6 +32,10 @@
                         <i class="ph-fill ph-push-pin-simple text-xs"></i>
                         고정 공지
                     </span>
+                    {% elif post.is_insight_link %}
+                    <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                        인사이트
+                    </span>
                     {% elif post.post_type == 'notice' %}
                     <span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-600">
                         공지

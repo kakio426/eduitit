@@ -124,10 +124,9 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                     </div>
                 </div>
 
+                {% if home_user_mode == 'guest' %}
                 <section class="home-v6-mobile-stack" data-home-v6-mobile-stack="true">
-                    {% if home_user_mode == 'guest' %}
                     {% include 'core/partials/home_v6_start_panel.html' with panel_name='mobile' %}
-                    {% endif %}
                     {% for mobile_section in home_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
                     <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
@@ -181,7 +180,6 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                     </article>
                     {% elif mobile_section == 'calendar' %}
                     <section class="home-v6-mobile-calendar-section" data-home-v6-calendar-panel="mobile">
-                        {% if home_user_mode == 'guest' %}
                         <div class="home-v6-card">
                             <div class="mb-4">
                                 <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 시작</p>
@@ -207,9 +205,6 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                             </div>
                             {% endif %}
                         </div>
-                        {% else %}
-                        {% include 'core/partials/home_v6_calendar_panel.html' %}
-                        {% endif %}
                     </section>
                     {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
@@ -273,8 +268,9 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                     </article>
                     {% endif %}
                 </section>
+                {% endif %}
 
-                <div class="home-v6-layout" data-home-v6-layout="true">
+                <div class="home-v6-layout" data-home-v6-layout="true" data-home-v6-layout-mode="{{ home_user_mode }}">
                     <aside class="home-v6-nav-shell" data-home-v6-nav-shell="desktop">
                         <div class="home-v6-nav-stack home-v6-nav-stack--rail">
                             <div class="home-v6-card home-v6-nav-card home-v6-nav-card--rail" data-home-v6-nav-card="rail">
@@ -324,7 +320,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                 </div>
                             </section>
 
-                            {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace %}
+                            {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace home_editorial_prompt_chip=home_editorial_prompt_chip %}
 
                         </div>
 
@@ -379,6 +375,8 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                 {% endif %}
                             </article>
 
+                            {% include 'core/partials/home_v6_editorial_panel.html' with panel_variant='desktop' %}
+
                             {% if teacher_buddy_panel %}
                             <section data-home-teacher-buddy-slot="v6-rail" data-home-v6-rail-card="true">
                                 {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
@@ -422,7 +420,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                             </section>
                             {% endif %}
 
-                            <section class="home-v6-community-section home-v6-top-sns" data-home-v6-sns-panel="true">
+                            <section id="home-community-section" class="home-v6-community-section home-v6-top-sns" data-home-v6-sns-panel="true">
                                 {% include 'core/partials/home_v6_sns_widget.html' with embed_mode='full' compact_posts=True %}
                             </section>
                         </div>

@@ -1,4 +1,5 @@
 <section
+    id="home-v6-agent-workspace"
     class="home-v6-representative-section"
     data-home-v6-representative-services="true"
     data-home-v6-agent-workspace="true"
@@ -81,6 +82,14 @@
                                 <span class="home-v6-agent-active-status-dot"></span>
                                 <span x-text="activeHeaderMeta()"></span>
                             </span>
+                            {% if home_editorial_prompt_chip %}
+                            <a href="{{ home_editorial_prompt_chip.href }}" class="home-v6-agent-editorial-chip">
+                                <span>{{ home_editorial_prompt_chip.label }}</span>
+                                {% if home_editorial_prompt_chip.meta %}
+                                <strong>{{ home_editorial_prompt_chip.meta }}</strong>
+                                {% endif %}
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

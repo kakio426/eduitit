@@ -5,53 +5,136 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from core.seo import build_insight_detail_seo, build_insight_list_seo
 from .models import Insight
 from .forms import InsightForm, InsightPasteForm
 from .importer import upsert_insight_from_text
 
 
+def _apply_insight_filters(queryset, *, track="", category="", tag=""):
+    if track:
+        queryset = queryset.filter(track=track)
+    if category:
+        queryset = queryset.filter(category=category)
+    if tag:
+        queryset = queryset.filter(tags__icontains=tag)
+    return queryset
+
+
+def _order_insights(queryset, sort):
+    if sort == 'oldest':
+        return queryset.order_by('created_at')
+    if sort == 'popular':
+        return queryset.order_by('-likes_count_annotated', '-created_at')
+    return queryset.order_by('-created_at')
+
+
+def _build_related_insights(insight):
+    queryset = Insight.objects.annotate(
+        likes_count_annotated=Count('likes', distinct=True)
+    ).exclude(pk=insight.pk)
+    if insight.series_name:
+        related = queryset.filter(series_name=insight.series_name).order_by('-created_at')[:3]
+        if related:
+            return related
+    if insight.track:
+        related = queryset.filter(track=insight.track).order_by('-is_featured', '-created_at')[:3]
+        if related:
+            return related
+    return queryset.order_by('-is_featured', '-created_at')[:3]
+
+
+def _build_related_tool_links(insight):
+    if insight.track == 'classroom':
+        return [
+            {
+                'label': '수업 준비',
+                'description': '바로 수업에 옮길 자료와 흐름을 정리합니다.',
+                'href': reverse('prompt_lab'),
+            },
+            {
+                'label': '포트폴리오',
+                'description': '현장 적용 사례를 더 이어서 봅니다.',
+                'href': reverse('portfolio:list'),
+            },
+        ]
+    if insight.track == 'editorial':
+        return [
+            {
+                'label': 'AI 법률 가이드',
+                'description': '운영 기준과 판단 포인트를 함께 확인합니다.',
+                'href': reverse('teacher_law:main'),
+            },
+            {
+                'label': '프롬프트 연구실',
+                'description': '다음 문장과 질문을 바로 꺼내 씁니다.',
+                'href': reverse('prompt_lab'),
+            },
+        ]
+    return [
+        {
+            'label': '알림장 멘트',
+            'description': '읽은 내용을 바로 안내문과 멘트로 옮깁니다.',
+            'href': reverse('noticegen:main'),
+        },
+        {
+            'label': '잇티수합',
+            'description': '가정 응답과 자료 수합 흐름으로 바로 이어갑니다.',
+            'href': reverse('collect:landing'),
+        },
+    ]
+
+
 def insight_list(request):
     """인사이트 목록 — 카테고리/태그/정렬 필터 지원"""
     sort = request.GET.get('sort', 'recent')
+    track = request.GET.get('track', '')
     category = request.GET.get('category', '')
     tag = request.GET.get('tag', '')
 
-    # featured 인사이트 (상단 고정)
-    featured_insights = Insight.objects.filter(is_featured=True).annotate(
+    featured_queryset = Insight.objects.filter(is_featured=True).annotate(
         likes_count_annotated=Count('likes', distinct=True)
-    ).order_by('-created_at')
-
-    # 일반 목록 (featured 제외)
-    insights = Insight.objects.filter(is_featured=False).annotate(
+    )
+    insight_queryset = Insight.objects.filter(is_featured=False).annotate(
         likes_count_annotated=Count('likes', distinct=True)
     )
 
-    # 카테고리 필터
-    if category:
-        insights = insights.filter(category=category)
+    featured_queryset = _apply_insight_filters(
+        featured_queryset,
+        track=track,
+        category=category,
+        tag=tag,
+    ).order_by('-created_at')
+    insight_queryset = _apply_insight_filters(
+        insight_queryset,
+        track=track,
+        category=category,
+        tag=tag,
+    )
+    insight_queryset = _order_insights(insight_queryset, sort)
 
-    # 태그 필터
-    if tag:
-        insights = insights.filter(tags__icontains=tag)
-        featured_insights = featured_insights.filter(tags__icontains=tag)
-
-    # 정렬
-    if sort == 'recent':
-        insights = insights.order_by('-created_at')
-    elif sort == 'oldest':
-        insights = insights.order_by('created_at')
-    elif sort == 'popular':
-        insights = insights.order_by('-likes_count_annotated', '-created_at')
+    featured_insights = list(featured_queryset[:4])
+    featured_primary = featured_insights[0] if featured_insights else None
+    featured_secondary = featured_insights[1:]
+    if featured_primary is None:
+        featured_primary = insight_queryset.first()
+        if featured_primary is not None:
+            insight_queryset = insight_queryset.exclude(pk=featured_primary.pk)
 
     return render(request, 'insights/insight_list.html', {
-        'insights': insights,
+        'insights': insight_queryset,
         'featured_insights': featured_insights,
+        'featured_primary': featured_primary,
+        'featured_secondary': featured_secondary,
+        'track_choices': Insight.TRACK_CHOICES,
+        'current_track': track,
         'current_sort': sort,
         'current_category': category,
         'current_tag': tag,
         **build_insight_list_seo(
             request,
+            current_track=track,
             current_category=category,
             current_tag=tag,
             current_sort=sort,
@@ -71,6 +154,8 @@ class InsightDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['related_insights'] = _build_related_insights(self.object)
+        context['related_tool_links'] = _build_related_tool_links(self.object)
         context.update(build_insight_detail_seo(self.request, self.object).as_context())
         return context
 

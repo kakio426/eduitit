@@ -230,6 +230,17 @@ class Post(models.Model):
         return self.post_type == 'news_link'
 
     @property
+    def is_insight_link(self):
+        secondary_tag = str(self.secondary_tag or '').strip().lower()
+        return self.post_type == 'news_link' and secondary_tag.startswith('insight:')
+
+    @property
+    def display_publisher(self):
+        if self.is_insight_link and str(self.publisher or '').strip() == 'Insight Library':
+            return '교실 AI 인사이트'
+        return self.publisher
+
+    @property
     def is_visible(self):
         return self.approval_status == 'approved'
 

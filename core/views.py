@@ -195,6 +195,12 @@ ADMIN_PAGE_NAME_BY_ROUTE = {
     'policy': '정책',
 }
 
+
+def _schoolcomm_user_ws_url():
+    if not getattr(settings, 'ENABLE_WEBSOCKETS', False):
+        return ''
+    return '/schoolcomm/ws/users/me/'
+
 HOME_V7_AGENT_TACIT_RULES = (
     {
         'rule_key': 'field_trip_bus_ratio',
@@ -1343,7 +1349,7 @@ def _build_home_v7_agent_conversations(request):
         'workspace_name': '',
         'open_url': _safe_reverse('schoolcomm:main') or '',
         'refresh_url': _safe_reverse('home_agent_conversations') or '',
-        'user_ws_url': '/schoolcomm/ws/users/me/',
+        'user_ws_url': _schoolcomm_user_ws_url(),
         'items': (),
     }
     if request is None or not getattr(getattr(request, 'user', None), 'is_authenticated', False):
@@ -1369,7 +1375,7 @@ def _build_home_v7_agent_conversations(request):
                 'workspace_name': '',
                 'open_url': open_url,
                 'refresh_url': _safe_reverse('home_agent_conversations') or '',
-                'user_ws_url': '/schoolcomm/ws/users/me/',
+                'user_ws_url': _schoolcomm_user_ws_url(),
                 'items': (),
             }
 
@@ -1418,7 +1424,7 @@ def _build_home_v7_agent_conversations(request):
             'workspace_name': str(home_card.get('workspace_name') or workspace.name or '').strip(),
             'open_url': open_url,
             'refresh_url': _safe_reverse('home_agent_conversations') or '',
-            'user_ws_url': '/schoolcomm/ws/users/me/',
+            'user_ws_url': _schoolcomm_user_ws_url(),
             'renderer_key': 'human-chat',
             'items': tuple(items),
         }
@@ -3985,6 +3991,110 @@ def _build_home_entry_panel_context(
     }
 
 
+def _compact_home_editorial_text(value, *, fallback=""):
+    text = " ".join(str(value or "").split())
+    return text or fallback
+
+
+def _build_home_editorial_links():
+    return [
+        {
+            "label": "바로 쓰는 AI",
+            "description": "오늘 바로 복사해 쓸 문장과 흐름",
+            "href": f"{reverse('insights:list')}?track=practical",
+        },
+        {
+            "label": "수업 사례",
+            "description": "교실에서 먼저 써 본 장면과 적용 기록",
+            "href": f"{reverse('insights:list')}?track=classroom",
+        },
+    ]
+
+
+def _build_home_editorial_portfolio_fallback():
+    from portfolio.models import Achievement
+
+    achievement = (
+        Achievement.objects
+        .filter(is_featured=True)
+        .order_by('-date_awarded', '-created_at')
+        .first()
+        or Achievement.objects.order_by('-date_awarded', '-created_at').first()
+    )
+    if achievement is None:
+        return None
+
+    summary = _compact_home_editorial_text(
+        achievement.description,
+        fallback=f"{achievement.issuer}에서 남긴 현장 기록입니다.",
+    )
+    return {
+        "source_kind": "portfolio",
+        "eyebrow": "교실 사례",
+        "title": achievement.title,
+        "deck": summary[:110] + ("..." if len(summary) > 110 else ""),
+        "summary": summary[:180] + ("..." if len(summary) > 180 else ""),
+        "track_label": "수업 사례",
+        "series_name": "",
+        "image_url": achievement.safe_image_url,
+        "href": reverse('portfolio:list'),
+        "cta_label": "사례 보기",
+        "assistant_href": "#home-v6-agent-workspace",
+        "assistant_label": "교무비서로 이어쓰기",
+    }
+
+
+def _build_home_editorial_panel_context():
+    from insights.models import Insight
+
+    insight = (
+        Insight.objects
+        .filter(is_featured=True)
+        .order_by('-created_at')
+        .first()
+        or Insight.objects
+        .filter(track='practical')
+        .order_by('-created_at')
+        .first()
+    )
+    if insight is None:
+        return _build_home_editorial_portfolio_fallback()
+
+    detail_url = reverse('insights:detail', kwargs={'pk': insight.pk})
+    summary = _compact_home_editorial_text(
+        insight.content,
+        fallback=insight.title,
+    )
+    deck = _compact_home_editorial_text(
+        insight.deck,
+        fallback=summary[:110] + ("..." if len(summary) > 110 else ""),
+    )
+    return {
+        "source_kind": "insight",
+        "eyebrow": "교실 AI 인사이트",
+        "title": insight.title,
+        "deck": deck,
+        "summary": summary[:180] + ("..." if len(summary) > 180 else ""),
+        "track_label": insight.get_track_display(),
+        "series_name": (insight.series_name or "").strip(),
+        "image_url": insight.thumbnail_url or "",
+        "href": detail_url,
+        "cta_label": "읽기",
+        "assistant_href": "#home-v6-agent-workspace",
+        "assistant_label": "교무비서로 이어쓰기",
+    }
+
+
+def _build_home_editorial_prompt_chip(home_editorial_panel):
+    if not home_editorial_panel:
+        return None
+    return {
+        "label": "인사이트로 질문 시작",
+        "href": home_editorial_panel.get("href", ""),
+        "meta": home_editorial_panel.get("track_label", ""),
+    }
+
+
 def _build_home_action_from_link_item(item, *, cta_label="바로 열기"):
     if not item:
         return None
@@ -5522,6 +5632,14 @@ def build_home_surface_context(
     home_frontend_config = _build_home_surface_frontend_config(
         favorite_product_ids=[product.id for product in favorite_products],
     )
+    home_editorial_panel = _build_home_surface_safe_value(
+        request,
+        label='home editorial panel',
+        fallback_factory=lambda: None,
+        builder=_build_home_editorial_panel_context,
+    )
+    home_editorial_links = _build_home_editorial_links()
+    home_editorial_prompt_chip = _build_home_editorial_prompt_chip(home_editorial_panel)
     home_v7_signal_layer = _build_home_v7_agent_signal_layer(provider_cards.calendar)
     home_v7_tacit_registry = _build_home_v7_agent_tacit_registry()
     home_v7_workflow_registry = _build_home_v7_agent_workflow_registry()
@@ -5611,6 +5729,9 @@ def build_home_surface_context(
         'home_v7_tacit_registry': home_v7_tacit_registry,
         'home_v7_workflow_registry': home_v7_workflow_registry,
         'home_v7_agent_workspace': home_v7_agent_workspace,
+        'home_editorial_panel': home_editorial_panel,
+        'home_editorial_links': home_editorial_links,
+        'home_editorial_prompt_chip': home_editorial_prompt_chip,
     })
     template_context.update(
         _build_home_surface_safe_value(
@@ -5824,6 +5945,11 @@ def build_guest_home_surface_context(
         )
     )
     template_context.update(home_calendar_surface)
+    template_context.update({
+        'home_editorial_panel': None,
+        'home_editorial_links': [],
+        'home_editorial_prompt_chip': None,
+    })
     template_context.update(
         _build_home_surface_safe_value(
             request,

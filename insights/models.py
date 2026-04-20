@@ -10,9 +10,17 @@ class Insight(models.Model):
         ('devlog', 'DevLog (Development Log)'),
         ('column', 'Column/Essay'),
     ]
+    TRACK_CHOICES = [
+        ('practical', '바로 쓰는 AI'),
+        ('classroom', '수업 사례'),
+        ('editorial', '운영 노트'),
+    ]
 
     title = models.CharField(max_length=200)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='youtube', verbose_name="카테고리")
+    track = models.CharField(max_length=20, choices=TRACK_CHOICES, default='practical', verbose_name="트랙")
+    series_name = models.CharField(max_length=120, blank=True, default='', verbose_name="시리즈")
+    deck = models.CharField(max_length=220, blank=True, default='', verbose_name="짧은 소개")
     video_url = models.URLField(help_text="YouTube video URL", blank=True, null=True)
     thumbnail_url = models.URLField(blank=True, help_text="Auto-generated or custom thumbnail URL")
     content = models.TextField(help_text="Main insight or quote")
@@ -29,6 +37,10 @@ class Insight(models.Model):
     @property
     def total_likes(self):
         return self.likes.count()
+
+    @property
+    def has_series(self):
+        return bool((self.series_name or "").strip())
 
     def get_video_id(self):
         """Extract a YouTube video ID from common URL formats."""

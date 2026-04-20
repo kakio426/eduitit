@@ -5,7 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Post, UserProfile
+from core.models import Post, UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.views import _build_post_feed_queryset
 from insights.models import Insight
 
@@ -19,6 +20,16 @@ def _create_onboarded_user(username, *, is_staff=False):
     if is_staff:
         user.is_staff = True
         user.save(update_fields=["is_staff"])
+        UserPolicyConsent.objects.create(
+            user=user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+            ip_address="127.0.0.1",
+            user_agent="insight-sns-test-agent",
+        )
     return user
 
 
@@ -95,3 +106,17 @@ class InsightSnsQueueTest(TestCase):
             {"action": "feature"},
         )
         self.assertEqual(action_response.status_code, 403)
+
+    def test_insight_posts_expose_editorial_display_label(self):
+        post = Post.objects.create(
+            author=self.staff_user,
+            content="인사이트 요약",
+            post_type="news_link",
+            publisher="Insight Library",
+            source_url=reverse("insights:detail", args=[self.insight.id]),
+            secondary_tag=f"insight:{self.insight.id}",
+            approval_status="approved",
+        )
+
+        self.assertTrue(post.is_insight_link)
+        self.assertEqual(post.display_publisher, "교실 AI 인사이트")
