@@ -236,33 +236,33 @@ body {
     }
 
     .shell-nav-brand-icon {
-        width: 2.15rem;
-        height: 2.15rem;
-        font-size: 0.92rem;
+        width: 1.95rem;
+        height: 1.95rem;
+        font-size: 0.84rem;
     }
 
     .shell-nav-brand-wordmark {
-        font-size: 1.02rem;
+        font-size: 1rem;
     }
 }
 
 @media (min-width: 1024px) {
     .shell-nav-brand-wordmark {
-        font-size: 1.2rem;
+        font-size: 1.16rem;
     }
 
     .shell-nav-bar {
-        min-height: 4.05rem;
+        min-height: 3.65rem;
     }
 }
 
 @media (min-width: 1280px) {
     .shell-nav-primary {
-        gap: 1.35rem;
+        gap: 1.65rem;
     }
 
     .shell-nav-secondary {
-        gap: 0.45rem;
+        gap: 0.2rem;
     }
 }
 
@@ -470,37 +470,39 @@ h4,
  * surfaces on one restrained palette without changing their layout structure.
  */
 .shell-nav-surface {
-    background: rgba(255, 255, 255, 0.84);
-    border: 1px solid rgba(255, 255, 255, 0.82);
-    box-shadow:
-        0 18px 42px -34px rgba(31, 21, 56, 0.48),
-        0 10px 20px -22px rgba(104, 68, 198, 0.28);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .shell-nav-frame {
     overflow: visible;
-    border-radius: 1.35rem;
+    border-radius: 0;
 }
 
 .shell-nav-frame:hover {
     transform: none;
-    box-shadow:
-        0 18px 42px -34px rgba(31, 21, 56, 0.48),
-        0 10px 20px -22px rgba(104, 68, 198, 0.28);
+    box-shadow: none;
 }
 
 .shell-nav-wrap {
-    padding-inline: var(--space-shell-nav-outer-x);
-    padding-top: calc(var(--space-shell-nav-outer-y) + env(safe-area-inset-top));
-    padding-bottom: var(--space-shell-nav-outer-y);
+    padding-inline: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: 0;
+    background:
+        linear-gradient(180deg, rgba(250, 248, 243, 0.98) 0%, rgba(248, 245, 239, 0.94) 100%);
+    border-bottom: 1px solid rgba(34, 26, 54, 0.08);
+    box-shadow: 0 10px 20px -22px rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
 .shell-nav-bar {
     gap: var(--space-shell-nav-gap);
-    min-height: 3.95rem;
-    padding: var(--space-shell-nav-inner-y) var(--space-shell-nav-inner-x);
+    min-height: 3.55rem;
+    padding: 0.68rem clamp(1rem, 2vw, 1.45rem);
 }
 
 .shell-nav-brand {
@@ -513,17 +515,18 @@ h4,
 }
 
 .shell-nav-brand-icon {
-    width: 2.35rem;
-    height: 2.35rem;
-    font-size: 1rem;
-    border-radius: 0.9rem;
-    color: var(--color-accent-primary);
-    border: 1px solid rgba(104, 68, 198, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 243, 252, 0.98) 100%);
-    box-shadow: 0 12px 24px -18px rgba(31, 21, 56, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 0.9rem;
+    border-radius: 0.8rem;
+    color: var(--color-accent-strong);
+    border: 1px solid rgba(52, 37, 95, 0.1);
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: none;
     transition:
         transform var(--motion-duration-fast) var(--motion-ease-standard),
-        box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+        background-color var(--motion-duration-fast) var(--motion-ease-standard),
+        border-color var(--motion-duration-fast) var(--motion-ease-standard),
         color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
@@ -531,15 +534,16 @@ h4,
 .shell-nav-brand-link:focus-visible .shell-nav-brand-icon {
     transform: translateY(var(--motion-lift-subtle));
     color: var(--color-accent-strong);
-    box-shadow: 0 16px 28px -20px rgba(31, 21, 56, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(52, 37, 95, 0.16);
 }
 
 .shell-nav-brand-wordmark {
     font-family: var(--font-brand);
-    font-size: 1.15rem;
+    font-size: 1.12rem;
     font-weight: 800;
-    letter-spacing: -0.045em;
-    color: var(--color-ink-brand);
+    letter-spacing: -0.04em;
+    color: #2d2348;
 }
 
 .shell-nav-actions {
@@ -555,22 +559,42 @@ h4,
 }
 
 .shell-nav-primary {
-    gap: 1.2rem;
-    margin-right: 0.2rem;
+    gap: 1.5rem;
+    margin-right: 0.35rem;
 }
 
 .shell-nav-secondary {
-    gap: 0.3rem;
+    gap: 0.15rem;
 }
 
 .shell-link--nav {
-    padding: 0.2rem 0 0.45rem;
-    border-bottom: 2px solid transparent;
-    color: var(--color-ink-tertiary);
-    font-size: 0.94rem;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0;
+    border-bottom: 0;
+    color: rgba(45, 35, 72, 0.68);
+    font-size: 0.96rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1;
+}
+
+.shell-link--nav::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.82rem;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.18;
+    transform: scaleX(0.35);
+    transform-origin: center;
+    transition:
+        transform var(--motion-duration-base) var(--motion-ease-standard),
+        opacity var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .shell-link--nav:hover,
@@ -579,8 +603,14 @@ h4,
 }
 
 .shell-link--nav-active {
-    color: var(--color-accent-primary);
-    border-bottom-color: currentColor;
+    color: var(--color-ink-primary);
+}
+
+.shell-link--nav:hover::after,
+.shell-link--nav:focus-visible::after,
+.shell-link--nav-active::after {
+    opacity: 1;
+    transform: scaleX(1);
 }
 
 .shell-utility-button {
@@ -588,12 +618,12 @@ h4,
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
-    min-height: 2.4rem;
-    padding: 0 0.72rem;
+    min-height: 2.2rem;
+    padding: 0 0.58rem;
     border: 1px solid transparent;
-    border-radius: 0.95rem;
+    border-radius: 0.72rem;
     background: transparent;
-    color: var(--color-ink-secondary);
+    color: rgba(45, 35, 72, 0.76);
     font-size: 0.88rem;
     font-weight: 650;
     letter-spacing: -0.02em;
@@ -609,57 +639,57 @@ h4,
 
 .shell-utility-button:hover,
 .shell-utility-button:focus-visible {
-    background: rgba(242, 235, 255, 0.62);
+    background: rgba(45, 35, 72, 0.055);
     color: var(--color-ink-primary);
 }
 
 .shell-utility-button--icon {
-    width: 2.4rem;
+    width: 2.2rem;
     padding: 0;
     color: var(--color-ink-tertiary);
 }
 
 .shell-utility-button--accent {
-    background: rgba(242, 235, 255, 0.88);
-    color: var(--color-accent-primary);
-    border-color: rgba(104, 68, 198, 0.12);
+    background: rgba(45, 35, 72, 0.05);
+    color: var(--color-ink-primary);
+    border-color: rgba(45, 35, 72, 0.09);
 }
 
 .shell-utility-button--accent:hover,
 .shell-utility-button--accent:focus-visible {
-    background: rgba(235, 225, 255, 0.98);
-    color: var(--color-accent-strong);
+    background: rgba(45, 35, 72, 0.08);
+    color: var(--color-ink-primary);
 }
 
 .shell-utility-button--warning {
-    background: rgba(255, 247, 237, 0.92);
-    color: #b45309;
-    border-color: rgba(251, 191, 36, 0.22);
+    background: rgba(198, 138, 26, 0.12);
+    color: #8b5d10;
+    border-color: rgba(198, 138, 26, 0.14);
 }
 
 .shell-utility-button--warning:hover,
 .shell-utility-button--warning:focus-visible {
-    background: rgba(255, 237, 213, 0.98);
-    color: #92400e;
+    background: rgba(198, 138, 26, 0.18);
+    color: #734c0d;
 }
 
 .shell-nav-clock {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 4.9rem;
-    padding: 0 0.45rem;
-    color: var(--color-ink-tertiary);
+    min-width: 4.4rem;
+    padding: 0 0.2rem;
+    color: rgba(45, 35, 72, 0.54);
     font-family: 'SFMono-Regular', 'Roboto Mono', 'Consolas', monospace;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.13em;
     line-height: 1;
 }
 
 .shell-nav-utility-icon {
-    color: var(--color-accent-muted);
-    font-size: 0.86rem;
+    color: rgba(45, 35, 72, 0.46);
+    font-size: 0.82rem;
 }
 
 .shell-nav-avatar {
@@ -669,6 +699,34 @@ h4,
 
 .shell-nav-user-label {
     font-size: 0.88rem;
+}
+
+.shell-nav-wrap .shell-icon-button,
+.shell-nav-wrap .shell-pill {
+    background: transparent;
+    border: 1px solid transparent;
+    box-shadow: none !important;
+    color: rgba(45, 35, 72, 0.76);
+}
+
+.shell-nav-wrap .shell-icon-button:hover,
+.shell-nav-wrap .shell-icon-button:focus-visible,
+.shell-nav-wrap .shell-pill:hover,
+.shell-nav-wrap .shell-pill:focus-visible {
+    background: rgba(45, 35, 72, 0.055);
+    color: var(--color-ink-primary);
+}
+
+.shell-nav-wrap .shell-pill--accent,
+.shell-nav-wrap .shell-pill--strong {
+    background: rgba(45, 35, 72, 0.05);
+    border-color: rgba(45, 35, 72, 0.08);
+}
+
+.shell-nav-wrap .shell-pill--warning {
+    background: rgba(198, 138, 26, 0.12);
+    border-color: rgba(198, 138, 26, 0.14);
+    color: #8b5d10;
 }
 
 .shell-mobile-surface {
