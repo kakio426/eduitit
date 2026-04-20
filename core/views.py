@@ -1340,7 +1340,6 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
 def _build_home_v7_agent_conversations(request):
     empty_payload = {
         'title': '끼리끼리 채팅방',
-        'workspace_id': '',
         'workspace_name': '',
         'open_url': _safe_reverse('schoolcomm:main') or '',
         'refresh_url': _safe_reverse('home_agent_conversations') or '',
@@ -1367,7 +1366,6 @@ def _build_home_v7_agent_conversations(request):
         if workspace is None:
             return {
                 'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
-                'workspace_id': '',
                 'workspace_name': '',
                 'open_url': open_url,
                 'refresh_url': _safe_reverse('home_agent_conversations') or '',
@@ -1402,8 +1400,6 @@ def _build_home_v7_agent_conversations(request):
                 'kind': 'room',
                 'key': f"room:{room_id}",
                 'entity_key': room_id,
-                'room_id': room_id,
-                'room_kind': room_kind,
                 'renderer_key': 'human-chat',
                 'title': name,
                 'summary': summary,
@@ -1419,7 +1415,6 @@ def _build_home_v7_agent_conversations(request):
 
         return {
             'title': str(home_card.get('title') or '끼리끼리 채팅방').strip() or '끼리끼리 채팅방',
-            'workspace_id': str(workspace.id),
             'workspace_name': str(home_card.get('workspace_name') or workspace.name or '').strip(),
             'open_url': open_url,
             'refresh_url': _safe_reverse('home_agent_conversations') or '',
@@ -1430,51 +1425,6 @@ def _build_home_v7_agent_conversations(request):
     except Exception:
         logger.exception('[home agent] failed to build schoolcomm conversations')
         return empty_payload
-
-
-def _build_home_v7_human_chat_summary(request, conversations):
-    base_url = _safe_reverse('schoolcomm:main') or ''
-    summary = {
-        'title': '최근 대화',
-        'workspace_name': '',
-        'unread_count': 0,
-        'items': (),
-        'open_url': base_url,
-        'open_label': '대화 열기',
-        'empty_text': '최근 대화 없음',
-    }
-    conversation_payload = conversations if isinstance(conversations, dict) else {}
-    workspace_id = str(conversation_payload.get('workspace_id') or '').strip()
-    items = []
-    total_unread = 0
-    for item in conversation_payload.get('items') or ():
-        room_kind = str(item.get('room_kind') or '').strip().lower()
-        room_id = str(item.get('room_id') or item.get('entity_key') or '').strip()
-        if room_kind not in {'dm', 'group_dm'} or not room_id:
-            continue
-        unread_count = int(item.get('unread_count') or 0)
-        total_unread += unread_count
-        if workspace_id and base_url:
-            open_url = f"{base_url}?workspace={workspace_id}&room={room_id}"
-        else:
-            open_url = str(item.get('open_url') or base_url).strip()
-        items.append({
-            'room_id': room_id,
-            'title': str(item.get('title') or '').strip(),
-            'summary': str(item.get('summary') or '').strip(),
-            'unread_count': unread_count,
-            'badge': str(unread_count) if unread_count else '',
-            'open_url': open_url,
-        })
-    preferred_item = next((item for item in items if item.get('unread_count')), items[0] if items else None)
-    if preferred_item and preferred_item.get('open_url'):
-        summary['open_url'] = preferred_item['open_url']
-    summary.update({
-        'workspace_name': str(conversation_payload.get('workspace_name') or '').strip(),
-        'unread_count': total_unread,
-        'items': tuple(items[:3]),
-    })
-    return summary
 
 
 def _build_home_v7_agent_signal_layer(calendar_summary):
@@ -1616,12 +1566,6 @@ def _build_home_v7_context_router_preview(
     tacit_registry=None,
     workflow_registry=None,
 ):
-    primary_mode_keys = ('schedule', 'notice', 'quickdrop')
-    home_mode_labels = {
-        'schedule': 'AI 일정',
-        'notice': 'AI 알림장 문구',
-        'quickdrop': '바로전송',
-    }
     tool_map = {
         'schedule': _build_home_v7_router_tool(
             request,
@@ -1687,7 +1631,6 @@ def _build_home_v7_context_router_preview(
     today_workspace = dict(calendar_summary.get('today_workspace') or {})
     route_map = {
         'messagebox:main': reverse('messagebox:main'),
-        'classcalendar:api_message_capture_parse': reverse('classcalendar:api_message_capture_parse'),
         'classcalendar:api_message_capture_save': reverse('classcalendar:api_message_capture_save'),
     }
     message_capture_links = {
@@ -1709,8 +1652,6 @@ def _build_home_v7_context_router_preview(
 
     modes = []
     for definition in get_home_agent_service_definitions():
-        if definition.key not in primary_mode_keys:
-            continue
         service_key = str(definition.service_key or '').strip()
         mode_workflows = workflow_registry.get('by_service_key', {}).get(service_key, [])
         mode_rules = tacit_registry.get('by_service_key', {}).get(service_key, [])
@@ -1739,7 +1680,6 @@ def _build_home_v7_context_router_preview(
                 tacit_rule_keys=tacit_rule_keys,
             )
         )
-        modes[-1]['label'] = home_mode_labels.get(definition.key, modes[-1]['label'])
 
     context_questions = []
     seen_questions = set()
@@ -1760,7 +1700,6 @@ def _build_home_v7_context_router_preview(
         for workflow_key in list(workflow_registry.get('by_workflow_key', {}).keys())[:3]
     )
     conversations = _build_home_v7_agent_conversations(request)
-    human_chat_summary = _build_home_v7_human_chat_summary(request, conversations)
     service_rail_items = [
         {
             'kind': 'service',
@@ -1798,13 +1737,11 @@ def _build_home_v7_context_router_preview(
         'workspace_summary': '',
         'workspace_selector_title': '서비스',
         'workspace_search_placeholder': '서비스와 대화 찾기',
-        'initial_mode': 'schedule',
-        'initial_rail_key': 'service:schedule',
-        'primary_mode_keys': primary_mode_keys,
+        'initial_mode': 'notice',
+        'initial_rail_key': 'service:notice',
         'modes': modes,
         'rail_sections': rail_sections,
         'conversations': conversations,
-        'human_chat_summary': human_chat_summary,
         'reason': '',
         'signal_sources': tuple(signal_sources) or ('calendar_day',),
         'selected_date_label': today_workspace.get('date_label', ''),
@@ -2223,7 +2160,7 @@ CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES = {
 }
 
 CLASS_OPS_NAV_RESERVATION_TITLES = {
-    '학교 예약 시스템',
+    '잇티예약',
 }
 
 CLASS_OPS_NAV_RESERVATION_INDEX = 2
@@ -3386,7 +3323,7 @@ PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS = (
     },
     {
         "route_names": ("reservations:dashboard_landing", "reservations:landing"),
-        "titles": ("학교 예약 시스템",),
+        "titles": ("잇티예약",),
     },
     {
         "route_names": ("classcalendar:main",),
@@ -3428,7 +3365,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "title": "일정·예약",
         "summary": "일정과 예약을 한 번에 봅니다.",
         "preferred_routes": ("classcalendar:main", "reservations:dashboard_landing", "reservations:landing"),
-        "preferred_titles": ("학급 캘린더", "학교 예약 시스템", "교무수첩"),
+        "preferred_titles": ("학급 캘린더", "잇티예약", "교무수첩"),
         "fallback_group_keys": ("schedule_reservation",),
     },
     {
@@ -3905,7 +3842,7 @@ def _build_home_public_representative_products(product_list, *, login_url):
         },
         {
             "route_names": {"reservations:dashboard_landing", "reservations:landing"},
-            "titles": {"학교 예약 시스템"},
+            "titles": {"잇티예약"},
         },
         {
             "route_names": {"collect:landing", "collect:dashboard"},

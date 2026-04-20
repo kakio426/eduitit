@@ -668,7 +668,6 @@
             workspaceInput: '',
             agentModeMenuOpen: false,
             railSearchText: '',
-            primaryModeKeys: Array.isArray(workspaceConfig.primary_mode_keys) ? workspaceConfig.primary_mode_keys : [],
             homeAgentLimitModalOpen: false,
             homeAgentLimitModal: {
                 title: '',
@@ -686,9 +685,6 @@
             agentRailSections: Array.isArray(workspaceConfig.rail_sections) ? workspaceConfig.rail_sections : [],
             agentConversationRail: workspaceConfig.conversations && typeof workspaceConfig.conversations === 'object'
                 ? workspaceConfig.conversations
-                : {},
-            humanChatSummary: workspaceConfig.human_chat_summary && typeof workspaceConfig.human_chat_summary === 'object'
-                ? workspaceConfig.human_chat_summary
                 : {},
             activeRoomSnapshot: null,
             isHumanChatLoading: false,
@@ -747,9 +743,6 @@
             noticeBaseInput: '',
             noticeRefinementLabel: '',
             scheduleEditorOpen: false,
-            scheduleCapturePayload: {},
-            scheduleCaptureStage: '',
-            scheduleLoadingState: '',
             messageSavePayload: {},
             messageSaveStage: '',
             messageSaveErrorText: '',
@@ -763,15 +756,11 @@
             init: function () {
                 frontendConfig = getHomeFrontendConfig();
                 workspaceConfig = parseJsonScript('home-v7-agent-workspace', workspaceConfig) || {};
-                this.primaryModeKeys = Array.isArray(workspaceConfig.primary_mode_keys) ? workspaceConfig.primary_mode_keys : this.primaryModeKeys;
                 this.agentModes = Array.isArray(workspaceConfig.modes) ? workspaceConfig.modes : this.agentModes;
                 this.agentRailSections = Array.isArray(workspaceConfig.rail_sections) ? workspaceConfig.rail_sections : this.agentRailSections;
                 this.agentConversationRail = workspaceConfig.conversations && typeof workspaceConfig.conversations === 'object'
                     ? workspaceConfig.conversations
                     : this.agentConversationRail;
-                this.humanChatSummary = workspaceConfig.human_chat_summary && typeof workspaceConfig.human_chat_summary === 'object'
-                    ? workspaceConfig.human_chat_summary
-                    : this.humanChatSummary;
                 this.favoriteIds = normalizeIdList(frontendConfig.favoriteProductIds || parseJsonScript('home-favorite-ids-data', []));
                 if (!this.activeModeKey && this.agentModes.length) {
                     this.activeModeKey = this.agentModes[0].key;
@@ -1304,174 +1293,6 @@
 
             railSections: function () {
                 return Array.isArray(this.agentRailSections) ? this.agentRailSections : [];
-            },
-
-            primaryAgentModes: function () {
-                var keys = Array.isArray(this.primaryModeKeys) ? this.primaryModeKeys : [];
-                if (!keys.length) {
-                    return this.agentModes;
-                }
-                return keys.map(function (modeKey) {
-                    return this.modeByKey(modeKey);
-                }, this).filter(function (mode) {
-                    return Boolean(mode && mode.key);
-                });
-            },
-
-            homeHumanChatSummaryItems: function () {
-                var summary = this.humanChatSummary && typeof this.humanChatSummary === 'object'
-                    ? this.humanChatSummary
-                    : {};
-                return Array.isArray(summary.items) ? summary.items : [];
-            },
-
-            homeHumanChatSummaryOpenHref: function () {
-                var summary = this.humanChatSummary && typeof this.humanChatSummary === 'object'
-                    ? this.humanChatSummary
-                    : {};
-                return trimLine(summary.open_url || '');
-            },
-
-            activeModeMarkerIconClass: function () {
-                return trimLine(this.activeMode.icon_class || 'fa-solid fa-cloud') || 'fa-solid fa-cloud';
-            },
-
-            activeModeDockItems: function () {
-                var modeKey = trimLine(this.activeModeKey || '');
-                var hasInput = Boolean(trimLine(this.workspaceInput));
-                var scheduleStage = trimLine(this.scheduleCaptureStage || '');
-                var scheduleLoadingState = trimLine(this.scheduleLoadingState || '');
-                var scheduleIdle = !this.scheduleShowLoadingCard() && !this.scheduleHasExecution() && !this.scheduleShouldPromptMessageOnlySave() && !scheduleStage;
-                var noticeHasDraft = Boolean(this.previewResultLines().length);
-                var quickdropHasFile = Boolean(this.quickdropQueuedFile);
-                var quickdropHasResult = this.quickdropHasResult();
-
-                if (modeKey === 'schedule') {
-                    return [
-                        {
-                            key: 'scan',
-                            label: '일정 읽기',
-                            icon: 'fa-regular fa-calendar-days',
-                            is_active: scheduleIdle || scheduleLoadingState === 'extracting',
-                            is_complete: Boolean(this.scheduleHasExecution() || this.scheduleShouldPromptMessageOnlySave() || scheduleStage),
-                        },
-                        {
-                            key: 'review',
-                            label: '후보 확인',
-                            icon: 'fa-regular fa-square-check',
-                            is_active: !this.scheduleShowLoadingCard() && (this.scheduleHasExecution() || this.scheduleShouldPromptMessageOnlySave() || scheduleStage === 'preview-only'),
-                            is_complete: scheduleStage === 'calendar-saved' || scheduleStage === 'message-only-saved',
-                        },
-                        {
-                            key: 'save',
-                            label: '저장',
-                            icon: (scheduleStage === 'calendar-saved' || scheduleStage === 'message-only-saved')
-                                ? 'fa-solid fa-circle-check'
-                                : 'fa-regular fa-folder-open',
-                            is_active: scheduleLoadingState === 'saving-message' || scheduleLoadingState === 'saving-calendar' || scheduleStage === 'calendar-saved' || scheduleStage === 'message-only-saved',
-                            is_complete: scheduleStage === 'calendar-saved' || scheduleStage === 'message-only-saved',
-                        },
-                    ];
-                }
-
-                if (modeKey === 'quickdrop') {
-                    return [
-                        {
-                            key: 'text',
-                            label: '텍스트',
-                            icon: 'fa-solid fa-font',
-                            is_active: !quickdropHasFile && !this.isSendingQuickdrop && !quickdropHasResult,
-                            is_complete: Boolean(hasInput && !quickdropHasFile),
-                        },
-                        {
-                            key: 'file',
-                            label: '파일',
-                            icon: 'fa-solid fa-paperclip',
-                            is_active: quickdropHasFile,
-                            is_complete: Boolean(this.quickdropLastSentFileName || quickdropHasFile),
-                        },
-                        {
-                            key: 'send',
-                            label: '전송',
-                            icon: quickdropHasResult ? 'fa-solid fa-circle-check' : 'fa-solid fa-paper-plane',
-                            is_active: this.isSendingQuickdrop || quickdropHasResult,
-                            is_complete: quickdropHasResult,
-                        },
-                    ];
-                }
-
-                return [
-                    {
-                        key: 'source',
-                        label: '내용',
-                        icon: 'fa-regular fa-pen-to-square',
-                        is_active: !noticeHasDraft && !this.activeAiLoading(),
-                        is_complete: hasInput,
-                    },
-                    {
-                        key: 'draft',
-                        label: '문구',
-                        icon: 'fa-solid fa-note-sticky',
-                        is_active: this.activeAiLoading() || noticeHasDraft,
-                        is_complete: noticeHasDraft,
-                    },
-                    {
-                        key: 'copy',
-                        label: '복사',
-                        icon: 'fa-regular fa-copy',
-                        is_active: noticeHasDraft && this.activeAiCanCopyDraft(),
-                        is_complete: noticeHasDraft && this.activeAiCanCopyDraft(),
-                    },
-                ];
-            },
-
-            scheduleShowLoadingCard: function () {
-                return Boolean(this.activeServiceRendererKey === 'schedule' && this.activeAiLoading());
-            },
-
-            scheduleLoadingTitle: function () {
-                var state = trimLine(this.scheduleLoadingState || '');
-                if (state === 'saving-message') {
-                    return '메시지만 보관하는 중';
-                }
-                if (state === 'saving-calendar') {
-                    return '일정과 메시지를 저장하는 중';
-                }
-                return '메시지에서 일정을 읽는 중';
-            },
-
-            scheduleLoadingDetail: function () {
-                var state = trimLine(this.scheduleLoadingState || '');
-                if (state === 'saving-message') {
-                    return '일정이 없으면 보관함에 메시지만 남기고 있어요.';
-                }
-                if (state === 'saving-calendar') {
-                    return '캘린더와 보관함에 같은 흐름으로 정리하고 있어요.';
-                }
-                return '날짜, 시간, 장소를 차분히 확인하고 있어요.';
-            },
-
-            scheduleLoadingSteps: function () {
-                var state = trimLine(this.scheduleLoadingState || '');
-                if (state === 'saving-message') {
-                    return [
-                        { key: 'read', label: '메시지 읽기', icon: 'fa-regular fa-calendar-days', state: 'complete' },
-                        { key: 'review', label: '후보 확인', icon: 'fa-regular fa-square-check', state: 'idle' },
-                        { key: 'save', label: '메시지 보관', icon: 'fa-regular fa-folder-open', state: 'current' },
-                    ];
-                }
-                if (state === 'saving-calendar') {
-                    return [
-                        { key: 'read', label: '메시지 읽기', icon: 'fa-regular fa-calendar-days', state: 'complete' },
-                        { key: 'review', label: '후보 확인', icon: 'fa-regular fa-square-check', state: 'complete' },
-                        { key: 'save', label: '캘린더 저장', icon: 'fa-regular fa-folder-open', state: 'current' },
-                    ];
-                }
-                return [
-                    { key: 'read', label: '메시지 읽기', icon: 'fa-regular fa-calendar-days', state: 'current' },
-                    { key: 'review', label: '후보 정리', icon: 'fa-regular fa-square-check', state: 'idle' },
-                    { key: 'save', label: '저장 준비', icon: 'fa-regular fa-folder-open', state: 'idle' },
-                ];
             },
 
             allRailItems: function () {
@@ -3409,9 +3230,6 @@
                     noticeBaseInput: '',
                     noticeRefinementLabel: '',
                     scheduleEditorOpen: false,
-                    scheduleCapturePayload: {},
-                    scheduleCaptureStage: '',
-                    scheduleLoadingState: '',
                     messageSavePayload: {},
                     messageSaveStage: '',
                     messageSaveErrorText: '',
@@ -3443,11 +3261,6 @@
                     noticeBaseInput: typeof source.noticeBaseInput === 'string' ? source.noticeBaseInput : '',
                     noticeRefinementLabel: typeof source.noticeRefinementLabel === 'string' ? source.noticeRefinementLabel : '',
                     scheduleEditorOpen: Boolean(source.scheduleEditorOpen),
-                    scheduleCapturePayload: source.scheduleCapturePayload && typeof source.scheduleCapturePayload === 'object'
-                        ? this.clonePayload(source.scheduleCapturePayload)
-                        : {},
-                    scheduleCaptureStage: trimLine(source.scheduleCaptureStage),
-                    scheduleLoadingState: trimLine(source.scheduleLoadingState),
                     messageSavePayload: source.messageSavePayload && typeof source.messageSavePayload === 'object'
                         ? this.clonePayload(source.messageSavePayload)
                         : {},
@@ -3475,9 +3288,6 @@
                     noticeBaseInput: this.noticeBaseInput,
                     noticeRefinementLabel: this.noticeRefinementLabel,
                     scheduleEditorOpen: this.scheduleEditorOpen,
-                    scheduleCapturePayload: this.scheduleCapturePayload,
-                    scheduleCaptureStage: this.scheduleCaptureStage,
-                    scheduleLoadingState: this.scheduleLoadingState,
                     messageSavePayload: this.messageSavePayload,
                     messageSaveStage: this.messageSaveStage,
                     messageSaveErrorText: this.messageSaveErrorText,
@@ -3498,9 +3308,6 @@
                 this.noticeBaseInput = nextState.noticeBaseInput;
                 this.noticeRefinementLabel = nextState.noticeRefinementLabel;
                 this.scheduleEditorOpen = nextState.scheduleEditorOpen;
-                this.scheduleCapturePayload = nextState.scheduleCapturePayload;
-                this.scheduleCaptureStage = nextState.scheduleCaptureStage;
-                this.scheduleLoadingState = nextState.scheduleLoadingState;
                 this.messageSavePayload = nextState.messageSavePayload;
                 this.messageSaveStage = nextState.messageSaveStage;
                 this.messageSaveErrorText = nextState.messageSaveErrorText;
@@ -3523,12 +3330,6 @@
                 this.messageSaveErrorText = '';
                 this.messageSaveSelectedCandidateId = '';
                 this.messageSaveCommitResult = {};
-            },
-
-            clearScheduleCaptureState: function () {
-                this.scheduleCapturePayload = {};
-                this.scheduleCaptureStage = '';
-                this.scheduleLoadingState = '';
             },
 
             normalizeFieldErrors: function (fieldErrors) {
@@ -4017,7 +3818,6 @@
                     providerLabel: '',
                 };
                 this.clearExecution();
-                this.clearScheduleCaptureState();
                 this.clearMessageSaveState();
                 this.scheduleEditorOpen = false;
                 if (this.modeHasCapability(this.activeMode, 'notice_refinement') || !trimLine(this.workspaceInput)) {
@@ -5010,23 +4810,6 @@
                 return trimLine(this.workspaceInput);
             },
 
-            scheduleParseUrl: function () {
-                return trimLine(this.activeMode.parse_url || '');
-            },
-
-            scheduleSaveUrl: function () {
-                return trimLine(this.activeMode.save_url || '');
-            },
-
-            scheduleCommitUrl: function (captureId) {
-                var template = trimLine(this.activeMode.commit_template || '');
-                var normalizedCaptureId = trimLine(captureId);
-                if (!template || !normalizedCaptureId) {
-                    return '';
-                }
-                return template.replace('__capture_id__', normalizedCaptureId);
-            },
-
             scheduleHasExecution: function () {
                 return Boolean(this.agentExecution && this.agentExecution.kind === 'schedule' && this.agentExecutionDraft && this.agentExecutionDraft.start_time);
             },
@@ -5059,21 +4842,6 @@
                 this.workspaceInput = value;
                 this.scheduleEditorOpen = false;
                 this.runAgentPreview(value);
-            },
-
-            scheduleShouldPromptMessageOnlySave: function () {
-                return Boolean(
-                    this.activeServiceRendererKey === 'schedule'
-                    && this.scheduleCaptureStage === 'message-only-prompt'
-                    && !this.isAgentLoading
-                    && !this.scheduleHasExecution()
-                );
-            },
-
-            dismissScheduleMessageOnlyConfirmation: function () {
-                if (this.scheduleCaptureStage === 'message-only-prompt') {
-                    this.scheduleCaptureStage = 'preview-only';
-                }
             },
 
             scheduleDraftDateLabel: function () {
@@ -5148,267 +4916,8 @@
             resetScheduleChat: function () {
                 this.workspaceInput = '';
                 this.scheduleEditorOpen = false;
-                this.clearScheduleCaptureState();
                 this.showIdlePreview();
                 this.focusWorkspace();
-            },
-
-            scheduleParseCandidateList: function () {
-                var payload = this.scheduleCapturePayload && typeof this.scheduleCapturePayload === 'object'
-                    ? this.scheduleCapturePayload
-                    : {};
-                var candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
-                return candidates.filter(function (candidate) {
-                    return candidate && !candidate.already_saved;
-                });
-            },
-
-            scheduleSelectedParseCandidate: function () {
-                var candidates = this.scheduleParseCandidateList();
-                var selectedChoiceId = this.scheduleSelectedChoiceId();
-                var selectedIndex = Number(selectedChoiceId);
-                if (!Number.isNaN(selectedIndex) && candidates[selectedIndex]) {
-                    return candidates[selectedIndex];
-                }
-                return candidates[0] || null;
-            },
-
-            buildScheduleCommitPreview: function (candidate, commitPayload) {
-                var selectedCandidate = candidate && typeof candidate === 'object' ? candidate : {};
-                var payload = commitPayload && typeof commitPayload === 'object' ? commitPayload : {};
-                var savedEvents = []
-                    .concat(Array.isArray(payload.created_events) ? payload.created_events : [])
-                    .concat(Array.isArray(payload.reused_events) ? payload.reused_events : []);
-                var openEvent = savedEvents[0] || {};
-                return this.normalizePreview({
-                    badge: this.activeMode.label || 'AI 일정',
-                    title: '일정과 메시지를 저장했어요.',
-                    summary: '',
-                    sections: [
-                        {
-                            title: '결과',
-                            items: [
-                                this.messageSaveTemporalDateLabel(selectedCandidate.start_time || selectedCandidate.end_time),
-                                this.messageSaveTemporalTimeLabel(selectedCandidate.start_time, selectedCandidate.end_time, selectedCandidate.is_all_day),
-                                trimLine(selectedCandidate.title || ''),
-                            ].filter(Boolean),
-                        },
-                    ],
-                    note: '',
-                    confirmHref: trimLine(openEvent.calendar_url || ''),
-                    confirmLabel: '캘린더 열기',
-                }, {
-                    source: 'direct',
-                    provider: 'classcalendar',
-                    model: '',
-                    providerLabel: '일정 + 메시지 저장',
-                });
-            },
-
-            buildScheduleMessageOnlyPreview: function (payload, text) {
-                var savedPayload = payload && typeof payload === 'object' ? payload : {};
-                var lines = compactLines(savedPayload.preview_text || savedPayload.raw_text || text).slice(0, 4);
-                return this.normalizePreview({
-                    badge: this.activeMode.label || 'AI 일정',
-                    title: '메시지만 저장했어요.',
-                    summary: '',
-                    sections: [
-                        {
-                            title: '결과',
-                            items: lines,
-                        },
-                    ],
-                    note: '',
-                    confirmHref: trimLine(savedPayload.messagebox_url || ''),
-                    confirmLabel: '보관함 열기',
-                }, {
-                    source: 'direct',
-                    provider: 'messagebox',
-                    model: '',
-                    providerLabel: '메시지 보관',
-                });
-            },
-
-            saveScheduleMessageOnly: async function () {
-                var text = trimLine(this.workspaceInput);
-                var saveUrl = this.scheduleSaveUrl();
-                var csrfToken = getCsrfToken();
-                var response;
-                var payload;
-
-                if (!text) {
-                    showFeedback('저장할 메시지를 먼저 넣어 주세요.', 'info');
-                    this.focusWorkspace();
-                    return;
-                }
-                if (!saveUrl) {
-                    showFeedback('메시지 저장 경로를 찾지 못했습니다.', 'error');
-                    return;
-                }
-                if (!csrfToken) {
-                    showFeedback('보안 토큰을 확인할 수 없습니다.', 'error');
-                    return;
-                }
-
-                this.isAgentExecuting = true;
-                this.scheduleLoadingState = 'saving-message';
-                try {
-                    response = await fetch(saveUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                            'X-CSRFToken': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: new URLSearchParams({
-                            raw_text: text,
-                            source_hint: 'home-agent-schedule',
-                            idempotency_key: this.buildIdempotencyKey('schedule-message-only', text),
-                        }).toString(),
-                    });
-                    payload = await response.json().catch(function () {
-                        return {};
-                    });
-                    if (!response.ok) {
-                        throw new Error(payload.detail || payload.error || payload.message || '메시지를 저장하지 못했습니다.');
-                    }
-                    this.scheduleCapturePayload = this.clonePayload(payload);
-                    this.scheduleCaptureStage = 'message-only-saved';
-                    this.agentPreview = this.buildScheduleMessageOnlyPreview(payload, text);
-                    this.agentPreviewMeta = {
-                        source: 'direct',
-                        provider: 'messagebox',
-                        model: '',
-                        providerLabel: '메시지 보관',
-                    };
-                    this.clearExecution();
-                    showFeedback('메시지만 저장했어요.', 'success');
-                } catch (error) {
-                    showFeedback(error && error.message ? error.message : '메시지를 저장하지 못했습니다.', 'error');
-                } finally {
-                    this.isAgentExecuting = false;
-                    this.scheduleLoadingState = '';
-                }
-            },
-
-            executeScheduleWorkflow: async function () {
-                var csrfToken = getCsrfToken();
-                var text = trimLine(this.workspaceInput);
-                var parseUrl = this.scheduleParseUrl();
-                var response;
-                var parsePayload;
-                var commitUrl;
-                var commitResponse;
-                var commitPayload;
-                var candidate;
-                var localFieldErrors;
-
-                if (!this.scheduleHasExecution()) {
-                    return;
-                }
-                this.normalizeExecutionDraft();
-                localFieldErrors = this.validateExecutionDraft();
-                if (Object.keys(localFieldErrors).length) {
-                    this.scheduleEditorOpen = true;
-                    this.setExecutionFieldErrors(localFieldErrors);
-                    showFeedback(localFieldErrors[this.firstExecutionErrorField()] || '입력을 먼저 확인해 주세요.', 'error');
-                    this.focusAgentExecutionField(this.firstExecutionErrorField());
-                    return;
-                }
-                if (!parseUrl) {
-                    showFeedback('일정 저장 경로를 찾지 못했습니다.', 'error');
-                    return;
-                }
-                if (!csrfToken) {
-                    showFeedback('보안 토큰을 확인할 수 없습니다.', 'error');
-                    return;
-                }
-
-                this.isAgentExecuting = true;
-                this.agentExecutionFieldErrors = {};
-                this.scheduleLoadingState = 'extracting';
-                try {
-                    response = await fetch(parseUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                            'X-CSRFToken': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: new URLSearchParams({
-                            raw_text: text,
-                            source_hint: 'home-agent-schedule',
-                            idempotency_key: this.buildIdempotencyKey('schedule-capture', text),
-                        }).toString(),
-                    });
-                    parsePayload = await response.json().catch(function () {
-                        return {};
-                    });
-                    if (!response.ok) {
-                        throw new Error(parsePayload.detail || parsePayload.error || parsePayload.message || '일정을 저장하지 못했습니다.');
-                    }
-                    this.scheduleCapturePayload = this.clonePayload(parsePayload);
-                    candidate = this.scheduleSelectedParseCandidate();
-                    if (!candidate) {
-                        this.scheduleCaptureStage = 'message-only-prompt';
-                        showFeedback('일정 후보가 없어 메시지 저장 여부를 다시 확인해 주세요.', 'info');
-                        return;
-                    }
-                    commitUrl = this.scheduleCommitUrl(parsePayload.capture_id);
-                    if (!commitUrl) {
-                        throw new Error('캘린더 저장 경로를 찾지 못했습니다.');
-                    }
-                    this.scheduleLoadingState = 'saving-calendar';
-                    commitResponse = await fetch(commitUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: JSON.stringify({
-                            selected_candidates: [
-                                {
-                                    candidate_id: String(candidate.candidate_id || ''),
-                                    selected: true,
-                                    kind: trimLine(candidate.kind || 'event'),
-                                    title: trimLine(this.agentExecutionDraft.title || candidate.title || ''),
-                                    start_time: trimLine(this.agentExecutionDraft.start_time || candidate.start_time || ''),
-                                    end_time: trimLine(this.agentExecutionDraft.end_time || candidate.end_time || ''),
-                                    is_all_day: Boolean(this.agentExecutionDraft.is_all_day),
-                                    summary: trimLine(candidate.summary || ''),
-                                },
-                            ],
-                            selected_attachment_ids: [],
-                        }),
-                    });
-                    commitPayload = await commitResponse.json().catch(function () {
-                        return {};
-                    });
-                    if (!commitResponse.ok) {
-                        throw new Error(commitPayload.detail || commitPayload.error || commitPayload.message || '캘린더에 저장하지 못했습니다.');
-                    }
-                    this.scheduleCaptureStage = 'calendar-saved';
-                    this.agentPreview = this.buildScheduleCommitPreview(Object.assign({}, candidate, {
-                        title: trimLine(this.agentExecutionDraft.title || candidate.title || ''),
-                        start_time: trimLine(this.agentExecutionDraft.start_time || candidate.start_time || ''),
-                        end_time: trimLine(this.agentExecutionDraft.end_time || candidate.end_time || ''),
-                        is_all_day: Boolean(this.agentExecutionDraft.is_all_day),
-                    }), commitPayload);
-                    this.agentPreviewMeta = {
-                        source: 'direct',
-                        provider: 'classcalendar',
-                        model: '',
-                        providerLabel: '일정 + 메시지 저장',
-                    };
-                    this.clearExecution();
-                    showFeedback(commitPayload.message || '일정과 메시지를 저장했어요.', 'success');
-                } catch (error) {
-                    showFeedback(error && error.message ? error.message : '일정을 저장하지 못했습니다.', 'error');
-                } finally {
-                    this.isAgentExecuting = false;
-                    this.scheduleLoadingState = '';
-                }
             },
 
             copyScheduleDraft: async function () {
@@ -5891,7 +5400,6 @@
                 }
                 if (this.modeHasCapability(mode, 'schedule_editor')) {
                     this.scheduleEditorOpen = false;
-                    this.clearScheduleCaptureState();
                 }
 
                 if (previewStrategy === 'direct') {
@@ -5911,9 +5419,6 @@
                 requestId = this.agentPreviewRequestId + 1;
                 this.agentPreviewRequestId = requestId;
                 this.isAgentLoading = true;
-                if (this.activeServiceRendererKey === 'schedule') {
-                    this.scheduleLoadingState = 'extracting';
-                }
                 try {
                     if (!runtime.preview_url || !csrfToken) {
                         throw new Error('AI preview 연결 정보가 없습니다.');
@@ -5946,9 +5451,6 @@
                     this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));
                     this.agentPreviewMeta = this.previewProviderStatus(payload);
                     this.setExecution(payload.execution);
-                    if (this.activeServiceRendererKey === 'schedule' && !payload.execution) {
-                        this.scheduleCaptureStage = 'message-only-prompt';
-                    }
                 } catch (error) {
                     if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
                         return;
@@ -5968,9 +5470,6 @@
                 } finally {
                     if (requestId === this.agentPreviewRequestId && modeKey === trimLine(this.activeModeKey || '')) {
                         this.isAgentLoading = false;
-                        if (this.activeServiceRendererKey === 'schedule') {
-                            this.scheduleLoadingState = '';
-                        }
                     }
                 }
             },
