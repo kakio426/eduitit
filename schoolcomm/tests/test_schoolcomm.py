@@ -316,7 +316,9 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertGreaterEqual(len(payload["assets_panel"]["sections"]), 1)
         self.assertGreaterEqual(len(payload["calendar_suggestions"]), 1)
         self.assertTrue(payload["invite_actions"]["can_create"])
-        self.assertEqual(payload["context_actions"][0]["mode_key"], "pdf")
+        action_keys = [item["mode_key"] for item in payload["context_actions"]]
+        self.assertIn("message-save", action_keys)
+        self.assertIn("quickdrop", action_keys)
 
     def test_room_fragment_refresh_returns_partial_content(self):
         create_room_message(self.shared_room, self.owner_membership, text="자료 확인 부탁드립니다")
@@ -431,7 +433,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "채팅방 이름")
         self.assertContains(response, "시작 흐름")
-        self.assertContains(response, "초대한 사람만 입장")
+        self.assertContains(response, "링크로 입장")
         self.assertNotContains(response, "학교 이름")
         self.assertNotContains(response, "학년도")
         self.assertNotContains(response, "승인 기다리는 학교")
@@ -580,32 +582,29 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["code"], "service_unavailable")
 
-    def test_main_renders_shared_calendar_tab_contents(self):
-        create_shared_calendar_event(
+    def test_main_renders_two_pane_inbox_with_selected_room(self):
+        dm_room = get_or_create_dm_room(
             self.workspace,
-            self.owner_membership,
-            title="주간 협의",
-            note="달력 노출",
-            start_time=timezone.make_aware(datetime(2026, 4, 20, 14, 0)),
-            end_time=timezone.make_aware(datetime(2026, 4, 20, 15, 0)),
-            color="indigo",
+            [self.owner_membership, self.member_membership],
+            created_by=self.owner,
+            name="학년 대화",
         )
-
+        create_room_message(dm_room, self.owner_membership, text="오늘 협의해요")
         self.client.force_login(self.owner)
         response = self.client.get(
             reverse("schoolcomm:main"),
             {
                 "workspace": str(self.workspace.id),
-                "calendar_tab": "shared",
-                "calendar_month": "2026-04",
-                "calendar_date": "2026-04-20",
+                "room": str(dm_room.id),
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "끼리끼리 캘린더")
-        self.assertContains(response, "내 메인 캘린더로 보내기")
-        self.assertContains(response, "내 캘린더에서는 독립 일정으로 관리됩니다.")
+        self.assertContains(response, 'data-schoolcomm-inbox="true"')
+        self.assertContains(response, "대화 목록")
+        self.assertContains(response, "학년 대화")
+        self.assertContains(response, 'data-schoolcomm-room-fragment="true"')
+        self.assertContains(response, 'data-schoolcomm-chat-composer="true"')
 
     def test_calendar_panel_fragment_returns_partial_markup(self):
         self.client.force_login(self.owner)
@@ -664,6 +663,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
                 "calendar_tab": "shared",
                 "calendar_month": "2026-05",
                 "calendar_date": "2026-05-02",
+                "fragment": "calendar_panel",
             },
         )
 
@@ -686,6 +686,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
                 "calendar_tab": "shared",
                 "calendar_month": "2026-05",
                 "calendar_date": "2026-05-02",
+                "fragment": "calendar_panel",
             },
         )
 
@@ -701,6 +702,7 @@ class SchoolcommViewTests(SchoolcommTestCase):
                 "calendar_tab": "shared",
                 "calendar_month": "2026-04",
                 "calendar_date": "2026-04-20",
+                "fragment": "calendar_panel",
             },
         )
 

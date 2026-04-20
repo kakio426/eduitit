@@ -484,17 +484,46 @@ def main(request):
         search_results = None
         dashboard = None
         shared_calendar = None
+        inbox_rooms = []
+        selected_room = None
+        selected_room_summary = None
+        chat_items = []
         current_query = request.GET.get("q", "")
         calendar_tab = _normalize_calendar_tab(request.GET.get("calendar_tab"))
         latest_invite_url = request.session.pop("schoolcomm_latest_invite_url", "")
         if workspace is not None:
             dashboard = build_workspace_dashboard(workspace, request.user)
+            inbox_rooms = list(dashboard.get("dm_rooms") or [])
             shared_calendar = build_shared_calendar_panel(
                 workspace,
                 request.user,
                 month_value=request.GET.get("calendar_month"),
                 selected_date_value=request.GET.get("calendar_date"),
             )
+            requested_room_id = str(request.GET.get("room") or "").strip()
+            if inbox_rooms:
+                selected_room_summary = next(
+                    (room for room in inbox_rooms if str(room.get("id") or "") == requested_room_id),
+                    None,
+                )
+                if selected_room_summary is None:
+                    selected_room_summary = next(
+                        (room for room in inbox_rooms if int(room.get("unread_count") or 0) > 0),
+                        inbox_rooms[0],
+                    )
+                room_id = str(selected_room_summary.get("id") or "").strip()
+                room, membership = get_room_for_user(room_id, request.user)
+                if room is not None and membership is not None and room.room_kind in {room.RoomKind.DM, room.RoomKind.GROUP_DM}:
+                    latest_message = room.messages.order_by("-created_at", "-id").first()
+                    mark_room_read(request.user, room, latest_message=latest_message)
+                    selected_room_summary = dict(selected_room_summary or {})
+                    selected_room_summary["unread_count"] = 0
+                    inbox_rooms = [
+                        dict(room_summary, unread_count=0) if str(room_summary.get("id") or "") == room_id else room_summary
+                        for room_summary in inbox_rooms
+                    ]
+                    selected_room = room
+                    chat_items = _build_room_chat_items(room, request.user)
             if (current_query or "").strip():
                 search_results = search_workspace(
                     workspace,
@@ -524,6 +553,15 @@ def main(request):
             "workspace_name_suggestion": school_name_suggestion_for_user(request.user),
             "active_memberships": active_memberships,
             "dashboard": dashboard,
+            "inbox_rooms": inbox_rooms,
+            "selected_room": selected_room,
+            "selected_room_summary": selected_room_summary,
+            "chat_items": chat_items,
+            "room_is_chat": bool(selected_room),
+            "can_post_top_level": True if selected_room else False,
+            "room_ws_url": _build_ws_path(f"schoolcomm/ws/rooms/{selected_room.id}/") if selected_room else "",
+            "room_base_url": _room_base_url(selected_room) if selected_room else "",
+            "room_refresh_url": _room_refresh_url(request, selected_room) if selected_room else "",
             "shared_calendar": shared_calendar,
             "calendar_tab": "shared" if calendar_tab == "shared" else "suggestions",
             "search_results": search_results,

@@ -1380,23 +1380,22 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-agent-mode-select="true"', content)
         self.assertIn('id="home-v7-agent-workspace"', content)
         self.assertIn('id="home-v7-signal-layer"', content)
-        self.assertIn('서비스와 대화 찾기', content)
-        self.assertIn('notice', mode_keys)
-        self.assertIn('teacher-law', mode_keys)
+        self.assertNotIn('서비스와 대화 찾기', content)
+        self.assertEqual(mode_keys, {'notice', 'schedule', 'quickdrop'})
+        self.assertEqual(tuple(workspace['primary_mode_keys']), ('schedule', 'notice', 'quickdrop'))
+        self.assertEqual(workspace['initial_mode'], 'schedule')
+        self.assertEqual(mode_map['notice']['label'], 'AI 알림장 문구')
+        self.assertEqual(mode_map['schedule']['label'], 'AI 일정')
+        self.assertEqual(mode_map['quickdrop']['label'], '바로전송')
         self.assertEqual(mode_map['notice']['renderer_key'], 'notice')
-        self.assertEqual(mode_map['teacher-law']['renderer_key'], 'teacher-law')
-        self.assertEqual(mode_map['teacher-law']['adapter_key'], 'teacher-law')
-        self.assertEqual(mode_map['teacher-law']['starter_provider_key'], 'teacher-law')
         self.assertEqual(mode_map['notice']['messenger_flow_key'], 'one-shot')
         self.assertEqual(mode_map['schedule']['messenger_flow_key'], 'guided')
         self.assertEqual(mode_map['quickdrop']['messenger_flow_key'], 'direct-send')
-        self.assertEqual(mode_map['message-save']['messenger_flow_key'], 'pipeline')
-        self.assertIn('messenger_capabilities', mode_map['teacher-law'])
-        self.assertIn('messenger_ui', mode_map['teacher-law'])
-        self.assertIn('ui_options', mode_map['teacher-law'])
+        self.assertTrue(mode_map['schedule']['parse_url'])
+        self.assertTrue(mode_map['schedule']['save_url'])
+        self.assertIn('__capture_id__', mode_map['schedule']['commit_template'])
         self.assertIn('conversations', workspace)
-        self.assertIn('rail_sections', workspace)
-        self.assertEqual(workspace['workspace_search_placeholder'], '서비스와 대화 찾기')
+        self.assertIn('human_chat_summary', workspace)
 
     def test_v2_agent_workspace_shows_mode_composer_and_actions_without_idle_examples(self):
         """V6 agent 워크스페이스는 예시칩 없이 입력창과 실행 액션을 함께 보여준다."""
@@ -1408,42 +1407,41 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('data-home-v6-agent-input="true"', content)
         self.assertIn('home-v6-agent-ai-messenger', content)
         self.assertIn('home-v6-agent-ai-composer', content)
-        self.assertNotIn('home-v6-agent-ai-starter-chip', content)
-        self.assertIn('home-v6-agent-human-chat', content)
-        self.assertNotIn('home-v6-agent-utility-tab', content)
-        self.assertNotIn('home-v6-agent-active-badge', content)
-        self.assertIn('humanChatTimelineItems()', content)
-        self.assertIn('home-v6-agent-human-drawer', content)
-        self.assertIn('home-v6-agent-human-head-chip', content)
+        self.assertIn('home-v6-agent-mode-chip', content)
+        self.assertIn('home-v6-agent-summary-card', content)
+        self.assertIn('일정이 없이 그냥 메시지면 메시지만 저장하시겠습니까?', content)
+        self.assertIn('메시지만 저장', content)
+        self.assertIn('다시 확인', content)
+        self.assertNotIn('home-v6-agent-human-chat', content)
+        self.assertNotIn('home-v6-agent-human-drawer', content)
+        self.assertNotIn('home-v6-agent-human-head-chip', content)
         self.assertIn('home-v6-agent-active-description', content)
-        self.assertIn('activeHeaderDescription()', content)
         self.assertIn("handleWorkspaceComposerKeydown($event, 'active-ai')", content)
-        self.assertIn("handleWorkspaceComposerKeydown($event, 'human-chat')", content)
-        self.assertIn("handleWorkspaceComposerKeydown($event, 'message-save')", content)
         self.assertIn('data-home-v6-agent-quickdrop-file-input="true"', content)
-        self.assertIn('data-home-v6-human-chat-file-input="true"', content)
         notice_mode = next(mode for mode in workspace['modes'] if mode['key'] == 'notice')
+        schedule_mode = next(mode for mode in workspace['modes'] if mode['key'] == 'schedule')
         quickdrop_mode = next(mode for mode in workspace['modes'] if mode['key'] == 'quickdrop')
-        message_save_mode = next(mode for mode in workspace['modes'] if mode['key'] == 'message-save')
+        self.assertEqual(notice_mode['label'], 'AI 알림장 문구')
+        self.assertEqual(schedule_mode['label'], 'AI 일정')
+        self.assertEqual(quickdrop_mode['label'], '바로전송')
         self.assertEqual(notice_mode['submit_label'], '알림 문구 생성')
         self.assertEqual(notice_mode['usage_hint'], '보낼 내용을 적으면 학부모용 알림 문구를 바로 정리합니다.')
         self.assertTrue(notice_mode['starter_items'])
+        self.assertTrue(schedule_mode['parse_url'])
+        self.assertTrue(schedule_mode['save_url'])
+        self.assertIn('__capture_id__', schedule_mode['commit_template'])
         self.assertTrue(notice_mode['capabilities']['notice_refinement'])
         self.assertTrue(quickdrop_mode['direct_url'])
         self.assertTrue(quickdrop_mode['send_file_url'])
         self.assertTrue(quickdrop_mode['starter_items'])
         self.assertEqual(quickdrop_mode['starter_items'][2]['kind'], 'file')
         self.assertEqual(quickdrop_mode['usage_hint'], '보낼 글이나 파일을 넣고 연결된 기기로 바로 보냅니다.')
-        self.assertIn('__capture_id__', message_save_mode['parse_saved_template'])
-        self.assertIn('__capture_id__', message_save_mode['commit_template'])
-        self.assertTrue(message_save_mode['starter_items'])
-        self.assertFalse(message_save_mode['messenger_capabilities']['starter_chips'])
-        self.assertTrue(message_save_mode['capabilities']['message_pipeline'])
 
     @patch(
         'core.views._build_home_v7_agent_conversations',
         return_value={
             'title': '끼리끼리 채팅방',
+            'workspace_id': 'workspace-1',
             'workspace_name': '우리학교',
             'open_url': '/schoolcomm/',
             'refresh_url': '/api/home-agent/conversations/',
@@ -1454,6 +1452,8 @@ class HomeV2ViewTest(TestCase):
                     'kind': 'room',
                     'key': 'room:notice',
                     'entity_key': 'notice',
+                    'room_id': 'notice',
+                    'room_kind': 'dm',
                     'renderer_key': 'human-chat',
                     'title': '학년 공지',
                     'summary': '회의 시간 바뀌었어요.',
@@ -1469,26 +1469,24 @@ class HomeV2ViewTest(TestCase):
             ),
         },
     )
-    def test_v2_agent_workspace_includes_conversation_rail_payload(self, _mock_conversations):
+    def test_v2_agent_workspace_builds_human_chat_summary_payload(self, _mock_conversations):
         self._login('conversationrail')
         response = self.client.get(reverse('home'))
         workspace = response.context['home_v7_agent_workspace']
-        conversations = workspace['conversations']
+        summary = workspace['human_chat_summary']
 
-        self.assertEqual(conversations['title'], '끼리끼리 채팅방')
-        self.assertEqual(conversations['workspace_name'], '우리학교')
-        self.assertEqual(conversations['open_url'], '/schoolcomm/')
-        self.assertTrue(conversations['refresh_url'])
-        self.assertTrue(conversations['user_ws_url'])
-        self.assertEqual(conversations['items'][0]['title'], '학년 공지')
-        self.assertEqual(conversations['items'][0]['badge'], '2')
-        self.assertEqual(conversations['items'][0]['renderer_key'], 'human-chat')
-        self.assertEqual(workspace['rail_sections'][1]['items'][0]['kind'], 'room')
+        self.assertEqual(summary['title'], '최근 대화')
+        self.assertEqual(summary['workspace_name'], '우리학교')
+        self.assertEqual(summary['unread_count'], 2)
+        self.assertEqual(summary['items'][0]['title'], '학년 공지')
+        self.assertEqual(summary['items'][0]['badge'], '2')
+        self.assertIn('room=notice', summary['open_url'])
 
     @patch(
         'core.views._build_home_v7_agent_conversations',
         return_value={
             'title': '끼리끼리 채팅방',
+            'workspace_id': 'workspace-1',
             'workspace_name': '우리학교',
             'open_url': '/schoolcomm/',
             'refresh_url': '/api/home-agent/conversations/',
@@ -1499,6 +1497,8 @@ class HomeV2ViewTest(TestCase):
                     'kind': 'room',
                     'key': 'room:notice',
                     'entity_key': 'notice',
+                    'room_id': 'notice',
+                    'room_kind': 'dm',
                     'renderer_key': 'human-chat',
                     'title': '학년 공지',
                     'summary': '회의 시간 바뀌었어요.',
@@ -4156,10 +4156,10 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .home-schoolcomm-card-head', css)
         self.assertIn('.home-v6-page .home-schoolcomm-card-primary', css)
         self.assertIn('data-home-v6-agent-workspace="true"', content)
-        self.assertIn('data-home-v6-human-chat-file-input="true"', content)
-        self.assertIn('service:notice', json.dumps(workspace, ensure_ascii=False))
+        self.assertNotIn('data-home-v6-human-chat-file-input="true"', content)
+        self.assertEqual(tuple(workspace['primary_mode_keys']), ('schedule', 'notice', 'quickdrop'))
         self.assertEqual(workspace['conversations']['title'], '끼리끼리 채팅방')
-        self.assertIn('items', workspace['conversations'])
+        self.assertIn('items', workspace['human_chat_summary'])
         self.assertNotIn('class="home-v4-card home-schoolcomm-card"', content)
         self.assertIn('.home-v6-page .home-v6-top-sns #feed-scroll-container > *', css)
 

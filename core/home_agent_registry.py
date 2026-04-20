@@ -158,6 +158,9 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         links={
             "service_href": {"source": "tool", "key": "schedule", "field": "href"},
             "secondary_link_href": {"source": "route", "name": "messagebox:main"},
+            "parse_url": {"source": "route", "name": "classcalendar:api_message_capture_parse"},
+            "save_url": {"source": "route", "name": "classcalendar:api_message_capture_save"},
+            "commit_template": {"source": "message_capture", "field": "commit_template"},
             "continue_query_fields": (
                 {"param": "date", "source": "execution_field", "field": "start_time", "transform": "date"},
             ),
@@ -843,6 +846,8 @@ def build_home_agent_mode_payload(
         "action_label": str(copy.get("action_label") or ""),
         "direct_url": str(resolved_links.get("direct_url") or ""),
         "send_file_url": str(resolved_links.get("send_file_url") or ""),
+        "parse_url": str(resolved_links.get("parse_url") or ""),
+        "save_url": str(resolved_links.get("save_url") or ""),
         "parse_saved_template": str(resolved_links.get("parse_saved_template") or ""),
         "commit_template": str(resolved_links.get("commit_template") or ""),
         "helper": str(copy.get("helper") or ""),

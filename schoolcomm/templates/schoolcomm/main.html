@@ -12,7 +12,16 @@
 {% endblock %}
 
 {% block content %}
-<main id="main-content" tabindex="-1" aria-label="끼리끼리 채팅방" class="min-h-screen schoolcomm-page" data-schoolcomm-root="true" data-schoolcomm-user-ws-url="{{ user_ws_url }}">
+<main
+    id="main-content"
+    tabindex="-1"
+    aria-label="끼리끼리 채팅방"
+    class="min-h-screen schoolcomm-page"
+    data-schoolcomm-root="true"
+    data-schoolcomm-user-ws-url="{{ user_ws_url }}"
+    {% if selected_room %}data-schoolcomm-room-ws-url="{{ room_ws_url }}"{% endif %}
+    {% if selected_room %}data-schoolcomm-room-refresh-url="{{ room_refresh_url }}"{% endif %}
+>
     <div class="mx-auto max-w-6xl px-4 pb-12 service-shell sm:px-6">
         <section class="schoolcomm-panel mb-6 rounded-[2rem] p-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -22,21 +31,19 @@
                     <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">지금 준비 중입니다.</h1>
                     <p class="mt-2 text-sm text-slate-500">{{ service_unavailable_message }}</p>
                     {% elif workspace %}
-                    <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">{{ workspace.name }}</h1>
+                    <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">받은함</h1>
+                    <p class="mt-2 text-sm text-slate-500">{{ workspace.name }}</p>
                     {% else %}
                     <h1 id="schoolcomm-page-title" class="mt-2 text-3xl font-black tracking-[-0.03em] text-slate-900">끼리끼리 채팅방 시작</h1>
                     {% endif %}
                 </div>
-                {% if dashboard and not service_unavailable %}
+                {% if workspace and dashboard and not service_unavailable %}
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-700">
                         미확인 <span class="ml-1" data-schoolcomm-badge="total_unread">{{ dashboard.notification_summary.total_unread }}</span>
                     </span>
-                    <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-700">
-                        공지 <span class="ml-1" data-schoolcomm-badge="notice_unread">{{ dashboard.notification_summary.notice_unread }}</span>
-                    </span>
-                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
-                        추천 <span class="ml-1" data-schoolcomm-badge="suggestion_count">{{ dashboard.notification_summary.suggestion_count }}</span>
+                    <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                        대화 {{ inbox_rooms|length }}
                     </span>
                 </div>
                 {% endif %}
@@ -84,258 +91,72 @@
             </section>
         </div>
         {% else %}
-        <section class="schoolcomm-panel mb-5 rounded-[2rem] p-4">
-            <form method="get" action="{% url 'schoolcomm:main' %}" class="flex flex-col gap-3 sm:flex-row">
-                <input type="hidden" name="workspace" value="{{ workspace.id }}">
-                <label for="schoolcomm-search" class="sr-only">채팅방 통합 검색</label>
-                <input
-                    id="schoolcomm-search"
-                    type="search"
-                    name="q"
-                    value="{{ current_query }}"
-                    placeholder="파일명, 업로더, 방 이름, 메시지를 검색하세요"
-                    class="min-w-0 flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                >
-                <button type="submit" class="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white">
-                    검색
-                </button>
-            </form>
-        </section>
-
-        {% if search_results and current_query %}
-        <section class="schoolcomm-panel mb-5 rounded-[2rem] p-5">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h2 class="text-xl font-black text-slate-900">검색 결과</h2>
-                    <p class="mt-1 text-sm text-slate-500">“{{ search_results.query }}”와 연결된 방, 메시지, 자료를 모았습니다.</p>
-                </div>
-            </div>
-
-            <div class="mt-4 grid gap-4 xl:grid-cols-3">
-                <div>
-                    <p class="text-sm font-black text-slate-700">방</p>
-                    <div class="mt-2 space-y-2">
-                        {% for room in search_results.room_matches %}
-                        <a href="{{ room.url }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-                            <span class="block font-black text-slate-900">{{ room.name }}</span>
-                            {% if room.summary %}<span class="mt-1 block text-slate-500">{{ room.summary }}</span>{% endif %}
-                        </a>
-                        {% empty %}
-                        <p class="rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-400">일치하는 방이 없습니다.</p>
-                        {% endfor %}
+        <section class="schoolcomm-inbox" data-schoolcomm-inbox="true">
+            <aside class="schoolcomm-inbox-sidebar schoolcomm-panel rounded-[2rem] p-4">
+                <div class="schoolcomm-inbox-sidebar-head">
+                    <div>
+                        <p class="text-sm font-black text-slate-900">대화 목록</p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">답장, 첨부, 읽음 확인</p>
                     </div>
+                    <span class="inline-flex items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">{{ inbox_rooms|length }}</span>
                 </div>
 
-                <div>
-                    <p class="text-sm font-black text-slate-700">메시지</p>
-                    <div class="mt-2 space-y-2">
-                        {% for message in search_results.message_cards %}
-                        <a href="{{ message.url }}" class="block rounded-2xl border border-slate-200 px-4 py-3 text-sm">
-                            <span class="block font-black text-slate-900">{{ message.room_name }}</span>
-                            <span class="mt-1 block text-slate-500">{{ message.body|truncatechars:90 }}</span>
-                        </a>
-                        {% empty %}
-                        <p class="rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-400">일치하는 메시지가 없습니다.</p>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div>
-                    <p class="text-sm font-black text-slate-700">자료</p>
-                    <div class="mt-2 space-y-2">
-                        {% for asset in search_results.asset_cards %}
-                        <div class="rounded-2xl border border-slate-200 px-4 py-4 text-sm">
-                            <p class="font-black text-slate-900">{{ asset.original_name }}</p>
-                            <p class="mt-1 text-slate-500">{{ asset.uploader_name }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <a href="{{ asset.download_url }}" class="inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700">내려받기</a>
-                                {% if asset.room_url %}
-                                <a href="{{ asset.room_url }}" class="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">대화 보기</a>
-                                {% endif %}
-                            </div>
+                <div class="schoolcomm-inbox-room-list">
+                    {% for room in inbox_rooms %}
+                    <a
+                        href="{% url 'schoolcomm:main' %}?workspace={{ workspace.id }}&room={{ room.id }}"
+                        class="schoolcomm-inbox-room {% if selected_room_summary and selected_room_summary.id == room.id %}is-active{% endif %}"
+                    >
+                        <div class="schoolcomm-inbox-room-copy">
+                            <p class="schoolcomm-inbox-room-title">{{ room.name }}</p>
+                            <p class="schoolcomm-inbox-room-body">{{ room.summary|default:"새 대화" }}</p>
                         </div>
-                        {% empty %}
-                        <p class="rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-400">일치하는 자료가 없습니다.</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            {% if search_results.has_previous or search_results.has_next %}
-            <div class="schoolcomm-search-pagination mt-4">
-                {% if search_results.has_previous %}
-                <a href="?workspace={{ workspace.id }}&q={{ current_query|urlencode }}&page={{ search_results.previous_page }}" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">이전</a>
-                {% endif %}
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600">{{ search_results.current_page }}페이지</span>
-                {% if search_results.has_next %}
-                <a href="?workspace={{ workspace.id }}&q={{ current_query|urlencode }}&page={{ search_results.next_page }}" class="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">다음</a>
-                {% endif %}
-            </div>
-            {% endif %}
-        </section>
-        {% endif %}
-
-        <div class="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-            <div class="space-y-5">
-                <div class="grid gap-4 md:grid-cols-2">
-                    <section class="schoolcomm-action-card rounded-[2rem] p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-900">공지</p>
-                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.notice_room.summary|default:"공지 확인" }}</p>
-                            </div>
-                            <span class="inline-flex min-w-10 justify-center rounded-full bg-amber-50 px-3 py-1 text-sm font-black text-amber-700">{{ dashboard.notice_room.unread_count }}</span>
-                        </div>
-                        <a href="{{ dashboard.notice_room.url }}" class="mt-4 inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">공지 확인</a>
-                    </section>
-
-                    <section class="schoolcomm-action-card rounded-[2rem] p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-900">자료공유</p>
-                                <p class="mt-1 text-sm text-slate-500">{{ dashboard.shared_room.summary|default:"자료 공유" }}</p>
-                            </div>
-                            <span class="inline-flex min-w-10 justify-center rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-blue-700">{{ dashboard.shared_room.unread_count }}</span>
-                        </div>
-                        <a href="{{ dashboard.shared_room.url }}" class="mt-4 inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">자료 보기</a>
-                    </section>
-
-                    <section class="schoolcomm-action-card rounded-[2rem] p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-900">대화</p>
-                                <p class="mt-1 text-sm text-slate-500">최근 대화 {{ dashboard.dm_rooms|length }}개가 준비돼 있습니다.</p>
-                            </div>
-                            <span class="inline-flex min-w-10 justify-center rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-700">{{ dashboard.dm_rooms|length }}</span>
-                        </div>
-                        <a href="#recent-talks" class="mt-4 inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">대화 보기</a>
-                    </section>
-
-                    <section class="schoolcomm-action-card rounded-[2rem] p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-900">캘린더</p>
-                                <p class="mt-1 text-sm text-slate-500">추천 {{ dashboard.calendar_suggestions|length }}건 · 이번 달 일정 {{ shared_calendar.month_event_count|default:0 }}건</p>
-                            </div>
-                            <span class="inline-flex min-w-10 justify-center rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">{{ dashboard.calendar_suggestions|length|add:shared_calendar.month_event_count }}</span>
-                        </div>
-                        <a href="#calendar-panel" class="mt-4 inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">캘린더 보기</a>
-                    </section>
-                </div>
-
-                <section id="recent-talks" class="schoolcomm-panel rounded-[2rem] p-5">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <h2 class="text-xl font-black text-slate-900">최근 대화</h2>
-                            <p class="mt-1 text-sm text-slate-500">대화방 {{ dashboard.dm_rooms|length }}개</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 space-y-3">
-                        {% for room in dashboard.dm_rooms %}
-                        <a href="{{ room.url }}" class="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
-                            <div class="min-w-0">
-                                <p class="text-sm font-black text-slate-900">{{ room.name }}</p>
-                                <p class="mt-1 truncate text-sm text-slate-500">{{ room.summary|default:"새 대화" }}</p>
-                            </div>
-                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ room.unread_count }}</span>
-                        </a>
-                        {% empty %}
-                        <div class="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                            대화 없음
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <details class="schoolcomm-panel-details mt-5 rounded-[1.5rem] p-4" data-schoolcomm-member-picker="true">
-                        <summary class="flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-900">새 대화 시작</p>
-                                <p class="mt-1 text-xs text-slate-500">한 명은 1:1, 여러 명은 그룹</p>
-                            </div>
-                            <span class="inline-flex rounded-full bg-slate-900 px-3 py-1.5 text-xs font-black text-white"><span data-schoolcomm-selected-count="true">0</span>명 선택</span>
-                        </summary>
-
-                        {% if dashboard.members|length > 1 %}
-                        <form method="post" action="{% url 'schoolcomm:api_dms' %}" class="mt-4">
-                            {% csrf_token %}
-                            <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
-                            <div class="mb-3">
-                                <label for="schoolcomm-member-search" class="sr-only">대화 상대 검색</label>
-                                <input id="schoolcomm-member-search" type="search" data-schoolcomm-member-search="true" placeholder="선생님 이름으로 찾기" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
-                            </div>
-                            <div class="schoolcomm-member-picker-list grid gap-2 sm:grid-cols-2">
-                                {% for member in dashboard.members %}
-                                {% if member.user_id != request.user.id %}
-                                <label class="schoolcomm-member-row flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm" data-schoolcomm-member-row="true" data-search-text="{{ member.user.username }} {{ member.get_role_display }}">
-                                    <input type="checkbox" name="user_ids" value="{{ member.user_id }}" class="h-4 w-4 rounded border-slate-300" data-schoolcomm-member-checkbox="true">
-                                    <span class="min-w-0">
-                                        <span class="block font-bold text-slate-900">{{ member.user.username }}</span>
-                                        <span class="block text-xs text-slate-500">{{ member.get_role_display }}</span>
-                                    </span>
-                                </label>
-                                {% endif %}
-                                {% endfor %}
-                            </div>
-                            <p class="mt-3 text-xs text-slate-500">최대 4명</p>
-                            <p class="mt-2 hidden rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700" data-schoolcomm-member-feedback="true"></p>
-                            <button type="submit" class="mt-4 inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white" data-schoolcomm-member-submit="true">
-                                대화방 만들기
-                            </button>
-                        </form>
-                        {% else %}
-                        <p class="mt-4 text-sm text-slate-500">초대 후 시작</p>
+                        {% if room.unread_count %}
+                        <span class="schoolcomm-inbox-room-badge">{{ room.unread_count }}</span>
                         {% endif %}
-                    </details>
-                </section>
-            </div>
-
-            <div class="space-y-5">
-                {% include "schoolcomm/partials/calendar_panel.html" %}
-
-                {% if dashboard.can_manage or latest_invite_url %}
-                <details class="schoolcomm-panel-details rounded-[2rem] p-5" {% if latest_invite_url %}open{% endif %}>
-                    <summary class="flex items-center justify-between gap-3">
-                        <div>
-                            <h2 class="text-xl font-black text-slate-900">관리</h2>
-                            <p class="mt-1 text-sm text-slate-500">초대와 멤버 관리</p>
-                        </div>
-                        <div class="flex flex-wrap justify-end gap-2">
-                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">선생님 {{ dashboard.member_count }}명</span>
-                        </div>
-                    </summary>
-
-                    {% if dashboard.can_manage %}
-                    <form method="post" action="{% url 'schoolcomm:api_create_invite' %}" class="mt-5 space-y-3">
-                        {% csrf_token %}
-                        <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
-                        <div>
-                            <label for="schoolcomm-invite-email" class="sr-only">초대할 이메일</label>
-                            <input id="schoolcomm-invite-email" type="email" name="email" placeholder="이메일(선택)" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
-                        </div>
-                        <div>
-                            <label for="schoolcomm-invite-role" class="sr-only">초대 권한</label>
-                            <select id="schoolcomm-invite-role" name="role" class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
-                            <option value="member">멤버</option>
-                            <option value="admin">관리자</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="inline-flex rounded-full bg-slate-900 px-4 py-2.5 text-sm font-black text-white">
-                            초대 링크 만들기
-                        </button>
-                    </form>
-                    {% endif %}
-
-                    {% if latest_invite_url %}
-                    <div class="mt-5 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4">
-                        <p class="text-sm font-bold text-emerald-800">방금 만든 초대 링크</p>
-                        <div class="mt-2 break-all rounded-xl bg-white px-3 py-3 text-sm text-slate-700">{{ latest_invite_url }}</div>
+                    </a>
+                    {% empty %}
+                    <div class="schoolcomm-inbox-empty-list">
+                        아직 열린 대화가 없습니다.
                     </div>
-                    {% endif %}
-                </details>
+                    {% endfor %}
+                </div>
+            </aside>
+
+            <section class="schoolcomm-inbox-main schoolcomm-panel rounded-[2rem] p-4 sm:p-5">
+                {% if selected_room %}
+                <div class="schoolcomm-inbox-main-head">
+                    <div>
+                        <h2 class="text-2xl font-black tracking-[-0.03em] text-slate-900">{{ selected_room.name }}</h2>
+                        <p class="mt-1 text-sm text-slate-500">{{ workspace.name }}</p>
+                    </div>
+                    <a href="{% url 'schoolcomm:room_detail' room_id=selected_room.id %}" class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-black text-slate-700">
+                        자세히 보기
+                    </a>
+                </div>
+
+                <p
+                    class="mt-4 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700"
+                    data-schoolcomm-room-status="true"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+
+                <div class="schoolcomm-inbox-thread" data-schoolcomm-room-fragment="true">
+                    {% include "schoolcomm/partials/room_content.html" with room=selected_room room_is_chat=room_is_chat chat_items=chat_items %}
+                </div>
+
+                <div class="schoolcomm-inbox-composer">
+                    {% include "schoolcomm/partials/room_composer.html" with room=selected_room room_is_chat=room_is_chat %}
+                </div>
+                {% else %}
+                <div class="schoolcomm-inbox-empty-main">
+                    <h2 class="text-2xl font-black tracking-[-0.03em] text-slate-900">대화를 선택하세요</h2>
+                    <p class="mt-2 text-sm text-slate-500">왼쪽 목록에서 최근 대화를 열면 답장과 첨부를 바로 이어서 쓸 수 있습니다.</p>
+                </div>
                 {% endif %}
-            </div>
-        </div>
+            </section>
+        </section>
         {% endif %}
     </div>
 </main>

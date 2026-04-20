@@ -533,7 +533,139 @@
     background: #f43f5e;
 }
 
+.schoolcomm-inbox {
+    display: grid;
+    gap: 1rem;
+}
+
+.schoolcomm-inbox-sidebar,
+.schoolcomm-inbox-main {
+    min-height: 34rem;
+}
+
+.schoolcomm-inbox-sidebar {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 1rem;
+}
+
+.schoolcomm-inbox-sidebar-head,
+.schoolcomm-inbox-main-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.schoolcomm-inbox-room-list {
+    display: grid;
+    gap: 0.7rem;
+    align-content: start;
+}
+
+.schoolcomm-inbox-room {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1.2rem;
+    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.9);
+    transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.schoolcomm-inbox-room:hover,
+.schoolcomm-inbox-room:focus-visible {
+    border-color: #93c5fd;
+    background: #eff6ff;
+    transform: translateY(-1px);
+}
+
+.schoolcomm-inbox-room.is-active {
+    border-color: #60a5fa;
+    background: #dbeafe;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+}
+
+.schoolcomm-inbox-room-copy {
+    min-width: 0;
+    display: grid;
+    gap: 0.2rem;
+}
+
+.schoolcomm-inbox-room-title {
+    margin: 0;
+    font-size: 0.96rem;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.schoolcomm-inbox-room-body {
+    margin: 0;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.schoolcomm-inbox-room-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.9rem;
+    min-height: 1.9rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.schoolcomm-inbox-empty-list,
+.schoolcomm-inbox-empty-main {
+    display: grid;
+    place-items: center;
+    min-height: 12rem;
+    padding: 1.25rem;
+    border-radius: 1.4rem;
+    border: 1px dashed #cbd5e1;
+    color: #64748b;
+    text-align: center;
+}
+
+.schoolcomm-inbox-main {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 1rem;
+}
+
+.schoolcomm-inbox-thread {
+    min-height: 0;
+}
+
+.schoolcomm-inbox-thread .schoolcomm-chat-room {
+    min-height: 100%;
+}
+
+.schoolcomm-inbox-composer {
+    margin-top: auto;
+}
+
 @media (min-width: 1100px) {
+    .schoolcomm-inbox {
+        grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .schoolcomm-inbox-sidebar {
+        position: sticky;
+        top: calc(var(--main-nav-height, 88px) + 1rem);
+    }
+
     .schoolcomm-room-content {
         grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.72fr);
         align-items: start;
@@ -548,6 +680,11 @@
 @media (max-width: 767px) {
     .schoolcomm-room-composer-shell {
         bottom: 0.75rem;
+    }
+
+    .schoolcomm-inbox-sidebar,
+    .schoolcomm-inbox-main {
+        min-height: auto;
     }
 
     .schoolcomm-calendar-weekdays,
