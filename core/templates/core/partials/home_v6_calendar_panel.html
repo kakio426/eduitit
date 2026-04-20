@@ -4,22 +4,6 @@
     data-home-v6-top-calendar="true"
     data-home-v6-calendar-surface="true"
 >
-    <section class="home-v6-calendar-story" data-home-v6-calendar-story="true">
-        <div class="home-v6-calendar-story-head">
-            <span class="home-v6-calendar-story-badge">오늘 흐름</span>
-            <a href="{{ today_all_url|default:main_url|default:calendar_center_url }}" class="home-v6-calendar-story-link">
-                전체 캘린더
-                <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
-            </a>
-        </div>
-        <p class="home-v6-calendar-story-copy">
-            {% if today_workspace.today_event_count or today_workspace.today_task_count %}
-            오늘 일정 {{ today_workspace.today_event_count|default_if_none:0 }}건, 할 일 {{ today_workspace.today_task_count|default_if_none:0 }}건. 먼저 흐름을 잡고 필요한 도구로 이어가세요.
-            {% else %}
-            오늘 흐름을 먼저 잡아두면 멘트, 수합, 준비가 더 빨리 이어집니다.
-            {% endif %}
-        </p>
-    </section>
     {% if calendar_load_error %}
     <section
         class="rounded-[1.5rem] border border-rose-200 bg-rose-50/90 px-4 py-4 text-left shadow-sm sm:px-5"

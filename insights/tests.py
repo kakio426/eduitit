@@ -1,34 +1,11 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
 
-from core.models import UserPolicyConsent
-from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from .forms import InsightPasteForm
 from .importer import parse_pasted_insight
 from .models import Insight
 from .templatetags.insight_extras import parse_tags
-
-
-def _mark_onboarded(user, *, nickname):
-    profile = user.userprofile
-    profile.nickname = nickname
-    profile.role = "school"
-    profile.save(update_fields=["nickname", "role"])
-
-
-def _grant_current_policy_consent(user):
-    return UserPolicyConsent.objects.create(
-        user=user,
-        provider="direct",
-        terms_version=TERMS_VERSION,
-        privacy_version=PRIVACY_VERSION,
-        agreed_at=timezone.now(),
-        agreement_source="required_gate",
-        ip_address="127.0.0.1",
-        user_agent="insights-test-agent",
-    )
 
 
 class InsightModelTest(TestCase):
@@ -37,11 +14,9 @@ class InsightModelTest(TestCase):
             title="My First DevLog",
             content="```python\nprint('hello')\n```",
             category="devlog",
-            track="editorial",
             video_url="https://youtube.com",
         )
         self.assertEqual(insight.category, "devlog")
-        self.assertEqual(insight.track, "editorial")
 
     def test_insight_detail_view(self):
         insight = Insight.objects.create(
@@ -118,8 +93,8 @@ class InsightListModalTemplateTest(TestCase):
             email="modal_admin@example.com",
             password="pw12345",
         )
-        _mark_onboarded(self.admin, nickname="modal_admin_nick")
-        _grant_current_policy_consent(self.admin)
+        self.admin.userprofile.nickname = "modal_admin_nick"
+        self.admin.userprofile.save(update_fields=["nickname"])
         Insight.objects.create(
             title="Modal Target Insight",
             content="Body",
@@ -133,18 +108,6 @@ class InsightListModalTemplateTest(TestCase):
         self.assertContains(response, 'x-teleport="body"')
         self.assertContains(response, "x-transition.opacity")
 
-    def test_list_supports_track_filter(self):
-        Insight.objects.create(
-            title="실전 안내문 문장",
-            content="Body",
-            category="column",
-            track="practical",
-        )
-        response = self.client.get(f"{reverse('insights:list')}?track=classroom")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "수업 사례")
-        self.assertNotContains(response, "실전 안내문 문장")
-
 
 class InsightPermissionTest(TestCase):
     def setUp(self):
@@ -153,15 +116,16 @@ class InsightPermissionTest(TestCase):
             email="teacher@example.com",
             password="pw12345",
         )
-        _mark_onboarded(self.user, nickname="teacher_nick")
+        self.user.userprofile.nickname = "teacher_nick"
+        self.user.userprofile.save(update_fields=["nickname"])
 
         self.admin = User.objects.create_superuser(
             username="admin",
             email="admin@example.com",
             password="pw12345",
         )
-        _mark_onboarded(self.admin, nickname="admin_nick")
-        _grant_current_policy_consent(self.admin)
+        self.admin.userprofile.nickname = "admin_nick"
+        self.admin.userprofile.save(update_fields=["nickname"])
         self.insight = Insight.objects.create(
             title="Original Title",
             content="Original Content",
@@ -174,10 +138,7 @@ class InsightPermissionTest(TestCase):
             reverse("insights:update", args=[self.insight.pk]),
             {
                 "title": "Changed Title",
-                "track": "practical",
                 "category": "column",
-                "series_name": "",
-                "deck": "",
                 "video_url": "",
                 "content": "Changed Content",
                 "kakio_note": "",
@@ -197,10 +158,7 @@ class InsightPermissionTest(TestCase):
             reverse("insights:update", args=[self.insight.pk]),
             {
                 "title": "Changed By Admin",
-                "track": "classroom",
                 "category": "column",
-                "series_name": "교실 AI 루틴",
-                "deck": "한 줄 소개",
                 "video_url": "",
                 "content": "Changed Content",
                 "kakio_note": "note",
@@ -210,8 +168,6 @@ class InsightPermissionTest(TestCase):
 
         self.insight.refresh_from_db()
         self.assertEqual(self.insight.title, "Changed By Admin")
-        self.assertEqual(self.insight.track, "classroom")
-        self.assertEqual(self.insight.series_name, "교실 AI 루틴")
         self.assertRedirects(response, reverse("insights:detail", args=[self.insight.pk]))
 
 
@@ -222,15 +178,16 @@ class InsightPasteImportTest(TestCase):
             email="teacher2@example.com",
             password="pw12345",
         )
-        _mark_onboarded(self.user, nickname="teacher2_nick")
+        self.user.userprofile.nickname = "teacher2_nick"
+        self.user.userprofile.save(update_fields=["nickname"])
 
         self.admin = User.objects.create_superuser(
             username="admin2",
             email="admin2@example.com",
             password="pw12345",
         )
-        _mark_onboarded(self.admin, nickname="admin2_nick")
-        _grant_current_policy_consent(self.admin)
+        self.admin.userprofile.nickname = "admin2_nick"
+        self.admin.userprofile.save(update_fields=["nickname"])
 
     def _sample_blob(self):
         return (
@@ -322,31 +279,6 @@ class InsightPasteFormTest(TestCase):
         self.assertEqual(attrs.get("autocorrect"), "off")
         self.assertEqual(attrs.get("autocomplete"), "off")
         self.assertEqual(attrs.get("spellcheck"), "false")
-
-
-class InsightDetailRelatedContentTest(TestCase):
-    def test_detail_shows_related_sections(self):
-        anchor = Insight.objects.create(
-            title="대표 글",
-            content="본문",
-            category="column",
-            track="classroom",
-            series_name="교실 AI 루틴",
-        )
-        Insight.objects.create(
-            title="같은 시리즈 글",
-            content="관련 본문",
-            category="column",
-            track="classroom",
-            series_name="교실 AI 루틴",
-        )
-
-        response = self.client.get(reverse("insights:detail", args=[anchor.pk]))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "바로 이어지는 도구")
-        self.assertContains(response, "같이 보면 좋은 인사이트")
-        self.assertContains(response, "같은 시리즈 글")
 
 
 class InsightTemplateTagsTest(TestCase):

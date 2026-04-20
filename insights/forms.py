@@ -4,22 +4,11 @@ from .models import Insight
 class InsightForm(forms.ModelForm):
     class Meta:
         model = Insight
-        fields = ['title', 'track', 'series_name', 'deck', 'category', 'video_url', 'content', 'kakio_note', 'tags']
+        fields = ['title', 'category', 'video_url', 'content', 'kakio_note', 'tags']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl',
                 'placeholder': '제목을 입력하세요'
-            }),
-            'track': forms.Select(attrs={
-                'class': 'w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl'
-            }),
-            'series_name': forms.TextInput(attrs={
-                'class': 'w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl',
-                'placeholder': '예: 교실 AI 루틴'
-            }),
-            'deck': forms.TextInput(attrs={
-                'class': 'w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl',
-                'placeholder': '홈과 목록 카드에서 먼저 보여줄 한 줄'
             }),
             'category': forms.Select(attrs={
                 'class': 'w-full px-5 py-3 rounded-2xl bg-[#E0E5EC] shadow-clay-inner focus:shadow-clay border-none outline-none text-xl'
@@ -45,9 +34,6 @@ class InsightForm(forms.ModelForm):
         }
         labels = {
             'title': '제목',
-            'track': '헤리티지 분류',
-            'series_name': '시리즈',
-            'deck': '짧은 소개',
             'category': '카테고리',
             'video_url': 'YouTube URL',
             'content': '핵심 인사이트',

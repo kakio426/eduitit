@@ -752,16 +752,9 @@ def build_service_guide_detail_seo(request, manual) -> PageSeoMeta:
     )
 
 
-def build_insight_list_seo(
-    request,
-    *,
-    current_track: str = "",
-    current_category: str = "",
-    current_tag: str = "",
-    current_sort: str = "recent",
-) -> PageSeoMeta:
+def build_insight_list_seo(request, *, current_category: str = "", current_tag: str = "", current_sort: str = "recent") -> PageSeoMeta:
     base_canonical = _absolute_url(reverse("insights:list"))
-    filtered = bool(current_track or current_category or current_tag or (current_sort and current_sort != "recent"))
+    filtered = bool(current_category or current_tag or (current_sort and current_sort != "recent"))
     if filtered and current_tag:
         description = f"#{current_tag} 관련 교실 AI 인사이트를 모아봤습니다. 상세 글은 {SITE_NAME_KO}에서 이어서 확인하세요."
     elif filtered and current_category:

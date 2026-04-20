@@ -34,33 +34,19 @@
     {% endif %}
 
     <!-- Meta -->
-    <div class="flex items-center gap-2 mb-2 flex-wrap">
-        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800">
-            {{ insight.get_track_display }}
-        </span>
+    <div class="flex items-center gap-2 mb-2">
         <span class="px-2.5 py-1 rounded-md text-[11px] font-bold
             {% if insight.category == 'devlog' %}bg-emerald-100 text-emerald-700
             {% elif insight.category == 'column' %}bg-blue-100 text-blue-700
             {% else %}bg-red-100 text-red-700{% endif %}">
             {{ insight.get_category_display }}
         </span>
-        {% if insight.series_name %}
-        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-stone-200 text-stone-700">
-            {{ insight.series_name }}
-        </span>
-        {% endif %}
         <span class="text-xs text-slate-400">{{ insight.created_at|date:"Y.m.d" }}</span>
     </div>
 
     <h3 class="text-xl md:text-2xl font-extrabold text-slate-800 leading-tight break-keep mb-3">
         {{ insight.title }}
     </h3>
-
-    {% if insight.deck %}
-    <p class="text-sm font-bold text-stone-700 leading-6 mb-3">
-        {{ insight.deck }}
-    </p>
-    {% endif %}
 
     <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 mb-3">
         <p class="text-sm text-slate-600 leading-6">

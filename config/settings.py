@@ -48,12 +48,6 @@ SECRET_KEY = (
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 TESTING = 'test' in sys.argv
 
-_enable_websockets_env = os.environ.get('ENABLE_WEBSOCKETS')
-if _enable_websockets_env is None:
-    ENABLE_WEBSOCKETS = TESTING or not DEBUG
-else:
-    ENABLE_WEBSOCKETS = _enable_websockets_env.lower() in ('true', '1', 'yes', 'on')
-
 # SECURITY: ALLOWED_HOSTS from environment
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 

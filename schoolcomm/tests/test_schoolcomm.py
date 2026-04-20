@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import DatabaseError
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import patch
@@ -317,25 +317,6 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertGreaterEqual(len(payload["calendar_suggestions"]), 1)
         self.assertTrue(payload["invite_actions"]["can_create"])
         self.assertEqual(payload["context_actions"][0]["mode_key"], "pdf")
-
-    @override_settings(ENABLE_WEBSOCKETS=False)
-    def test_room_snapshot_omits_socket_urls_when_websockets_disabled(self):
-        dm_room = get_or_create_dm_room(
-            self.workspace,
-            [self.owner_membership, self.member_membership],
-            created_by=self.owner,
-        )
-
-        self.client.force_login(self.owner)
-        response = self.client.get(
-            reverse("schoolcomm:api_room_snapshot", kwargs={"room_id": dm_room.id}),
-            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.json()
-        self.assertEqual(payload["room"]["room_ws_url"], "")
-        self.assertEqual(payload["room"]["user_ws_url"], "")
 
     def test_room_fragment_refresh_returns_partial_content(self):
         create_room_message(self.shared_room, self.owner_membership, text="자료 확인 부탁드립니다")
