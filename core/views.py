@@ -2160,7 +2160,7 @@ CLASS_OPS_NAV_RESERVATION_ROUTE_NAMES = {
 }
 
 CLASS_OPS_NAV_RESERVATION_TITLES = {
-    '잇티예약',
+    '학교 예약 시스템',
 }
 
 CLASS_OPS_NAV_RESERVATION_INDEX = 2
@@ -3323,7 +3323,7 @@ PUBLIC_PLATFORM_SHOWCASE_PRIORITY_SPECS = (
     },
     {
         "route_names": ("reservations:dashboard_landing", "reservations:landing"),
-        "titles": ("잇티예약",),
+        "titles": ("학교 예약 시스템",),
     },
     {
         "route_names": ("classcalendar:main",),
@@ -3365,7 +3365,7 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "title": "일정·예약",
         "summary": "일정과 예약을 한 번에 봅니다.",
         "preferred_routes": ("classcalendar:main", "reservations:dashboard_landing", "reservations:landing"),
-        "preferred_titles": ("학급 캘린더", "잇티예약", "교무수첩"),
+        "preferred_titles": ("학급 캘린더", "학교 예약 시스템", "교무수첩"),
         "fallback_group_keys": ("schedule_reservation",),
     },
     {
@@ -3842,7 +3842,7 @@ def _build_home_public_representative_products(product_list, *, login_url):
         },
         {
             "route_names": {"reservations:dashboard_landing", "reservations:landing"},
-            "titles": {"잇티예약"},
+            "titles": {"학교 예약 시스템"},
         },
         {
             "route_names": {"collect:landing", "collect:dashboard"},

@@ -1741,7 +1741,7 @@ class HomeV2ViewTest(TestCase):
             service_type='classroom',
         )
         reservation_system = Product.objects.create(
-            title="잇티예약",
+            title="학교 예약 시스템",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -1768,7 +1768,7 @@ class HomeV2ViewTest(TestCase):
 
         self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
-        self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
+        self.assertIn('title="학교 예약 시스템">학교 예약 시스템</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
 
     def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
@@ -1778,7 +1778,7 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(build_favorite_service_title("두뇌 풀가동! 교실 장기"), "장기")
         self.assertEqual(build_favorite_service_title("왁자지껄 교실 윷놀이"), "윷놀이")
         self.assertEqual(build_favorite_service_title("글솜씨 뚝딱! 소식지"), "소식지")
-        self.assertEqual(build_favorite_service_title("잇티예약"), "잇티예약")
+        self.assertEqual(build_favorite_service_title("학교 예약 시스템"), "학교 예약 시스템")
         self.assertEqual(build_favorite_service_title("AI 업무 메시지 보관함"), "메시지 보관")
 
     def test_v2_usage_based_quick_actions(self):
@@ -2615,7 +2615,7 @@ class HomeV4ViewTest(TestCase):
             icon='fa-solid fa-palette',
         )
         self.reservations_product = Product.objects.create(
-            title="잇티예약",
+            title="학교 예약 시스템",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -3327,7 +3327,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertEqual(
             representative_titles,
-            ['미술 수업 도우미', '잇티예약', '잇티수합', '잇티하게 서명 톡'],
+            ['미술 수업 도우미', '학교 예약 시스템', '잇티수합', '잇티하게 서명 톡'],
         )
 
     def test_v4_anonymous_featured_service_uses_access_matched_cta(self):
@@ -3754,7 +3754,7 @@ class HomeV5ViewTest(TestCase):
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
         reservations_product = Product.objects.create(
-            title='잇티예약',
+            title='학교 예약 시스템',
             description='학교 예약 바로가기',
             price=0,
             is_active=True,
@@ -4247,7 +4247,7 @@ class HomeV6ViewTest(TestCase):
             display_order=40,
         )
         Product.objects.create(
-            title="잇티예약",
+            title="학교 예약 시스템",
             description="특별실 예약",
             price=0,
             is_active=True,
@@ -4274,7 +4274,7 @@ class HomeV6ViewTest(TestCase):
             [
                 '몽글몽글 미술 수업',
                 'AI 수업자료 메이커',
-                '잇티예약',
+                '학교 예약 시스템',
                 '행복의 씨앗',
                 '씨앗 퀴즈',
             ],

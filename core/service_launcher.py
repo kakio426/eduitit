@@ -18,8 +18,8 @@ PUBLIC_SERVICE_TITLE_BY_ROUTE = {
     "docsign:list": "잇티PDF사인",
     "signatures:list": "잇티하게 서명 톡",
     "doccollab:main": "잇티한글",
-    "reservations:dashboard_landing": "잇티예약",
-    "reservations:landing": "잇티예약",
+    "reservations:dashboard_landing": "학교 예약 시스템",
+    "reservations:landing": "학교 예약 시스템",
     "qrgen:landing": "잇티QR",
     "infoboard:dashboard": "잇티보드",
 }
