@@ -211,6 +211,9 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                         {% include 'core/partials/home_v6_calendar_panel.html' %}
                         {% endif %}
                     </section>
+                    <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
+                        {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
+                    </section>
                     {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
                     {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
@@ -330,9 +333,11 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
 
                         <div class="home-v6-side-stack">
                             <article class="home-v6-card home-v6-favorites-panel" data-home-v6-favorites-panel="true" data-home-v6-rail-card="true">
-                                <div class="mb-4 flex items-center gap-2">
-                                    <i class="fa-solid fa-star home-v6-favorites-icon text-amber-500"></i>
-                                    <h2 class="text-lg font-black text-slate-900">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
+                                <div class="home-v6-favorites-panel-head">
+                                    <div class="home-v6-favorites-panel-title">
+                                        <i class="fa-solid fa-star home-v6-favorites-icon text-amber-500"></i>
+                                        <h2>{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
+                                    </div>
                                 </div>
 
                                 {% if favorite_items %}
@@ -379,20 +384,12 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                 {% endif %}
                             </article>
 
-                            {% if teacher_buddy_panel %}
-                            <section data-home-teacher-buddy-slot="v6-rail" data-home-v6-rail-card="true">
-                                {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
-                            </section>
-                            {% endif %}
-
                             {% if home_user_mode == 'authenticated' and reservation_home_card %}
-                            <section class="home-v6-card home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
-                                <div class="mb-4 flex items-center justify-between gap-3">
-                                    <div>
-                                        <div class="mb-1 flex items-center gap-2">
-                                            <i class="fa-solid fa-school home-v6-title-icon"></i>
-                                            <h2 class="text-lg font-black text-slate-900">내 학교 예약</h2>
-                                        </div>
+                            <section class="home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
+                                <div class="home-v6-reservations-head">
+                                    <div class="home-v6-reservations-title">
+                                        <i class="fa-solid fa-school home-v6-title-icon"></i>
+                                        <h2>내 학교 예약</h2>
                                     </div>
                                     <a
                                         href="{{ reservation_home_card.dashboard_url }}"
@@ -419,6 +416,12 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                     </a>
                                     {% endfor %}
                                 </div>
+                            </section>
+                            {% endif %}
+
+                            {% if teacher_buddy_panel %}
+                            <section data-home-teacher-buddy-slot="v6-rail" data-home-v6-rail-card="true">
+                                {% include 'core/partials/home_v6_teacher_buddy_panel_rail.html' %}
                             </section>
                             {% endif %}
 

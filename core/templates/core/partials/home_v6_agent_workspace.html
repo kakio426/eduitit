@@ -1,14 +1,17 @@
 <section
     class="home-v6-representative-section"
-    data-home-v6-representative-services="true"
+    {% if agent_workspace_surface != 'mobile' %}data-home-v6-representative-services="true"{% endif %}
     data-home-v6-agent-workspace="true"
 >
     <div class="home-v6-card home-v6-agent-card">
         <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true">
             <div class="home-v6-agent-rail-head">
                 <div class="home-v6-agent-brand-copy">
-                    <h2 class="home-v6-agent-title">{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</h2>
-                    <p class="home-v6-agent-brand-subtitle">서비스와 대화</p>
+                    <h2 class="home-v6-agent-title">
+                        <span>{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</span>
+                        <span class="home-v6-agent-title-divider" aria-hidden="true">·</span>
+                        <span class="home-v6-agent-brand-subtitle">서비스와 대화</span>
+                    </h2>
                 </div>
             </div>
 
@@ -73,16 +76,18 @@
                         <p
                             class="home-v6-agent-active-description"
                             x-cloak
-                            x-show="activeHeaderDescription()"
+                            x-show="shouldShowActiveHeaderDescription()"
                             x-text="activeHeaderDescription()"
                         ></p>
-                        <div class="home-v6-agent-active-meta">
-                            <span class="home-v6-agent-active-status">
-                                <span class="home-v6-agent-active-status-dot"></span>
-                                <span x-text="activeHeaderMeta()"></span>
-                            </span>
-                        </div>
                     </div>
+                    <span
+                        class="home-v6-agent-active-status"
+                        :class="'is-' + activeHeaderStatusTone()"
+                        :title="activeHeaderMeta() || ''"
+                    >
+                        <span class="home-v6-agent-active-status-dot"></span>
+                        <span x-text="activeHeaderStatusLabel()"></span>
+                    </span>
                 </div>
 
                 <div class="home-v6-agent-head-actions" :class="{ 'home-v6-agent-head-actions--human': activeRendererKey === 'human-chat' }">

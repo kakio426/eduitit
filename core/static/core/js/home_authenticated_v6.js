@@ -24,6 +24,23 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    function isVisibleNode(node) {
+        if (!node) {
+            return false;
+        }
+        if (node.offsetParent !== null) {
+            return true;
+        }
+        var style = window.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    }
+
+    function firstVisibleNode(selector) {
+        return Array.prototype.slice.call(document.querySelectorAll(selector)).find(function (node) {
+            return isVisibleNode(node);
+        }) || null;
+    }
+
     function buildSocketUrl(path) {
         var rawPath = String(path || '').trim();
         if (!rawPath) {
@@ -1428,6 +1445,47 @@
                 return trimLine(this.activeMode.usage_hint);
             },
 
+            activeHeaderStatusTone: function () {
+                if (this.activeConversationItem) {
+                    return this.isHumanChatLoading ? 'streaming' : 'ready';
+                }
+                if (this.activeAiLoading() || this.isAgentExecuting || this.isAgentLoading) {
+                    return 'streaming';
+                }
+                if (this.agentExecution || this.activeAiUserBubbleText() || this.previewResultLines().length) {
+                    return 'ready';
+                }
+                return 'idle';
+            },
+
+            activeHeaderStatusLabel: function () {
+                var tone = this.activeHeaderStatusTone();
+                var meta = trimLine(this.activeHeaderMeta());
+                if (tone === 'streaming') {
+                    if (this.activeConversationItem) {
+                        return '동기화 중';
+                    }
+                    return this.isAgentExecuting ? '적용 중' : '생성 중';
+                }
+                if (meta) {
+                    return meta;
+                }
+                return tone === 'ready' ? '준비됨' : '대기';
+            },
+
+            shouldShowActiveHeaderDescription: function () {
+                var description = trimLine(this.activeHeaderDescription());
+                if (!description || this.activeConversationItem || this.activeRendererKey === 'human-chat') {
+                    return false;
+                }
+                return !this.agentExecution
+                    && !this.activeAiUserBubbleText()
+                    && !this.activeAiQueuedFileName()
+                    && !this.previewResultLines().length
+                    && !this.activeAiLoading()
+                    && !this.isAgentExecuting;
+            },
+
             activeHeaderPrimaryHref: function () {
                 var room = this.activeRoomSnapshot && this.activeRoomSnapshot.room ? this.activeRoomSnapshot.room : null;
                 if (this.activeConversationItem) {
@@ -2369,7 +2427,7 @@
             },
 
             humanChatFileInput: function () {
-                return document.querySelector('[data-home-v6-human-chat-file-input="true"]');
+                return firstVisibleNode('[data-home-v6-human-chat-file-input="true"]');
             },
 
             openHumanChatFilePicker: function () {
@@ -2630,7 +2688,7 @@
             },
 
             humanChatComposerTextarea: function () {
-                return document.querySelector('[data-home-v6-human-chat-textarea="true"]');
+                return firstVisibleNode('[data-home-v6-human-chat-textarea="true"]');
             },
 
             scheduleHumanChatComposerResize: function () {
@@ -2956,7 +3014,7 @@
             },
 
             aiComposerTextarea: function () {
-                return document.querySelector('[data-home-v6-ai-composer-textarea="true"]');
+                return firstVisibleNode('[data-home-v6-ai-composer-textarea="true"]');
             },
 
             scheduleAiComposerResize: function () {

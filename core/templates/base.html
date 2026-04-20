@@ -156,7 +156,7 @@
                 <div class="flex items-center shell-nav-brand">
                     <a href="/" class="flex items-center gap-3 shell-nav-brand-link group" aria-label="에듀잇티 홈" title="{{ brand_nav_wordmark|default:'에듀잇티' }}">
                         <div
-                            class="shell-nav-brand-icon flex items-center justify-center shadow-clay-inner">
+                            class="shell-nav-brand-icon flex items-center justify-center">
                             <i class="fa-solid fa-cloud"></i>
                         </div>
                         <span class="shell-nav-brand-wordmark">EDUITIT</span>
@@ -175,11 +175,12 @@
                             onclick="if(window.openServiceLauncher) openServiceLauncher()"
                             class="shell-utility-button shell-utility-button--search"
                             data-global-service-launcher-trigger="true"
-                            title="서비스 찾기 (Ctrl+K)"
+                            title="서비스 찾기 (⌘K)"
                             aria-label="서비스 찾기 열기"
                             aria-keyshortcuts="Control+K Meta+K">
                             <i class="fa-solid fa-magnifying-glass text-sm"></i>
-                            <span>서비스 찾기</span>
+                            <span class="hidden xl:inline">서비스 찾기</span>
+                            <span class="shell-utility-shortcut" aria-hidden="true">⌘K</span>
                         </button>
                         {% endif %}
                         {% if user.is_authenticated and home_agent_limit_nav_action %}
