@@ -321,7 +321,6 @@
                             <article class="home-v6-card home-v6-favorites-panel" data-home-v6-favorites-panel="true" data-home-v6-rail-card="true">
                                 <div class="home-v6-favorites-panel-head">
                                     <div class="home-v6-favorites-panel-title">
-                                        <i class="fa-solid fa-star home-v6-favorites-icon text-amber-500"></i>
                                         <h2>{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
                                     </div>
                                 </div>
@@ -342,25 +341,22 @@
                                         role="button"
                                         tabindex="0">
                                         <div class="home-v6-favorite-card-body">
-                                            <div class="home-v6-service-icon-tone flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-sm" data-home-v6-service-icon="true" data-home-accent="{{ item.product.home_accent_token|default:'external' }}">
-                                                <i class="{{ item.product.home_icon_class|default:'fa-solid fa-star' }}"></i>
-                                            </div>
                                             <div class="home-v6-favorite-card-copy">
                                                 <p class="home-v6-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                             </div>
+                                            {% if home_user_mode == 'authenticated' %}
+                                            <button type="button"
+                                                class="home-v6-favorite-card-star favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                                data-home-v6-rail-action="true"
+                                                data-product-id="{{ item.product.id }}"
+                                                data-favorite-toggle="true"
+                                                aria-pressed="false"
+                                                aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
+                                                title="즐겨찾기">
+                                                <i class="fa-solid fa-star"></i>
+                                            </button>
+                                            {% endif %}
                                         </div>
-                                        {% if home_user_mode == 'authenticated' %}
-                                        <button type="button"
-                                            class="home-v6-favorite-card-star favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
-                                            data-home-v6-rail-action="true"
-                                            data-product-id="{{ item.product.id }}"
-                                            data-favorite-toggle="true"
-                                            aria-pressed="false"
-                                            aria-label="{{ item.favorite_full_title }} 즐겨찾기 토글"
-                                            title="즐겨찾기">
-                                            <i class="fa-solid fa-star"></i>
-                                        </button>
-                                        {% endif %}
                                     </div>
                                     {% endwith %}
                                     {% endfor %}

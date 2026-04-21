@@ -39,10 +39,10 @@
                                 <i class="fa-solid fa-star text-amber-500"></i>
                                 <h2 class="text-lg md:text-xl font-black text-slate-900">즐겨찾기</h2>
                             </div>
-                            <div class="home-v2-favorites-grid" data-home-v2-favorites-grid="true">
+                            <div class="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-2" data-home-v2-favorites-grid="true">
                                 {% for item in favorite_items|slice:":4" %}
                                 {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
-                                <div class="home-v2-favorite-card product-card"
+                                <div class="min-h-[74px] rounded-[1.35rem] border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm transition product-card hover:border-amber-300 hover:bg-white"
                                         data-home-v2-favorite-card="true"
                                         data-product-id="{{ item.product.id }}"
                                         data-launch-href="{{ item.href }}"
@@ -51,12 +51,15 @@
                                         data-track-label="{{ item.favorite_full_title }}"
                                         role="button"
                                         tabindex="0">
-                                    <div class="home-v2-favorite-card-body" data-home-v2-favorite-card-body="true">
-                                        <div class="home-v2-favorite-card-copy">
-                                            <p class="home-v2-favorite-card-title" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                    <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
+                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
+                                            <i class="{{ item.product.home_icon_class|default:item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
                                         </div>
                                         <button type="button"
-                                            class="home-v2-favorite-card-star favorite-toggle-btn inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
+                                            class="favorite-toggle-btn inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-500 transition-colors"
                                             data-product-id="{{ item.product.id }}"
                                             data-favorite-toggle="true"
                                             aria-pressed="false"

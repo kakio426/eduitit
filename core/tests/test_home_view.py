@@ -1332,30 +1332,6 @@ class HomeV2ViewTest(TestCase):
         self.assertNotIn('function initHomeV2Interactions()', content)
         self.assertNotIn('function buildCalendarMessageHubState()', content)
 
-    def test_legacy_v2_favorites_template_uses_text_first_cards_without_leading_icons(self):
-        template = (
-            Path(settings.BASE_DIR)
-            / 'core'
-            / 'templates'
-            / 'core'
-            / 'home_authenticated_v2.html'
-        ).read_text(encoding='utf-8')
-        css = (
-            Path(settings.BASE_DIR)
-            / 'core'
-            / 'static'
-            / 'core'
-            / 'css'
-            / 'home_authenticated_v2.css'
-        ).read_text(encoding='utf-8')
-
-        self.assertIn('class="home-v2-favorites-grid"', template)
-        self.assertIn('data-home-v2-favorite-card-body="true"', template)
-        self.assertIn('class="home-v2-favorite-card-title"', template)
-        self.assertNotIn("item.product.home_icon_class", template)
-        self.assertIn('.home-v2-favorite-card-title {', css)
-        self.assertIn('font-size: 1.18rem;', css)
-
     def test_v2_authenticated_has_sections(self):
         """V2 로그인 홈에 목적별 섹션 존재"""
         self._login('secuser')
@@ -1794,6 +1770,7 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
         self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
+        self.assertNotIn('data-home-v6-service-icon="true"', favorites_block)
 
     def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
         self.assertEqual(build_favorite_service_title("반짝반짝 우리반 알림판"), "알림판")
@@ -4481,6 +4458,14 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .home-v6-tool-favorite-badge {', css)
         self.assertIn('opacity: 1;', css)
         self.assertIn('pointer-events: auto;', css)
+
+    def test_v6_css_uses_text_first_favorites_cards(self):
+        css = _read_home_v6_css_bundle()
+
+        self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {', css)
+        self.assertIn('align-items: center;', css)
+        self.assertIn('font-size: 1.16rem;', css)
+        self.assertNotIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
 
     def test_v6_css_keeps_reservation_split_grid_from_stretching_date_field(self):
         css = _read_home_v6_css_bundle()
