@@ -244,6 +244,27 @@ body {
     .shell-nav-brand-wordmark {
         font-size: 1.04rem;
     }
+
+    .shell-nav-bar--public-simple {
+        min-height: 3.85rem;
+        padding-inline: 1rem;
+    }
+
+    .shell-nav-bar--public-simple .shell-nav-brand-icon {
+        width: 2.3rem;
+        height: 2.3rem;
+        font-size: 0.92rem;
+    }
+
+    .shell-nav-bar--public-simple .shell-nav-brand-wordmark {
+        font-size: 1.16rem;
+    }
+
+    .shell-nav-public-link {
+        min-height: 2.36rem;
+        padding-inline: 0.88rem;
+        font-size: 0.9rem;
+    }
 }
 
 @media (min-width: 1024px) {
@@ -550,6 +571,69 @@ h4,
     color: #2d2348;
 }
 
+.shell-nav-public-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.shell-nav-public-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 1px solid rgba(45, 35, 72, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-ink-primary);
+    font-size: 0.96rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 12px 24px rgba(45, 35, 72, 0.08);
+    transition:
+        transform var(--motion-duration-fast) var(--motion-ease-standard),
+        border-color var(--motion-duration-fast) var(--motion-ease-standard),
+        background-color var(--motion-duration-fast) var(--motion-ease-standard),
+        box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.shell-nav-public-link:hover,
+.shell-nav-public-link:focus-visible {
+    border-color: rgba(45, 35, 72, 0.18);
+    background: #ffffff;
+    box-shadow: 0 16px 28px rgba(45, 35, 72, 0.12);
+    transform: translateY(var(--motion-lift-subtle));
+}
+
+.shell-nav-public-link--active {
+    border-color: rgba(45, 35, 72, 0.18);
+    background: #ffffff;
+}
+
+.shell-nav-bar--public-simple {
+    min-height: 4rem;
+    padding: 0.62rem clamp(1rem, 2.4vw, 1.7rem);
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.shell-nav-bar--public-simple .shell-nav-brand-link {
+    gap: 0.72rem;
+}
+
+.shell-nav-bar--public-simple .shell-nav-brand-icon {
+    width: 2.55rem;
+    height: 2.55rem;
+    font-size: 1rem;
+}
+
+.shell-nav-bar--public-simple .shell-nav-brand-wordmark {
+    font-size: clamp(1.2rem, 2vw, 1.4rem);
+    letter-spacing: -0.045em;
+}
+
 .shell-nav-primary,
 .shell-nav-secondary {
     align-items: center;
@@ -577,6 +661,10 @@ h4,
     gap: 0.22rem;
     padding-left: 0.85rem;
     border-left: 1px solid rgba(45, 35, 72, 0.08);
+}
+
+.shell-nav-bar--public-simple .shell-nav-public-actions {
+    justify-self: end;
 }
 
 .shell-link--nav {

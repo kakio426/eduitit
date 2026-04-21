@@ -142,6 +142,7 @@ PUBLIC_HOME_CONTEXT_KEYS = (
     'guest_continue_url',
     'guest_continue_category_labels',
     'hide_navbar',
+    'public_simple_navbar',
     'login_url',
     'home_design_version',
 )
@@ -178,7 +179,8 @@ def _assert_public_home_context_contract(testcase, response, *, design_version='
     for key in PUBLIC_HOME_CONTEXT_KEYS:
         testcase.assertIn(key, response.context)
     testcase.assertEqual(response.context['home_design_version'], design_version)
-    testcase.assertTrue(response.context['hide_navbar'])
+    testcase.assertFalse(response.context['hide_navbar'])
+    testcase.assertTrue(response.context['public_simple_navbar'])
 
 
 @override_settings(HOME_V2_ENABLED=False)
@@ -223,12 +225,14 @@ class HomeViewTest(TestCase):
         self.assertIn('테스트 서비스', locked_titles)
         self.assertIn('업무별로 바로 찾는 에듀잇티', content)
 
-    def test_home_nav_contains_single_help_hub_link(self):
+    def test_home_public_nav_uses_simple_brand_and_portfolio_bar(self):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertIn('이용 안내', content)
-        self.assertIn('https://padlet.com/kakio1q2w/eduitit-wrjbzmk8oufxdzcv', content)
+        self.assertIn('data-public-simple-nav="true"', content)
+        self.assertIn('data-public-simple-nav-link="portfolio"', content)
+        self.assertNotIn('id="mobileMenuBtn"', content)
+        self.assertNotIn('서비스 찾기 열기', content)
 
     def test_home_authenticated_200(self):
         """로그인 홈 200 응답"""
@@ -330,9 +334,9 @@ class HomeV2ViewTest(TestCase):
     def _assert_public_home_uses_v6(self, response, content):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         _assert_public_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-public-simple-nav="true"', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-header="true"', content)
         self.assertIn('data-home-v6-public-showcase="true"', content)
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertIn('data-home-v6-public-portfolio="true"', content)
@@ -449,14 +453,14 @@ class HomeV2ViewTest(TestCase):
         _assert_public_home_context_contract(self, response)
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         self.assertIn('data-home-v6-public-hero="true"', content)
-        self.assertIn('data-home-v6-public-header="true"', content)
+        self.assertIn('data-public-simple-nav="true"', content)
         self.assertIn('data-home-v6-public-showcase="true"', content)
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertIn('data-home-v6-public-portfolio="true"', content)
         self.assertIn('교실 업무를', content)
         self.assertIn('바로 여는 플랫폼', content)
         self.assertIn('업무별로 바로 찾는 에듀잇티', content)
-        self.assertIn('에듀잇티 포트폴리오', content)
+        self.assertIn('수업 사례와 연수 기록', content)
         self.assertNotIn('data-home-v2-guest-hero="true"', content)
         self.assertNotIn('data-home-v2-public-section="true"', content)
 
@@ -543,7 +547,7 @@ class HomeV2ViewTest(TestCase):
 
         self._assert_public_home_uses_v6(response, content)
         self.assertIn('업무별로 바로 찾는 에듀잇티', content)
-        self.assertIn('에듀잇티 포트폴리오', content)
+        self.assertIn('수업 사례와 연수 기록', content)
 
         public_ids = [card['id'] for card in response.context.get('guest_public_cards', [])]
         self.assertIn(public_collect.id, public_ids)
@@ -2781,8 +2785,8 @@ class HomeV4ViewTest(TestCase):
     def _assert_public_home_uses_v6(self, response, content):
         self.assertTemplateUsed(response, 'core/home_public_v6_canonical.html')
         _assert_public_home_context_contract(self, response, design_version='v6')
+        self.assertIn('data-public-simple-nav="true"', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('data-home-v6-public-header="true"', content)
         self.assertIn('data-home-v6-public-showcase="true"', content)
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertIn('data-home-v6-public-portfolio="true"', content)
@@ -4767,8 +4771,8 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('core/css/home_public_v6.css', content)
         self.assertIn("data-home-mobile-chrome', 'minimal'", content)
         self.assertIn('home-public-v6-page', content)
+        self.assertIn('data-public-simple-nav="true"', content)
         self.assertIn('data-home-v6-public-shell="true"', content)
-        self.assertIn('data-home-v6-public-header="true"', content)
         self.assertIn('data-home-design-version="v6"', content)
         self.assertIn('교실 업무를', content)
         self.assertIn('바로 여는 플랫폼', content)
@@ -4777,8 +4781,9 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-public-showcase="true"', content)
         self.assertIn('data-home-v6-public-map="true"', content)
         self.assertIn('data-home-v6-public-portfolio="true"', content)
-        self.assertIn('에듀잇티 포트폴리오', content)
+        self.assertIn('수업 사례와 연수 기록', content)
         self.assertIn('LOGIN', content)
+        self.assertNotIn('id="mobileMenuBtn"', content)
         self.assertNotIn('교실 업무의 기준', content)
         self.assertNotIn('업무 둘러보기', content)
         self.assertNotIn('core/css/home_authenticated_v6.css', content)

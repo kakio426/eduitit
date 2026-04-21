@@ -4926,11 +4926,11 @@ def _build_home_public_v6_landing_context(request, products):
             "public_platform_groups": platform_groups,
             "public_portfolio_panel": {
                 "href": reverse("portfolio:list"),
-                "eyebrow": "현장 사례",
-                "title": "에듀잇티 포트폴리오",
-                "summary": "교실 적용 사례와 연수 기록을 보고 도입 맥락을 빠르게 파악합니다.",
+                "eyebrow": "포트폴리오",
+                "title": "수업 사례와 연수 기록",
+                "summary": "직접 진행한 수업 적용 사례와 연수 활동을 한 번에 봅니다.",
                 "cta_label": "포트폴리오 보기",
-                "chips": ("교실 적용", "연수 기록", "도입 참고"),
+                "chips": ("수업 사례", "연수 활동", "협업 이력"),
             },
             "public_primary_cta": {
                 "label": "업무 둘러보기",
@@ -4938,7 +4938,8 @@ def _build_home_public_v6_landing_context(request, products):
                 "fallback_target_id": "public-platform-map",
                 "aria_label": "업무 둘러보기",
             },
-            "hide_navbar": True,
+            "hide_navbar": False,
+            "public_simple_navbar": True,
         }
     )
     return context

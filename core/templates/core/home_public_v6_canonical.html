@@ -32,24 +32,6 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
     </svg>
     <div class="home-public-v6-page-top-spacer">
         <div class="mx-auto home-public-v6-stage px-4 pb-24 sm:px-5 md:px-6">
-            <header class="home-public-v6-header" data-home-v6-public-header="true">
-                <a href="{% url 'home' %}" class="home-public-v6-brand" aria-label="에듀잇티 홈">
-                    <span class="w-12 h-12 rounded-xl shadow-clay-inner flex items-center justify-center text-[1.55rem] logo-icon-box" aria-hidden="true">
-                        <i class="fa-solid fa-cloud"></i>
-                    </span>
-                    <span class="logo-lockup">
-                        <span class="logo-kicker" aria-hidden="true">EDUITIT</span>
-                        <span class="logo-text logo-text--korean">{{ brand_nav_wordmark|default:'에듀잇티' }}</span>
-                    </span>
-                </a>
-
-                <div class="home-public-v6-header-actions">
-                    <a href="{{ login_url }}" class="home-public-v6-login-link">
-                        로그인
-                    </a>
-                </div>
-            </header>
-
             <main class="home-public-v6-main">
                 <section class="home-public-v6-hero home-public-v6-grid home-public-v6-hero-grid" data-home-v6-public-hero="true">
                     <div class="home-public-v6-hero-copy">
