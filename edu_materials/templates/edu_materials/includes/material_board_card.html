@@ -31,24 +31,19 @@
             </div>
         </div>
 
+        {% if owner_controls %}
         <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
             {{ material.get_input_mode_display }}
         </span>
+        {% endif %}
     </div>
 
     {% if show_live_preview %}
     <div class="relative">
         <a href="{{ detail_url }}" class="edu-materials-preview-card block">
-            <div class="flex items-center justify-between gap-3 px-4 pt-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/72">
-                <span>움직이는 화면</span>
-                <span>
-                    {% if owner_controls %}
-                    바로 배포 가능
-                    {% else %}
-                    수업 시작판
-                    {% endif %}
-                </span>
-            </div>
+            {% if featured_badge %}
+            <span class="absolute left-4 top-4 z-[1] rounded-full border border-white/12 bg-white/12 px-3 py-1 text-[11px] font-black text-white backdrop-blur">{{ featured_badge }}</span>
+            {% endif %}
 
             <div class="edu-materials-preview-root" data-board-preview-root>
                 <div class="edu-materials-preview-root-inner">
@@ -68,7 +63,7 @@
             </div>
 
             <div class="edu-materials-preview-overlay">
-                <span class="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">클릭해 크게 보기</span>
+                <span class="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">크게 보기</span>
                 <span class="rounded-full border border-white/12 bg-slate-950/55 px-3 py-1 text-[11px] font-bold text-white/92 backdrop-blur">열람 {{ material.view_count }}회</span>
             </div>
         </a>
@@ -84,30 +79,29 @@
         </div>
 
         {% if material.summary %}
-        <p class="text-sm leading-6 text-slate-600">{{ material.summary }}</p>
-        {% else %}
-        <p class="text-sm leading-6 text-slate-500">{% if show_live_preview %}수업 시작판에서 먼저 움직이는지만 보고, 바로 공유판과 학생 화면으로 이어갈 수 있는 자료입니다.{% else %}수업 흐름을 빠르게 비교해보고, 마음에 들면 바로 열거나 내 자료로 복사해 수정할 수 있는 공개 자료입니다.{% endif %}</p>
+        <p class="edu-materials-card-summary text-sm leading-6 text-slate-600">{{ material.summary }}</p>
         {% endif %}
 
         {% if material.tags %}
         <div class="flex flex-wrap gap-2">
-            {% for tag in material.tags|slice:":3" %}
+            {% for tag in material.tags|slice:":2" %}
             <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600">#{{ tag }}</span>
             {% endfor %}
-            {% if material.tags|length > 3 %}
-            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500">+{{ material.tags|length|add:"-3" }}</span>
+            {% if material.tags|length > 2 %}
+            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-500">+{{ material.tags|length|add:"-2" }}</span>
             {% endif %}
         </div>
         {% endif %}
 
         <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
             <span>최근 수정 {{ material.updated_at|date:"n월 j일 H:i" }}</span>
+            {% if not owner_controls and material.teacher_id != request.user.id %}
+            <span>{{ material.teacher_display_name }}</span>
+            {% elif not show_live_preview %}
             <div class="flex flex-wrap items-center gap-2">
                 <span>열람 {{ material.view_count }}회</span>
-                {% if not owner_controls and material.teacher_id != request.user.id %}
-                <span>{{ material.teacher_display_name }}</span>
-                {% endif %}
             </div>
+            {% endif %}
         </div>
     </div>
 

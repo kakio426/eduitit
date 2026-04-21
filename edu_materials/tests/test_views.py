@@ -375,7 +375,7 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(list(response.context["shared_page_obj"].object_list), [])
         self.assertNotContains(response, "조건에 맞는 공개 자료가 없습니다.")
 
-    def test_main_view_shared_tab_uses_lightweight_cards_without_live_preview(self):
+    def test_main_view_shared_tab_shows_thumbnail_preview_for_catalog_cards(self):
         other_user = self._create_other_user()
         featured = EduMaterial.objects.create(
             teacher=other_user,
@@ -407,11 +407,13 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(response.context["active_tab"], "shared")
         self.assertEqual(response.context["featured_public_material"].id, featured.id)
         self.assertContains(response, browse.title)
-        self.assertContains(response, "움직이는 화면")
         self.assertContains(response, reverse("edu_materials:render", args=[featured.id]))
         self.assertContains(response, reverse("edu_materials:detail", args=[featured.id]))
         self.assertContains(response, reverse("edu_materials:detail", args=[browse.id]))
-        self.assertNotContains(response, reverse("edu_materials:render", args=[browse.id]))
+        self.assertContains(response, reverse("edu_materials:render", args=[browse.id]))
+        self.assertContains(response, "추천 자료")
+        self.assertNotContains(response, "대표 체험 화면")
+        self.assertNotContains(response, "전체 공개 자료")
 
     def test_main_view_renders_summary_and_tags(self):
         material = EduMaterial.objects.create(
@@ -437,6 +439,23 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, reverse("edu_materials:render", args=[material.id]))
         self.assertNotContains(response, "미리보기 확인 중")
         self.assertNotContains(response, "다시 보기")
+
+    def test_main_view_omits_long_fallback_copy_when_public_card_has_no_summary(self):
+        other_user = self._create_other_user()
+        EduMaterial.objects.create(
+            teacher=other_user,
+            title="요약 없는 공개 자료",
+            html_content="<html><body>plain</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.REFERENCE,
+            metadata_status=EduMaterial.MetadataStatus.DONE,
+        )
+
+        response = self.client.get(reverse("edu_materials:main"), data={"tab": "shared"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "수업 흐름을 빠르게 비교해보고, 마음에 들면 바로 열거나 내 자료로 복사해 수정할 수 있는 공개 자료입니다.")
 
     def test_clone_material_creates_published_copy_for_teacher(self):
         other_user = self._create_other_user()
