@@ -495,11 +495,11 @@ h4,
     padding-inline: 0;
     padding-top: env(safe-area-inset-top);
     padding-bottom: 0;
-    background: rgba(255, 255, 255, 0.72);
-    border-bottom: 0;
-    box-shadow: 0 1px 0 rgba(30, 20, 60, 0.06);
-    backdrop-filter: blur(10px) saturate(140%);
-    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    background: rgba(247, 243, 252, 0.82);
+    border-bottom: 1px solid rgba(214, 202, 235, 0.45);
+    box-shadow: none;
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
 .shell-nav-bar {
