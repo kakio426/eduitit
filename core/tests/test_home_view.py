@@ -4595,6 +4595,10 @@ class HomeV6ViewTest(TestCase):
             reverse('reservations:reservation_index', args=['shared-middle-home']),
             content,
         )
+        self.assertNotRegex(
+            content,
+            rf'href="{re.escape(reverse("reservations:dashboard_landing"))}"[^>]*>\s*전체 보기',
+        )
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-arrow="true"', content)
 
