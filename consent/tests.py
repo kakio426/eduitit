@@ -1,5 +1,6 @@
 import csv
 import io
+import unittest
 from unittest.mock import patch
 from io import StringIO
 from urllib.parse import parse_qs, urlsplit
@@ -15,6 +16,7 @@ from django.utils import timezone
 from consent.models import (
     ConsentAuditLog,
     SignatureDocument,
+    SignaturePosition,
     SignatureRecipient,
     SignatureRequest,
 )
@@ -35,6 +37,30 @@ def seed_current_policy_consent(user):
         agreed_at=timezone.now(),
         agreement_source="required_gate",
     )
+
+
+def build_test_pdf_bytes(labels, *, page_size=(400, 400)) -> bytes:
+    try:
+        from reportlab.pdfgen import canvas
+    except ModuleNotFoundError as exc:
+        raise unittest.SkipTest("reportlab unavailable") from exc
+
+    if isinstance(labels, str):
+        labels = [labels]
+    packet = io.BytesIO()
+    pdf = canvas.Canvas(packet, pagesize=page_size)
+    for label in labels:
+        pdf.drawString(72, page_size[1] - 80, label)
+        pdf.showPage()
+    pdf.save()
+    packet.seek(0)
+    return packet.getvalue()
+
+
+SIGNATURE_DATA_URL = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+G14J3QAAAABJRU5ErkJggg=="
+)
 
 
 class ConsentFlowTests(TestCase):
@@ -79,6 +105,83 @@ class ConsentFlowTests(TestCase):
             reverse("consent:sign", kwargs={"token": self.recipient.access_token}),
             fetch_redirect_response=False,
         )
+
+    def test_create_step1_redirects_to_position_setup(self):
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(
+            reverse("consent:create_step1"),
+            {
+                "audience_type": SignatureRequest.AUDIENCE_GUARDIAN,
+                "title": "현장체험학습 동의서",
+                "message": "안내",
+                "link_expire_days": SignatureRequest.LINK_EXPIRE_14,
+                "legal_notice": "",
+                "original_file": SimpleUploadedFile(
+                    "workflow.pdf",
+                    b"%PDF-1.4\n%%EOF",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        created_request = SignatureRequest.objects.exclude(id=self.request_obj.id).get()
+        self.assertRedirects(
+            response,
+            reverse("consent:setup_positions", kwargs={"request_id": created_request.request_id}),
+            fetch_redirect_response=False,
+        )
+
+    def test_setup_positions_stores_multiple_mark_types(self):
+        try:
+            import pypdf  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("pypdf unavailable")
+
+        self.client.force_login(self.teacher)
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="multi-mark-source",
+            original_file=SimpleUploadedFile(
+                "multi_mark_source.pdf",
+                build_test_pdf_bytes(["page-1", "page-2"]),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="multi-mark-request",
+            consent_text_version="v1",
+        )
+
+        response = self.client.post(
+            reverse("consent:setup_positions", kwargs={"request_id": request_obj.request_id}),
+            {
+                "marks_json": (
+                    '[{"page":1,"x_ratio":0.2,"y_ratio":0.12,"w_ratio":0.3,"h_ratio":0.08,"mark_type":"name","text_source":"student_name","check_rule":"agree"},'
+                    '{"page":1,"x_ratio":0.5,"y_ratio":0.2,"w_ratio":0.12,"h_ratio":0.12,"mark_type":"checkmark","text_source":"signer_name","check_rule":"agree"},'
+                    '{"page":2,"x_ratio":0.1,"y_ratio":0.12,"w_ratio":0.3,"h_ratio":0.1,"mark_type":"signature","text_source":"signer_name","check_rule":"agree"}]'
+                ),
+            },
+        )
+
+        self.assertRedirects(response, reverse("consent:recipients", kwargs={"request_id": request_obj.request_id}))
+        positions = list(request_obj.positions.order_by("page", "id"))
+        self.assertEqual(len(positions), 3)
+        self.assertEqual(positions[0].mark_type, SignaturePosition.MARK_TYPE_NAME)
+        self.assertEqual(positions[0].text_source, SignaturePosition.TEXT_SOURCE_STUDENT_NAME)
+        self.assertEqual(positions[0].x, 80)
+        self.assertEqual(positions[0].y, 48)
+        self.assertEqual(positions[0].width, 120)
+        self.assertEqual(positions[0].height, 32)
+        self.assertEqual(positions[1].mark_type, SignaturePosition.MARK_TYPE_CHECKMARK)
+        self.assertEqual(positions[1].check_rule, SignaturePosition.CHECK_RULE_AGREE)
+        self.assertEqual(positions[2].mark_type, SignaturePosition.MARK_TYPE_SIGNATURE)
+        self.assertEqual(positions[2].page, 2)
+        self.assertEqual(positions[2].x, 40)
+        self.assertEqual(positions[2].y, 48)
 
     def test_send_marks_request_as_sent(self):
         self.client.login(username="teacher", password="pw123456")
@@ -182,6 +285,41 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "개인정보처리방침")
         self.assertContains(response, "운영정책")
         self.assertContains(response, "접속 기록")
+
+    def test_sign_page_hides_signature_pad_when_no_signature_mark_exists(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        SignaturePosition.objects.create(
+            request=self.request_obj,
+            page=1,
+            x=40,
+            y=48,
+            width=120,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_STUDENT_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=self.request_obj,
+            page=1,
+            x=180,
+            y=80,
+            width=80,
+            height=80,
+            mark_type=SignaturePosition.MARK_TYPE_CHECKMARK,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이 문서는 이름과 체크만 자동으로 넣습니다.")
+        self.assertNotContains(response, 'id="signaturePad"', html=False)
 
 
     def test_sign_submission_with_phone_requires_last4(self):
@@ -963,7 +1101,7 @@ class ConsentFlowTests(TestCase):
 
         response = self.client.get(f"{reverse('consent:create_step1')}?sb_seed=seed-token")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩에서 가져온 내용으로")
+        self.assertContains(response, "연결된 내용으로 먼저 채워두었어요.")
         self.assertContains(response, "교무수첩 동의서")
         self.assertContains(response, "교무수첩에서 가져온 안내문입니다.")
         self.assertContains(response, 'name="prefill_seed_token"')
@@ -1005,7 +1143,7 @@ class ConsentFlowTests(TestCase):
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교무수첩에서 가져온 수신자 2명을 미리 넣어두었어요.")
+        self.assertContains(response, "연결된 서비스에서 가져온 수신자 2명을 미리 넣어두었어요.")
         created_request = SignatureRequest.objects.filter(
             created_by=self.teacher,
             title="교무수첩 연동 동의서",
@@ -1082,7 +1220,7 @@ class ConsentFlowTests(TestCase):
             follow=True,
         )
         self.assertEqual(post_response.status_code, 200)
-        self.assertContains(post_response, "교무수첩 수신자 자동 넣기는 꺼두었어요.")
+        self.assertContains(post_response, "연결된 수신자 자동 넣기는 꺼두었어요.")
 
         created_request = SignatureRequest.objects.filter(
             created_by=self.teacher,
@@ -1408,27 +1546,18 @@ class ConsentEvidenceTests(TestCase):
         reader = PdfReader(io.BytesIO(pdf_bytes))
         self.assertGreaterEqual(len(reader.pages), 2)
 
-    def test_recipient_evidence_pdf_limits_source_pdf_to_first_page(self):
+    def test_recipient_evidence_pdf_keeps_full_source_and_applies_document_marks(self):
         try:
             from pypdf import PdfReader
-            from reportlab.pdfgen import canvas
         except ModuleNotFoundError:
-            self.skipTest("pypdf/reportlab unavailable")
-
-        packet = io.BytesIO()
-        c = canvas.Canvas(packet)
-        for label in ("evidence-source-page-1", "evidence-source-page-2"):
-            c.drawString(72, 720, label)
-            c.showPage()
-        c.save()
-        packet.seek(0)
+            self.skipTest("pypdf unavailable")
 
         document = SignatureDocument.objects.create(
             created_by=self.teacher,
             title="evidence-preview-source",
             original_file=SimpleUploadedFile(
                 "evidence_preview_source.pdf",
-                packet.getvalue(),
+                build_test_pdf_bytes(["source-page-1", "source-page-2"]),
                 content_type="application/pdf",
             ),
             file_type=SignatureDocument.FILE_TYPE_PDF,
@@ -1441,12 +1570,12 @@ class ConsentEvidenceTests(TestCase):
         )
         recipient = SignatureRecipient.objects.create(
             request=request_obj,
-            student_name="학생A",
-            parent_name="보호자A",
+            student_name="Student A",
+            parent_name="Parent A",
             phone_number="010-3333-4444",
             status=SignatureRecipient.STATUS_SIGNED,
             decision=SignatureRecipient.DECISION_AGREE,
-            signature_data="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+G14J3QAAAABJRU5ErkJggg==",
+            signature_data=SIGNATURE_DATA_URL,
             signed_at=timezone.now(),
             identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
             verified_at=timezone.now(),
@@ -1454,15 +1583,59 @@ class ConsentEvidenceTests(TestCase):
             ip_address="203.0.113.51",
             user_agent="EvidencePreviewAgent/1.0",
         )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=48,
+            y=56,
+            width=120,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_STUDENT_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=180,
+            y=96,
+            width=80,
+            height=80,
+            mark_type=SignaturePosition.MARK_TYPE_CHECKMARK,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=2,
+            x=40,
+            y=48,
+            width=120,
+            height=40,
+            mark_type=SignaturePosition.MARK_TYPE_SIGNATURE,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
 
         evidence_file = generate_recipient_evidence_pdf(recipient)
         pdf_bytes = evidence_file.read()
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
         reader = PdfReader(io.BytesIO(pdf_bytes))
-        self.assertGreaterEqual(len(reader.pages), 2)
-        combined_text = "\n".join((page.extract_text() or "") for page in reader.pages)
-        self.assertIn("evidence-source-page-1", combined_text)
-        self.assertNotIn("evidence-source-page-2", combined_text)
+        self.assertGreaterEqual(len(reader.pages), 3)
+
+        combined_text = "\n".join((page.extract_text() or "") for page in reader.pages[:2])
+        self.assertIn("source-page-1", combined_text)
+        self.assertIn("source-page-2", combined_text)
+        self.assertIn("Student A", combined_text)
+
+        first_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
+        second_stream = reader.pages[1].get_contents().get_data().decode("latin-1", errors="ignore")
+        self.assertRegex(
+            first_stream,
+            r"200(?:\.0+)? 132(?:\.0+)? m\s+216(?:\.0+)? 112(?:\.0+)? l\s+244(?:\.0+)? 156(?:\.0+)? l",
+        )
+        self.assertRegex(second_stream, r"44(?:\.0+)? 52(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
+        self.assertRegex(second_stream, r"32(?:\.0+)? 0 0 32(?:\.0+)? 84(?:\.0+)? 52(?:\.0+)? cm")
 
 
 class ConsentSharedRosterTests(TestCase):

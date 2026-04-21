@@ -171,6 +171,85 @@ class SignatureRequest(models.Model):
     def allows_shared_lookup(self):
         return self.is_guardian_audience
 
+    @property
+    def configured_positions(self):
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("positions")
+        positions = prefetched if prefetched is not None else self.positions.all()
+        return sorted(positions, key=lambda item: (item.page, item.id))
+
+    @property
+    def is_position_configured(self):
+        return bool(self.configured_positions)
+
+    @property
+    def position_count(self):
+        return len(self.configured_positions)
+
+    @property
+    def signature_mark_count(self):
+        return sum(
+            1
+            for position in self.configured_positions
+            if position.mark_type == SignaturePosition.MARK_TYPE_SIGNATURE
+        )
+
+    @property
+    def checkmark_mark_count(self):
+        return sum(
+            1
+            for position in self.configured_positions
+            if position.mark_type == SignaturePosition.MARK_TYPE_CHECKMARK
+        )
+
+    @property
+    def name_mark_count(self):
+        return sum(
+            1
+            for position in self.configured_positions
+            if position.mark_type == SignaturePosition.MARK_TYPE_NAME
+        )
+
+    @property
+    def requires_signature_input(self):
+        positions = self.configured_positions
+        if not positions:
+            return True
+        return any(position.mark_type == SignaturePosition.MARK_TYPE_SIGNATURE for position in positions)
+
+    @property
+    def page_summary(self):
+        pages = sorted({position.page for position in self.configured_positions})
+        if not pages:
+            return "위치 없음"
+        if len(pages) == 1:
+            return f"{pages[0]}쪽"
+        return ", ".join(str(page) for page in pages) + "쪽"
+
+    @property
+    def mark_summary(self):
+        if not self.configured_positions:
+            return "위치 없음"
+        parts = []
+        if self.name_mark_count:
+            parts.append(
+                "이름"
+                if self.name_mark_count == 1
+                else f"이름 {self.name_mark_count}개"
+            )
+        if self.checkmark_mark_count:
+            parts.append(
+                "체크"
+                if self.checkmark_mark_count == 1
+                else f"체크 {self.checkmark_mark_count}개"
+            )
+        if self.signature_mark_count:
+            parts.append(
+                "사인"
+                if self.signature_mark_count == 1
+                else f"사인 {self.signature_mark_count}개"
+            )
+        return " · ".join(parts)
+
 
 class ConsentRoster(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -248,6 +327,31 @@ class ConsentRosterEntry(models.Model):
 
 
 class SignaturePosition(models.Model):
+    MARK_TYPE_SIGNATURE = "signature"
+    MARK_TYPE_CHECKMARK = "checkmark"
+    MARK_TYPE_NAME = "name"
+    MARK_TYPE_CHOICES = [
+        (MARK_TYPE_SIGNATURE, "사인"),
+        (MARK_TYPE_CHECKMARK, "체크"),
+        (MARK_TYPE_NAME, "이름"),
+    ]
+
+    TEXT_SOURCE_STUDENT_NAME = "student_name"
+    TEXT_SOURCE_SIGNER_NAME = "signer_name"
+    TEXT_SOURCE_CHOICES = [
+        (TEXT_SOURCE_STUDENT_NAME, "학생 이름"),
+        (TEXT_SOURCE_SIGNER_NAME, "서명자 이름"),
+    ]
+
+    CHECK_RULE_ALWAYS = "always"
+    CHECK_RULE_AGREE = "agree"
+    CHECK_RULE_DISAGREE = "disagree"
+    CHECK_RULE_CHOICES = [
+        (CHECK_RULE_ALWAYS, "항상"),
+        (CHECK_RULE_AGREE, "동의일 때"),
+        (CHECK_RULE_DISAGREE, "비동의일 때"),
+    ]
+
     request = models.ForeignKey(
         SignatureRequest,
         on_delete=models.CASCADE,
@@ -258,6 +362,17 @@ class SignaturePosition(models.Model):
     y = models.FloatField(help_text="Points from bottom")
     width = models.FloatField(default=180)
     height = models.FloatField(default=70)
+    mark_type = models.CharField(max_length=20, choices=MARK_TYPE_CHOICES, default=MARK_TYPE_SIGNATURE)
+    text_source = models.CharField(
+        max_length=20,
+        choices=TEXT_SOURCE_CHOICES,
+        default=TEXT_SOURCE_SIGNER_NAME,
+    )
+    check_rule = models.CharField(
+        max_length=20,
+        choices=CHECK_RULE_CHOICES,
+        default=CHECK_RULE_AGREE,
+    )
     x_ratio = models.FloatField(blank=True, null=True)
     y_ratio = models.FloatField(blank=True, null=True)
     w_ratio = models.FloatField(blank=True, null=True)
@@ -266,6 +381,17 @@ class SignaturePosition(models.Model):
     class Meta:
         ordering = ["page", "id"]
         db_table = "signatures_signatureposition"
+
+    def __str__(self):
+        return f"{self.request_id} - {self.get_mark_type_display()} ({self.page}쪽)"
+
+    @property
+    def type_summary(self):
+        if self.mark_type == self.MARK_TYPE_NAME:
+            return dict(self.TEXT_SOURCE_CHOICES).get(self.text_source, self.text_source)
+        if self.mark_type == self.MARK_TYPE_CHECKMARK:
+            return dict(self.CHECK_RULE_CHOICES).get(self.check_rule, self.check_rule)
+        return dict(self.MARK_TYPE_CHOICES).get(self.mark_type, self.mark_type)
 
 
 class SignatureRecipient(models.Model):

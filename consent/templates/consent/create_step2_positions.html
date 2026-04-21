@@ -5,107 +5,229 @@
 
 {% block extra_css %}
 <style>
-  #stage {
+  #consent-position-stage {
     position: relative;
     display: inline-block;
-    border-radius: 16px;
     overflow: hidden;
-    border: 1px solid #d1d5db;
+    border-radius: 24px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
     background: #fff;
   }
 
-  #pdf-canvas,
-  #image-canvas {
+  #consent-position-pdf,
+  #consent-position-image {
     display: block;
+    position: relative;
+    z-index: 1;
   }
 
-  #image-canvas {
-    position: absolute;
-    left: 0;
-    top: 0;
-    pointer-events: none;
+  #consent-position-image.is-hidden,
+  #consent-position-pdf.is-hidden {
     display: none;
   }
 
-  .sign-box {
+  .consent-mark-box {
     position: absolute;
-    border: 2px dashed #7c3aed;
-    background: rgba(124, 58, 237, 0.12);
     cursor: move;
+    touch-action: none;
+    z-index: 4;
+    border: 2px dashed #7c3aed;
+    background: rgba(124, 58, 237, 0.14);
   }
 
-  .sign-box.active {
+  .consent-mark-box.active {
     border-style: solid;
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18);
   }
 
-  .sign-box .label {
+  .consent-mark-box--name {
+    border-color: #b45309;
+    background: rgba(245, 158, 11, 0.15);
+  }
+
+  .consent-mark-box--name.active {
+    box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.16);
+  }
+
+  .consent-mark-box--check {
+    border-color: #0f172a;
+    background: rgba(15, 23, 42, 0.08);
+  }
+
+  .consent-mark-box--check.active {
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.16);
+  }
+
+  .consent-mark-box-label {
     position: absolute;
-    top: -20px;
+    top: -22px;
     left: 0;
+    z-index: 5;
+    border-radius: 999px;
+    background: #7c3aed;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .consent-mark-box--name .consent-mark-box-label {
+    background: #b45309;
+  }
+
+  .consent-mark-box--check .consent-mark-box-label {
+    background: #0f172a;
+  }
+
+  .consent-mark-box-handle {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    z-index: 5;
+    height: 16px;
+    width: 16px;
+    border-radius: 999px;
+    background: currentColor;
+    cursor: nwse-resize;
+  }
+
+  .consent-mark-box-mark {
+    position: absolute;
+    inset: 10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .consent-mark-box-mark--signature {
+    color: #6d28d9;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .consent-mark-box-mark--name {
+    color: #92400e;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .consent-mark-box-mark--check svg {
+    width: 100%;
+    height: 100%;
+    color: #0f172a;
+  }
+
+  .consent-mark-chip.active {
+    border-color: #7c3aed;
     background: #7c3aed;
     color: #fff;
-    font-size: 11px;
-    border-radius: 999px;
-    padding: 1px 6px;
-  }
-
-  .sign-box .handle {
-    position: absolute;
-    right: -7px;
-    bottom: -7px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #7c3aed;
-    cursor: nwse-resize;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="service-shell pb-16 px-4 min-h-screen bg-[#E0E5EC]">
-  <div class="max-w-6xl mx-auto">
-    <div class="mb-6">
-      <a href="{% url 'consent:dashboard' %}" class="text-sm text-gray-500 hover:text-purple-600">목록으로</a>
-      <h1 class="text-3xl font-bold text-gray-800 mt-2">2단계. 서명 위치 설정</h1>
-      <p class="text-sm text-gray-500 mt-1">박스를 드래그해 위치/크기를 조정한 뒤 저장하세요.</p>
+<main class="service-shell min-h-screen bg-[#E0E5EC] px-4 pb-16">
+  <div class="mx-auto max-w-6xl space-y-5">
+    <div class="space-y-2">
+      <a href="{% url 'consent:detail' request_id=consent_request.request_id %}" class="text-sm font-semibold text-gray-500 hover:text-purple-600">동의서 상세</a>
+      <h1 class="text-3xl font-bold text-gray-800">2단계. 문서 입력 위치</h1>
+      <p class="text-sm text-gray-500">{{ document_file_name }} · {{ page_count }}쪽</p>
     </div>
 
     {% if form.non_field_errors %}
-    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
       {{ form.non_field_errors }}
     </div>
     {% endif %}
-
-    <div class="clay-card p-4 md:p-5">
-      <div class="flex flex-wrap items-center gap-2 mb-3">
-        <span class="text-sm text-gray-600">페이지</span>
-        <input id="pageInput" type="number" value="1" min="1" class="w-20 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft">
-        <button id="pageBtn" type="button" class="px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft">이동</button>
-        <button id="addBtn" type="button" class="px-3 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700">서명 박스 추가</button>
-        <button id="delBtn" type="button" class="px-3 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200" disabled>선택 박스 삭제</button>
-        <span id="stateMsg" class="text-sm text-gray-500 ml-auto">박스를 최소 1개 배치해 주세요.</span>
-      </div>
-
-      <div id="stageWrap" class="overflow-auto">
-        <div id="stage">
-          <canvas id="pdf-canvas"></canvas>
-          <img id="image-canvas" alt="preview">
-        </div>
-      </div>
+    {% if form.marks_json.errors %}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+      {{ form.marks_json.errors|join:", " }}
     </div>
+    {% endif %}
 
-    <form method="post" class="mt-4">
-      {% csrf_token %}
-      {{ form.positions_json }}
-      <div class="flex flex-wrap gap-2">
-        <a href="{% url 'consent:preview_positions' request_id=consent_request.request_id %}" class="min-h-11 px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700">
-          위치 미리보기
-        </a>
-        <button type="submit" id="saveBtn" class="min-h-11 px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
-          다음: 수신자 등록
-        </button>
+    <section class="clay-card p-5 md:p-6 space-y-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="prevPageBtn" class="min-h-10 rounded-xl shadow-clay-inner bg-bg-soft px-3 py-2 text-xs font-semibold text-gray-700">이전</button>
+        <div class="inline-flex items-center gap-2 rounded-xl shadow-clay-inner bg-bg-soft px-3 py-2 text-xs font-semibold text-gray-700">
+          <span>쪽</span>
+          <input id="pageInput" type="number" min="1" max="{{ page_count }}" class="w-16 rounded-lg border border-gray-200 bg-white px-2 py-1 text-center text-xs font-bold text-gray-900">
+          <span>/ {{ page_count }}</span>
+        </div>
+        <button type="button" id="nextPageBtn" class="min-h-10 rounded-xl shadow-clay-inner bg-bg-soft px-3 py-2 text-xs font-semibold text-gray-700">다음</button>
+        <button type="button" id="addNameBtn" class="min-h-10 rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700">이름 추가</button>
+        <button type="button" id="addCheckBtn" class="min-h-10 rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900">체크 추가</button>
+        <button type="button" id="addSignatureBtn" class="min-h-10 rounded-xl bg-purple-600 px-3 py-2 text-xs font-semibold text-white hover:bg-purple-700">사인 추가</button>
+        <button type="button" id="resetBoxBtn" class="min-h-10 rounded-xl shadow-clay-inner bg-bg-soft px-3 py-2 text-xs font-semibold text-gray-700">크기 초기화</button>
+        <button type="button" id="deleteBoxBtn" class="min-h-10 rounded-xl bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200">선택 삭제</button>
+        <p id="positionStatus" class="ml-auto text-xs font-semibold text-gray-500">표시를 놓고 맞춰 주세요.</p>
       </div>
+
+      <div id="markList" class="flex flex-wrap gap-2"></div>
+
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div class="overflow-auto rounded-3xl bg-white/70 p-3 shadow-clay-inner">
+          <div id="consent-position-stage">
+            <canvas id="consent-position-pdf"></canvas>
+            <img id="consent-position-image" alt="문서 미리보기" class="is-hidden">
+          </div>
+        </div>
+
+        <aside class="rounded-3xl border border-white/60 bg-white/80 p-4 space-y-4">
+          <div>
+            <p class="text-xs font-semibold tracking-[0.08em] text-gray-500">선택 표시</p>
+            <p id="selectedMarkLabel" class="mt-1 text-base font-bold text-gray-800">표시를 선택해 주세요.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label for="markTypeSelect" class="block text-xs font-semibold text-gray-600 mb-1">표시 종류</label>
+              <select id="markTypeSelect" class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm">
+                <option value="name">이름</option>
+                <option value="checkmark">체크</option>
+                <option value="signature">사인</option>
+              </select>
+            </div>
+
+            <div id="nameSourceWrap">
+              <label for="nameSourceSelect" class="block text-xs font-semibold text-gray-600 mb-1">이름 대상</label>
+              <select id="nameSourceSelect" class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm">
+                <option value="student_name">학생 이름</option>
+                <option value="signer_name">{% if is_guardian_audience %}보호자 이름{% else %}서명자 이름{% endif %}</option>
+              </select>
+            </div>
+
+            <div id="checkRuleWrap">
+              <label for="checkRuleSelect" class="block text-xs font-semibold text-gray-600 mb-1">체크 조건</label>
+              <select id="checkRuleSelect" class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm">
+                <option value="agree">동의일 때</option>
+                <option value="disagree">비동의일 때</option>
+                <option value="always">항상 표시</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-gray-50 px-4 py-3 text-xs text-gray-600">
+            <p class="font-semibold text-gray-700 mb-1">합성 방식</p>
+            <p>저장한 좌표 그대로 원본 문서 위에 이름, 체크, 사인을 올립니다.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <form method="post" class="flex flex-wrap gap-3">
+      {% csrf_token %}
+      {{ form.marks_json }}
+      <a href="{% url 'consent:detail' request_id=consent_request.request_id %}" class="inline-flex min-h-11 items-center justify-center rounded-2xl shadow-clay-inner bg-bg-soft px-5 py-3 text-sm font-semibold text-gray-700">
+        상세로
+      </a>
+      <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-2xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white hover:bg-purple-700">
+        다음: 수신자 등록
+      </button>
     </form>
   </div>
 </main>
@@ -116,6 +238,7 @@
   const documentFileType = "{{ document_file_type|escapejs }}".toLowerCase();
   const documentFileName = "{{ document_file_name|escapejs }}".toLowerCase();
   const documentUrl = "{{ document_url|escapejs }}";
+  const pageCount = Number("{{ page_count }}") || 1;
   const localPdfModuleUrl = "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}";
   const localPdfWorkerUrl = "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}";
   const normalizedUrl = documentUrl.split("?")[0].toLowerCase();
@@ -124,266 +247,463 @@
     documentFileName.endsWith(".pdf") ||
     normalizedUrl.endsWith(".pdf")
   );
-  const initial = {{ initial_positions_json|safe }};
+  const initialMarks = {{ initial_marks_json|safe }};
 
-  const stage = document.getElementById("stage");
-  const pdfCanvas = document.getElementById("pdf-canvas");
-  const imageCanvas = document.getElementById("image-canvas");
-  const ctx = pdfCanvas.getContext("2d");
+  const stage = document.getElementById("consent-position-stage");
+  const pdfCanvas = document.getElementById("consent-position-pdf");
+  const imageNode = document.getElementById("consent-position-image");
+  const context = pdfCanvas.getContext("2d");
+  const hidden = document.getElementById("id_marks_json");
   const pageInput = document.getElementById("pageInput");
-  const pageBtn = document.getElementById("pageBtn");
-  const addBtn = document.getElementById("addBtn");
-  const delBtn = document.getElementById("delBtn");
-  const saveBtn = document.getElementById("saveBtn");
-  const stateMsg = document.getElementById("stateMsg");
-  const hidden = document.getElementById("id_positions_json");
+  const prevPageBtn = document.getElementById("prevPageBtn");
+  const nextPageBtn = document.getElementById("nextPageBtn");
+  const addNameBtn = document.getElementById("addNameBtn");
+  const addCheckBtn = document.getElementById("addCheckBtn");
+  const addSignatureBtn = document.getElementById("addSignatureBtn");
+  const resetBoxBtn = document.getElementById("resetBoxBtn");
+  const deleteBoxBtn = document.getElementById("deleteBoxBtn");
+  const positionStatus = document.getElementById("positionStatus");
+  const markList = document.getElementById("markList");
+  const selectedMarkLabel = document.getElementById("selectedMarkLabel");
+  const markTypeSelect = document.getElementById("markTypeSelect");
+  const nameSourceWrap = document.getElementById("nameSourceWrap");
+  const nameSourceSelect = document.getElementById("nameSourceSelect");
+  const checkRuleWrap = document.getElementById("checkRuleWrap");
+  const checkRuleSelect = document.getElementById("checkRuleSelect");
 
-  const boxes = [];
-  let nextId = 1;
-  let selectedId = null;
+  const MARK_TYPES = {
+    name: "이름",
+    checkmark: "체크",
+    signature: "사인",
+  };
+  const NAME_SOURCE_LABELS = {
+    student_name: "학생 이름",
+    signer_name: "{% if is_guardian_audience %}보호자 이름{% else %}서명자 이름{% endif %}",
+  };
+  const CHECK_RULE_LABELS = {
+    agree: "동의일 때",
+    disagree: "비동의일 때",
+    always: "항상 표시",
+  };
+  const MARK_DEFAULTS = {
+    name: { x_ratio: 0.52, y_ratio: 0.16, w_ratio: 0.24, h_ratio: 0.08 },
+    checkmark: { x_ratio: 0.58, y_ratio: 0.08, w_ratio: 0.12, h_ratio: 0.12 },
+    signature: { x_ratio: 0.58, y_ratio: 0.08, w_ratio: 0.28, h_ratio: 0.12 },
+  };
+
+  let pdfDoc = null;
   let currentPage = 1;
   let pageWidth = 1;
   let pageHeight = 1;
-  let pdfDoc = null;
-  let drag = null;
+  let dragState = null;
+  let activeMarkId = null;
 
-  for (const p of initial) {
-    boxes.push({
-      id: nextId++,
-      page: Number(p.page || 1),
-      x_ratio: Number(p.x_ratio ?? 0.6),
-      y_ratio: Number(p.y_ratio ?? 0.08),
-      w_ratio: Number(p.w_ratio ?? 0.3),
-      h_ratio: Number(p.h_ratio ?? 0.12),
-    });
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const makeClientId = () =>
+    (window.crypto && typeof window.crypto.randomUUID === "function")
+      ? window.crypto.randomUUID()
+      : `mark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  function safeMarkType(value) {
+    return Object.prototype.hasOwnProperty.call(MARK_DEFAULTS, value) ? value : "signature";
   }
 
-  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-  const pageBoxes = () => boxes.filter((b) => b.page === currentPage);
+  function safeNameSource(value) {
+    return Object.prototype.hasOwnProperty.call(NAME_SOURCE_LABELS, value) ? value : "signer_name";
+  }
 
-  function serialize() {
-    hidden.value = JSON.stringify(
-      boxes.map((b) => ({
-        page: b.page,
-        x_ratio: b.x_ratio,
-        y_ratio: b.y_ratio,
-        w_ratio: b.w_ratio,
-        h_ratio: b.h_ratio,
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-      }))
+  function safeCheckRule(value) {
+    return Object.prototype.hasOwnProperty.call(CHECK_RULE_LABELS, value) ? value : "agree";
+  }
+
+  function normalizeMark(mark, index) {
+    const markType = safeMarkType(String(mark?.mark_type || "").trim().toLowerCase());
+    return {
+      client_id: String(mark?.client_id || makeClientId() || `mark-${index + 1}`),
+      page: Math.max(1, Number(mark?.page || 1)),
+      x_ratio: Number(mark?.x_ratio ?? MARK_DEFAULTS[markType].x_ratio),
+      y_ratio: Number(mark?.y_ratio ?? MARK_DEFAULTS[markType].y_ratio),
+      w_ratio: Number(mark?.w_ratio ?? MARK_DEFAULTS[markType].w_ratio),
+      h_ratio: Number(mark?.h_ratio ?? MARK_DEFAULTS[markType].h_ratio),
+      mark_type: markType,
+      text_source: safeNameSource(String(mark?.text_source || "").trim().toLowerCase()),
+      check_rule: safeCheckRule(String(mark?.check_rule || "").trim().toLowerCase()),
+    };
+  }
+
+  function createMark(markType, pageNumber) {
+    const safeType = safeMarkType(markType);
+    return normalizeMark(
+      {
+        client_id: makeClientId(),
+        page: pageNumber,
+        mark_type: safeType,
+        ...MARK_DEFAULTS[safeType],
+      },
+      0,
     );
   }
 
-  function setMessage(text) {
-    stateMsg.textContent = text;
+  const marks = Array.isArray(initialMarks) && initialMarks.length
+    ? initialMarks.map((mark, index) => normalizeMark(mark, index))
+    : [createMark("signature", 1)];
+  activeMarkId = marks[0]?.client_id || null;
+
+  function activeMark() {
+    return marks.find((mark) => mark.client_id === activeMarkId) || null;
   }
 
-  function repaintBoxes() {
-    for (const el of stage.querySelectorAll(".sign-box")) el.remove();
-    delBtn.disabled = selectedId === null;
+  function marksForCurrentPage() {
+    return marks.filter((mark) => mark.page === currentPage);
+  }
 
-    for (const box of pageBoxes()) {
-      const el = document.createElement("div");
-      el.className = "sign-box" + (box.id === selectedId ? " active" : "");
-      el.style.left = `${box.x_ratio * pageWidth}px`;
-      el.style.top = `${(1 - box.y_ratio - box.h_ratio) * pageHeight}px`;
-      el.style.width = `${box.w_ratio * pageWidth}px`;
-      el.style.height = `${box.h_ratio * pageHeight}px`;
-      el.innerHTML = `<span class="label">#${box.id}</span><span class="handle"></span>`;
-      stage.appendChild(el);
+  function syncHidden() {
+    hidden.value = JSON.stringify(
+      marks.map((mark) => ({
+        page: mark.page,
+        x_ratio: mark.x_ratio,
+        y_ratio: mark.y_ratio,
+        w_ratio: mark.w_ratio,
+        h_ratio: mark.h_ratio,
+        mark_type: mark.mark_type,
+        text_source: mark.text_source,
+        check_rule: mark.check_rule,
+      })),
+    );
+  }
 
-      el.addEventListener("pointerdown", (e) => {
-        selectedId = box.id;
-        drag = {
-          mode: e.target.classList.contains("handle") ? "resize" : "move",
-          startX: e.clientX,
-          startY: e.clientY,
-          left: parseFloat(el.style.left),
-          top: parseFloat(el.style.top),
-          width: parseFloat(el.style.width),
-          height: parseFloat(el.style.height),
+  function setStatus(text) {
+    positionStatus.textContent = text;
+  }
+
+  function describeMark(mark) {
+    if (mark.mark_type === "name") {
+      return NAME_SOURCE_LABELS[mark.text_source] || "이름";
+    }
+    if (mark.mark_type === "checkmark") {
+      return CHECK_RULE_LABELS[mark.check_rule] || "체크";
+    }
+    return MARK_TYPES[mark.mark_type] || "사인";
+  }
+
+  function labelForMark(mark, index) {
+    return `${index + 1}. ${mark.page}쪽 ${describeMark(mark)}`;
+  }
+
+  function renderMarkPreview(mark) {
+    if (mark.mark_type === "checkmark") {
+      return `
+        <span class="consent-mark-box-mark consent-mark-box-mark--check">
+          <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+            <path d="M24 56 L44 76 L80 28" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+      `;
+    }
+    if (mark.mark_type === "name") {
+      return `<span class="consent-mark-box-mark consent-mark-box-mark--name">${NAME_SOURCE_LABELS[mark.text_source] || "이름"}</span>`;
+    }
+    return `<span class="consent-mark-box-mark consent-mark-box-mark--signature">사인</span>`;
+  }
+
+  function removeBoxes() {
+    stage.querySelectorAll(".consent-mark-box").forEach((node) => node.remove());
+  }
+
+  function renderMarkList() {
+    markList.innerHTML = "";
+    marks.forEach((mark, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "consent-mark-chip inline-flex min-h-10 items-center rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700";
+      if (mark.client_id === activeMarkId) {
+        button.classList.add("active");
+      }
+      button.textContent = labelForMark(mark, index);
+      button.addEventListener("click", () => {
+        activeMarkId = mark.client_id;
+        currentPage = mark.page;
+        renderDocument();
+      });
+      markList.appendChild(button);
+    });
+  }
+
+  function syncInspector() {
+    const mark = activeMark();
+    const disabled = !mark;
+    markTypeSelect.disabled = disabled;
+    nameSourceSelect.disabled = disabled;
+    checkRuleSelect.disabled = disabled;
+    resetBoxBtn.disabled = disabled;
+    deleteBoxBtn.disabled = disabled;
+
+    if (!mark) {
+      selectedMarkLabel.textContent = "표시를 선택해 주세요.";
+      nameSourceWrap.hidden = true;
+      checkRuleWrap.hidden = true;
+      return;
+    }
+
+    selectedMarkLabel.textContent = describeMark(mark);
+    markTypeSelect.value = mark.mark_type;
+    nameSourceSelect.value = mark.text_source;
+    checkRuleSelect.value = mark.check_rule;
+    nameSourceWrap.hidden = mark.mark_type !== "name";
+    checkRuleWrap.hidden = mark.mark_type !== "checkmark";
+  }
+
+  function renderBoxes() {
+    removeBoxes();
+    marksForCurrentPage().forEach((mark, index) => {
+      const node = document.createElement("div");
+      node.className = `consent-mark-box consent-mark-box--${mark.mark_type}${mark.client_id === activeMarkId ? " active" : ""}`;
+      node.style.left = `${mark.x_ratio * pageWidth}px`;
+      node.style.top = `${(1 - mark.y_ratio - mark.h_ratio) * pageHeight}px`;
+      node.style.width = `${mark.w_ratio * pageWidth}px`;
+      node.style.height = `${mark.h_ratio * pageHeight}px`;
+      node.style.color = mark.mark_type === "name" ? "#b45309" : (mark.mark_type === "checkmark" ? "#0f172a" : "#7c3aed");
+      node.innerHTML = `
+        <span class="consent-mark-box-label">${labelForMark(mark, marks.indexOf(mark))}</span>
+        ${renderMarkPreview(mark)}
+        <span class="consent-mark-box-handle" aria-hidden="true"></span>
+      `;
+      stage.appendChild(node);
+
+      node.addEventListener("pointerdown", (event) => {
+        activeMarkId = mark.client_id;
+        const rect = node.getBoundingClientRect();
+        dragState = {
+          mode: event.target.classList.contains("consent-mark-box-handle") ? "resize" : "move",
+          startX: event.clientX,
+          startY: event.clientY,
+          left: parseFloat(node.style.left) || 0,
+          top: parseFloat(node.style.top) || 0,
+          width: rect.width,
+          height: rect.height,
+          mark,
         };
-        el.setPointerCapture(e.pointerId);
-        repaintBoxes();
+        node.setPointerCapture(event.pointerId);
+        stage.querySelectorAll(".consent-mark-box").forEach((boxNode) => boxNode.classList.remove("active"));
+        node.classList.add("active");
+        renderMarkList();
+        syncInspector();
       });
 
-      el.addEventListener("pointermove", (e) => {
-        if (!drag || selectedId !== box.id) return;
-        const dx = e.clientX - drag.startX;
-        const dy = e.clientY - drag.startY;
-        if (drag.mode === "move") {
-          const left = clamp(drag.left + dx, 0, pageWidth - drag.width);
-          const top = clamp(drag.top + dy, 0, pageHeight - drag.height);
-          el.style.left = `${left}px`;
-          el.style.top = `${top}px`;
+      node.addEventListener("pointermove", (event) => {
+        if (!dragState || dragState.mark.client_id !== mark.client_id) {
+          return;
+        }
+        const dx = event.clientX - dragState.startX;
+        const dy = event.clientY - dragState.startY;
+        if (dragState.mode === "move") {
+          const left = clamp(dragState.left + dx, 0, pageWidth - dragState.width);
+          const top = clamp(dragState.top + dy, 0, pageHeight - dragState.height);
+          node.style.left = `${left}px`;
+          node.style.top = `${top}px`;
         } else {
-          const width = clamp(drag.width + dx, 60, pageWidth - drag.left);
-          const height = clamp(drag.height + dy, 28, pageHeight - drag.top);
-          el.style.width = `${width}px`;
-          el.style.height = `${height}px`;
+          const width = clamp(dragState.width + dx, 48, pageWidth - dragState.left);
+          const height = clamp(dragState.height + dy, 24, pageHeight - dragState.top);
+          node.style.width = `${width}px`;
+          node.style.height = `${height}px`;
         }
       });
 
-      el.addEventListener("pointerup", () => {
-        if (!drag || selectedId !== box.id) return;
-        const left = parseFloat(el.style.left);
-        const top = parseFloat(el.style.top);
-        const width = parseFloat(el.style.width);
-        const height = parseFloat(el.style.height);
-        box.x_ratio = clamp(left / pageWidth, 0, 1);
-        box.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
-        box.w_ratio = clamp(width / pageWidth, 0.05, 1);
-        box.h_ratio = clamp(height / pageHeight, 0.03, 1);
-        drag = null;
+      node.addEventListener("pointerup", () => {
+        if (!dragState || dragState.mark.client_id !== mark.client_id) {
+          return;
+        }
+        const left = parseFloat(node.style.left) || 0;
+        const top = parseFloat(node.style.top) || 0;
+        const width = parseFloat(node.style.width) || 0;
+        const height = parseFloat(node.style.height) || 0;
+        dragState.mark.x_ratio = clamp(left / pageWidth, 0, 1);
+        dragState.mark.y_ratio = clamp(1 - ((top + height) / pageHeight), 0, 1);
+        dragState.mark.w_ratio = clamp(width / pageWidth, 0.05, 1);
+        dragState.mark.h_ratio = clamp(height / pageHeight, 0.03, 1);
+        dragState = null;
+        syncHidden();
       });
+    });
+  }
+
+  function addMark(markType) {
+    const mark = createMark(markType, currentPage);
+    marks.push(mark);
+    activeMarkId = mark.client_id;
+    syncHidden();
+    renderMarkList();
+    syncInspector();
+    renderBoxes();
+    setStatus(`${MARK_TYPES[mark.mark_type]} 위치를 추가했습니다.`);
+  }
+
+  function deleteActiveMark() {
+    const index = marks.findIndex((mark) => mark.client_id === activeMarkId);
+    if (index < 0) {
+      return;
     }
+    marks.splice(index, 1);
+    activeMarkId = marks[Math.max(0, index - 1)]?.client_id || marks[0]?.client_id || null;
+    syncHidden();
+    renderMarkList();
+    syncInspector();
+    renderBoxes();
+    setStatus(marks.length ? "선택 표시를 삭제했습니다." : "표시를 하나 이상 놓아 주세요.");
   }
 
-  function addBox() {
-    const b = { id: nextId++, page: currentPage, x_ratio: 0.6, y_ratio: 0.08, w_ratio: 0.3, h_ratio: 0.12 };
-    boxes.push(b);
-    selectedId = b.id;
-    repaintBoxes();
-    setMessage("서명 박스를 추가했습니다.");
+  function resetActiveMarkSize() {
+    const mark = activeMark();
+    if (!mark) {
+      return;
+    }
+    const preset = MARK_DEFAULTS[mark.mark_type] || MARK_DEFAULTS.signature;
+    mark.w_ratio = preset.w_ratio;
+    mark.h_ratio = preset.h_ratio;
+    mark.x_ratio = clamp(mark.x_ratio, 0, 1 - mark.w_ratio);
+    mark.y_ratio = clamp(mark.y_ratio, 0, 1 - mark.h_ratio);
+    syncHidden();
+    renderBoxes();
+    setStatus("선택 표시 크기를 기본값으로 되돌렸습니다.");
   }
 
-  async function renderPdfPage(pageNo) {
-    const page = await pdfDoc.getPage(pageNo);
-    const maxWidth = Math.min(window.innerWidth - 120, 960);
-    const base = page.getViewport({ scale: 1 });
-    const scale = Math.max(0.7, maxWidth / base.width);
+  async function renderPdfPage(pageNumber) {
+    const page = await pdfDoc.getPage(pageNumber);
+    const maxWidth = Math.min(window.innerWidth - 140, 980);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.max(0.7, maxWidth / baseViewport.width);
     const viewport = page.getViewport({ scale });
     pageWidth = viewport.width;
     pageHeight = viewport.height;
-    pdfCanvas.width = pageWidth;
-    pdfCanvas.height = pageHeight;
-    imageCanvas.style.display = "none";
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    repaintBoxes();
+    pdfCanvas.width = viewport.width;
+    pdfCanvas.height = viewport.height;
+    pdfCanvas.classList.remove("is-hidden");
+    imageNode.classList.add("is-hidden");
+    stage.style.width = `${viewport.width}px`;
+    stage.style.height = `${viewport.height}px`;
+    await page.render({ canvasContext: context, viewport }).promise;
   }
 
   async function renderImagePage() {
     await new Promise((resolve, reject) => {
-      imageCanvas.onload = resolve;
-      imageCanvas.onerror = () => reject(new Error("image-load-failed"));
-      imageCanvas.src = documentUrl;
+      const loader = new Image();
+      loader.onload = () => {
+        const maxWidth = Math.min(window.innerWidth - 140, 980);
+        const scale = Math.min(1, maxWidth / loader.naturalWidth);
+        pageWidth = Math.max(1, loader.naturalWidth * scale);
+        pageHeight = Math.max(1, loader.naturalHeight * scale);
+        imageNode.src = loader.src;
+        imageNode.style.width = `${pageWidth}px`;
+        imageNode.style.height = `${pageHeight}px`;
+        stage.style.width = `${pageWidth}px`;
+        stage.style.height = `${pageHeight}px`;
+        imageNode.classList.remove("is-hidden");
+        pdfCanvas.classList.add("is-hidden");
+        resolve();
+      };
+      loader.onerror = reject;
+      loader.src = documentUrl;
     });
-    pageWidth = imageCanvas.naturalWidth;
-    pageHeight = imageCanvas.naturalHeight;
-    pdfCanvas.width = pageWidth;
-    pdfCanvas.height = pageHeight;
-    ctx.clearRect(0, 0, pageWidth, pageHeight);
-    imageCanvas.style.width = `${pageWidth}px`;
-    imageCanvas.style.height = `${pageHeight}px`;
-    imageCanvas.style.display = "block";
-    repaintBoxes();
   }
 
-  pageBtn.addEventListener("click", async () => {
-    if (!pdfDoc) return;
-    currentPage = clamp(parseInt(pageInput.value || "1", 10), 1, pdfDoc.numPages);
-    pageInput.value = String(currentPage);
-    selectedId = null;
-    await renderPdfPage(currentPage);
-  });
+  async function renderDocument() {
+    currentPage = clamp(Number(currentPage) || 1, 1, pageCount);
+    pageInput.value = currentPage;
+    prevPageBtn.disabled = currentPage <= 1;
+    nextPageBtn.disabled = currentPage >= pageCount;
+    if (preferPdf) {
+      await renderPdfPage(currentPage);
+    } else {
+      await renderImagePage();
+    }
+    renderBoxes();
+    renderMarkList();
+    syncInspector();
+    syncHidden();
+  }
 
-  addBtn.addEventListener("click", addBox);
-  delBtn.addEventListener("click", () => {
-    if (!selectedId) return;
-    const idx = boxes.findIndex((b) => b.id === selectedId);
-    if (idx >= 0) boxes.splice(idx, 1);
-    selectedId = null;
-    repaintBoxes();
-  });
-
-  saveBtn.addEventListener("click", (e) => {
-    if (!boxes.length) {
-      e.preventDefault();
-      alert("서명 박스를 최소 1개 이상 배치해 주세요.");
+  markTypeSelect.addEventListener("change", () => {
+    const mark = activeMark();
+    if (!mark) {
       return;
     }
-    serialize();
+    mark.mark_type = safeMarkType(markTypeSelect.value);
+    mark.w_ratio = MARK_DEFAULTS[mark.mark_type].w_ratio;
+    mark.h_ratio = MARK_DEFAULTS[mark.mark_type].h_ratio;
+    mark.x_ratio = clamp(mark.x_ratio, 0, 1 - mark.w_ratio);
+    mark.y_ratio = clamp(mark.y_ratio, 0, 1 - mark.h_ratio);
+    syncHidden();
+    renderMarkList();
+    syncInspector();
+    renderBoxes();
   });
 
-  async function tryRenderPdf() {
-    try {
-      const candidates = [
-        {
-          moduleUrl: localPdfModuleUrl,
-          workerUrl: localPdfWorkerUrl,
-        },
-        {
-          moduleUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs",
-          workerUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
-        },
-        {
-          moduleUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs",
-          workerUrl: "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs",
-        },
-      ];
+  nameSourceSelect.addEventListener("change", () => {
+    const mark = activeMark();
+    if (!mark) {
+      return;
+    }
+    mark.text_source = safeNameSource(nameSourceSelect.value);
+    syncHidden();
+    renderMarkList();
+    syncInspector();
+    renderBoxes();
+  });
 
-      for (const c of candidates) {
-        try {
-          const mod = await import(c.moduleUrl);
-          mod.GlobalWorkerOptions.workerSrc = c.workerUrl;
-          pdfDoc = await mod.getDocument(documentUrl).promise;
-          pageInput.max = String(pdfDoc.numPages);
-          await renderPdfPage(currentPage);
-          return true;
-        } catch (e) {
-          console.warn("pdf-provider-failed", c.moduleUrl, e);
-        }
+  checkRuleSelect.addEventListener("change", () => {
+    const mark = activeMark();
+    if (!mark) {
+      return;
+    }
+    mark.check_rule = safeCheckRule(checkRuleSelect.value);
+    syncHidden();
+    renderMarkList();
+    syncInspector();
+    renderBoxes();
+  });
+
+  prevPageBtn.addEventListener("click", async () => {
+    currentPage = clamp(currentPage - 1, 1, pageCount);
+    await renderDocument();
+  });
+
+  nextPageBtn.addEventListener("click", async () => {
+    currentPage = clamp(currentPage + 1, 1, pageCount);
+    await renderDocument();
+  });
+
+  pageInput.addEventListener("change", async () => {
+    currentPage = clamp(Number(pageInput.value) || 1, 1, pageCount);
+    await renderDocument();
+  });
+
+  addNameBtn.addEventListener("click", () => addMark("name"));
+  addCheckBtn.addEventListener("click", () => addMark("checkmark"));
+  addSignatureBtn.addEventListener("click", () => addMark("signature"));
+  resetBoxBtn.addEventListener("click", resetActiveMarkSize);
+  deleteBoxBtn.addEventListener("click", deleteActiveMark);
+  window.addEventListener("resize", () => {
+    renderDocument().catch(() => {
+      setStatus("미리보기를 다시 불러오지 못했습니다.");
+    });
+  });
+
+  try {
+    if (preferPdf) {
+      let pdfjsLib;
+      try {
+        pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+      } catch (error) {
+        pdfjsLib = await import(localPdfModuleUrl);
       }
-      return false;
-    } catch (error) {
-      console.warn("pdf-render-failed", error);
-      pdfDoc = null;
-      return false;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = localPdfWorkerUrl;
+      pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
     }
+    await renderDocument();
+    setStatus("표시 위치를 맞춘 뒤 저장하세요.");
+  } catch (error) {
+    console.error(error);
+    setStatus("문서를 불러오지 못했습니다.");
   }
-
-  async function tryRenderImage() {
-    try {
-      pageBtn.disabled = true;
-      pageInput.disabled = true;
-      await renderImagePage();
-      return true;
-    } catch (error) {
-      console.warn("image-render-failed", error);
-      imageCanvas.style.display = "none";
-      return false;
-    }
-  }
-
-  let rendered = false;
-  if (preferPdf) {
-    rendered = await tryRenderPdf();
-    if (!rendered) rendered = await tryRenderImage();
-  } else {
-    rendered = await tryRenderImage();
-    if (!rendered) rendered = await tryRenderPdf();
-  }
-
-  if (!rendered) {
-    console.error("preview-render-failed");
-    setMessage("미리보기를 불러오지 못했습니다. 파일 형식이나 접근 권한을 확인해 주세요.");
-    pageBtn.disabled = true;
-    pageInput.disabled = true;
-    saveBtn.disabled = true;
-    addBtn.disabled = true;
-    delBtn.disabled = true;
-    return;
-  }
-
-  if (pdfDoc) {
-    pageBtn.disabled = false;
-    pageInput.disabled = false;
-  }
-
-  if (!boxes.length) addBox();
-  setMessage("박스를 드래그해 위치를 맞춘 뒤 저장하세요.");
 </script>
 {% endblock %}

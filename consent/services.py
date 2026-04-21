@@ -7,16 +7,21 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from core.document_signing import (
+    DOCUMENT_MARK_TYPE_CHECKMARK,
+    DOCUMENT_MARK_TYPE_NAME,
+    DOCUMENT_MARK_TYPE_SIGNATURE,
     PdfRuntimeUnavailable,
     basename as _basename,
+    build_signed_pdf_bytes,
     ensure_pdf_runtime as _ensure_pdf_runtime,
     get_file_field_bytes,
     get_pdf_bytes_from_file_field,
     guess_file_type,
+    normalize_pdf_bytes,
     split_data_url as _split_data_url,
 )
 
-from .models import SignatureDocument, SignatureRecipient, SignatureRequest
+from .models import SignatureDocument, SignaturePosition, SignatureRecipient, SignatureRequest
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +66,65 @@ def _decision_label(recipient: SignatureRecipient) -> str:
     if recipient.decision == SignatureRecipient.DECISION_DISAGREE:
         return "비동의"
     return "-"
+
+
+def _resolved_signer_name(recipient: SignatureRecipient) -> str:
+    if recipient.request.is_guardian_audience:
+        return (recipient.parent_name or recipient.student_name or "").strip()
+    return (recipient.display_name or recipient.student_name or recipient.parent_name or "").strip()
+
+
+def _resolve_position_text(position: SignaturePosition, recipient: SignatureRecipient) -> str:
+    if position.text_source == SignaturePosition.TEXT_SOURCE_STUDENT_NAME:
+        return (recipient.student_name or recipient.display_name or "").strip()
+    return _resolved_signer_name(recipient)
+
+
+def _position_applies_to_decision(position: SignaturePosition, recipient: SignatureRecipient) -> bool:
+    if position.check_rule == SignaturePosition.CHECK_RULE_ALWAYS:
+        return True
+    if position.check_rule == SignaturePosition.CHECK_RULE_DISAGREE:
+        return recipient.decision == SignatureRecipient.DECISION_DISAGREE
+    return recipient.decision == SignatureRecipient.DECISION_AGREE
+
+
+def _build_resolved_overlay_marks(recipient: SignatureRecipient) -> list[dict]:
+    resolved = []
+    for position in recipient.request.configured_positions:
+        mark = {
+            "page": position.page,
+            "x": position.x,
+            "y": position.y,
+            "width": position.width,
+            "height": position.height,
+        }
+        if position.mark_type == SignaturePosition.MARK_TYPE_NAME:
+            text_value = _resolve_position_text(position, recipient)
+            if not text_value:
+                continue
+            resolved.append(
+                {
+                    **mark,
+                    "mark_type": DOCUMENT_MARK_TYPE_NAME,
+                    "text_value": text_value,
+                }
+            )
+        elif position.mark_type == SignaturePosition.MARK_TYPE_CHECKMARK:
+            if _position_applies_to_decision(position, recipient):
+                resolved.append(
+                    {
+                        **mark,
+                        "mark_type": DOCUMENT_MARK_TYPE_CHECKMARK,
+                    }
+                )
+        else:
+            resolved.append(
+                {
+                    **mark,
+                    "mark_type": DOCUMENT_MARK_TYPE_SIGNATURE,
+                }
+            )
+    return resolved
 
 
 def _format_size(size: int | None) -> str:
@@ -627,18 +691,26 @@ def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFil
         source_pdf_bytes = b""
         try:
             original_bytes = get_document_original_bytes(request.document)
-            source_pdf_bytes = get_document_pdf_bytes(request.document)
+            source_pdf_bytes = normalize_pdf_bytes(get_document_pdf_bytes(request.document))
         except Exception:
             logger.exception("[consent] recipient evidence source load failed request_id=%s recipient_id=%s", request.request_id, recipient.id)
 
         evidence = _build_document_evidence(request, original_bytes)
         evidence_section_bytes = _build_recipient_evidence_section_pdf(recipient, evidence)
         title_seed = (request.title or request.document.title or "동의서 제출 증빙").strip() or "동의서 제출 증빙"
+        resolved_source_bytes = source_pdf_bytes
+        overlay_marks = _build_resolved_overlay_marks(recipient)
+        if resolved_source_bytes and overlay_marks:
+            resolved_source_bytes = build_signed_pdf_bytes(
+                resolved_source_bytes,
+                marks=overlay_marks,
+                signature_data=recipient.signature_data or "",
+                pdf_title=f"{title_seed} - 제출본",
+            )
         merged_bytes = _merge_pdf_bytes(
-            source_pdf_bytes,
+            resolved_source_bytes,
             evidence_section_bytes,
             pdf_title=f"{title_seed} - {recipient.student_name} 증빙",
-            source_page_limit=1,
         )
         filename = f"recipient_{request.id}_{recipient.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         return ContentFile(merged_bytes, name=filename)

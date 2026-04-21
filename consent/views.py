@@ -1,4 +1,5 @@
 import csv
+import json
 import hashlib
 import io
 import logging
@@ -27,6 +28,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import (
     ConsentDocumentForm,
+    PositionPayloadForm,
     ConsentRequestForm,
     ConsentRosterManageForm,
     ConsentSignForm,
@@ -37,6 +39,7 @@ from .models import (
     ConsentAuditLog,
     ConsentRoster,
     ConsentRosterEntry,
+    SignaturePosition,
     SignatureRecipient,
     SignatureRequest,
 )
@@ -50,8 +53,10 @@ from .services import (
     PdfRuntimeUnavailable,
     generate_recipient_evidence_pdf,
     generate_summary_pdf,
+    get_document_pdf_bytes,
     guess_file_type,
 )
+from core.document_signing import basename, get_pdf_page_sizes, normalize_pdf_bytes
 from handoff.shared_roster import consent_recipients as build_shared_roster_recipients
 from core.teacher_activity import ACTIVITY_CATEGORY_REQUEST_SENT, award_teacher_activity
 
@@ -101,6 +106,50 @@ def _apply_sensitive_cache_headers(response):
     response["Pragma"] = "no-cache"
     response["Expires"] = "0"
     return response
+
+
+def _inline_pdf_response(pdf_bytes: bytes, *, filename: str):
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
+    return _apply_sensitive_cache_headers(response)
+
+
+def _normalized_document_pdf_bytes(document) -> bytes:
+    return normalize_pdf_bytes(get_document_pdf_bytes(document))
+
+
+def _mark_payload_from_request(consent_request: SignatureRequest, page_sizes: list[tuple[float, float]]) -> list[dict]:
+    payload = []
+    for position in consent_request.configured_positions:
+        page_number = position.page
+        if page_number < 1 or page_number > len(page_sizes):
+            continue
+        page_width, page_height = page_sizes[page_number - 1]
+        x_ratio = position.x_ratio
+        y_ratio = position.y_ratio
+        w_ratio = position.w_ratio
+        h_ratio = position.h_ratio
+        if x_ratio is None and page_width:
+            x_ratio = round(position.x / page_width, 6)
+        if y_ratio is None and page_height:
+            y_ratio = round(position.y / page_height, 6)
+        if w_ratio is None and page_width:
+            w_ratio = round(position.width / page_width, 6)
+        if h_ratio is None and page_height:
+            h_ratio = round(position.height / page_height, 6)
+        payload.append(
+            {
+                "page": page_number,
+                "x_ratio": x_ratio,
+                "y_ratio": y_ratio,
+                "w_ratio": w_ratio,
+                "h_ratio": h_ratio,
+                "mark_type": position.mark_type,
+                "text_source": position.text_source,
+                "check_rule": position.check_rule,
+            }
+        )
+    return payload
 
 
 def _append_query_params(url, **params):
@@ -1108,7 +1157,7 @@ def consent_create_step1(request):
                                 request,
                                 f"연결된 수신자 후보 {len(invalid_seed_rows)}줄은 연락처 뒤 4자리가 없어 자동으로 넣지 않았어요. 다음 단계에서 확인해 주세요.",
                             )
-                        return redirect("consent:recipients", request_id=consent_request.request_id)
+                        return redirect("consent:setup_positions", request_id=consent_request.request_id)
                 else:
                     if recipients_text:
                         messages.info(
@@ -1120,7 +1169,7 @@ def consent_create_step1(request):
                         prefill_seed_token,
                         expected_action="consent",
                     )
-                    return redirect("consent:recipients", request_id=consent_request.request_id)
+                    return redirect("consent:setup_positions", request_id=consent_request.request_id)
     else:
         document_form = ConsentDocumentForm(
             initial={
@@ -1166,9 +1215,100 @@ def consent_setup_positions(request, request_id):
     if schema_block:
         return schema_block
 
-    consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    messages.info(request, "위치 설정 단계는 현재 사용하지 않습니다. 수신자 등록 단계로 이동합니다.")
-    return redirect("consent:recipients", request_id=consent_request.request_id)
+    consent_request = get_object_or_404(
+        SignatureRequest.objects.select_related("document").prefetch_related("positions"),
+        request_id=request_id,
+        created_by=request.user,
+    )
+    if consent_request.recipients.filter(
+        status__in=[SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED]
+    ).exists():
+        messages.error(request, "응답이 시작된 뒤에는 문서 입력 위치를 바꿀 수 없습니다.")
+        return redirect("consent:detail", request_id=consent_request.request_id)
+
+    try:
+        source_pdf_bytes = _normalized_document_pdf_bytes(consent_request.document)
+        page_sizes = get_pdf_page_sizes(source_pdf_bytes)
+    except PdfRuntimeUnavailable:
+        messages.error(
+            request,
+            "PDF 엔진(reportlab, pypdf)이 준비되지 않아 위치 설정을 열 수 없습니다. 운영팀에 환경 설정을 요청해 주세요.",
+        )
+        return redirect("consent:detail", request_id=consent_request.request_id)
+    except Exception:
+        logger.exception("[consent] position setup load failed request_id=%s", consent_request.request_id)
+        messages.warning(request, "문서를 미리보지 못해 위치 설정을 건너뛰고 수신자 단계로 이동합니다.")
+        return redirect("consent:recipients", request_id=consent_request.request_id)
+
+    if request.method == "POST":
+        form = PositionPayloadForm(request.POST)
+        if form.is_valid():
+            payload = form.cleaned_data["marks_json"]
+            invalid_page = next(
+                (item["page"] for item in payload if item["page"] > len(page_sizes)),
+                None,
+            )
+            if invalid_page is not None:
+                form.add_error(None, "문서 페이지 수를 다시 확인해 주세요.")
+            else:
+                resolved_positions = []
+                for item in payload:
+                    page_number = item["page"]
+                    page_width, page_height = page_sizes[page_number - 1]
+                    resolved_positions.append(
+                        SignaturePosition(
+                            request=consent_request,
+                            page=page_number,
+                            x=page_width * item["x_ratio"],
+                            y=page_height * item["y_ratio"],
+                            width=page_width * item["w_ratio"],
+                            height=page_height * item["h_ratio"],
+                            x_ratio=item["x_ratio"],
+                            y_ratio=item["y_ratio"],
+                            w_ratio=item["w_ratio"],
+                            h_ratio=item["h_ratio"],
+                            mark_type=item["mark_type"],
+                            text_source=item["text_source"],
+                            check_rule=item["check_rule"],
+                        )
+                    )
+                consent_request.positions.all().delete()
+                SignaturePosition.objects.bulk_create(resolved_positions)
+                messages.success(request, "문서 입력 위치를 저장했습니다.")
+                return redirect("consent:recipients", request_id=consent_request.request_id)
+    else:
+        form = PositionPayloadForm()
+
+    initial_marks = _mark_payload_from_request(consent_request, page_sizes)
+    if not initial_marks:
+        initial_marks = [
+            {
+                "page": 1,
+                "x_ratio": 0.58,
+                "y_ratio": 0.08,
+                "w_ratio": 0.28,
+                "h_ratio": 0.12,
+                "mark_type": SignaturePosition.MARK_TYPE_SIGNATURE,
+                "text_source": SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+                "check_rule": SignaturePosition.CHECK_RULE_AGREE,
+            }
+        ]
+
+    return render(
+        request,
+        "consent/create_step2_positions.html",
+        {
+            "consent_request": consent_request,
+            "form": form,
+            "document_url": reverse("consent:document_source", kwargs={"request_id": consent_request.request_id}),
+            "document_file_type": consent_request.document.file_type,
+            "document_file_name": consent_request.document_name_snapshot
+            or basename(consent_request.document.original_file.name),
+            "page_count": len(page_sizes),
+            "initial_marks_json": json.dumps(initial_marks, ensure_ascii=False),
+            "is_guardian_audience": consent_request.is_guardian_audience,
+        },
+    )
 
 
 @login_required
@@ -1429,6 +1569,9 @@ def consent_detail(request, request_id):
             "recipient_stats": recipient_stats,
             "links_released": links_released,
             "is_guardian_audience": consent_request.is_guardian_audience,
+            "mark_summary": consent_request.mark_summary,
+            "page_summary": consent_request.page_summary,
+            "position_count": consent_request.position_count,
             "evidence_warning_counts": {
                 "missing_phone": missing_phone_count,
                 "token_only_submitted": token_only_submitted_count,
@@ -1446,8 +1589,8 @@ def consent_preview_positions(request, request_id):
         return schema_block
 
     consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
-    messages.info(request, "위치 미리보기 기능은 사용하지 않습니다.")
-    return redirect("consent:detail", request_id=consent_request.request_id)
+    messages.info(request, "문서 입력 위치 화면으로 이동합니다.")
+    return redirect("consent:setup_positions", request_id=consent_request.request_id)
 
 
 @login_required
@@ -1748,6 +1891,14 @@ def consent_document_source(request, request_id):
             consent_request.request_id,
             request.user.username,
         )
+        if consent_request.document.file_type == "pdf":
+            try:
+                pdf_bytes = _normalized_document_pdf_bytes(consent_request.document)
+            except Exception:
+                pdf_bytes = b""
+            if pdf_bytes:
+                filename = basename(consent_request.document_name_snapshot or file_field.name) or "document.pdf"
+                return _inline_pdf_response(pdf_bytes, filename=filename)
         return _build_file_response(file_field, inline=True, filename_hint=consent_request.document.title)
     except Exception:
         logger.exception("[consent] teacher document source open failed request_id=%s", consent_request.request_id)
@@ -1850,17 +2001,21 @@ def consent_sign(request, token):
     if schema_block:
         return schema_block
 
-    recipient = get_object_or_404(SignatureRecipient.objects.select_related("request__document"), access_token=token)
+    recipient = get_object_or_404(
+        SignatureRecipient.objects.select_related("request__document").prefetch_related("request__positions"),
+        access_token=token,
+    )
     if not _is_public_link_released(recipient):
         return _link_not_ready_response(request, recipient)
     evidence = _request_document_evidence(recipient.request)
+    requires_signature_input = recipient.request.requires_signature_input
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
     if _is_active_link_expired(recipient):
         return _expired_link_response(request, recipient)
 
     if request.method == "POST":
-        form = ConsentSignForm(request.POST)
+        form = ConsentSignForm(request.POST, requires_signature=requires_signature_input)
         if form.is_valid():
             ip_address = _request_client_ip(request)
             user_agent = _request_user_agent(request)
@@ -1970,7 +2125,7 @@ def consent_sign(request, token):
 
                 return redirect("consent:complete", token=token)
     else:
-        form = ConsentSignForm()
+        form = ConsentSignForm(requires_signature=requires_signature_input)
 
     response = render(
         request,
@@ -1988,7 +2143,14 @@ def consent_sign(request, token):
             "document_file_name": evidence.get("document_name") or recipient.request.document.title,
             "document_file_size": evidence.get("document_size") or "",
             "requires_phone_last4": recipient.request.is_guardian_audience and bool(recipient.phone_last4),
+            "requires_signature_input": requires_signature_input,
             "is_guardian_audience": recipient.request.is_guardian_audience,
+            "mark_summary": recipient.request.mark_summary,
+            "page_summary": recipient.request.page_summary,
+            "position_count": recipient.request.position_count,
+            "name_mark_count": recipient.request.name_mark_count,
+            "checkmark_mark_count": recipient.request.checkmark_mark_count,
+            "signature_mark_count": recipient.request.signature_mark_count,
         },
     )
     return _apply_sensitive_cache_headers(response)
@@ -2047,11 +2209,19 @@ def consent_public_document_inline(request, token):
 
     file_field = recipient.request.document.original_file
     try:
-        response = _build_file_response(
-            file_field,
-            inline=True,
-            filename_hint=recipient.request.document.title,
-        )
+        if recipient.request.document.file_type == "pdf":
+            try:
+                pdf_bytes = _normalized_document_pdf_bytes(recipient.request.document)
+            except Exception:
+                pdf_bytes = b""
+            if pdf_bytes:
+                filename = basename(
+                    recipient.request.document_name_snapshot or file_field.name
+                ) or "document.pdf"
+                response = _inline_pdf_response(pdf_bytes, filename=filename)
+                _log_document_view(recipient, request, mode="inline")
+                return response
+        response = _build_file_response(file_field, inline=True, filename_hint=recipient.request.document.title)
         _log_document_view(recipient, request, mode="inline")
         return response
     except Exception:

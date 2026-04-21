@@ -14,6 +14,7 @@ PDF_FILE_TYPE = "pdf"
 IMAGE_FILE_TYPE = "image"
 DOCUMENT_MARK_TYPE_SIGNATURE = "signature"
 DOCUMENT_MARK_TYPE_CHECKMARK = "checkmark"
+DOCUMENT_MARK_TYPE_NAME = "name"
 
 
 class PdfRuntimeUnavailable(RuntimeError):
@@ -259,30 +260,49 @@ def normalize_pdf_bytes(source_pdf_bytes: bytes) -> bytes:
 def get_signature_image_bytes(signature_data: str) -> bytes:
     image_bytes = split_data_url(signature_data)
     try:
-        from PIL import Image
+        from PIL import Image, ImageFile
     except ModuleNotFoundError:
         return image_bytes
 
     try:
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            rgba = image.convert("RGBA")
-            alpha = rgba.getchannel("A")
-            bbox = alpha.getbbox()
-            if not bbox:
-                return image_bytes
+        original_flag = ImageFile.LOAD_TRUNCATED_IMAGES
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        try:
+            with Image.open(io.BytesIO(image_bytes)) as image:
+                rgba = image.convert("RGBA")
+                rgba.load()
+                alpha = rgba.getchannel("A")
+                bbox = alpha.getbbox()
+                if bbox:
+                    pad = 8
+                    left = max(bbox[0] - pad, 0)
+                    top = max(bbox[1] - pad, 0)
+                    right = min(bbox[2] + pad, rgba.width)
+                    bottom = min(bbox[3] + pad, rgba.height)
+                    output_image = rgba.crop((left, top, right, bottom))
+                else:
+                    output_image = rgba
 
-            pad = 8
-            left = max(bbox[0] - pad, 0)
-            top = max(bbox[1] - pad, 0)
-            right = min(bbox[2] + pad, rgba.width)
-            bottom = min(bbox[3] + pad, rgba.height)
-            cropped = rgba.crop((left, top, right, bottom))
-
-            output = io.BytesIO()
-            cropped.save(output, format="PNG")
-            return output.getvalue()
+                output = io.BytesIO()
+                output_image.save(output, format="PNG")
+                return output.getvalue()
+        finally:
+            ImageFile.LOAD_TRUNCATED_IMAGES = original_flag
     except Exception:
         return image_bytes
+
+
+def _resolve_font_name() -> str:
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+    for candidate in ("HYGothic-Medium", "HYSMyeongJo-Medium"):
+        try:
+            pdfmetrics.registerFont(UnicodeCIDFont(candidate))
+            return candidate
+        except Exception:
+            continue
+    return "Helvetica"
 
 
 def draw_signature_image(pdf_canvas, signature_data: str, *, x: float, y: float, width: float, height: float):
@@ -312,6 +332,34 @@ def draw_signature_image(pdf_canvas, signature_data: str, *, x: float, y: float,
         preserveAspectRatio=True,
         mask="auto",
     )
+    pdf_canvas.restoreState()
+
+
+def draw_name_text(pdf_canvas, text_value: str, *, x: float, y: float, width: float, height: float):
+    from reportlab.pdfbase import pdfmetrics
+
+    text = (text_value or "").strip()
+    if not text:
+        return
+
+    font_name = _resolve_font_name()
+    padding_x = max(min(width * 0.06, 18.0), 4.0)
+    available_width = max(width - (padding_x * 2), 1.0)
+    available_height = max(height, 12.0)
+    font_size = min(max(available_height * 0.56, 10.0), 24.0)
+
+    while font_size > 8.0 and pdfmetrics.stringWidth(text, font_name, font_size) > available_width:
+        font_size -= 0.5
+
+    display_text = text
+    while len(display_text) > 1 and pdfmetrics.stringWidth(display_text, font_name, font_size) > available_width:
+        display_text = f"{display_text[:-2]}…"
+
+    baseline_y = y + max((height - font_size) / 2, 2.0) + (font_size * 0.12)
+    pdf_canvas.saveState()
+    pdf_canvas.setFillColorRGB(0, 0, 0)
+    pdf_canvas.setFont(font_name, font_size)
+    pdf_canvas.drawString(x + padding_x, baseline_y, display_text)
     pdf_canvas.restoreState()
 
 
@@ -352,6 +400,15 @@ def _build_mark_overlay_pdf_bytes(
         if mark["mark_type"] == DOCUMENT_MARK_TYPE_CHECKMARK:
             draw_checkmark(
                 pdf,
+                x=mark["x"],
+                y=mark["y"],
+                width=mark["width"],
+                height=mark["height"],
+            )
+        elif mark["mark_type"] == DOCUMENT_MARK_TYPE_NAME:
+            draw_name_text(
+                pdf,
+                mark.get("text_value", ""),
                 x=mark["x"],
                 y=mark["y"],
                 width=mark["width"],
@@ -416,6 +473,7 @@ def build_signed_pdf_bytes(
         normalized_mark_type = str(
             item.get("mark_type") or DOCUMENT_MARK_TYPE_SIGNATURE
         ).strip().lower()
+        normalized_text_value = str(item.get("text_value") or "").strip()
         if normalized_page < 1 or normalized_page > len(reader.pages):
             raise ValueError("표시 페이지가 문서 범위를 벗어났습니다.")
         if normalized_width <= 0 or normalized_height <= 0:
@@ -423,8 +481,11 @@ def build_signed_pdf_bytes(
         if normalized_mark_type not in {
             DOCUMENT_MARK_TYPE_SIGNATURE,
             DOCUMENT_MARK_TYPE_CHECKMARK,
+            DOCUMENT_MARK_TYPE_NAME,
         }:
             raise ValueError("지원하지 않는 표시 방식입니다.")
+        if normalized_mark_type == DOCUMENT_MARK_TYPE_NAME and not normalized_text_value:
+            raise ValueError("이름 표시 값이 없습니다.")
         normalized_marks.append(
             {
                 "page": normalized_page,
@@ -433,6 +494,7 @@ def build_signed_pdf_bytes(
                 "width": normalized_width,
                 "height": normalized_height,
                 "mark_type": normalized_mark_type,
+                "text_value": normalized_text_value,
             }
         )
 

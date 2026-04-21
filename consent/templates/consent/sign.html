@@ -115,6 +115,20 @@
       </p>
     </div>
 
+    {% if position_count %}
+    <div class="clay-card p-4 mb-4">
+      <p class="text-sm font-semibold text-gray-800">문서 입력</p>
+      <p class="mt-1 text-sm text-gray-600">{{ mark_summary }} · {{ page_summary }}</p>
+      <p class="mt-2 text-xs text-gray-500">
+        {% if name_mark_count %}이름 {{ name_mark_count }}개{% endif %}
+        {% if name_mark_count and checkmark_mark_count %} · {% endif %}
+        {% if checkmark_mark_count %}체크 {{ checkmark_mark_count }}개{% endif %}
+        {% if signature_mark_count and position_count != signature_mark_count %} · {% endif %}
+        {% if signature_mark_count %}사인 {{ signature_mark_count }}개{% endif %}
+      </p>
+    </div>
+    {% endif %}
+
     <form method="post" id="signForm" class="clay-card p-5 space-y-4">
       {% csrf_token %}
       <div>
@@ -141,18 +155,25 @@
       </div>
       {% endif %}
 
+      {{ form.signature_data }}
+
+      {% if requires_signature_input %}
       <div>
         <label class="block text-sm font-semibold mb-1">{% if is_guardian_audience %}학부모 서명{% else %}서명{% endif %}</label>
         <canvas id="signaturePad" class="shadow-clay-inner"></canvas>
         <div class="flex gap-2 mt-2">
           <button type="button" id="clearBtn" class="px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft">지우기</button>
         </div>
-        {{ form.signature_data }}
         {% if form.signature_data.errors %}
         <p class="text-red-600 text-xs mt-1">{{ form.signature_data.errors|join:", " }}</p>
         {% endif %}
         <p class="text-red-600 text-xs mt-1 hidden" id="signatureWarning">서명을 먼저 입력해 주세요.</p>
       </div>
+      {% else %}
+      <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        이 문서는 이름과 체크만 자동으로 넣습니다.
+      </div>
+      {% endif %}
 
       {% if form.non_field_errors %}
       <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -168,6 +189,7 @@
 
 {% block extra_js %}
 <script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
+{% if requires_signature_input %}
 <script>
 const canvas = document.getElementById("signaturePad");
 const clearBtn = document.getElementById("clearBtn");
@@ -238,4 +260,5 @@ document.getElementById("signForm").addEventListener("submit", function(e) {
   }
 });
 </script>
+{% endif %}
 {% endblock %}
