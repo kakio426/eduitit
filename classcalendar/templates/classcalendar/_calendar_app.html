@@ -370,6 +370,10 @@
         min-height: 6.36rem;
     }
 
+    .classcalendar-home-workweek-day-stack--today {
+        padding-top: 0.58rem;
+    }
+
     .classcalendar-home-workweek-day-stack--secondary {
         min-height: 2.04rem;
     }
@@ -1845,7 +1849,10 @@
                                     <div class="classcalendar-home-workweek-content">
                                         <div class="classcalendar-home-workweek-day-grid">
                                             <template x-for="date in week.dates" :key="`primary-${date.toISOString()}`">
-                                                <div class="classcalendar-home-workweek-day-stack classcalendar-home-workweek-day-stack--primary">
+                                                <div
+                                                    class="classcalendar-home-workweek-day-stack classcalendar-home-workweek-day-stack--primary"
+                                                    :class="isToday(date) ? 'classcalendar-home-workweek-day-stack--today' : ''"
+                                                >
                                                     <template x-for="item in week.dayBuckets[dateKey(date)].primary" :key="item.id">
                                                         <button
                                                             type="button"

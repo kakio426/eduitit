@@ -93,7 +93,10 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn("background: linear-gradient(180deg, rgba(239, 246, 255, 0.88) 0%, rgba(255, 255, 255, 0) 38%);", content)
         self.assertIn(".classcalendar-home-workweek-date.is-today {", content)
         self.assertIn("box-shadow: inset 0 0 0 1.5px #93c5fd, 0 1px 2px rgba(37, 99, 235, 0.08);", content)
+        self.assertIn(".classcalendar-home-workweek-day-stack--today {", content)
+        self.assertIn("padding-top: 0.58rem;", content)
         self.assertIn("isToday(date) ? 'is-today' : '',", content)
+        self.assertIn(":class=\"isToday(date) ? 'classcalendar-home-workweek-day-stack--today' : ''\"", content)
         self.assertIn(".classcalendar-home-mobile-day--today {", content)
         self.assertIn(".classcalendar-home-mobile-day--today.classcalendar-home-mobile-day--selected {", content)
 
