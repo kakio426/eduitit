@@ -183,6 +183,43 @@ class ConsentFlowTests(TestCase):
         self.assertEqual(positions[2].x, 40)
         self.assertEqual(positions[2].y, 48)
 
+    def test_setup_positions_uses_matched_pdfjs_module_worker_pairs(self):
+        try:
+            import pypdf  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("pypdf unavailable")
+
+        self.client.force_login(self.teacher)
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="preview-source",
+            original_file=SimpleUploadedFile(
+                "preview_source.pdf",
+                build_test_pdf_bytes(["page-1"]),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="preview-request",
+            consent_text_version="v1",
+        )
+
+        response = self.client.get(
+            reverse("consent:setup_positions", kwargs={"request_id": request_obj.request_id}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('moduleUrl: localPdfModuleUrl', content)
+        self.assertIn('workerUrl: localPdfWorkerUrl', content)
+        self.assertIn('moduleUrl: pdfjsCdnModuleUrl', content)
+        self.assertIn('workerUrl: pdfjsCdnWorkerUrl', content)
+        self.assertIn('moduleUrl: pdfjsUnpkgModuleUrl', content)
+        self.assertIn('workerUrl: pdfjsUnpkgWorkerUrl', content)
+
     def test_send_marks_request_as_sent(self):
         self.client.login(username="teacher", password="pw123456")
         url = reverse("consent:send", kwargs={"request_id": self.request_obj.request_id})

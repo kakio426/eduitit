@@ -241,6 +241,10 @@
   const pageCount = Number("{{ page_count }}") || 1;
   const localPdfModuleUrl = "{% static 'consent/vendor/pdfjs/pdf.min.mjs' %}";
   const localPdfWorkerUrl = "{% static 'consent/vendor/pdfjs/pdf.worker.min.mjs' %}";
+  const pdfjsCdnModuleUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+  const pdfjsCdnWorkerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+  const pdfjsUnpkgModuleUrl = "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+  const pdfjsUnpkgWorkerUrl = "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
   const normalizedUrl = documentUrl.split("?")[0].toLowerCase();
   const preferPdf = (
     documentFileType === "pdf" ||
@@ -606,6 +610,40 @@
     });
   }
 
+  async function loadPdfDocument() {
+    const candidates = [
+      {
+        label: "local",
+        moduleUrl: localPdfModuleUrl,
+        workerUrl: localPdfWorkerUrl,
+      },
+      {
+        label: "jsdelivr",
+        moduleUrl: pdfjsCdnModuleUrl,
+        workerUrl: pdfjsCdnWorkerUrl,
+      },
+      {
+        label: "unpkg",
+        moduleUrl: pdfjsUnpkgModuleUrl,
+        workerUrl: pdfjsUnpkgWorkerUrl,
+      },
+    ];
+    let lastError = null;
+
+    for (const candidate of candidates) {
+      try {
+        const pdfjsLib = await import(candidate.moduleUrl);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = candidate.workerUrl;
+        return await pdfjsLib.getDocument(documentUrl).promise;
+      } catch (error) {
+        lastError = error;
+        console.warn("consent-pdf-provider-failed", candidate.label, error);
+      }
+    }
+
+    throw lastError || new Error("pdfjs-load-failed");
+  }
+
   async function renderDocument() {
     currentPage = clamp(Number(currentPage) || 1, 1, pageCount);
     pageInput.value = currentPage;
@@ -690,14 +728,7 @@
 
   try {
     if (preferPdf) {
-      let pdfjsLib;
-      try {
-        pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
-      } catch (error) {
-        pdfjsLib = await import(localPdfModuleUrl);
-      }
-      pdfjsLib.GlobalWorkerOptions.workerSrc = localPdfWorkerUrl;
-      pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
+      pdfDoc = await loadPdfDocument();
     }
     await renderDocument();
     setStatus("표시 위치를 맞춘 뒤 저장하세요.");
