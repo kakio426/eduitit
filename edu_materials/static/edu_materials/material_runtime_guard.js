@@ -126,21 +126,28 @@
       return false;
     }
 
+    var overlay = findBlockingOverlay();
+
     if (payload.kind === "timeout") {
       return true;
     }
 
-    if (findBlockingOverlay()) {
-      return true;
-    }
-
-    if (document.readyState !== "complete") {
-      return true;
+    if (overlay) {
+      return document.readyState === "complete";
     }
 
     if (payload.kind === "resource") {
       // 리소스 에러는 로딩 완료 후에도 발생할 수 있어 기본값은 경고 처리.
       return false;
+    }
+
+    if (document.readyState !== "complete") {
+      return false;
+    }
+
+    var message = toLowerText(payload.message);
+    if (message.indexOf("three") !== -1 || message.indexOf("webgl") !== -1) {
+      return true;
     }
 
     // 화면이 정상적으로 떠 있으면 즉시 에러 패널을 띄우지 않는다.
