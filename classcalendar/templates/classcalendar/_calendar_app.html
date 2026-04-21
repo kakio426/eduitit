@@ -2599,7 +2599,11 @@
 
 <script src="{% static 'classcalendar/js/message_hub.js' %}"></script>
 <script>
-const CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
+var CALENDAR_EMBEDDED_IN_SHEETBOOK = window.CALENDAR_EMBEDDED_IN_SHEETBOOK;
+if (typeof CALENDAR_EMBEDDED_IN_SHEETBOOK === 'undefined') {
+    CALENDAR_EMBEDDED_IN_SHEETBOOK = {{ is_embedded_in_sheetbook|yesno:"true,false" }};
+}
+window.CALENDAR_EMBEDDED_IN_SHEETBOOK = CALENDAR_EMBEDDED_IN_SHEETBOOK;
 
 function ensureCalendarToastBridge() {
     if (typeof window.showToast === 'function') return;

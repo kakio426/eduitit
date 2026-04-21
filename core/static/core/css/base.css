@@ -552,8 +552,12 @@ h4,
 
 .shell-nav-primary,
 .shell-nav-secondary {
-    display: flex;
     align-items: center;
+}
+
+.shell-nav-primary:not(.hidden),
+.shell-nav-secondary:not(.hidden) {
+    display: flex;
 }
 
 .shell-nav-primary {
