@@ -124,7 +124,7 @@
                     {% endif %}
                     {% for mobile_section in home_mobile_section_order %}
                     {% if mobile_section == 'workbench' %}
-                    <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true">
+                    <article class="home-v6-mobile-panel home-v6-workbench-panel" data-home-v6-workbench="mobile" data-home-v6-rail-card="true" {% if home_user_mode == 'authenticated' %}hidden aria-hidden="true"{% endif %}>
                         <div class="home-v6-mobile-panel-head">
                             <div>
                                 <h2 class="home-v6-mobile-panel-title">{% if home_user_mode == 'guest' %}지금 바로 써보기{% else %}즐겨찾기{% endif %}</h2>
@@ -205,7 +205,7 @@
                         {% include 'core/partials/home_v6_calendar_panel.html' %}
                         {% endif %}
                     </section>
-                    <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
+                    <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true" {% if home_user_mode == 'authenticated' %}hidden aria-hidden="true"{% endif %}>
                         {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
                     </section>
                     {% elif mobile_section == 'quickdrop' %}
@@ -216,7 +216,7 @@
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if home_user_mode == 'authenticated' and reservation_home_card %}
-                    <article class="home-v6-mobile-panel home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true">
+                    <article class="home-v6-mobile-panel home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true" hidden aria-hidden="true">
                         <div class="home-v6-mobile-panel-head">
                             <div>
                                 <h2 class="home-v6-mobile-panel-title">내 학교 예약</h2>
@@ -250,14 +250,14 @@
                     </article>
                     {% endif %}
                     {% elif mobile_section == 'sns' %}
-                    <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true">
+                    <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true" {% if home_user_mode == 'authenticated' %}hidden aria-hidden="true"{% endif %}>
                         {% include 'core/partials/home_v6_sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
                     </section>
                     {% endif %}
                     {% endfor %}
 
                     {% if teacher_buddy_panel %}
-                    <article class="home-v6-mobile-panel" data-home-teacher-buddy-slot="v6-mobile" data-home-v6-rail-card="true">
+                    <article class="home-v6-mobile-panel" data-home-teacher-buddy-slot="v6-mobile" data-home-v6-rail-card="true" hidden aria-hidden="true">
                         {% include 'core/partials/home_v6_teacher_buddy_panel_mobile.html' %}
                     </article>
                     {% endif %}

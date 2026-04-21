@@ -3501,6 +3501,15 @@ class HomeV5ViewTest(TestCase):
         user = self._login('v5layout')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         ProductUsageLog.objects.create(user=user, product=self.p2, action='launch', source='home_quick')
+        Product.objects.create(
+            title='바로전송',
+            description='기기 사이 전송',
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-right-left',
+        )
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
@@ -3520,10 +3529,26 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-mobile-sns="true"', content)
+        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
         self.assertIn('sns-full-section-auth-v6', content)
         self.assertIn('data-home-v6-mobile-summary-button="true"', content)
-        self.assertIn('내 작업대', content)
+        self.assertIn('즐겨찾기', content)
         self.assertIn('data-favorite-toggle="true"', content)
+        workbench_mobile_match = re.search(r'<article[^>]*data-home-v6-workbench="mobile"[^>]*>', content)
+        calendar_mobile_match = re.search(r'<section[^>]*data-home-v6-calendar-panel="mobile"[^>]*>', content)
+        agent_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-agent-workspace="true"[^>]*>', content)
+        quickdrop_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-quickdrop="true"[^>]*>', content)
+        sns_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-sns="true"[^>]*>', content)
+        self.assertIsNotNone(workbench_mobile_match)
+        self.assertIsNotNone(calendar_mobile_match)
+        self.assertIsNotNone(agent_mobile_match)
+        self.assertIsNotNone(quickdrop_mobile_match)
+        self.assertIsNotNone(sns_mobile_match)
+        self.assertIn('hidden', workbench_mobile_match.group(0))
+        self.assertNotIn('hidden', calendar_mobile_match.group(0))
+        self.assertIn('hidden', agent_mobile_match.group(0))
+        self.assertNotIn('hidden', quickdrop_mobile_match.group(0))
+        self.assertIn('hidden', sns_mobile_match.group(0))
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
