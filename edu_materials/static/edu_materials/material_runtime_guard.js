@@ -53,10 +53,19 @@
     if (!style || style.display === "none" || style.visibility === "hidden") {
       return false;
     }
+    if (style.pointerEvents === "none") {
+      return false;
+    }
     if (parseFloat(style.opacity || "1") <= 0.05) {
       return false;
     }
+    if (style.position !== "fixed" && style.position !== "absolute") {
+      return false;
+    }
     var rect = element.getBoundingClientRect();
+    if (rect.top > window.innerHeight * 0.15 || rect.left > window.innerWidth * 0.15) {
+      return false;
+    }
     return rect.width >= Math.max(window.innerWidth * 0.55, 220) &&
       rect.height >= Math.max(window.innerHeight * 0.35, 140);
   }
@@ -143,11 +152,6 @@
 
     if (document.readyState !== "complete") {
       return false;
-    }
-
-    var message = toLowerText(payload.message);
-    if (message.indexOf("three") !== -1 || message.indexOf("webgl") !== -1) {
-      return true;
     }
 
     // 화면이 정상적으로 떠 있으면 즉시 에러 패널을 띄우지 않는다.
@@ -344,12 +348,12 @@
   });
 
   function maybeReportReady() {
-    if (readyReported || issueReported) {
+    if (readyReported) {
       return;
     }
 
     function checkRuntimeState() {
-      if (readyReported || issueReported) {
+      if (readyReported) {
         return;
       }
 

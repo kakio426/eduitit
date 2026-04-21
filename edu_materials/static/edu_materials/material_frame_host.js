@@ -52,12 +52,14 @@
       return null;
     }
 
+    var card = status.querySelector("[data-frame-status-card]");
     var title = status.querySelector("[data-frame-status-title]");
     var body = status.querySelector("[data-frame-status-body]");
     var reload = status.querySelector("[data-frame-status-reload]");
     var frameState = {
       iframe: iframe,
       status: status,
+      card: card,
       title: title,
       body: body,
       reload: reload,
@@ -70,6 +72,15 @@
       frameState.status.setAttribute("data-tone", tone || "notice");
       frameState.title.textContent = titleText;
       frameState.body.textContent = bodyText;
+      if (frameState.card) {
+        if (bodyText) {
+          frameState.card.setAttribute("title", bodyText);
+          frameState.card.setAttribute("aria-label", titleText + ". " + bodyText);
+        } else {
+          frameState.card.removeAttribute("title");
+          frameState.card.setAttribute("aria-label", titleText);
+        }
+      }
     };
 
     frameState.hide = function () {
@@ -127,7 +138,7 @@
     if (data.type === "edu-materials:runtime-error") {
       frameState.ready = false;
       frameState.hasError = true;
-      frameState.show("자료 실행 오류", describeError(data), "error");
+      frameState.show("오류 있음", describeError(data), "error");
     }
   });
 
