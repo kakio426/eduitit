@@ -583,6 +583,7 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "data-frame-mode=\"runtime\"")
         self.assertContains(response, "data-material-frame-shell")
         self.assertContains(response, "data-frame-status")
+        self.assertNotContains(response, "자료 실행 확인 중")
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
 
@@ -611,6 +612,7 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, material.access_code)
         self.assertContains(response, "전체화면 공유판 열기")
         self.assertContains(response, "학생 화면 열기")
+        self.assertNotContains(response, "자료 실행 확인 중")
         self.assertContains(response, "자료 정보 바꾸기")
         self.assertContains(response, "현재 내용으로 다시 자동 분류")
         self.assertEqual(response.context["preview_default_viewport"]["id"], "desktop")

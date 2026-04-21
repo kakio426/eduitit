@@ -63,8 +63,6 @@
       reload: reload,
       ready: false,
       hasError: false,
-      slowTimer: 0,
-      followupTimer: 0,
     };
 
     frameState.show = function (titleText, bodyText, tone) {
@@ -78,51 +76,14 @@
       frameState.status.hidden = true;
     };
 
-    frameState.clearTimers = function () {
-      window.clearTimeout(frameState.slowTimer);
-      window.clearTimeout(frameState.followupTimer);
-      frameState.slowTimer = 0;
-      frameState.followupTimer = 0;
-    };
-
-    frameState.armTimers = function () {
-      frameState.clearTimers();
-      frameState.slowTimer = window.setTimeout(function () {
-        if (frameState.ready || frameState.hasError) {
-          return;
-        }
-        frameState.show(
-          "자료 실행 확인 중",
-          "자료를 불러오는 데 시간이 조금 더 걸리고 있습니다. 외부 스크립트나 큰 3D 장면이 있으면 첫 실행이 늦을 수 있습니다.",
-          "notice"
-        );
-      }, 8000);
-    };
-
-    iframe.addEventListener("load", function () {
-      frameState.followupTimer = window.setTimeout(function () {
-        if (frameState.ready || frameState.hasError) {
-          return;
-        }
-        frameState.show(
-          "자료 실행 확인 중",
-          "아직 준비 중입니다. 네트워크가 느리거나 외부 리소스 응답이 늦으면 오래 걸릴 수 있습니다. 계속 그대로면 '다시 열기'를 눌러 주세요.",
-          "notice"
-        );
-      }, 20000);
-    });
-
     if (reload) {
       reload.addEventListener("click", function () {
         frameState.ready = false;
         frameState.hasError = false;
         frameState.hide();
-        frameState.armTimers();
         iframe.src = iframe.src;
       });
     }
-
-    frameState.armTimers();
     return frameState;
   }
 
@@ -159,7 +120,6 @@
     if (data.type === "edu-materials:runtime-ready") {
       frameState.ready = true;
       frameState.hasError = false;
-      frameState.clearTimers();
       frameState.hide();
       return;
     }
@@ -167,7 +127,6 @@
     if (data.type === "edu-materials:runtime-error") {
       frameState.ready = false;
       frameState.hasError = true;
-      frameState.clearTimers();
       frameState.show("자료 실행 오류", describeError(data), "error");
     }
   });

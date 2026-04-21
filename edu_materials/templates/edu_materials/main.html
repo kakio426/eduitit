@@ -245,14 +245,14 @@
         <div class="edu-materials-panel rounded-[24px] p-3.5 md:p-4">
             <details class="edu-materials-details" id="material-search-filter" {% if query or current_subject or current_material_type or current_grade or current_tag %}open{% endif %}>
                 <summary class="edu-materials-summary cursor-pointer">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex flex-wrap items-center gap-2.5">
-                            <h2 class="text-sm md:text-base font-black text-slate-900">{% if active_tab == 'my' %}내 자료 찾기{% else %}공개 자료 찾기{% endif %}</h2>
+                    <div class="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                        <div class="flex min-w-0 flex-1 items-center gap-2.5">
+                            <h2 class="truncate text-sm md:text-base font-black text-slate-900">{% if active_tab == 'my' %}내 자료 찾기{% else %}공개 자료 찾기{% endif %}</h2>
                             {% if query or current_subject or current_material_type or current_grade or current_tag %}
-                            <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700">조건 적용 중</span>
+                            <span class="shrink-0 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700">조건 적용 중</span>
                             {% endif %}
                         </div>
-                        <div class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700 flex items-center gap-2">
+                        <div class="shrink-0 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700 flex items-center gap-2">
                             <span class="edu-materials-summary-label">필터</span>
                             <span class="edu-materials-summary-arrow inline-block">⌄</span>
                         </div>
