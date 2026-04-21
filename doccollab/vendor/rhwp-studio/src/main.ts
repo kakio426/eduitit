@@ -24,6 +24,7 @@ import { TableObjectRenderer } from '@/engine/table-object-renderer';
 import { TableResizeRenderer } from '@/engine/table-resize-renderer';
 import { Ruler } from '@/view/ruler';
 import { installDoccollabBridge } from '@/embed/doccollab-bridge';
+import { fillWorksheetTemplate } from '@/embed/worksheet-template';
 
 const wasm = new WasmBridge();
 const eventBus = new EventBus();
@@ -665,6 +666,16 @@ window.addEventListener('message', async (e) => {
           fileName: wasm.fileName,
           pageCount: wasm.pageCount,
         });
+        break;
+      case 'fillWorksheetTemplate':
+        await initializePromise;
+        reply(
+          fillWorksheetTemplate(
+            wasm,
+            (params?.content ?? {}) as Record<string, unknown>,
+            String(params?.layoutProfile || 'comfortable'),
+          ),
+        );
         break;
       case 'focusEditor':
         await initializePromise;

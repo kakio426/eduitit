@@ -108,6 +108,21 @@ class RhwpStudioEmbed {
     };
   }
 
+  async fillWorksheetTemplate(content, layoutProfile) {
+    return this.request(
+      "fillWorksheetTemplate",
+      {
+        content,
+        layoutProfile,
+      },
+      90000,
+    );
+  }
+
+  async pageCount() {
+    return this.request("pageCount", {}, 5000);
+  }
+
   async focus() {
     return this.request("focusEditor", {}, 5000);
   }
@@ -182,7 +197,8 @@ class DoccollabRoom {
   constructor(rootEl, payload) {
     this.rootEl = rootEl;
     this.payload = payload;
-    this.runtimeEditingEnabled = Boolean(payload.editingEnabled && payload.editingSupported);
+    this.canEdit = Boolean(payload.editingEnabled && payload.editingSupported);
+    this.runtimeEditingEnabled = Boolean(this.canEdit);
     this.statusBadge = document.getElementById("doccollab-status-badge");
     this.snapshotBadge = document.getElementById("doccollab-snapshot-badge");
     this.participantList = document.getElementById("doccollab-participant-list");
@@ -194,6 +210,7 @@ class DoccollabRoom {
     this.loadErrorEl = document.getElementById("doccollab-load-error");
     this.loadErrorMessageEl = document.getElementById("doccollab-load-error-message");
     this.saveButton = document.getElementById("doccollab-save-button");
+    this.publishButton = document.getElementById("doccollab-publish-button");
     this.tableSelectionLabel = document.getElementById("doccollab-table-selection");
     this.tableCommandButtons = Array.from(document.querySelectorAll("[data-doccollab-table-command]"));
     this.renderedRevisionIds = new Set(
@@ -235,8 +252,12 @@ class DoccollabRoom {
     window.addEventListener("beforeunload", this.boundBeforeUnload);
     this.connectSocket();
     await this.mountEditor();
-    await this.loadDocument(this.payload.initialFileUrl);
-    this.setStatus(this.runtimeEditingEnabled ? "편집 준비 완료" : "보기 모드");
+    if (this.payload.initialFileUrl) {
+      await this.loadDocument(this.payload.initialFileUrl);
+      this.setStatus(this.runtimeEditingEnabled ? "편집 준비 완료" : "보기 모드");
+    } else {
+      this.setStatus("불러올 문서가 없습니다.", true);
+    }
   }
 
   bindUI() {
@@ -259,7 +280,7 @@ class DoccollabRoom {
     iframe.setAttribute("allow", "clipboard-read; clipboard-write");
     const studioUrl = new URL(this.payload.studioUrl, window.location.origin);
     studioUrl.searchParams.set("embed", "doccollab");
-    if (!this.runtimeEditingEnabled) {
+    if (!this.canEdit) {
       studioUrl.searchParams.set("readonly", "1");
     }
     iframe.src = studioUrl.toString();
@@ -923,6 +944,9 @@ class DoccollabRoom {
       this.downloadLink.classList.remove("doccollab-secondary--disabled");
       this.downloadLink.removeAttribute("aria-disabled");
     }
+    if (this.publishButton && this.runtimeEditingEnabled) {
+      this.publishButton.removeAttribute("disabled");
+    }
     if (options.announce === false) {
       return;
     }
@@ -1014,6 +1038,9 @@ class DoccollabRoom {
     }
     if (this.saveButton) {
       this.saveButton.disabled = true;
+    }
+    if (this.publishButton) {
+      this.publishButton.disabled = true;
     }
     this.snapshotBadge.textContent = "사용 불가";
     this.setStatus("열기 실패", true);

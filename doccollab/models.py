@@ -96,6 +96,10 @@ class DocMembership(models.Model):
 
 
 class DocRoom(models.Model):
+    class OriginKind(models.TextChoices):
+        UPLOAD = "upload", "업로드"
+        GENERATED_WORKSHEET = "generated_worksheet", "학습지 생성"
+
     class SourceFormat(models.TextChoices):
         HWP = "hwp", "HWP"
         HWPX = "hwpx", "HWPX"
@@ -125,11 +129,18 @@ class DocRoom(models.Model):
         blank=True,
         related_name="doccollab_room",
     )
+    origin_kind = models.CharField(max_length=30, choices=OriginKind.choices, default=OriginKind.UPLOAD)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
-    source_file = models.FileField(upload_to=room_source_upload_to, storage=get_raw_storage, max_length=500)
-    source_name = models.CharField(max_length=255)
+    source_file = models.FileField(
+        upload_to=room_source_upload_to,
+        storage=get_raw_storage,
+        max_length=500,
+        null=True,
+        blank=True,
+    )
+    source_name = models.CharField(max_length=255, blank=True, default="")
     source_format = models.CharField(max_length=10, choices=SourceFormat.choices, default=SourceFormat.HWPX)
-    source_sha256 = models.CharField(max_length=64)
+    source_sha256 = models.CharField(max_length=64, blank=True, default="")
     last_activity_at = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -143,6 +154,53 @@ class DocRoom(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class DocWorksheet(models.Model):
+    class BootstrapStatus(models.TextChoices):
+        PENDING = "pending", "대기"
+        BUILDING = "building", "생성 중"
+        READY = "ready", "준비 완료"
+        FAILED = "failed", "실패"
+
+    room = models.OneToOneField(
+        DocRoom,
+        on_delete=models.CASCADE,
+        related_name="worksheet",
+    )
+    source_worksheet = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cloned_worksheets",
+    )
+    topic = models.CharField(max_length=120)
+    summary_text = models.CharField(max_length=200, blank=True, default="")
+    content_json = models.JSONField(default=dict, blank=True)
+    search_text = models.TextField(blank=True, default="")
+    provider = models.CharField(max_length=30, blank=True, default="deepseek")
+    prompt_version = models.CharField(max_length=40, blank=True, default="")
+    latest_page_count = models.PositiveIntegerField(default=0)
+    bootstrap_status = models.CharField(
+        max_length=20,
+        choices=BootstrapStatus.choices,
+        default=BootstrapStatus.PENDING,
+    )
+    is_library_published = models.BooleanField(default=False)
+    view_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+        indexes = [
+            models.Index(fields=["bootstrap_status", "is_library_published"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.room.title
 
 
 class DocRevision(models.Model):

@@ -3,6 +3,7 @@ import wasmUrl from "@rhwp/core/rhwp_bg.wasm?url";
 
 
 const form = document.querySelector("[data-doccollab-upload-form='true']");
+const worksheetForm = document.querySelector("[data-doccollab-worksheet-form='true']");
 
 if (form) {
   const fileInput = form.querySelector("input[name='source_file']");
@@ -104,6 +105,49 @@ if (form) {
     submitButton?.setAttribute("aria-busy", "true");
     setStatus(message);
   }
+}
+
+if (worksheetForm) {
+  const topicInput = worksheetForm.querySelector("input[name='topic']");
+  const submitButton = worksheetForm.querySelector("[data-doccollab-worksheet-button='true']");
+  const statusEl = document.getElementById("doccollab-worksheet-status");
+  let submitLocked = false;
+
+  topicInput?.addEventListener("input", () => {
+    if (!statusEl) {
+      return;
+    }
+    const length = String(topicInput.value || "").trim().length;
+    if (!length) {
+      statusEl.textContent = "생성 가능 · 편집은 데스크톱 Chrome";
+      return;
+    }
+    statusEl.textContent = `${length}/120`;
+  });
+
+  worksheetForm.addEventListener("submit", (event) => {
+    if (submitLocked) {
+      event.preventDefault();
+      return;
+    }
+    if (submitButton?.disabled) {
+      return;
+    }
+    const topic = String(topicInput?.value || "").trim();
+    if (!topic) {
+      event.preventDefault();
+      if (statusEl) {
+        statusEl.textContent = "학습 주제를 먼저 적어 주세요.";
+      }
+      return;
+    }
+    submitLocked = true;
+    submitButton?.setAttribute("aria-busy", "true");
+    submitButton?.setAttribute("disabled", "disabled");
+    if (statusEl) {
+      statusEl.textContent = "학습지 만드는 중";
+    }
+  });
 }
 
 

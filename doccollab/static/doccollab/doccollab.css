@@ -96,6 +96,17 @@
     align-items: start;
 }
 
+.doccollab-grid--dashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.doccollab-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
 .doccollab-room-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
@@ -214,6 +225,13 @@
     color: #0f172a;
 }
 
+.doccollab-primary[disabled],
+.doccollab-secondary[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .doccollab-secondary--link {
     margin-top: 0.8rem;
 }
@@ -286,6 +304,18 @@
     gap: 0.55rem;
 }
 
+.doccollab-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+}
+
+.doccollab-row-actions form,
+.doccollab-toolbar-actions form {
+    display: inline-flex;
+}
+
 .doccollab-room-row--history {
     display: block;
 }
@@ -316,6 +346,19 @@
     line-height: 1.45;
     word-break: keep-all;
     overflow-wrap: anywhere;
+}
+
+.doccollab-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.doccollab-support-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
 }
 
 .doccollab-room-meta-row {
@@ -657,6 +700,8 @@
 }
 
 @media (max-width: 980px) {
+    .doccollab-action-grid,
+    .doccollab-grid--dashboard,
     .doccollab-grid,
     .doccollab-room-layout,
     .doccollab-spike-grid {

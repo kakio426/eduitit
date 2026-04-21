@@ -12,12 +12,12 @@
             <div>
                 <p class="doccollab-kicker">온라인 HWP 편집</p>
                 <h1 class="doccollab-title">{{ service_title }}</h1>
-                <p class="doccollab-copy">열기, 수정, 저장.</p>
+                <p class="doccollab-copy">파일 열기, 학습지 만들기, 저장.</p>
             </div>
             <div class="doccollab-chip-row">
                 <span class="doccollab-chip">HWP/HWPX</span>
                 <span class="doccollab-chip">Chrome 편집</span>
-                <span class="doccollab-chip">모바일 보기</span>
+                <span class="doccollab-chip">오늘 {{ worksheet_daily_limit }}장 중 {{ worksheet_daily_used }}장 사용</span>
             </div>
         </header>
 
@@ -29,11 +29,13 @@
         </div>
         {% endif %}
 
-        <div class="doccollab-grid">
-            <aside class="doccollab-card doccollab-card--sticky">
+        <section class="doccollab-action-grid">
+            <article class="doccollab-card">
                 <div class="doccollab-card-head">
-                    <p class="doccollab-label">파일 열기</p>
-                    <h2 class="doccollab-card-title">지금 수정</h2>
+                    <div>
+                        <p class="doccollab-label">파일 열기</p>
+                        <h2 class="doccollab-card-title">문서 편집</h2>
+                    </div>
                 </div>
                 <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form" data-doccollab-upload-form="true">
                     {% csrf_token %}
@@ -48,9 +50,127 @@
                     <button type="submit" class="doccollab-primary" data-doccollab-open-button="true">파일 열기</button>
                     <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">선택 후 바로 열림</p>
                 </form>
-            </aside>
+            </article>
 
-            <div class="doccollab-stack">
+            <article class="doccollab-card">
+                <div class="doccollab-card-head">
+                    <div>
+                        <p class="doccollab-label">학습지 만들기</p>
+                        <h2 class="doccollab-card-title">한 장 초안</h2>
+                    </div>
+                    <span class="doccollab-chip doccollab-chip--soft">하루 {{ worksheet_daily_limit }}장</span>
+                </div>
+                <form method="post" action="{% url 'doccollab:generate_worksheet' %}" class="doccollab-form" data-doccollab-worksheet-form="true">
+                    {% csrf_token %}
+                    <label class="doccollab-field">
+                        <span>학습 주제</span>
+                        <input type="text" name="topic" maxlength="120" placeholder="예: 분수, 화산, 물의 순환" required>
+                    </label>
+                    <button
+                        type="submit"
+                        class="doccollab-primary"
+                        data-doccollab-worksheet-button="true"
+                    >
+                        학습지 만들기
+                    </button>
+                    <p id="doccollab-worksheet-status" class="doccollab-footnote">{{ worksheet_creation_reason }}</p>
+                </form>
+            </article>
+        </section>
+
+        <div class="doccollab-stack">
+            <section class="doccollab-card">
+                <div class="doccollab-card-head">
+                    <div>
+                        <p class="doccollab-label">내 학습지</p>
+                        <h2 class="doccollab-card-title">바로 이어서</h2>
+                    </div>
+                </div>
+                {% if my_worksheet_cards %}
+                <div class="doccollab-list">
+                    {% for item in my_worksheet_cards %}
+                    <div class="doccollab-room-row doccollab-room-row--workspace">
+                        <a href="{{ item.url }}" class="doccollab-room-main doccollab-room-main--link">
+                            <div class="doccollab-room-heading">
+                                <span class="doccollab-room-title">{{ item.title }}</span>
+                                <div class="doccollab-room-badges">
+                                    <span class="doccollab-chip doccollab-chip--soft">{{ item.status_label }}</span>
+                                    <span class="doccollab-chip doccollab-chip--soft">{{ item.revision_label }}</span>
+                                </div>
+                            </div>
+                            <span class="doccollab-room-submeta">{{ item.topic }}</span>
+                            {% if item.summary_text %}
+                            <span class="doccollab-room-submeta">{{ item.summary_text }}</span>
+                            {% endif %}
+                        </a>
+                        <div class="doccollab-room-side doccollab-room-side--actions">
+                            <span class="doccollab-room-meta">{{ item.activity_label }}</span>
+                            <div class="doccollab-row-actions">
+                                <a href="{{ item.url }}" class="doccollab-secondary doccollab-secondary--row">열기</a>
+                                {% if item.is_ready and not item.is_public %}
+                                <form method="post" action="{{ item.publish_url }}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="doccollab-secondary doccollab-secondary--row">공개</button>
+                                </form>
+                                {% endif %}
+                                {% if item.download_url %}
+                                <a href="{{ item.download_url }}" class="doccollab-secondary doccollab-secondary--row">다운로드</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="doccollab-empty">아직 만든 학습지가 없습니다.</p>
+                {% endif %}
+            </section>
+
+            <section class="doccollab-card">
+                <div class="doccollab-card-head">
+                    <div>
+                        <p class="doccollab-label">공개 학습지</p>
+                        <h2 class="doccollab-card-title">가져와서 쓰기</h2>
+                    </div>
+                    <a href="{% url 'doccollab:worksheet_library' %}" class="doccollab-secondary doccollab-secondary--link">전체 보기</a>
+                </div>
+                {% if public_worksheet_cards %}
+                <div class="doccollab-list">
+                    {% for item in public_worksheet_cards %}
+                    <div class="doccollab-room-row doccollab-room-row--workspace">
+                        <a href="{{ item.url }}" class="doccollab-room-main doccollab-room-main--link">
+                            <div class="doccollab-room-heading">
+                                <span class="doccollab-room-title">{{ item.title }}</span>
+                                <div class="doccollab-room-badges">
+                                    <span class="doccollab-chip doccollab-chip--soft">{{ item.owner_label }}</span>
+                                </div>
+                            </div>
+                            <span class="doccollab-room-submeta">{{ item.topic }}</span>
+                            {% if item.summary_text %}
+                            <span class="doccollab-room-submeta">{{ item.summary_text }}</span>
+                            {% endif %}
+                        </a>
+                        <div class="doccollab-room-side doccollab-room-side--actions">
+                            <span class="doccollab-room-meta">{{ item.activity_label }}</span>
+                            <div class="doccollab-row-actions">
+                                {% if item.download_url %}
+                                <a href="{{ item.download_url }}" class="doccollab-secondary doccollab-secondary--row">다운로드</a>
+                                {% endif %}
+                                <form method="post" action="{{ item.clone_url }}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="doccollab-secondary doccollab-secondary--row">내 자료로</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="doccollab-empty">공개된 학습지가 없습니다.</p>
+                {% endif %}
+            </section>
+
+            <div class="doccollab-grid doccollab-grid--dashboard">
                 <section class="doccollab-card">
                     <div class="doccollab-card-head">
                         <div>

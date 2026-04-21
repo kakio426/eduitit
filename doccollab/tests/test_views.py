@@ -1,18 +1,34 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from core.models import UserProfile
-from doccollab.models import DocEditEvent, DocMembership, DocRevision, DocRoom, revision_upload_to, room_source_upload_to
+from doccollab.models import (
+    DocEditEvent,
+    DocMembership,
+    DocRevision,
+    DocRoom,
+    DocWorksheet,
+    DocWorkspace,
+    revision_upload_to,
+    room_source_upload_to,
+)
 from doccollab.services import (
     accessible_rooms_queryset,
     append_room_collab_update,
     create_room_from_upload,
     load_room_collab_state,
     save_room_revision,
+)
+from doccollab.worksheet_hwp_builder import WorksheetBuildError
+from doccollab.worksheet_service import (
+    generate_single_page_worksheet,
+    publish_generated_worksheet,
+    worksheet_daily_limit_used,
 )
 from version_manager.models import Document, DocumentGroup, DocumentVersion, document_version_upload_to, get_raw_storage
 
@@ -29,7 +45,10 @@ def hwp_upload(name="document.hwp", content=b"fake hwp bytes"):
 
 
 class DoccollabViewTests(TestCase):
+    CHROME_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+
     def setUp(self):
+        cache.clear()
         self.owner = User.objects.create_user(
             username="doc-owner",
             email="doc-owner@example.com",
@@ -61,6 +80,83 @@ class DoccollabViewTests(TestCase):
             title=title,
             uploaded_file=upload_factory(file_name, content=f"{title}-bytes".encode("utf-8")),
         )
+
+    def _worksheet_payload(self, *, title="물의 순환 학습지", summary="구름과 비를 따라가요.", short=False):
+        return {
+            "title": title,
+            "companion_line": "와리와 함께 물의 여행을 살펴봐요 ☆",
+            "curiosity_opening": (
+                "비가 그친 뒤 웅덩이가 사라지는 까닭을 떠올려 볼까요? 햇볕을 받은 물은 하늘로 올라가요."
+                if not short
+                else "햇볕을 받은 물이 하늘로 올라가 구름이 돼요."
+            ),
+            "key_points": [
+                "물이 수증기가 되면 눈에 잘 안 보여요.",
+                "수증기가 모이면 구름이 돼요.",
+                "구름 속 물방울이 무거워지면 비가 내려요.",
+            ],
+            "quiz_items": [
+                {"prompt": "햇볕을 받은 물은 _____ 로 올라가요.", "answer_lines": 1},
+                {"prompt": "비가 온 뒤 웅덩이가 어떻게 변할지 한 줄로 적어 봐요. _____", "answer_lines": 2},
+            ],
+            "summary_text": summary,
+            "search_text": "물의 순환 구름 비 증발",
+        }
+
+    def _worksheet_generation_result(self, *, title="물의 순환 학습지", summary="구름과 비를 따라가요.", short=False):
+        return {
+            "content": self._worksheet_payload(title=title, summary=summary, short=short),
+            "hwp_bytes": b"worksheet-hwp",
+            "page_count": 1,
+            "used_profile": "comfortable" if not short else "tight",
+            "file_name": f"{title}.hwp",
+        }
+
+    def _create_generated_room(self, *, user=None, title="물의 순환 학습지", topic="물의 순환", ready=False, published=False):
+        owner = user or self.owner
+        workspace = DocWorkspace.objects.create(name=title, created_by=owner)
+        DocMembership.objects.create(
+            workspace=workspace,
+            user=owner,
+            role=DocMembership.Role.OWNER,
+            status=DocMembership.Status.ACTIVE,
+            invited_by=owner,
+        )
+        room = DocRoom.objects.create(
+            workspace=workspace,
+            title=title,
+            created_by=owner,
+            origin_kind=DocRoom.OriginKind.GENERATED_WORKSHEET,
+            source_name="",
+            source_format=DocRoom.SourceFormat.HWP,
+            source_sha256="",
+        )
+        worksheet = DocWorksheet.objects.create(
+            room=room,
+            topic=topic,
+            summary_text="구름과 비를 따라가요.",
+            content_json=self._worksheet_payload(title=title),
+            search_text="물의 순환",
+            provider="deepseek",
+            prompt_version="worksheet-v1",
+            bootstrap_status=DocWorksheet.BootstrapStatus.PENDING,
+        )
+        revision = None
+        if ready:
+            revision = save_room_revision(
+                room=room,
+                user=owner,
+                uploaded_file=hwp_upload(f"{title}.hwp", content=b"worksheet-hwp"),
+                export_format=DocRevision.ExportFormat.HWP_EXPORT,
+                note="학습지 초안 생성",
+            )
+            worksheet.bootstrap_status = DocWorksheet.BootstrapStatus.READY
+            worksheet.latest_page_count = 1
+            worksheet.save(update_fields=["bootstrap_status", "latest_page_count", "updated_at"])
+            if published:
+                publish_generated_worksheet(worksheet=worksheet)
+                worksheet.refresh_from_db()
+        return room, worksheet, revision
 
     def test_doccollab_binary_files_use_raw_storage_callable(self):
         source_field = DocRoom._meta.get_field("source_file")
@@ -472,3 +568,210 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["editing_supported"])
         self.assertContains(response, "휴대폰에서는 보기만 가능합니다.")
+
+    @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
+    def test_generate_worksheet_creates_generated_room_and_first_get_200(self, mock_generate):
+        mock_generate.return_value = self._worksheet_generation_result()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "물의 순환"},
+            follow=True,
+            HTTP_USER_AGENT=self.CHROME_UA,
+        )
+
+        room = DocRoom.objects.get(origin_kind=DocRoom.OriginKind.GENERATED_WORKSHEET)
+        worksheet = room.worksheet
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(room.source_name, "")
+        self.assertEqual(worksheet.topic, "물의 순환")
+        self.assertEqual(worksheet.bootstrap_status, DocWorksheet.BootstrapStatus.READY)
+        self.assertEqual(room.revisions.count(), 1)
+        revision = room.revisions.get()
+        self.assertEqual(response.context["room"].id, room.id)
+        self.assertEqual(response.context["room_payload"]["initialFileUrl"], reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}))
+        self.assertEqual(response.context["room_payload"]["sourceFileUrl"], "")
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=3)
+    @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
+    def test_generate_worksheet_returns_429_on_fourth_request(self, mock_generate):
+        mock_generate.return_value = self._worksheet_generation_result()
+        self.client.force_login(self.owner)
+
+        for _ in range(3):
+            response = self.client.post(
+                reverse("doccollab:generate_worksheet"),
+                {"topic": "물의 순환"},
+                HTTP_USER_AGENT=self.CHROME_UA,
+                HTTP_ACCEPT="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        blocked = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "태양계"},
+            HTTP_USER_AGENT=self.CHROME_UA,
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(blocked.status_code, 429)
+        self.assertEqual(blocked.json()["message"], "오늘 학습지 3장을 모두 사용했어요. 내일 다시 만들어 볼까요?")
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
+    @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
+    def test_invalid_generate_request_releases_daily_limit(self, mock_generate):
+        mock_generate.return_value = self._worksheet_generation_result()
+        self.client.force_login(self.owner)
+
+        invalid = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": ""},
+            HTTP_USER_AGENT=self.CHROME_UA,
+            HTTP_ACCEPT="application/json",
+        )
+        valid = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "물의 순환"},
+            HTTP_USER_AGENT=self.CHROME_UA,
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(valid.status_code, 200)
+        self.assertEqual(worksheet_daily_limit_used(self.owner.id), 1)
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
+    @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
+    def test_generate_worksheet_returns_revision_metadata(self, mock_generate):
+        mock_generate.return_value = self._worksheet_generation_result()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "물의 순환"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        payload = response.json()
+        room = DocRoom.objects.get(id=payload["room_id"])
+        revision = room.revisions.get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["revision_id"], str(revision.id))
+        self.assertEqual(
+            payload["download_url"],
+            reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}),
+        )
+        self.assertEqual(payload["daily_used"], 1)
+        self.assertEqual(payload["daily_limit"], 1)
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
+    @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
+    def test_generate_worksheet_builder_error_releases_daily_limit(self, mock_generate):
+        mock_generate.side_effect = [
+            WorksheetBuildError("builder failed"),
+            self._worksheet_generation_result(),
+        ]
+        self.client.force_login(self.owner)
+
+        failed = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "물의 순환"},
+            HTTP_ACCEPT="application/json",
+        )
+        succeeded = self.client.post(
+            reverse("doccollab:generate_worksheet"),
+            {"topic": "태양계"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(failed.status_code, 503)
+        self.assertEqual(succeeded.status_code, 200)
+        self.assertEqual(worksheet_daily_limit_used(self.owner.id), 1)
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
+    @mock.patch("doccollab.views.generate_single_page_worksheet")
+    def test_generate_worksheet_file_returns_hwp_download(self, mock_generate):
+        mock_generate.return_value = self._worksheet_generation_result()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_worksheet_file"),
+            {"topic": "물의 순환"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response.headers["Content-Disposition"])
+        self.assertIn("filename*=", response.headers["Content-Disposition"])
+        self.assertIn(".hwp", response.headers["Content-Disposition"])
+        self.assertEqual(response.headers["Content-Type"], "application/x-hwp")
+        self.assertEqual(response.headers["X-Worksheet-Daily-Used"], "1")
+        self.assertEqual(response.headers["X-Worksheet-Daily-Limit"], "1")
+        self.assertEqual(response.headers["X-Worksheet-Layout-Profile"], "comfortable")
+
+    @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
+    def test_generate_worksheet_file_invalid_request_returns_400_without_consuming_quota(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_worksheet_file"),
+            {"topic": ""},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["message"], "학습 주제를 먼저 입력해 주세요.")
+        self.assertEqual(worksheet_daily_limit_used(self.owner.id), 0)
+
+    @mock.patch("doccollab.worksheet_service.build_worksheet_hwp_bytes")
+    @mock.patch("doccollab.worksheet_service.generate_worksheet_content")
+    def test_generate_single_page_worksheet_retries_short_content_after_all_profiles(self, mock_generate, mock_build):
+        mock_generate.side_effect = [
+            self._worksheet_payload(),
+            self._worksheet_payload(summary="짧은 버전", short=True),
+        ]
+        mock_build.side_effect = [
+            {"layout_profile": "comfortable", "page_count": 2, "file_name": "comfortable.hwp", "hwp_bytes": b"a"},
+            {"layout_profile": "compact", "page_count": 2, "file_name": "compact.hwp", "hwp_bytes": b"b"},
+            {"layout_profile": "tight", "page_count": 2, "file_name": "tight.hwp", "hwp_bytes": b"c"},
+            {"layout_profile": "comfortable", "page_count": 1, "file_name": "short.hwp", "hwp_bytes": b"d"},
+        ]
+
+        result = generate_single_page_worksheet(topic="물의 순환")
+
+        self.assertEqual(result["page_count"], 1)
+        self.assertEqual(result["used_profile"], "comfortable")
+        self.assertEqual(result["hwp_bytes"], b"d")
+        self.assertEqual(
+            [call.kwargs["layout_profile"] for call in mock_build.call_args_list],
+            ["comfortable", "compact", "tight", "comfortable"],
+        )
+        self.assertEqual(
+            [call.kwargs["force_short"] for call in mock_generate.call_args_list],
+            [False, True],
+        )
+
+    def test_published_worksheet_is_visible_for_download_and_clone(self):
+        room, worksheet, revision = self._create_generated_room(ready=True, published=True)
+        self.client.force_login(self.other_teacher)
+
+        detail = self.client.get(
+            reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+            HTTP_USER_AGENT=self.CHROME_UA,
+        )
+        download = self.client.get(
+            reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id})
+        )
+        clone = self.client.post(
+            reverse("doccollab:worksheet_clone", kwargs={"room_id": room.id}),
+            follow=True,
+        )
+
+        cloned = DocWorksheet.objects.exclude(id=worksheet.id).get()
+        self.assertEqual(detail.status_code, 200)
+        self.assertTrue(detail.context["public_library_view"])
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(clone.status_code, 200)
+        self.assertEqual(cloned.source_worksheet_id, worksheet.id)
+        self.assertContains(clone, "내 학습지로 가져왔습니다.")

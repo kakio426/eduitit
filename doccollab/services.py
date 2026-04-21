@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -19,7 +20,7 @@ from django.utils import timezone
 
 from version_manager.models import Document, DocumentGroup, DocumentVersion
 
-from .models import DocEditEvent, DocMembership, DocPresence, DocRevision, DocRoom, DocSnapshot, DocWorkspace
+from .models import DocEditEvent, DocMembership, DocPresence, DocRevision, DocRoom, DocSnapshot, DocWorkspace, DocWorksheet
 
 logger = logging.getLogger(__name__)
 
@@ -740,32 +741,47 @@ def broadcast_room_event(room, message_type, payload):
 
 
 def room_payload_for_template(*, room, membership, request, editing_supported):
-    current_revision = room.revisions.order_by("-revision_number").first()
+    worksheet = getattr(room, "worksheet", None)
+    is_public_library_view = bool(
+        worksheet
+        and membership is None
+        and room.created_by_id != getattr(request.user, "id", None)
+        and worksheet.is_library_published
+        and worksheet.bootstrap_status == DocWorksheet.BootstrapStatus.READY
+    )
+    published_revision = room.revisions.filter(is_published=True).order_by("-revision_number").first()
+    current_revision = published_revision if is_public_library_view else room.revisions.order_by("-revision_number").first()
     collab_state = load_room_collab_state(room)
     source_format_label = display_source_format(room.source_format)
     current_revision_format = file_format_for_revision(current_revision) if current_revision else room.source_format
-    initial_file_url = (
-        reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": current_revision.id})
-        if current_revision
-        else reverse("doccollab:download_source", kwargs={"room_id": room.id})
-    )
+    if current_revision:
+        initial_file_url = reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": current_revision.id})
+    elif room.source_file:
+        initial_file_url = reverse("doccollab:download_source", kwargs={"room_id": room.id})
+    else:
+        initial_file_url = ""
+    source_file_url = reverse("doccollab:download_source", kwargs={"room_id": room.id}) if room.source_file else ""
+    editing_enabled = getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR}
+    notes = f"원본 {source_format_label}는 그대로 두고, 저장본은 HWP로 남깁니다."
+    if worksheet is not None:
+        notes = "서버에서 만든 한 장 학습지를 바로 엽니다."
     return {
         "roomId": str(room.id),
         "title": room.title,
         "membershipRole": getattr(membership, "role", ""),
-        "editingEnabled": getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR},
+        "editingEnabled": editing_enabled,
         "editingSupported": bool(editing_supported),
-        "wsUrl": f"/ws/doccollab/rooms/{room.id}/",
+        "wsUrl": f"/ws/doccollab/rooms/{room.id}/" if not is_public_library_view else "",
         "initialFileUrl": initial_file_url,
-        "sourceFileUrl": reverse("doccollab:download_source", kwargs={"room_id": room.id}),
+        "sourceFileUrl": source_file_url,
         "saveRevisionUrl": reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
         "snapshotUrl": reverse("doccollab:create_snapshot", kwargs={"room_id": room.id}),
         "studioUrl": static_url("doccollab/rhwp-studio/index.html"),
         "csrfToken": get_token(request),
         "displayName": display_name_for_user(request.user),
-        "publishedRevision": serialize_revision(room.revisions.filter(is_published=True).order_by("-revision_number").first()) if room.revisions.exists() else None,
+        "publishedRevision": serialize_revision(published_revision) if published_revision else None,
         "currentRevision": serialize_revision(current_revision) if current_revision else None,
-        "sourceName": room.source_name,
+        "sourceName": room.source_name or f"{room.title}.hwp",
         "sourceFormat": room.source_format,
         "sourceFormatLabel": source_format_label,
         "currentRevisionFormat": current_revision_format,
@@ -774,6 +790,6 @@ def room_payload_for_template(*, room, membership, request, editing_supported):
         "saveFormatLabel": display_source_format(DocRoom.SourceFormat.HWP),
         "supportedUploadFormats": list(SUPPORTED_UPLOAD_FORMATS.values()),
         "collabState": collab_state,
-        "notes": f"원본 {source_format_label}는 그대로 두고, 저장본은 HWP로 남깁니다.",
+        "notes": notes,
         "maxControlScan": MAX_CONTROL_SCAN,
     }
