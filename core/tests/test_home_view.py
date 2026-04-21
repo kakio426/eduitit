@@ -573,6 +573,62 @@ class HomeV2ViewTest(TestCase):
         for card in locked_cards:
             self.assertTrue(card['href'].startswith(reverse('account_login')))
 
+    def test_v2_anonymous_records_group_includes_itit_hangul(self):
+        Product.objects.create(
+            title="바로전송",
+            description="파일을 빠르게 보냅니다.",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='quickdrop:landing',
+            icon='fa-solid fa-paper-plane',
+        )
+        Product.objects.create(
+            title="한글문서 AI야 읽어줘",
+            description="한글 문서를 읽고 해야 할 일을 정리합니다.",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='hwpxchat:main',
+            icon='fa-solid fa-file-word',
+        )
+        Product.objects.create(
+            title="잇티한글",
+            description="HWP와 HWPX를 열고 바로 수정합니다.",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='doccollab:main',
+            icon='fa-solid fa-file-pen',
+        )
+        Product.objects.create(
+            title="잇티보드",
+            description="자료를 한곳에 정리합니다.",
+            price=0,
+            is_active=True,
+            service_type='work',
+            launch_route_name='infoboard:dashboard',
+            icon='fa-solid fa-table-cells-large',
+        )
+
+        response = self.client.get(reverse('home'))
+
+        records_group = next(
+            group
+            for group in response.context.get('public_platform_groups', [])
+            if group['key'] == 'records'
+        )
+
+        record_titles = [item['title'] for item in records_group['items']]
+
+        self.assertEqual(
+            record_titles,
+            ['바로전송', '한글문서 AI야 읽어줘', '잇티한글', '잇티보드'],
+        )
+        hangul_item = next(item for item in records_group['items'] if item['title'] == '잇티한글')
+        self.assertEqual(hangul_item['access_status_label'], '로그인 필요')
+        self.assertTrue(hangul_item['href'].startswith(reverse('account_login')))
+
     def test_v2_anonymous_login_page_explains_continue_flow_when_next_exists(self):
         response = self.client.get(f"{reverse('account_login')}?next=/products/{self.p1.id}/")
         content = response.content.decode('utf-8')

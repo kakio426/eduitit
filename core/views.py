@@ -3372,8 +3372,9 @@ PUBLIC_PLATFORM_GROUP_SPECS = (
         "key": "records",
         "title": "문서·자료 정리",
         "summary": "문서와 자료를 빠르게 정리합니다.",
-        "preferred_routes": ("quickdrop:landing", "hwpxchat:main", "infoboard:dashboard"),
-        "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "잇티보드"),
+        "item_limit": 4,
+        "preferred_routes": ("quickdrop:landing", "hwpxchat:main", "doccollab:main", "infoboard:dashboard"),
+        "preferred_titles": ("바로전송", "한글문서 AI야 읽어줘", "잇티한글", "잇티보드"),
         "fallback_group_keys": ("records", "family_contact"),
     },
     {
@@ -3404,6 +3405,7 @@ PUBLIC_PLATFORM_GROUP_KEY_BY_ROUTE = {
     "reservations:landing": "schedule_reservation",
     "quickdrop:landing": "records",
     "hwpxchat:main": "records",
+    "doccollab:main": "records",
     "infoboard:dashboard": "records",
     "teacher_law:main": "teacher_support",
     "schoolprograms:landing": "teacher_support",
@@ -3708,6 +3710,7 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
     groups = []
 
     for spec in PUBLIC_PLATFORM_GROUP_SPECS:
+        item_limit = spec.get("item_limit", limit)
         items = []
         seen_ids = set()
 
@@ -3726,10 +3729,10 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
                 continue
             items.append(item)
             seen_ids.add(item["id"])
-            if len(items) >= limit:
+            if len(items) >= item_limit:
                 break
 
-        if len(items) < limit:
+        if len(items) < item_limit:
             for title in spec.get("preferred_titles", ()):
                 matched_product = _match_public_platform_product(
                     product_list,
@@ -3745,10 +3748,10 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
                     continue
                 items.append(item)
                 seen_ids.add(item["id"])
-                if len(items) >= limit:
+                if len(items) >= item_limit:
                     break
 
-        if len(items) < limit:
+        if len(items) < item_limit:
             for product in product_list:
                 if getattr(product, "id", None) in seen_ids:
                     continue
@@ -3760,10 +3763,10 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
                 item["section_key"] = spec["key"]
                 items.append(item)
                 seen_ids.add(item["id"])
-                if len(items) >= limit:
+                if len(items) >= item_limit:
                     break
 
-        if len(items) < limit:
+        if len(items) < item_limit:
             for showcase_item in showcase_items:
                 if showcase_item.get("id") in seen_ids:
                     continue
@@ -3774,7 +3777,7 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
                     "section_key": spec["key"],
                 })
                 seen_ids.add(showcase_item.get("id"))
-                if len(items) >= limit:
+                if len(items) >= item_limit:
                     break
 
         if items:
@@ -3783,7 +3786,7 @@ def _build_home_public_platform_groups(product_list, *, login_url, showcase_item
                     "key": spec["key"],
                     "title": spec["title"],
                     "summary": spec["summary"],
-                    "items": items[:limit],
+                    "items": items[:item_limit],
                 }
             )
 
