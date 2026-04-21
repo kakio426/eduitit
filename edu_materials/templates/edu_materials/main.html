@@ -38,15 +38,19 @@
         color: #0f172a;
     }
     .edu-create-mode-button {
-        border: 1px solid rgba(203, 213, 225, 0.9);
-        background: rgba(255, 255, 255, 0.96);
-        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        border: 1px solid transparent;
+        background: transparent;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+    .edu-create-mode-button:hover,
+    .edu-create-mode-button:focus-visible {
+        background: rgba(255, 255, 255, 0.82);
     }
     .edu-create-mode-button[data-active="true"] {
-        border-color: rgba(16, 185, 129, 0.45);
-        background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), rgba(255, 255, 255, 0.98));
-        box-shadow: 0 18px 36px rgba(16, 185, 129, 0.12);
-        transform: translateY(-1px);
+        border-color: rgba(16, 185, 129, 0.22);
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        color: #0f172a;
     }
     .edu-create-panel[hidden] {
         display: none;
@@ -199,7 +203,7 @@
     }
     .edu-materials-card-summary {
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
@@ -207,24 +211,27 @@
 {% endblock %}
 
 {% block content %}
-<section class="edu-materials-shell min-h-screen service-shell pb-20 px-4">
-    <div class="max-w-7xl mx-auto space-y-5">
-        <div class="edu-materials-panel rounded-[28px] px-4 py-4 md:px-5">
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div class="flex flex-wrap items-center gap-2.5 md:gap-3.5">
+<section class="edu-materials-shell min-h-screen service-shell pb-16 px-4">
+    <div class="max-w-7xl mx-auto space-y-4">
+        <div class="edu-materials-panel rounded-[24px] px-4 py-3 md:px-5">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-wrap items-center gap-2.5">
                     <p class="text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-600">AI 수업자료 메이커</p>
-                    {% if request.user.is_authenticated %}
-                    <h1 class="text-lg md:text-xl font-black text-slate-900">수업 자료 찾기</h1>
-                    {% else %}
-                    <h1 class="text-lg md:text-xl font-black text-slate-900">공개 자료 보기</h1>
-                    {% endif %}
-                    <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">공개 {{ shared_material_count }}</span>
-                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">내 {% if request.user.is_authenticated %}{{ my_material_count }}{% else %}-{% endif %}</span>
+                    <span aria-hidden="true" class="h-3 w-px bg-slate-200"></span>
+                    <h1 class="text-sm md:text-base font-black text-slate-900">
+                        {% if active_tab == 'my' %}
+                        내 보관함
+                        {% elif active_tab == 'create' %}
+                        새 자료 만들기
+                        {% else %}
+                        공개 자료
+                        {% endif %}
+                    </h1>
                 </div>
 
                 {% if request.user.is_authenticated %}
                 <div class="inline-flex flex-wrap rounded-full bg-slate-100 p-1">
-                    <a href="?tab=shared{% if tab_query_string %}&amp;{{ tab_query_string }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-black transition {% if active_tab == 'shared' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500{% endif %}">공개 자료실</a>
+                    <a href="?tab=shared{% if tab_query_string %}&amp;{{ tab_query_string }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-black transition {% if active_tab == 'shared' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500{% endif %}">공개 자료</a>
                     <a href="?tab=my{% if tab_query_string %}&amp;{{ tab_query_string }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-black transition {% if active_tab == 'my' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500{% endif %}">내 보관함</a>
                     <a href="?tab=create{% if tab_query_string %}&amp;{{ tab_query_string }}{% endif %}" class="rounded-full px-3 py-1.5 text-xs font-black transition {% if active_tab == 'create' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500{% endif %}">새 자료 만들기</a>
                 </div>
@@ -235,24 +242,23 @@
         </div>
 
         {% if show_filter_panel %}
-        <div class="edu-materials-panel rounded-[28px] p-4 md:p-5">
+        <div class="edu-materials-panel rounded-[24px] p-3.5 md:p-4">
             <details class="edu-materials-details" id="material-search-filter" {% if query or current_subject or current_material_type or current_grade or current_tag %}open{% endif %}>
                 <summary class="edu-materials-summary cursor-pointer">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="flex flex-wrap items-center gap-3">
-                            <div class="text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-600">검색</div>
-                            <h2 class="text-lg font-black text-slate-900">{% if active_tab == 'my' %}내 자료 찾기{% else %}공개 자료 찾기{% endif %}</h2>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h2 class="text-sm md:text-base font-black text-slate-900">{% if active_tab == 'my' %}내 자료 찾기{% else %}공개 자료 찾기{% endif %}</h2>
                             {% if query or current_subject or current_material_type or current_grade or current_tag %}
-                            <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">조건 적용 중</span>
+                            <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-700">조건 적용 중</span>
                             {% endif %}
                         </div>
-                        <div class="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-700 flex items-center gap-2">
+                        <div class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700 flex items-center gap-2">
                             <span class="edu-materials-summary-label">필터</span>
                             <span class="edu-materials-summary-arrow inline-block">⌄</span>
                         </div>
                     </div>
                 </summary>
-                <form method="get" action="{% url 'edu_materials:main' %}" class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_repeat(4,minmax(0,0.72fr))_auto]">
+                <form method="get" action="{% url 'edu_materials:main' %}" class="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_repeat(4,minmax(0,0.72fr))_auto]">
                     {% if request.user.is_authenticated %}
                     <input type="hidden" name="tab" value="{{ active_tab }}">
                     {% endif %}
@@ -302,7 +308,7 @@
                 </form>
 
                 {% if popular_tags %}
-                <div class="mt-4 flex flex-wrap gap-2">
+                <div class="mt-3 flex flex-wrap gap-2">
                     {% for tag in popular_tags %}
                     <a href="?{% if request.user.is_authenticated %}tab={{ active_tab|urlencode }}&amp;{% endif %}{% if query %}q={{ query|urlencode }}&amp;{% endif %}{% if current_subject %}subject={{ current_subject|urlencode }}&amp;{% endif %}{% if current_material_type %}material_type={{ current_material_type|urlencode }}&amp;{% endif %}{% if current_grade %}grade={{ current_grade|urlencode }}&amp;{% endif %}{% if current_sort %}sort={{ current_sort|urlencode }}&amp;{% endif %}tag={{ tag|urlencode }}"
                         class="rounded-full px-3 py-1.5 text-xs font-black border {% if current_tag == tag %}bg-emerald-600 text-white border-emerald-600{% else %}bg-white text-emerald-700 border-emerald-100 hover:border-emerald-300{% endif %}">
@@ -322,28 +328,14 @@
         {% endif %}
 
         {% if show_create_panel %}
-        <div class="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,400px)]">
-            <div class="edu-materials-panel rounded-[32px] p-6 md:p-8">
-                <div class="mb-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">직접 만들기</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">새 자료 만들기</h2>
-                    <p class="text-sm text-slate-500 mt-2">저장 후 공개</p>
+        <div class="space-y-4">
+            <div class="edu-materials-panel rounded-[28px] p-5 md:p-6">
+                <div class="mb-4 inline-flex flex-wrap rounded-full bg-slate-100 p-1">
+                    <button type="button" class="edu-create-mode-button rounded-full px-4 py-2 text-sm font-black text-slate-600" data-create-mode-button data-mode="paste" data-active="true">붙여넣기</button>
+                    <button type="button" class="edu-create-mode-button rounded-full px-4 py-2 text-sm font-black text-slate-600" data-create-mode-button data-mode="file" data-active="false">파일 올리기</button>
                 </div>
 
-                <div class="grid gap-3 md:grid-cols-2">
-                    <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="paste" data-active="true">
-                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">AI</div>
-                        <div class="mt-2 text-2xl font-black text-slate-900">주제 입력 후 붙여넣기</div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">주제 입력 후 HTML 붙여넣기</p>
-                    </button>
-                    <button type="button" class="edu-create-mode-button rounded-[28px] p-5 text-left" data-create-mode-button data-mode="file" data-active="false">
-                        <div class="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">파일</div>
-                        <div class="mt-2 text-2xl font-black text-slate-900">HTML 파일 올리기</div>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">파일 선택 후 저장</p>
-                    </button>
-                </div>
-
-                <div class="mt-6 space-y-6">
+                <div class="space-y-6">
                     <div class="edu-create-panel" data-create-panel data-mode="paste">
                         <form action="{% url 'edu_materials:create' %}" method="post" class="space-y-5">
                             {% csrf_token %}
@@ -387,7 +379,6 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">완성된 자료 붙여넣기</label>
                                 <textarea name="html_content" class="edu-materials-input min-h-[220px]" placeholder="AI에서 받은 자료 전체를 그대로 붙여넣으세요." required></textarea>
-                                <p class="text-xs text-slate-500 mt-2">저장 후 시작판 확인</p>
                             </div>
                             <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 시작판 보기</button>
                         </form>
@@ -411,34 +402,16 @@
                             <div>
                                 <label class="block text-sm font-bold text-slate-700 mb-2">자료 파일 올리기</label>
                                 <input type="file" name="html_file" accept=".html,.htm,text/html" class="edu-materials-input" required>
-                                <p class="text-xs text-slate-500 mt-2">HTML 파일 1개</p>
                             </div>
                             <button type="submit" class="w-full rounded-2xl bg-emerald-600 py-4 text-white text-lg font-black shadow-lg shadow-emerald-600/15 hover:-translate-y-0.5 transition">저장하고 시작판 보기</button>
                         </form>
                     </div>
                 </div>
             </div>
-
-            <aside class="space-y-6">
-                <div class="edu-materials-panel rounded-[32px] p-6">
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">저장 후</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">다음 확인</h2>
-                    <div class="mt-5 space-y-3 text-sm text-slate-600">
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">미리보기 확인</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">분류 수정</div>
-                        <div class="rounded-[24px] border border-slate-200 bg-white p-4">QR 열기</div>
-                    </div>
-                </div>
-            </aside>
         </div>
         {% elif active_tab == 'my' %}
         <div class="space-y-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">내 보관함</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">내 자료를 다시 쓰기 쉽게 정리하기</h2>
-                    <p class="text-sm text-slate-500 mt-2">미리보기, 수정, 공유판.</p>
-                </div>
+            <div class="flex justify-end">
                 <a href="?tab=create" class="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-emerald-600/15">새 자료 만들기</a>
             </div>
 
@@ -470,44 +443,21 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="space-y-6">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">공개 자료실</div>
-                    <h2 class="text-3xl font-black text-slate-900 mt-2">공개 자료 둘러보기</h2>
-                    <p class="text-sm text-slate-500 mt-2">썸네일로 바로 고르기.</p>
-                </div>
-                {% if request.user.is_authenticated %}
-                <a href="?tab=my" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-black text-slate-700">내 보관함 보기</a>
-                {% endif %}
-            </div>
-
+        <div class="space-y-4">
             {% if featured_public_material or shared_page_obj.object_list %}
-            <div class="space-y-3">
-                <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-[0.32em] text-emerald-600">공개 자료</div>
-                        <p class="text-sm text-slate-500 mt-1">화면을 보면서 바로 찾기.</p>
-                    </div>
-                    {% if featured_public_material %}
-                    <span class="rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">많이 보는 자료 포함</span>
-                    {% endif %}
-                </div>
-                <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
-                    <div class="grid gap-5 xl:grid-cols-2">
-                    {% if featured_public_material %}
-                    {% include 'edu_materials/includes/material_board_card.html' with material=featured_public_material owner_controls=False show_live_preview=True featured_badge='추천 자료' %}
-                    {% endif %}
-                    {% for material in shared_page_obj.object_list %}
-                    {% include 'edu_materials/includes/material_board_card.html' with material=material owner_controls=False show_live_preview=True %}
-                    {% endfor %}
-                    </div>
+            <div class="edu-materials-board-wrap rounded-[32px] p-3 md:p-4">
+                <div class="grid gap-5 xl:grid-cols-2">
+                {% if featured_public_material %}
+                {% include 'edu_materials/includes/material_board_card.html' with material=featured_public_material owner_controls=False show_live_preview=True %}
+                {% endif %}
+                {% for material in shared_page_obj.object_list %}
+                {% include 'edu_materials/includes/material_board_card.html' with material=material owner_controls=False show_live_preview=True %}
+                {% endfor %}
                 </div>
             </div>
             {% else %}
             <div class="edu-materials-panel rounded-[28px] p-10 text-center text-slate-500">
                 <p class="text-lg font-bold text-slate-700">조건에 맞는 공개 자료가 없습니다.</p>
-                <p class="mt-2">조건을 바꿔 다시 검색하세요.</p>
             </div>
             {% endif %}
 
@@ -570,17 +520,6 @@
 
 <script>
     (function () {
-        const details = document.getElementById('material-search-filter');
-        if (details) {
-            const label = details.querySelector('.edu-materials-summary-label');
-            const syncLabel = () => {
-                if (!label) return;
-                label.textContent = details.open ? '검색 필터 닫기' : '검색 필터 열기';
-            };
-            details.addEventListener('toggle', syncLabel);
-            syncLabel();
-        }
-
         const topicInput = document.getElementById('lesson-topic-input');
         const promptPreview = document.getElementById('lesson-prompt-preview');
         const copyPromptButton = document.getElementById('copy-prompt-button');

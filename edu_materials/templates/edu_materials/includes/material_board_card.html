@@ -4,7 +4,7 @@
 {% url 'edu_materials:delete' material.id as delete_url %}
 {% url 'edu_materials:clone' material.id as clone_url %}
 
-<article class="edu-materials-board-card edu-materials-panel rounded-[30px] p-4 md:p-5 flex flex-col gap-4">
+<article class="edu-materials-board-card edu-materials-panel rounded-[30px] p-4 md:p-5 flex flex-col gap-3">
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 space-y-3">
             <div class="flex flex-wrap items-center gap-2">
@@ -41,10 +41,6 @@
     {% if show_live_preview %}
     <div class="relative">
         <a href="{{ detail_url }}" class="edu-materials-preview-card block">
-            {% if featured_badge %}
-            <span class="absolute left-4 top-4 z-[1] rounded-full border border-white/12 bg-white/12 px-3 py-1 text-[11px] font-black text-white backdrop-blur">{{ featured_badge }}</span>
-            {% endif %}
-
             <div class="edu-materials-preview-root" data-board-preview-root>
                 <div class="edu-materials-preview-root-inner">
                     <div class="edu-materials-preview-frame-shell">
@@ -63,7 +59,6 @@
             </div>
 
             <div class="edu-materials-preview-overlay">
-                <span class="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">크게 보기</span>
                 <span class="rounded-full border border-white/12 bg-slate-950/55 px-3 py-1 text-[11px] font-bold text-white/92 backdrop-blur">열람 {{ material.view_count }}회</span>
             </div>
         </a>
