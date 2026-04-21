@@ -152,6 +152,158 @@ def _mark_payload_from_request(consent_request: SignatureRequest, page_sizes: li
     return payload
 
 
+def _resolved_signer_name(recipient: SignatureRecipient) -> str:
+    if recipient.request.is_guardian_audience:
+        return (recipient.parent_name or recipient.student_name or "").strip()
+    return (recipient.display_name or recipient.student_name or recipient.parent_name or "").strip()
+
+
+def _signer_name_label(recipient: SignatureRecipient) -> str:
+    if recipient.request.is_guardian_audience:
+        return "학부모 이름"
+    return "서명자 이름"
+
+
+def _requires_signer_name_input(recipient: SignatureRecipient) -> bool:
+    if not recipient.request.is_guardian_audience:
+        return False
+    return any(
+        position.mark_type == SignaturePosition.MARK_TYPE_NAME
+        and position.text_source == SignaturePosition.TEXT_SOURCE_SIGNER_NAME
+        for position in recipient.request.configured_positions
+    )
+
+
+def _build_public_name_step_items(recipient: SignatureRecipient) -> list[dict]:
+    grouped: dict[tuple[str, str, bool], dict] = {}
+    student_name = (recipient.student_name or recipient.display_name or "").strip()
+    signer_name = _resolved_signer_name(recipient)
+
+    for position in recipient.request.configured_positions:
+        if position.mark_type != SignaturePosition.MARK_TYPE_NAME:
+            continue
+        if position.text_source == SignaturePosition.TEXT_SOURCE_STUDENT_NAME:
+            label = "학생 이름"
+            value = student_name
+            editable = False
+        else:
+            label = _signer_name_label(recipient)
+            value = signer_name
+            editable = recipient.request.is_guardian_audience
+        key = (label, value, editable)
+        item = grouped.setdefault(
+            key,
+            {
+                "label": label,
+                "value": value,
+                "editable": editable,
+                "count": 0,
+            },
+        )
+        item["count"] += 1
+
+    return list(grouped.values())
+
+
+def _build_public_check_step_items(recipient: SignatureRecipient) -> list[dict]:
+    counts = {
+        SignaturePosition.CHECK_RULE_AGREE: 0,
+        SignaturePosition.CHECK_RULE_DISAGREE: 0,
+        SignaturePosition.CHECK_RULE_ALWAYS: 0,
+    }
+    for position in recipient.request.configured_positions:
+        if position.mark_type != SignaturePosition.MARK_TYPE_CHECKMARK:
+            continue
+        counts[position.check_rule] = counts.get(position.check_rule, 0) + 1
+
+    items = []
+    labels = {
+        SignaturePosition.CHECK_RULE_AGREE: "동의하면 체크",
+        SignaturePosition.CHECK_RULE_DISAGREE: "비동의하면 체크",
+        SignaturePosition.CHECK_RULE_ALWAYS: "항상 체크",
+    }
+    for rule in (
+        SignaturePosition.CHECK_RULE_AGREE,
+        SignaturePosition.CHECK_RULE_DISAGREE,
+        SignaturePosition.CHECK_RULE_ALWAYS,
+    ):
+        count = counts.get(rule, 0)
+        if not count:
+            continue
+        items.append(
+            {
+                "label": labels[rule],
+                "count": count,
+            }
+        )
+    return items
+
+
+def _build_public_preview_marks(recipient: SignatureRecipient) -> list[dict]:
+    if not recipient.request.position_count:
+        return []
+    needs_page_sizes = any(
+        position.x_ratio is None
+        or position.y_ratio is None
+        or position.w_ratio is None
+        or position.h_ratio is None
+        for position in recipient.request.configured_positions
+    )
+    page_sizes = []
+    if needs_page_sizes:
+        try:
+            page_sizes = get_pdf_page_sizes(_normalized_document_pdf_bytes(recipient.request.document))
+        except Exception:
+            logger.warning(
+                "[consent] public preview mark payload skipped request_id=%s recipient_id=%s",
+                recipient.request.request_id,
+                recipient.id,
+                exc_info=True,
+            )
+            return []
+
+    marks = []
+    for position in recipient.request.configured_positions:
+        x_ratio = position.x_ratio
+        y_ratio = position.y_ratio
+        w_ratio = position.w_ratio
+        h_ratio = position.h_ratio
+        if None in (x_ratio, y_ratio, w_ratio, h_ratio):
+            if position.page < 1 or position.page > len(page_sizes):
+                continue
+            page_width, page_height = page_sizes[position.page - 1]
+            x_ratio = round(position.x / page_width, 6) if x_ratio is None and page_width else x_ratio
+            y_ratio = round(position.y / page_height, 6) if y_ratio is None and page_height else y_ratio
+            w_ratio = round(position.width / page_width, 6) if w_ratio is None and page_width else w_ratio
+            h_ratio = round(position.height / page_height, 6) if h_ratio is None and page_height else h_ratio
+        marks.append(
+            {
+                "page": position.page,
+                "x_ratio": x_ratio,
+                "y_ratio": y_ratio,
+                "w_ratio": w_ratio,
+                "h_ratio": h_ratio,
+                "mark_type": position.mark_type,
+                "text_source": position.text_source,
+                "check_rule": position.check_rule,
+            }
+        )
+    student_name = (recipient.student_name or recipient.display_name or "").strip()
+    signer_name = _resolved_signer_name(recipient)
+    signer_label = _signer_name_label(recipient)
+
+    for mark in marks:
+        if mark["mark_type"] != SignaturePosition.MARK_TYPE_NAME:
+            continue
+        if mark["text_source"] == SignaturePosition.TEXT_SOURCE_STUDENT_NAME:
+            mark["text_value"] = student_name
+            mark["text_label"] = "학생 이름"
+        else:
+            mark["text_value"] = signer_name
+            mark["text_label"] = signer_label
+    return marks
+
+
 def _append_query_params(url, **params):
     split_result = urlsplit(url)
     query = dict(parse_qsl(split_result.query, keep_blank_values=True))
@@ -2009,13 +2161,23 @@ def consent_sign(request, token):
         return _link_not_ready_response(request, recipient)
     evidence = _request_document_evidence(recipient.request)
     requires_signature_input = recipient.request.requires_signature_input
+    requires_signer_name_input = _requires_signer_name_input(recipient)
+    signer_name_label = _signer_name_label(recipient)
+    initial_signer_name = _resolved_signer_name(recipient)
+    name_step_items = _build_public_name_step_items(recipient)
+    check_step_items = _build_public_check_step_items(recipient)
+    preview_marks = _build_public_preview_marks(recipient)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
         return redirect("consent:complete", token=token)
     if _is_active_link_expired(recipient):
         return _expired_link_response(request, recipient)
 
     if request.method == "POST":
-        form = ConsentSignForm(request.POST, requires_signature=requires_signature_input)
+        form = ConsentSignForm(
+            request.POST,
+            requires_signature=requires_signature_input,
+            requires_signer_name=requires_signer_name_input,
+        )
         if form.is_valid():
             ip_address = _request_client_ip(request)
             user_agent = _request_user_agent(request)
@@ -2044,9 +2206,19 @@ def consent_sign(request, token):
 
             if not form.errors:
                 decision = form.cleaned_data["decision"]
+                submitted_signer_name = (form.cleaned_data.get("signer_name") or "").strip()
                 recipient.decision = decision
                 recipient.decline_reason = form.cleaned_data.get("decline_reason", "").strip()
                 recipient.signature_data = form.cleaned_data["signature_data"]
+                update_fields = [
+                    "decision", "decline_reason", "signature_data",
+                    "signed_at", "status", "identity_assurance",
+                    "verified_at", "verified_ip_address", "verified_user_agent",
+                    "ip_address", "user_agent",
+                ]
+                if requires_signer_name_input and submitted_signer_name:
+                    recipient.parent_name = submitted_signer_name
+                    update_fields.append("parent_name")
                 recipient.signed_at = timezone.now()
                 recipient.status = (
                     SignatureRecipient.STATUS_SIGNED
@@ -2064,12 +2236,7 @@ def consent_sign(request, token):
                     recipient.verified_at = None
                     recipient.verified_ip_address = None
                     recipient.verified_user_agent = ""
-                recipient.save(update_fields=[
-                    "decision", "decline_reason", "signature_data",
-                    "signed_at", "status", "identity_assurance",
-                    "verified_at", "verified_ip_address", "verified_user_agent",
-                    "ip_address", "user_agent",
-                ])
+                recipient.save(update_fields=update_fields)
 
                 if identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
                     ConsentAuditLog.objects.create(
@@ -2125,7 +2292,11 @@ def consent_sign(request, token):
 
                 return redirect("consent:complete", token=token)
     else:
-        form = ConsentSignForm(requires_signature=requires_signature_input)
+        form = ConsentSignForm(
+            requires_signature=requires_signature_input,
+            requires_signer_name=requires_signer_name_input,
+            initial={"signer_name": initial_signer_name},
+        )
 
     response = render(
         request,
@@ -2144,7 +2315,12 @@ def consent_sign(request, token):
             "document_file_size": evidence.get("document_size") or "",
             "requires_phone_last4": recipient.request.is_guardian_audience and bool(recipient.phone_last4),
             "requires_signature_input": requires_signature_input,
+            "requires_signer_name_input": requires_signer_name_input,
             "is_guardian_audience": recipient.request.is_guardian_audience,
+            "signer_name_label": signer_name_label,
+            "name_step_items": name_step_items,
+            "check_step_items": check_step_items,
+            "preview_marks_json": json.dumps(preview_marks, ensure_ascii=False),
             "mark_summary": recipient.request.mark_summary,
             "page_summary": recipient.request.page_summary,
             "position_count": recipient.request.position_count,

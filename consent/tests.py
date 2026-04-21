@@ -358,6 +358,88 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "이 문서는 이름과 체크만 자동으로 넣습니다.")
         self.assertNotContains(response, 'id="signaturePad"', html=False)
 
+    def test_sign_page_uses_collapsible_legal_notice_and_preview_overlay(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.legal_notice = DEFAULT_LEGAL_NOTICE
+        self.request_obj.save(update_fields=["status", "sent_at", "legal_notice"])
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<details", html=False)
+        self.assertContains(response, "하단 고지")
+        self.assertContains(response, "data-preview-overlay")
+        self.assertContains(response, "data-preview-marks")
+
+    def test_sign_page_shows_signer_name_input_when_signer_name_mark_exists(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        SignaturePosition.objects.create(
+            request=self.request_obj,
+            page=1,
+            x=40,
+            y=48,
+            width=160,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="signer_name"', html=False)
+        self.assertContains(response, "학부모 이름")
+        self.assertContains(response, "data-preview-signer-input-id")
+
+    def test_sign_submission_updates_parent_name_from_signer_name_input(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+        SignaturePosition.objects.create(
+            request=self.request_obj,
+            page=1,
+            x=40,
+            y=48,
+            width=160,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=self.request_obj,
+            page=1,
+            x=90,
+            y=110,
+            width=140,
+            height=80,
+            mark_type=SignaturePosition.MARK_TYPE_SIGNATURE,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+
+        response = self.client.post(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token}),
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signer_name": "김학부모",
+                "signature_data": "data:image/png;base64,AAA",
+            },
+        )
+
+        self.assertRedirects(response, reverse("consent:complete", kwargs={"token": self.recipient.access_token}))
+        self.recipient.refresh_from_db()
+        self.assertEqual(self.recipient.parent_name, "김학부모")
+
 
     def test_sign_submission_with_phone_requires_last4(self):
         self.recipient.phone_number = "010-1234-5678"

@@ -354,16 +354,34 @@ class ConsentSignForm(forms.Form):
             }
         ),
     )
+    signer_name = forms.CharField(
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(
+            attrs={
+                "class": CLAY_INPUT,
+                "placeholder": "학부모 이름",
+                "autocomplete": "name",
+            }
+        ),
+    )
     signature_data = forms.CharField(required=False, widget=forms.HiddenInput)
 
     def __init__(self, *args, **kwargs):
         self.requires_signature = bool(kwargs.pop("requires_signature", True))
+        self.requires_signer_name = bool(kwargs.pop("requires_signer_name", False))
         super().__init__(*args, **kwargs)
 
     def clean_phone_last4(self):
         value = (self.cleaned_data.get("phone_last4") or "").strip()
         if value and not value.isdigit():
             raise forms.ValidationError("숫자 4자리를 입력해 주세요.")
+        return value
+
+    def clean_signer_name(self):
+        value = (self.cleaned_data.get("signer_name") or "").strip()
+        if self.requires_signer_name and not value:
+            raise forms.ValidationError("이름을 확인해 주세요.")
         return value
 
     def clean_signature_data(self):

@@ -20,9 +20,11 @@ function formatBytes(size) {
 
 function getElements(root) {
   return {
+    stage: root.querySelector("[data-preview-stage]"),
     placeholder: root.querySelector("[data-preview-placeholder]"),
     canvas: root.querySelector("[data-preview-canvas]"),
     image: root.querySelector("[data-preview-image]"),
+    overlay: root.querySelector("[data-preview-overlay]"),
     status: root.querySelector("[data-preview-status]"),
     meta: root.querySelector("[data-preview-meta]"),
     pagination: root.querySelector("[data-preview-pagination]"),
@@ -41,6 +43,7 @@ function getPreviewState(root) {
       currentPage: 1,
       totalPages: 1,
       renderToken: 0,
+      previewMarks: null,
     };
     previewStates.set(root, state);
   }
@@ -94,7 +97,7 @@ function resetPdfState(root) {
 }
 
 function showPlaceholder(root, text) {
-  const { placeholder, canvas, image } = getElements(root);
+  const { placeholder, canvas, image, overlay } = getElements(root);
   resetPdfState(root);
   if (placeholder) {
     placeholder.textContent = text;
@@ -110,6 +113,13 @@ function showPlaceholder(root, text) {
   if (image) {
     image.classList.add("hidden");
     image.removeAttribute("src");
+  }
+  if (overlay) {
+    overlay.classList.add("hidden");
+    const ctx = overlay.getContext("2d");
+    if (ctx) {
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+    }
   }
 }
 
@@ -139,6 +149,275 @@ function buildLoadingStatus(kind, currentPage, totalPages) {
     return `업로드 전 ${currentPage} / ${totalPages}쪽을 불러오는 중입니다.`;
   }
   return `${currentPage} / ${totalPages}쪽을 불러오는 중입니다.`;
+}
+
+function getPreviewMarks(root) {
+  const state = getPreviewState(root);
+  if (state.previewMarks !== null) {
+    return state.previewMarks;
+  }
+  try {
+    const parsed = JSON.parse(root.dataset.previewMarks || "[]");
+    state.previewMarks = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("consent-preview-mark-parse-failed", error);
+    state.previewMarks = [];
+  }
+  return state.previewMarks;
+}
+
+function hideOverlay(root) {
+  const { overlay } = getElements(root);
+  if (!overlay) {
+    return;
+  }
+  const ctx = overlay.getContext("2d");
+  if (ctx) {
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+  }
+  overlay.classList.add("hidden");
+}
+
+function sizeOverlayCanvas(root, width, height) {
+  const { overlay } = getElements(root);
+  if (!overlay || !width || !height) {
+    return null;
+  }
+  const outputScale = window.devicePixelRatio || 1;
+  overlay.width = Math.ceil(width * outputScale);
+  overlay.height = Math.ceil(height * outputScale);
+  overlay.style.width = `${width}px`;
+  overlay.style.height = `${height}px`;
+  const ctx = overlay.getContext("2d");
+  ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  overlay.classList.remove("hidden");
+  return ctx;
+}
+
+function getCurrentDecision(root) {
+  const decisionName = root.dataset.previewDecisionName || "";
+  if (!decisionName) {
+    return "";
+  }
+  const checked = document.querySelector(`input[name="${decisionName}"]:checked`);
+  return checked ? checked.value : "";
+}
+
+function getCurrentSignerName(root, fallbackText = "") {
+  const signerInput = document.getElementById(root.dataset.previewSignerInputId || "");
+  if (!signerInput) {
+    return fallbackText;
+  }
+  return (signerInput.value || "").trim() || fallbackText;
+}
+
+function getCurrentSignatureData(root) {
+  const signatureInput = document.getElementById(root.dataset.previewSignatureInputId || "");
+  return signatureInput ? (signatureInput.value || "").trim() : "";
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function appliesCheckRule(mark, decision) {
+  if (mark.check_rule === "always") {
+    return true;
+  }
+  if (mark.check_rule === "disagree") {
+    return decision === "disagree";
+  }
+  return decision === "agree";
+}
+
+function drawNameMark(ctx, mark, left, top, width, height, root) {
+  const textValue = mark.text_source === "signer_name"
+    ? getCurrentSignerName(root, mark.text_value || "")
+    : (mark.text_value || "");
+  const displayText = textValue || mark.text_label || "이름";
+  const fontSize = Math.max(12, Math.min(height * 0.42, 24));
+  ctx.save();
+  drawRoundedRect(ctx, left, top, width, height, 10);
+  ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
+  ctx.strokeStyle = "rgba(180, 83, 9, 0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#92400e";
+  ctx.font = `700 ${fontSize}px "Noto Sans KR", sans-serif`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(displayText, left + 10, top + (height / 2));
+  ctx.restore();
+}
+
+function drawCheckMark(ctx, left, top, width, height, options = {}) {
+  const active = Boolean(options.active);
+  const label = options.label || "";
+  ctx.save();
+  drawRoundedRect(ctx, left, top, width, height, 10);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = active ? "rgba(15, 23, 42, 0.6)" : "rgba(148, 163, 184, 0.7)";
+  ctx.setLineDash(active ? [] : [5, 5]);
+  ctx.stroke();
+  if (active) {
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = Math.max(2.5, Math.min(width, height) * 0.11);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(left + (width * 0.24), top + (height * 0.56));
+    ctx.lineTo(left + (width * 0.42), top + (height * 0.74));
+    ctx.lineTo(left + (width * 0.78), top + (height * 0.28));
+    ctx.stroke();
+  } else if (label) {
+    ctx.fillStyle = "#64748b";
+    ctx.font = `700 ${Math.max(11, Math.min(height * 0.22, 15))}px "Noto Sans KR", sans-serif`;
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, left + 10, top + (height / 2));
+  }
+  ctx.restore();
+}
+
+async function drawSignatureMark(ctx, left, top, width, height, signatureData) {
+  ctx.save();
+  drawRoundedRect(ctx, left, top, width, height, 10);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = "rgba(37, 99, 235, 0.45)";
+  ctx.stroke();
+
+  if (signatureData.startsWith("data:image")) {
+    const signatureImage = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = signatureData;
+    });
+    const padding = 6;
+    const availableWidth = Math.max(width - (padding * 2), 1);
+    const availableHeight = Math.max(height - (padding * 2), 1);
+    const scale = Math.min(
+      availableWidth / signatureImage.width,
+      availableHeight / signatureImage.height,
+    );
+    const drawWidth = signatureImage.width * scale;
+    const drawHeight = signatureImage.height * scale;
+    const drawLeft = left + padding + ((availableWidth - drawWidth) / 2);
+    const drawTop = top + padding + ((availableHeight - drawHeight) / 2);
+    ctx.drawImage(signatureImage, drawLeft, drawTop, drawWidth, drawHeight);
+  } else {
+    ctx.fillStyle = "#2563eb";
+    ctx.font = `700 ${Math.max(11, Math.min(height * 0.22, 15))}px "Noto Sans KR", sans-serif`;
+    ctx.textBaseline = "middle";
+    ctx.fillText("사인", left + 10, top + (height / 2));
+  }
+  ctx.restore();
+}
+
+async function renderPreviewOverlay(root) {
+  const marks = getPreviewMarks(root);
+  const { canvas, image } = getElements(root);
+  if (!marks.length) {
+    hideOverlay(root);
+    return;
+  }
+
+  const state = getPreviewState(root);
+  const currentPage = state.currentPage || 1;
+  const visibleMarks = marks.filter((mark) => Number(mark.page) === currentPage);
+  if (!visibleMarks.length) {
+    hideOverlay(root);
+    return;
+  }
+
+  let width = 0;
+  let height = 0;
+  if (canvas && !canvas.classList.contains("hidden")) {
+    width = parseFloat(canvas.style.width) || canvas.clientWidth || canvas.width;
+    height = parseFloat(canvas.style.height) || canvas.clientHeight || canvas.height;
+  } else if (image && !image.classList.contains("hidden")) {
+    width = image.clientWidth;
+    height = image.clientHeight;
+  }
+  if (!width || !height) {
+    hideOverlay(root);
+    return;
+  }
+
+  const ctx = sizeOverlayCanvas(root, width, height);
+  if (!ctx) {
+    return;
+  }
+
+  const decision = getCurrentDecision(root);
+  const signatureData = getCurrentSignatureData(root);
+
+  for (const mark of visibleMarks) {
+    const xRatio = Number(mark.x_ratio);
+    const yRatio = Number(mark.y_ratio);
+    const wRatio = Number(mark.w_ratio);
+    const hRatio = Number(mark.h_ratio);
+    if (![xRatio, yRatio, wRatio, hRatio].every(Number.isFinite)) {
+      continue;
+    }
+    const left = xRatio * width;
+    const top = (1 - yRatio - hRatio) * height;
+    const markWidth = wRatio * width;
+    const markHeight = hRatio * height;
+
+    if (mark.mark_type === "name") {
+      drawNameMark(ctx, mark, left, top, markWidth, markHeight, root);
+      continue;
+    }
+    if (mark.mark_type === "checkmark") {
+      drawCheckMark(ctx, left, top, markWidth, markHeight, {
+        active: appliesCheckRule(mark, decision),
+        label: mark.check_rule === "disagree" ? "비동의" : "동의",
+      });
+      continue;
+    }
+    await drawSignatureMark(ctx, left, top, markWidth, markHeight, signatureData);
+  }
+}
+
+function bindPreviewInputs(root) {
+  if (root.dataset.previewInputsBound === "1") {
+    return;
+  }
+  const refresh = () => {
+    renderPreviewOverlay(root).catch((error) => {
+      console.warn("consent-preview-overlay-refresh-failed", error);
+    });
+  };
+  const decisionName = root.dataset.previewDecisionName || "";
+  if (decisionName) {
+    document.querySelectorAll(`input[name="${decisionName}"]`).forEach((input) => {
+      input.addEventListener("change", refresh);
+    });
+  }
+  const signatureInput = document.getElementById(root.dataset.previewSignatureInputId || "");
+  if (signatureInput) {
+    signatureInput.addEventListener("input", refresh);
+    signatureInput.addEventListener("change", refresh);
+  }
+  const signerInput = document.getElementById(root.dataset.previewSignerInputId || "");
+  if (signerInput) {
+    signerInput.addEventListener("input", refresh);
+    signerInput.addEventListener("change", refresh);
+  }
+  document.addEventListener("consent-preview-refresh", refresh);
+  root.dataset.previewInputsBound = "1";
 }
 
 function bindPagination(root) {
@@ -201,11 +480,18 @@ async function renderPdfPage(root, pageNumber) {
   const baseViewport = page.getViewport({ scale: 1 });
   const scale = Math.max(0.55, availableWidth / baseViewport.width);
   const viewport = page.getViewport({ scale });
-  canvas.width = Math.ceil(viewport.width);
-  canvas.height = Math.ceil(viewport.height);
+  const outputScale = window.devicePixelRatio || 1;
+  canvas.width = Math.ceil(viewport.width * outputScale);
+  canvas.height = Math.ceil(viewport.height * outputScale);
+  canvas.style.width = `${Math.ceil(viewport.width)}px`;
+  canvas.style.height = `${Math.ceil(viewport.height)}px`;
+  const renderContext = canvas.getContext("2d");
+  renderContext.setTransform(1, 0, 0, 1, 0, 0);
+  renderContext.clearRect(0, 0, canvas.width, canvas.height);
   await page.render({
-    canvasContext: canvas.getContext("2d"),
+    canvasContext: renderContext,
     viewport,
+    transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0],
   }).promise;
 
   if (renderToken !== state.renderToken) {
@@ -228,6 +514,7 @@ async function renderPdfPage(root, pageNumber) {
     disabled: false,
   });
   setStatus(root, buildReadyStatus(state.kind, safePage, state.totalPages));
+  await renderPreviewOverlay(root);
   return state.totalPages;
 }
 
@@ -261,6 +548,7 @@ async function renderImage(root, sourceUrl, altText) {
     canvas.classList.add("hidden");
   }
   image.classList.remove("hidden");
+  await renderPreviewOverlay(root);
 }
 
 async function renderRemotePreview(root) {
@@ -278,6 +566,7 @@ async function renderRemotePreview(root) {
   setMeta(root, [fileName, formatBytes(root.dataset.fileSize)].filter(Boolean).join(" · "));
 
   try {
+    bindPreviewInputs(root);
     if (isPdf(fileType, fileName)) {
       await loadPdfPreview(root, sourceUrl, "remote");
       return;
