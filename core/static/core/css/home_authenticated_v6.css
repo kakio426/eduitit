@@ -167,10 +167,12 @@
 
 .home-v6-shell {
     width: 100%;
-    max-width: 1480px;
+    max-width: 1620px;
     margin: 0 auto;
-    /* Keep the home layout intact while normalizing panel density across cards. */
-    --home-v6-panel-gap: 0.9rem;
+    /* Rebalance the desktop shell so the left rail stays compact and the right rail can breathe. */
+    --home-v6-panel-gap: clamp(0.9rem, 0.72rem + 0.28vw, 1.15rem);
+    --home-v6-desktop-nav-width: 4.25rem;
+    --home-v6-desktop-side-width: clamp(18rem, 21vw, 22rem);
     --home-v4-panel-gap: var(--home-v6-panel-gap);
 }
 
