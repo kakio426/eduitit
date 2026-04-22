@@ -1826,7 +1826,7 @@ class HomeV2ViewTest(TestCase):
         favorites_end = content.index('data-home-v6-sns-panel="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
-        self.assertIn('title="반짝반짝 우리반 알림판">반짝반짝 우리반 알림판</p>', favorites_block)
+        self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
         self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
@@ -4519,15 +4519,17 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('opacity: 1;', css)
         self.assertIn('pointer-events: auto;', css)
 
-    def test_v6_css_uses_roomier_favorites_cards(self):
+    def test_v6_css_keeps_favorites_readable_without_widening_side_rail(self):
         css = _read_home_v6_css_bundle()
 
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorites-grid {', css)
         self.assertIn('grid-template-columns: repeat(2, minmax(0, 1fr));', css)
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {', css)
-        self.assertIn('align-items: center;', css)
-        self.assertIn('font-size: 1.05rem;', css)
+        self.assertIn('grid-template-columns: auto minmax(0, 1fr) auto;', css)
+        self.assertIn('font-size: 0.98rem;', css)
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
+        self.assertNotIn('--home-v6-desktop-side-width: clamp(21.5rem, 24vw, 24.75rem);', css)
+        self.assertNotIn('--home-v6-desktop-side-width: clamp(22.75rem, 25vw, 26.5rem);', css)
 
     def test_v6_css_uses_single_and_stack_reservation_layout_variants(self):
         css = _read_home_v6_css_bundle()

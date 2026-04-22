@@ -3079,10 +3079,6 @@ width: 100%;
 }
 
 @media (min-width: 1100px) {
-.home-v6-shell {
-    --home-v6-desktop-side-width: clamp(21.5rem, 24vw, 24.75rem);
-}
-
 .home-v6-mobile-summary,
 .home-v6-mobile-overlay,
 .home-v6-mobile-sheet,
@@ -3136,10 +3132,6 @@ padding-left: 0.9rem;
 }
 
 @media (min-width: 1280px) {
-.home-v6-shell {
-    --home-v6-desktop-side-width: clamp(22.75rem, 25vw, 26.5rem);
-}
-
 .home-v6-main {
 grid-template-columns: minmax(0, 1fr) var(--home-v6-desktop-side-width);
         column-gap: var(--home-v6-panel-gap);
@@ -5200,59 +5192,59 @@ grid-template-columns: minmax(0, 1fr);
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     width: 100%;
     align-items: center;
-    gap: 0.82rem;
+    column-gap: 0.72rem;
     min-width: 0;
     min-height: 100%;
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-copy {
-    flex: 1 1 auto;
     min-width: 0;
-    align-self: center;
+    width: 100%;
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {
-    width: 2.65rem;
-    height: 2.65rem;
-    min-width: 2.65rem;
-    min-height: 2.65rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    min-width: 2.4rem;
+    min-height: 2.4rem;
     border-radius: 1rem;
-    font-size: 1rem;
+    font-size: 0.92rem;
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-title="true"] {
     color: #0f172a;
-    display: -webkit-box;
+    display: block;
     overflow: hidden;
-    font-size: 1.05rem;
+    font-size: 0.98rem;
     font-weight: 900;
-    line-height: 1.22;
+    line-height: 1.2;
     letter-spacing: -0.03em;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    word-break: keep-all;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: initial;
 }
 
 .home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-star {
     position: relative;
     top: auto;
     right: auto;
-    width: 1.9rem;
-    height: 1.9rem;
-    min-width: 1.9rem;
-    min-height: 1.9rem;
+    width: 1.72rem;
+    height: 1.72rem;
+    min-width: 1.72rem;
+    min-height: 1.72rem;
     margin-top: 0;
-    margin-left: 0.14rem;
+    margin-left: 0;
     border-radius: 999px;
     border-color: rgba(15, 23, 42, 0.08);
     background: rgba(255, 255, 255, 0.98);
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
     transform: none;
-    align-self: center;
+    justify-self: end;
     opacity: 1;
     pointer-events: auto;
 }
