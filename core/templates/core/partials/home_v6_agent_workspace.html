@@ -5,16 +5,6 @@
 >
     <div class="home-v6-card home-v6-agent-card">
         <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true">
-            <div class="home-v6-agent-rail-head">
-                <div class="home-v6-agent-brand-copy">
-                    <h2 class="home-v6-agent-title">
-                        <span>{{ agent_workspace.workspace_title|default:'AI 교무비서' }}</span>
-                        <span class="home-v6-agent-title-divider" aria-hidden="true">·</span>
-                        <span class="home-v6-agent-brand-subtitle">서비스와 대화</span>
-                    </h2>
-                </div>
-            </div>
-
             <label class="home-v6-agent-rail-search" aria-label="서비스와 대화 찾기">
                 <span class="home-v6-agent-rail-search-icon" aria-hidden="true">
                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -60,13 +50,17 @@
             </template>
         </aside>
 
-        <div class="home-v6-agent-main">
+        <div class="home-v6-agent-main" :class="{ 'is-hero-open': agentHeroExpanded }">
             <div class="home-v6-agent-main-head">
 
                 <!-- 커맨드 히어로 (첫 진입 / 재확장 시) -->
                 <div class="home-v6-cmd-hero" x-cloak x-show="agentHeroExpanded">
                     <div class="home-v6-cmd-hero-icon" aria-hidden="true">
-                        <i class="fa-solid fa-sparkles"></i>
+                        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2.5l1.8 5.2 5.2 1.8-5.2 1.8L12 16.5l-1.8-5.2L5 9.5l5.2-1.8L12 2.5z"/>
+                            <path d="M18.5 14l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" opacity="0.75"/>
+                            <path d="M5 16l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6L5 16z" opacity="0.6"/>
+                        </svg>
                     </div>
                     <h2 class="home-v6-cmd-hero-title">무엇을 도와드릴까요?</h2>
                     <div class="home-v6-cmd-bar">
