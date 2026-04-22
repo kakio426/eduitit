@@ -1,3 +1,6 @@
+from datetime import date
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
 
@@ -92,6 +95,17 @@ class HomeAgentRegistryTests(TestCase):
         self.assertIn('legal_goal_options', ui_options)
         self.assertIn('scene_options', ui_options)
         self.assertIn('counterpart_options', ui_options)
+
+    @patch("core.home_agent_registry._home_agent_today", return_value=date(2026, 6, 5))
+    def test_notice_provider_includes_date_based_today_recommendation(self, _mock_today):
+        definition = get_home_agent_service_definition('notice')
+
+        starter_items = resolve_home_agent_starter_items(definition, request=self._request())
+
+        self.assertTrue(starter_items)
+        self.assertEqual(starter_items[0]["label"], "오늘 추천")
+        self.assertIn("우산", starter_items[0]["text"])
+        self.assertIn("주말 전에 개인 물건도 살펴봐 주세요.", starter_items[0]["text"])
 
     def test_conversation_actions_are_resolved_from_registry_contract(self):
         shared_actions = resolve_home_agent_conversation_actions('shared')

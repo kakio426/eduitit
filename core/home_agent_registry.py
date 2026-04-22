@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Callable
 
 
@@ -38,6 +39,31 @@ class HomeAgentServiceDefinition:
 
 def _starter_items(*items):
     return tuple(dict(item) for item in items)
+
+
+def _home_agent_today() -> date:
+    try:
+        from django.utils import timezone
+
+        return timezone.localdate()
+    except Exception:
+        return date.today()
+
+
+_NOTICE_SEASONAL_COPY_BY_MONTH: dict[int, str] = {
+    1: "겨울방학 중 생활 리듬과 안전수칙을 함께 확인해 주세요.",
+    2: "새 학년을 앞두고 필통과 실내화, 개인 준비물을 다시 확인해 주세요.",
+    3: "새 학기 준비물이 빠지지 않도록 이름표와 기본 학습도구를 다시 챙겨 주세요.",
+    4: "봄철 일교차가 큽니다. 얇은 겉옷과 개인 물병을 챙겨 주세요.",
+    5: "야외활동이 잦은 시기입니다. 모자와 물, 편한 복장을 준비해 주세요.",
+    6: "비 오는 날이 늘어납니다. 작은 우산과 여벌 양말을 챙겨 주세요.",
+    7: "더운 날씨가 이어집니다. 매일 물병과 모자를 챙겨 주세요.",
+    8: "개학을 앞두고 실내화와 학습 준비물을 다시 확인해 주세요.",
+    9: "아침저녁이 선선합니다. 얇은 겉옷과 개인 물병을 준비해 주세요.",
+    10: "체험학습과 바깥활동이 잦습니다. 모자와 편한 운동화를 챙겨 주세요.",
+    11: "감기예방을 위해 개인 물병과 여분 마스크를 챙겨 주세요.",
+    12: "학기 마무리 기간입니다. 개인 물품과 안내장을 함께 확인해 주세요.",
+}
 
 
 HOME_AGENT_SERVICE_DEFINITIONS = (
@@ -673,6 +699,33 @@ def _build_teacher_law_starter_items(*, definition: HomeAgentServiceDefinition, 
     return starter_items or _clone_starter_items(definition)
 
 
+def _build_notice_starter_items(*, definition: HomeAgentServiceDefinition, request=None) -> list[dict]:
+    today = _home_agent_today()
+    seasonal_copy = _NOTICE_SEASONAL_COPY_BY_MONTH.get(
+        today.month,
+        "오늘 필요한 준비물과 안내장을 함께 확인해 주세요.",
+    )
+    if today.weekday() == 0 and today.month not in {1, 2, 8}:
+        seasonal_copy = f"{seasonal_copy} 이번 주 준비물도 함께 확인해 주세요."
+    elif today.weekday() == 4:
+        seasonal_copy = f"{seasonal_copy} 주말 전에 개인 물건도 살펴봐 주세요."
+
+    starter_items = [
+        {
+            "label": "오늘 추천",
+            "text": seasonal_copy,
+        }
+    ]
+    seen_texts = {seasonal_copy}
+    for item in _clone_starter_items(definition):
+        text = str(item.get("text") or "").strip()
+        if not text or text in seen_texts:
+            continue
+        seen_texts.add(text)
+        starter_items.append(item)
+    return starter_items
+
+
 def _build_teacher_law_ui_options(*, definition: HomeAgentServiceDefinition, request=None) -> dict:
     try:
         from teacher_law.services.query_normalizer import get_input_options
@@ -747,7 +800,7 @@ UiOptionsProvider = Callable[..., dict]
 
 
 HOME_AGENT_STARTER_PROVIDERS: dict[str, StarterProvider] = {
-    "notice": lambda *, definition, request=None: _clone_starter_items(definition),
+    "notice": _build_notice_starter_items,
     "schedule": lambda *, definition, request=None: _clone_starter_items(definition),
     "teacher-law": _build_teacher_law_starter_items,
     "reservation": lambda *, definition, request=None: _build_reservation_starter_items(request=request),

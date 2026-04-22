@@ -127,6 +127,17 @@
 
                         <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>
 
+                        <div class="home-v6-cmd-starter-list" x-cloak x-show="!activeAiHasVisibleConversation() && activeAiHasStarterChips()">
+                            <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
+                                <button
+                                    type="button"
+                                    class="home-v6-cmd-starter-chip"
+                                    @click="runActiveAiStarter(item)"
+                                    x-text="item.label"
+                                ></button>
+                            </template>
+                        </div>
+
                         <div class="home-v6-cmd-actions" role="toolbar" aria-label="AI 교무비서 유틸리티">
                             <button
                                 class="home-v6-cmd-action"
@@ -827,12 +838,22 @@
                                         </div>
                                         <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('counterpart')" x-text="executionFieldError('counterpart')"></p>
                                     </div>
+
+                                    <div class="home-v6-agent-law-inline-cta">
+                                        <button
+                                            type="button"
+                                            class="home-v6-agent-ai-primary-cta"
+                                            :disabled="isAgentExecuting || isAgentLoading"
+                                            @click="executeAgentService()"
+                                            x-text="isAgentExecuting ? '답변 준비 중' : '답변 보기'"
+                                        ></button>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="home-v6-agent-ai-guided-block" x-cloak x-show="aiMessengerIsFlow('guided') && activeAiExecutionVariant() === 'teacher-law' && (teacherLawHasExecution() || previewResultLines().length)">
                                 <div class="home-v6-agent-ai-action-row">
-                                    <button type="button" class="home-v6-agent-ai-action-chip" x-cloak x-show="teacherLawHasExecution()" :disabled="isAgentExecuting || isAgentLoading" @click="executeAgentService()" x-text="isAgentExecuting ? '저장 중' : teacherLawPrimaryActionLabel()"></button>
+                                    <button type="button" class="home-v6-agent-ai-action-chip" x-cloak x-show="teacherLawHasExecution() && !teacherLawNeedsSetup()" :disabled="isAgentExecuting || isAgentLoading" @click="executeAgentService()" x-text="isAgentExecuting ? '저장 중' : teacherLawPrimaryActionLabel()"></button>
                                     <button type="button" class="home-v6-agent-ai-action-chip" x-cloak x-show="activeAiCanCopyDraft()" @click="copyActiveAiDraft()">복사</button>
                                     <a class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link" x-cloak x-show="activeAiHasOpenLink()" :href="activeAiOpenHref()" x-text="activeAiOpenLabel()"></a>
                                 </div>
