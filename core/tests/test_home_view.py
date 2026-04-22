@@ -1826,11 +1826,11 @@ class HomeV2ViewTest(TestCase):
         favorites_end = content.index('data-home-v6-sns-panel="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
-        self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
+        self.assertIn('title="반짝반짝 우리반 알림판">반짝반짝 우리반 알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
         self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
-        self.assertNotIn('data-home-v6-service-icon="true"', favorites_block)
+        self.assertIn('data-home-v6-service-icon="true"', favorites_block)
 
     def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
         self.assertEqual(build_favorite_service_title("반짝반짝 우리반 알림판"), "알림판")
@@ -4519,13 +4519,15 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('opacity: 1;', css)
         self.assertIn('pointer-events: auto;', css)
 
-    def test_v6_css_uses_text_first_favorites_cards(self):
+    def test_v6_css_uses_roomier_favorites_cards(self):
         css = _read_home_v6_css_bundle()
 
+        self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorites-grid {', css)
+        self.assertIn('grid-template-columns: repeat(2, minmax(0, 1fr));', css)
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {', css)
         self.assertIn('align-items: center;', css)
-        self.assertIn('font-size: 1.16rem;', css)
-        self.assertNotIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
+        self.assertIn('font-size: 1.05rem;', css)
+        self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
 
     def test_v6_css_keeps_reservation_split_grid_from_stretching_date_field(self):
         css = _read_home_v6_css_bundle()

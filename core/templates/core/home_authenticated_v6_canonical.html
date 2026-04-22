@@ -329,6 +329,7 @@
                                 <div class="home-v6-favorites-grid" data-home-v6-favorites-grid="true">
                                     {% for item in favorite_items %}
                                     {% with favorite_title=item.favorite_title|default:item.favorite_full_title %}
+                                    {% with favorite_display_title=item.favorite_full_title|default:favorite_title %}
                                     <div class="home-v6-favorite-card product-card"
                                         data-home-v6-favorite-card="true"
                                         data-home-v6-rail-item="true"
@@ -341,8 +342,11 @@
                                         role="button"
                                         tabindex="0">
                                         <div class="home-v6-favorite-card-body">
+                                            <div class="home-v6-service-icon-tone flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl text-base" data-home-v6-service-icon="true" data-home-accent="{{ item.home_accent_token|default:'external' }}">
+                                                <i class="{{ item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                            </div>
                                             <div class="home-v6-favorite-card-copy">
-                                                <p class="home-v6-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>
+                                                <p class="home-v6-favorite-card-title" data-home-v6-service-title="true" title="{{ item.favorite_full_title }}">{{ favorite_display_title }}</p>
                                             </div>
                                             {% if home_user_mode == 'authenticated' %}
                                             <button type="button"
@@ -358,6 +362,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    {% endwith %}
                                     {% endwith %}
                                     {% endfor %}
                                 </div>
