@@ -20,8 +20,8 @@ from consent.models import (
     SignatureRecipient,
     SignatureRequest,
 )
-from consent.services import PdfRuntimeUnavailable, generate_recipient_evidence_pdf, generate_summary_pdf
-from consent.views import DEFAULT_LEGAL_NOTICE
+from consent.services import PdfRuntimeUnavailable, generate_merged_pdf, generate_recipient_evidence_pdf, generate_summary_pdf
+from consent.views import CONSENT_SHARED_LOOKUP_SESSION_KEY, DEFAULT_LEGAL_NOTICE
 from core.models import UserPolicyConsent
 from core.models import TeacherActivityEvent, TeacherActivityProfile
 from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
@@ -92,6 +92,97 @@ class ConsentFlowTests(TestCase):
             parent_name="홍길동",
             phone_number="",
         )
+
+    def _create_ready_guardian_request(
+        self,
+        *,
+        source_label="guardian-source-page",
+        request_title="guardian-ready-request",
+        student_name="가나다",
+        parent_name="홍길동",
+        phone_number="010-1234-5678",
+    ):
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title=f"{request_title}-document",
+            original_file=SimpleUploadedFile(
+                f"{request_title}.pdf",
+                build_test_pdf_bytes([source_label]),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title=request_title,
+            audience_type=SignatureRequest.AUDIENCE_GUARDIAN,
+            consent_text_version="v1",
+            status=SignatureRequest.STATUS_SENT,
+            sent_at=timezone.now(),
+        )
+        recipient = SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name=student_name,
+            parent_name=parent_name,
+            phone_number=phone_number,
+        )
+        return request_obj, recipient
+
+    def _add_standard_document_positions(self, request_obj):
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=48,
+            y=56,
+            width=120,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=180,
+            y=96,
+            width=80,
+            height=80,
+            mark_type=SignaturePosition.MARK_TYPE_CHECKMARK,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=40,
+            y=48,
+            width=120,
+            height=40,
+            mark_type=SignaturePosition.MARK_TYPE_SIGNATURE,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+
+    def _assert_merged_pdf_has_positioned_submission(self, pdf_bytes, *, source_label, signer_name):
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError:
+            self.skipTest("pypdf unavailable")
+
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertEqual(len(reader.pages), 1)
+        merged_text = reader.pages[0].extract_text() or ""
+        self.assertIn(source_label, merged_text)
+        self.assertIn(signer_name, merged_text)
+
+        content_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
+        self.assertRegex(
+            content_stream,
+            r"200(?:\.0+)? 132(?:\.0+)? m\s+216(?:\.0+)? 112(?:\.0+)? l\s+244(?:\.0+)? 156(?:\.0+)? l",
+        )
+        self.assertRegex(content_stream, r"44(?:\.0+)? 52(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
+        self.assertRegex(content_stream, r"32(?:\.0+)? 0 0 32(?:\.0+)? 84(?:\.0+)? 52(?:\.0+)? cm")
 
     def test_access_token_generated(self):
         self.assertTrue(self.recipient.access_token)
@@ -284,8 +375,9 @@ class ConsentFlowTests(TestCase):
             response,
             reverse("consent:shared_lookup", kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token}),
         )
+        self.assertContains(response, "학부모 화면 열기")
         self.assertContains(response, "전체 링크 복사")
-        self.assertContains(response, "안내문+전체 링크 복사")
+        self.assertContains(response, "전체 안내문 복사")
 
     def test_sign_submission_updates_status(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -355,7 +447,7 @@ class ConsentFlowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "이 문서는 이름과 체크만 자동으로 넣습니다.")
+        self.assertContains(response, "이름, 체크만 반영합니다.")
         self.assertNotContains(response, 'id="signaturePad"', html=False)
 
     def test_sign_page_uses_collapsible_legal_notice_and_preview_overlay(self):
@@ -373,6 +465,74 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "하단 고지")
         self.assertContains(response, "data-preview-overlay")
         self.assertContains(response, "data-preview-marks")
+
+    def test_sign_page_uses_simple_result_selector_copy(self):
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "동의서")
+        self.assertContains(response, "결과")
+        self.assertNotContains(response, "동의 선택")
+        self.assertNotContains(response, "문서에 동의 결과를 반영하고 제출합니다.")
+        self.assertNotContains(response, "비동의 사유를 함께 적고 제출합니다.")
+        self.assertNotContains(response, "문서 확인값")
+        self.assertNotContains(response, "SHA-256")
+        self.assertNotContains(response, "제출 방식")
+        self.assertNotContains(response, "제출 기록이 남습니다.")
+        self.assertContains(response, "문서 다운로드")
+
+    def test_direct_link_sign_page_keeps_phone_field_when_phone_exists(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "본인 확인")
+        self.assertContains(response, 'name="phone_last4"', html=False)
+
+    def test_shared_lookup_hides_phone_field_on_sign_page(self):
+        self.recipient.phone_number = "010-1234-5678"
+        self.recipient.save(update_fields=["phone_number"])
+        self.request_obj.status = SignatureRequest.STATUS_SENT
+        self.request_obj.sent_at = timezone.now()
+        self.request_obj.save(update_fields=["status", "sent_at"])
+
+        lookup_url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": self.request_obj.shared_lookup_token},
+        )
+        response = self.client.post(
+            lookup_url,
+            {
+                "student_name": "가나다",
+                "phone_last4": "5678",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token}),
+            fetch_redirect_response=False,
+        )
+
+        sign_response = self.client.get(
+            reverse("consent:sign", kwargs={"token": self.recipient.access_token})
+        )
+        self.assertEqual(sign_response.status_code, 200)
+        self.assertNotContains(sign_response, 'name="phone_last4"', html=False)
+        self.assertNotContains(sign_response, "등록된 연락처 끝 4자리")
 
     def test_sign_page_shows_signer_name_input_when_signer_name_mark_exists(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -396,10 +556,11 @@ class ConsentFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="signer_name"', html=False)
-        self.assertContains(response, "학부모 이름")
+        self.assertContains(response, "서명자 이름")
+        self.assertNotContains(response, "학부모 이름")
         self.assertContains(response, "data-preview-signer-input-id")
 
-    def test_sign_submission_updates_parent_name_from_signer_name_input(self):
+    def test_sign_submission_stores_signer_name_override_without_overwriting_parent_name(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
         self.request_obj.sent_at = timezone.now()
         self.request_obj.save(update_fields=["status", "sent_at"])
@@ -438,7 +599,8 @@ class ConsentFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("consent:complete", kwargs={"token": self.recipient.access_token}))
         self.recipient.refresh_from_db()
-        self.assertEqual(self.recipient.parent_name, "김학부모")
+        self.assertEqual(self.recipient.parent_name, "홍길동")
+        self.assertEqual(self.recipient.signer_name_override, "김학부모")
 
 
     def test_sign_submission_with_phone_requires_last4(self):
@@ -574,6 +736,136 @@ class ConsentFlowTests(TestCase):
                 recipient=self.recipient,
                 event_type=ConsentAuditLog.EVENT_LOOKUP_SUCCESS,
             ).exists()
+        )
+        session_entry = self.client.session.get(CONSENT_SHARED_LOOKUP_SESSION_KEY, {}).get(self.recipient.access_token)
+        self.assertEqual(session_entry["recipient_id"], self.recipient.id)
+        self.assertEqual(session_entry["phone_last4"], "5678")
+
+    def test_shared_lookup_submission_uses_verified_lookup_without_reentering_phone(self):
+        request_obj, recipient = self._create_ready_guardian_request(request_title="shared-lookup-submit")
+        self._add_standard_document_positions(request_obj)
+
+        lookup_url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": request_obj.shared_lookup_token},
+        )
+        lookup_response = self.client.post(
+            lookup_url,
+            {
+                "student_name": recipient.student_name,
+                "phone_last4": "5678",
+            },
+        )
+
+        self.assertRedirects(
+            lookup_response,
+            reverse("consent:sign", kwargs={"token": recipient.access_token}),
+            fetch_redirect_response=False,
+        )
+
+        sign_response = self.client.post(
+            reverse("consent:sign", kwargs={"token": recipient.access_token}),
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signer_name": "전체링크 서명자",
+                "signature_data": SIGNATURE_DATA_URL,
+            },
+            HTTP_X_FORWARDED_FOR="203.0.113.21",
+            HTTP_USER_AGENT="ConsentSharedLookup/1.0",
+        )
+
+        self.assertRedirects(
+            sign_response,
+            reverse("consent:complete", kwargs={"token": recipient.access_token}),
+        )
+        recipient.refresh_from_db()
+        self.assertEqual(recipient.identity_assurance, SignatureRecipient.IDENTITY_PHONE_LAST4)
+        self.assertIsNotNone(recipient.verified_at)
+        self.assertEqual(recipient.verified_ip_address, "203.0.113.21")
+        self.assertEqual(recipient.signer_name_override, "전체링크 서명자")
+        self.assertNotIn(
+            recipient.access_token,
+            self.client.session.get(CONSENT_SHARED_LOOKUP_SESSION_KEY, {}),
+        )
+        verify_log = ConsentAuditLog.objects.filter(
+            request=request_obj,
+            recipient=recipient,
+            event_type=ConsentAuditLog.EVENT_VERIFY_SUCCESS,
+        ).latest("created_at")
+        self.assertEqual(verify_log.event_meta.get("verification_method"), "shared_lookup")
+
+    def test_direct_link_submission_merged_pdf_places_name_check_and_signature(self):
+        request_obj, recipient = self._create_ready_guardian_request(
+            source_label="direct-merged-source",
+            request_title="direct-merged-request",
+        )
+        self._add_standard_document_positions(request_obj)
+
+        response = self.client.post(
+            reverse("consent:sign", kwargs={"token": recipient.access_token}),
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "phone_last4": "5678",
+                "signer_name": "직접 서명자",
+                "signature_data": SIGNATURE_DATA_URL,
+            },
+            HTTP_X_FORWARDED_FOR="203.0.113.31",
+            HTTP_USER_AGENT="ConsentDirectFlow/1.0",
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("consent:complete", kwargs={"token": recipient.access_token}),
+        )
+        merged_file = generate_merged_pdf(request_obj)
+        self._assert_merged_pdf_has_positioned_submission(
+            merged_file.read(),
+            source_label="direct-merged-source",
+            signer_name="직접 서명자",
+        )
+
+    def test_shared_lookup_submission_merged_pdf_places_name_check_and_signature(self):
+        request_obj, recipient = self._create_ready_guardian_request(
+            source_label="lookup-merged-source",
+            request_title="lookup-merged-request",
+        )
+        self._add_standard_document_positions(request_obj)
+
+        lookup_url = reverse(
+            "consent:shared_lookup",
+            kwargs={"shared_lookup_token": request_obj.shared_lookup_token},
+        )
+        self.client.post(
+            lookup_url,
+            {
+                "student_name": recipient.student_name,
+                "phone_last4": "5678",
+            },
+        )
+
+        response = self.client.post(
+            reverse("consent:sign", kwargs={"token": recipient.access_token}),
+            {
+                "decision": "agree",
+                "decline_reason": "",
+                "signer_name": "전체링크 서명자",
+                "signature_data": SIGNATURE_DATA_URL,
+            },
+            HTTP_X_FORWARDED_FOR="203.0.113.41",
+            HTTP_USER_AGENT="ConsentSharedLookupFlow/1.0",
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("consent:complete", kwargs={"token": recipient.access_token}),
+        )
+        merged_file = generate_merged_pdf(request_obj)
+        self._assert_merged_pdf_has_positioned_submission(
+            merged_file.read(),
+            source_label="lookup-merged-source",
+            signer_name="전체링크 서명자",
         )
 
     def test_shared_lookup_shows_generic_error_on_no_match(self):
@@ -791,6 +1083,36 @@ class ConsentFlowTests(TestCase):
         response = self.client.get(url, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "PDF 엔진(reportlab, pypdf)이 준비되지 않아 요약 PDF를 생성할 수 없습니다.")
+
+    @patch("consent.views.generate_merged_pdf")
+    def test_merged_pdf_download(self, mocked_generate_merged_pdf):
+        mocked_generate_merged_pdf.return_value = ContentFile(
+            b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF",
+            name="merged.pdf",
+        )
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_merged", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/pdf", response["Content-Type"])
+        disposition = response.get("Content-Disposition", "")
+        self.assertIn("attachment;", disposition)
+        self.assertIn("%EC%99%84%EC%84%B1%EB%B3%B8", disposition)
+
+    @patch("consent.views.generate_merged_pdf", side_effect=PdfRuntimeUnavailable("missing reportlab, pypdf"))
+    def test_merged_pdf_download_shows_error_when_pdf_runtime_missing(self, mocked_generate_merged_pdf):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_merged", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PDF 엔진(reportlab, pypdf)이 준비되지 않아 완성본 PDF를 생성할 수 없습니다.")
+
+    def test_merged_pdf_download_requires_completed_response(self):
+        self.client.login(username="teacher", password="pw123456")
+        url = reverse("consent:download_merged", kwargs={"request_id": self.request_obj.request_id})
+        response = self.client.get(url, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "응답 완료 후 완성본 PDF를 받을 수 있습니다.")
 
     def test_sign_link_expired(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -1032,7 +1354,8 @@ class ConsentFlowTests(TestCase):
         url = reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "안내문+링크 복사")
+        self.assertContains(response, "개별 링크 복사")
+        self.assertContains(response, "개별 안내문 복사")
         self.assertContains(response, "data:image/png;base64,")
 
     def test_detail_shows_inline_document_preview_panel(self):
@@ -1043,6 +1366,8 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "data-consent-document-preview")
         self.assertContains(response, "data-preview-pagination")
         self.assertContains(response, reverse("consent:document_source", kwargs={"request_id": self.request_obj.request_id}))
+        self.assertContains(response, reverse("consent:download_merged", kwargs={"request_id": self.request_obj.request_id}))
+        self.assertNotContains(response, reverse("consent:download_summary_pdf", kwargs={"request_id": self.request_obj.request_id}))
 
     def test_sign_page_shows_document_preview_pagination_controls(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -1522,19 +1847,20 @@ class ConsentEvidenceTests(TestCase):
             phone_number="",
         )
 
-    def test_sign_page_shows_document_evidence_block(self):
+    def test_sign_page_keeps_document_preview_and_legal_notice(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
         self.request_obj.sent_at = timezone.now()
         self.request_obj.save(update_fields=["status", "sent_at"])
         url = reverse("consent:sign", kwargs={"token": self.recipient.access_token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SHA-256")
-        self.assertContains(response, "abc123")
+        self.assertContains(response, "문서 다운로드")
         self.assertContains(response, "data-consent-document-preview")
         self.assertContains(response, "consent/pdf_preview.js")
-        self.assertContains(response, "첨부 문서 미리보기")
+        self.assertContains(response, "동의서")
         self.assertContains(response, "법적 고지")
+        self.assertNotContains(response, "문서 확인값")
+        self.assertNotContains(response, "제출 방식")
 
     def test_sign_audit_log_contains_document_evidence(self):
         self.request_obj.status = SignatureRequest.STATUS_SENT
@@ -1755,6 +2081,99 @@ class ConsentEvidenceTests(TestCase):
         )
         self.assertRegex(second_stream, r"44(?:\.0+)? 52(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
         self.assertRegex(second_stream, r"32(?:\.0+)? 0 0 32(?:\.0+)? 84(?:\.0+)? 52(?:\.0+)? cm")
+
+    def test_generate_merged_pdf_keeps_completed_source_documents_and_applies_marks(self):
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError:
+            self.skipTest("pypdf unavailable")
+
+        document = SignatureDocument.objects.create(
+            created_by=self.teacher,
+            title="merged-preview-source",
+            original_file=SimpleUploadedFile(
+                "merged_preview_source.pdf",
+                build_test_pdf_bytes(["merged-source-page"]),
+                content_type="application/pdf",
+            ),
+            file_type=SignatureDocument.FILE_TYPE_PDF,
+        )
+        request_obj = SignatureRequest.objects.create(
+            created_by=self.teacher,
+            document=document,
+            title="merged-preview-test",
+            consent_text_version="v1",
+        )
+        SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="Student A",
+            parent_name="Guardian A",
+            phone_number="010-3333-4444",
+            status=SignatureRecipient.STATUS_SIGNED,
+            decision=SignatureRecipient.DECISION_AGREE,
+            signature_data=SIGNATURE_DATA_URL,
+            signed_at=timezone.now(),
+            identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
+            verified_at=timezone.now(),
+            verified_ip_address="203.0.113.60",
+            ip_address="203.0.113.61",
+            user_agent="MergedPreviewAgent/1.0",
+        )
+        SignatureRecipient.objects.create(
+            request=request_obj,
+            student_name="Student B",
+            parent_name="Guardian B",
+            phone_number="010-3333-5555",
+            status=SignatureRecipient.STATUS_SIGNED,
+            decision=SignatureRecipient.DECISION_AGREE,
+            signature_data=SIGNATURE_DATA_URL,
+            signed_at=timezone.now(),
+            identity_assurance=SignatureRecipient.IDENTITY_PHONE_LAST4,
+            verified_at=timezone.now(),
+            verified_ip_address="203.0.113.62",
+            ip_address="203.0.113.63",
+            user_agent="MergedPreviewAgent/1.0",
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=40,
+            y=48,
+            width=160,
+            height=32,
+            mark_type=SignaturePosition.MARK_TYPE_NAME,
+            text_source=SignaturePosition.TEXT_SOURCE_STUDENT_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+        SignaturePosition.objects.create(
+            request=request_obj,
+            page=1,
+            x=40,
+            y=96,
+            width=120,
+            height=40,
+            mark_type=SignaturePosition.MARK_TYPE_SIGNATURE,
+            text_source=SignaturePosition.TEXT_SOURCE_SIGNER_NAME,
+            check_rule=SignaturePosition.CHECK_RULE_AGREE,
+        )
+
+        merged_file = generate_merged_pdf(request_obj)
+        pdf_bytes = merged_file.read()
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertEqual(len(reader.pages), 2)
+
+        first_text = reader.pages[0].extract_text() or ""
+        second_text = reader.pages[1].extract_text() or ""
+        self.assertIn("merged-source-page", first_text)
+        self.assertIn("Student A", first_text)
+        self.assertIn("merged-source-page", second_text)
+        self.assertIn("Student B", second_text)
+
+        first_stream = reader.pages[0].get_contents().get_data().decode("latin-1", errors="ignore")
+        second_stream = reader.pages[1].get_contents().get_data().decode("latin-1", errors="ignore")
+        self.assertRegex(first_stream, r"44(?:\.0+)? 100(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
+        self.assertRegex(second_stream, r"44(?:\.0+)? 100(?:\.0+)? 112(?:\.0+)? 32(?:\.0+)? re")
 
 
 class ConsentSharedRosterTests(TestCase):

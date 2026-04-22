@@ -69,6 +69,9 @@ def _decision_label(recipient: SignatureRecipient) -> str:
 
 
 def _resolved_signer_name(recipient: SignatureRecipient) -> str:
+    override_name = (recipient.signer_name_override or "").strip()
+    if override_name:
+        return override_name
     if recipient.request.is_guardian_audience:
         return (recipient.parent_name or recipient.student_name or "").strip()
     return (recipient.display_name or recipient.student_name or recipient.parent_name or "").strip()
@@ -602,7 +605,7 @@ def _build_recipient_evidence_section_pdf(
     pdf_title_seed = (request.title or request.document.title or "동의서 증빙").strip() or "동의서 증빙"
     c.setTitle(f"{pdf_title_seed} - {recipient.student_name} 증빙")
     c.setAuthor("Eduitit")
-    c.setSubject("학부모 동의서 개별 제출 증빙")
+    c.setSubject("동의서 개별 제출 증빙")
 
     def draw_wrapped(label: str, value: str, y: float, *, indent: float = 34, size: int = 9, line_gap: int = 12):
         lines = _wrap_pdf_lines(f"{label}: {value or '-'}", font_name, size, width - (indent + 28))
@@ -636,6 +639,7 @@ def _build_recipient_evidence_section_pdf(
         ("안내문 파일크기", evidence.get("document_size", "-")),
         ("학생명", recipient.student_name or "-"),
         ("보호자명", recipient.parent_name or "-"),
+        ("서명자명", _resolved_signer_name(recipient) or "-"),
         ("증빙 수준", _identity_assurance_label(recipient)),
         ("본인확인 시각", _format_dt(recipient.verified_at)),
         ("본인확인 IP", recipient.verified_ip_address or "-"),
@@ -682,6 +686,31 @@ def _build_recipient_evidence_section_pdf(
     return packet.read()
 
 
+def _build_resolved_source_pdf_bytes(
+    recipient: SignatureRecipient,
+    *,
+    source_pdf_bytes: bytes,
+    pdf_title: str = "",
+) -> bytes:
+    if not source_pdf_bytes:
+        return b""
+
+    overlay_marks = _build_resolved_overlay_marks(recipient)
+    if not overlay_marks:
+        return source_pdf_bytes
+
+    signature_data = recipient.signature_data or ""
+    if not any(mark["mark_type"] == DOCUMENT_MARK_TYPE_SIGNATURE for mark in overlay_marks):
+        signature_data = ""
+
+    return build_signed_pdf_bytes(
+        source_pdf_bytes,
+        marks=overlay_marks,
+        signature_data=signature_data,
+        pdf_title=pdf_title,
+    )
+
+
 def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFile:
     _ensure_pdf_runtime()
 
@@ -698,15 +727,11 @@ def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFil
         evidence = _build_document_evidence(request, original_bytes)
         evidence_section_bytes = _build_recipient_evidence_section_pdf(recipient, evidence)
         title_seed = (request.title or request.document.title or "동의서 제출 증빙").strip() or "동의서 제출 증빙"
-        resolved_source_bytes = source_pdf_bytes
-        overlay_marks = _build_resolved_overlay_marks(recipient)
-        if resolved_source_bytes and overlay_marks:
-            resolved_source_bytes = build_signed_pdf_bytes(
-                resolved_source_bytes,
-                marks=overlay_marks,
-                signature_data=recipient.signature_data or "",
-                pdf_title=f"{title_seed} - 제출본",
-            )
+        resolved_source_bytes = _build_resolved_source_pdf_bytes(
+            recipient,
+            source_pdf_bytes=source_pdf_bytes,
+            pdf_title=f"{title_seed} - 제출본",
+        )
         merged_bytes = _merge_pdf_bytes(
             resolved_source_bytes,
             evidence_section_bytes,
@@ -724,4 +749,67 @@ def generate_recipient_evidence_pdf(recipient: SignatureRecipient) -> ContentFil
 
 
 def generate_merged_pdf(request: SignatureRequest, include_decline_summary: bool = False) -> ContentFile:
-    return generate_summary_pdf(request)
+    _ensure_pdf_runtime()
+    recipients = list(
+        request.recipients.filter(
+            status__in=(
+                SignatureRecipient.STATUS_SIGNED,
+                SignatureRecipient.STATUS_DECLINED,
+            )
+        ).order_by("student_name", "id")
+    )
+    if not recipients:
+        raise ValueError("merged pdf has no completed recipients")
+
+    try:
+        from pypdf import PdfReader, PdfWriter
+
+        original_bytes = b""
+        source_pdf_bytes = normalize_pdf_bytes(get_document_pdf_bytes(request.document))
+        title_seed = (request.title or request.document.title or "동의서 제출 결과").strip() or "동의서 제출 결과"
+
+        writer = PdfWriter()
+        added_pages = 0
+
+        for recipient in recipients:
+            recipient_pdf_bytes = _build_resolved_source_pdf_bytes(
+                recipient,
+                source_pdf_bytes=source_pdf_bytes,
+                pdf_title=f"{title_seed} - {recipient.student_name} 제출본",
+            )
+            recipient_reader = PdfReader(io.BytesIO(recipient_pdf_bytes))
+            for page in recipient_reader.pages:
+                writer.add_page(page)
+                added_pages += 1
+
+        if include_decline_summary:
+            try:
+                original_bytes = get_document_original_bytes(request.document)
+            except Exception:
+                logger.exception("[consent] merged pdf summary source load failed request_id=%s", request.request_id)
+            evidence = _build_document_evidence(request, original_bytes)
+            summary_section_bytes = _build_summary_section_pdf(request, recipients, evidence)
+            summary_reader = PdfReader(io.BytesIO(summary_section_bytes))
+            for page in summary_reader.pages:
+                writer.add_page(page)
+                added_pages += 1
+
+        if added_pages == 0:
+            raise ValueError("merged pdf has no pages")
+
+        writer.add_metadata(
+            {
+                "/Producer": "Eduitit Consent",
+                "/Title": f"{title_seed} - 완성본",
+            }
+        )
+
+        output = io.BytesIO()
+        writer.write(output)
+        filename = f"merged_{request.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        return ContentFile(output.getvalue(), name=filename)
+    except ValueError:
+        raise
+    except Exception:
+        logger.exception("[consent] merged pdf generation failed request_id=%s", request.request_id)
+        raise

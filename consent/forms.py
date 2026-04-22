@@ -360,7 +360,7 @@ class ConsentSignForm(forms.Form):
         widget=forms.TextInput(
             attrs={
                 "class": CLAY_INPUT,
-                "placeholder": "학부모 이름",
+                "placeholder": "서명자 이름",
                 "autocomplete": "name",
             }
         ),

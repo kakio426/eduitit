@@ -35,7 +35,7 @@
       <a href="{% url 'handoff:dashboard' %}?return_to={{ request.get_full_path|urlencode }}" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">공용 명부 관리</a>
       <a href="{% url 'consent:document_source' request_id=consent_request.request_id %}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-4 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-gray-700 font-semibold">원본 안내문 열기</a>
       <a href="{% url 'consent:download_csv' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700">제출 현황 CSV 다운로드</a>
-      <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">제출 결과 PDF 다운로드</a>
+      <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}" class="min-h-11 px-4 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">완성본 PDF 다운로드</a>
     </div>
 
     <section class="mb-4 rounded-2xl border {% if position_count %}border-purple-200 bg-purple-50 text-purple-900{% else %}border-amber-200 bg-amber-50 text-amber-900{% endif %} px-4 py-4">
@@ -59,11 +59,11 @@
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p class="text-sm font-semibold text-indigo-900">학부모 전체 링크</p>
-          <p class="text-xs text-indigo-700 mt-1">학생 이름과 보호자 전화번호 뒤 4자리로 본인 동의서를 찾는 공용 진입 링크입니다.</p>
+          <p class="text-xs text-indigo-700 mt-1">학생 이름과 연락처 끝 4자리로 찾는 링크입니다.</p>
         </div>
         {% if links_released %}
         <a href="{{ shared_lookup_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i>학부모용 확인 화면 열기
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>학부모 화면 열기
         </a>
         {% else %}
         <button type="button" disabled class="inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 rounded-xl bg-indigo-200 text-indigo-500 font-semibold cursor-not-allowed">
@@ -80,7 +80,7 @@
           <textarea id="shared-lookup-message" class="hidden">{{ shared_lookup_copy_message }}</textarea>
           <div class="flex flex-wrap gap-2">
             <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="shared-lookup-link">전체 링크 복사</button>
-            <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="shared-lookup-message">안내문+전체 링크 복사</button>
+            <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="shared-lookup-message">전체 안내문 복사</button>
           </div>
         </div>
       </div>
@@ -140,11 +140,6 @@
     {% endif %}
     {% endif %}
 
-    <div class="mb-4 rounded-xl {% if is_guardian_audience %}border border-indigo-200 bg-indigo-50 text-indigo-900{% else %}border border-emerald-200 bg-emerald-50 text-emerald-900{% endif %} px-4 py-3 text-sm">
-      <p class="font-semibold mb-1">{% if is_guardian_audience %}학부모 안내문 복사 지원{% else %}서명 요청 복사 지원{% endif %}</p>
-      <p>각 수신자 카드의 <code>안내문+링크 복사</code> 버튼으로 메시지와 제출 링크를 함께 복사할 수 있습니다.</p>
-    </div>
-
     {% if source_file_available %}
     <section
       class="clay-card p-4 sm:p-5 mb-4"
@@ -162,7 +157,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <a href="{{ document_preview_url }}" target="_blank" rel="noopener noreferrer" class="min-h-11 px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-slate-700 text-sm font-semibold">새 탭으로 열기</a>
-          <a href="{% url 'consent:download_summary_pdf' request_id=consent_request.request_id %}" class="min-h-11 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">결과 PDF 받기</a>
+          <a href="{% url 'consent:download_merged' request_id=consent_request.request_id %}" class="min-h-11 px-3 py-2 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">완성본 PDF 받기</a>
         </div>
       </div>
       <div class="min-h-[320px] rounded-2xl border border-slate-200 bg-white p-3 overflow-auto flex items-center justify-center">
@@ -248,8 +243,8 @@
               <input id="sign-link-{{ r.id }}" type="text" readonly value="{{ row.sign_url }}" class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs">
               <textarea id="sign-message-{{ r.id }}" class="hidden">{{ row.copy_message }}</textarea>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700" data-copy-source="sign-link-{{ r.id }}">링크 복사</button>
-                <button type="button" class="js-copy px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700" data-copy-source="sign-message-{{ r.id }}">안내문+링크 복사</button>
+                <button type="button" class="js-copy px-3 py-1.5 rounded-lg shadow-clay-inner bg-bg-soft text-slate-700 text-xs font-semibold" data-copy-source="sign-link-{{ r.id }}">개별 링크 복사</button>
+                <button type="button" class="js-copy px-3 py-1.5 rounded-lg shadow-clay-inner bg-bg-soft text-slate-700 text-xs font-semibold" data-copy-source="sign-message-{{ r.id }}">개별 안내문 복사</button>
                 {% if r.status == "pending" or r.status == "verified" %}
                 <form method="post" action="{% url 'consent:regenerate_link' recipient_id=r.id %}">
                   {% csrf_token %}
@@ -268,8 +263,8 @@
             <div class="min-w-0 w-full space-y-2">
               <input type="text" readonly value="발송 시작 후 수신자 링크가 표시됩니다." class="w-full px-3 py-2 rounded-xl shadow-clay-inner bg-bg-soft text-xs text-gray-500">
               <div class="flex flex-wrap gap-2">
-                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-indigo-300 text-white text-xs font-semibold cursor-not-allowed">링크 복사</button>
-                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-purple-300 text-white text-xs font-semibold cursor-not-allowed">안내문+링크 복사</button>
+                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-500 text-xs font-semibold cursor-not-allowed">개별 링크 복사</button>
+                <button type="button" disabled class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-500 text-xs font-semibold cursor-not-allowed">개별 안내문 복사</button>
               </div>
             </div>
           </div>

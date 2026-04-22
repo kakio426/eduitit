@@ -51,6 +51,7 @@ from .policy_content import (
 from .schema import get_consent_schema_status
 from .services import (
     PdfRuntimeUnavailable,
+    generate_merged_pdf,
     generate_recipient_evidence_pdf,
     generate_summary_pdf,
     get_document_pdf_bytes,
@@ -75,6 +76,7 @@ SCHEMA_UNAVAILABLE_MESSAGE = (
 )
 
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
+CONSENT_SHARED_LOOKUP_SESSION_KEY = "consent_shared_lookup_verified"
 
 
 def _normalize_audience_type(value):
@@ -153,14 +155,15 @@ def _mark_payload_from_request(consent_request: SignatureRequest, page_sizes: li
 
 
 def _resolved_signer_name(recipient: SignatureRecipient) -> str:
+    override_name = (recipient.signer_name_override or "").strip()
+    if override_name:
+        return override_name
     if recipient.request.is_guardian_audience:
         return (recipient.parent_name or recipient.student_name or "").strip()
     return (recipient.display_name or recipient.student_name or recipient.parent_name or "").strip()
 
 
 def _signer_name_label(recipient: SignatureRecipient) -> str:
-    if recipient.request.is_guardian_audience:
-        return "학부모 이름"
     return "서명자 이름"
 
 
@@ -172,71 +175,6 @@ def _requires_signer_name_input(recipient: SignatureRecipient) -> bool:
         and position.text_source == SignaturePosition.TEXT_SOURCE_SIGNER_NAME
         for position in recipient.request.configured_positions
     )
-
-
-def _build_public_name_step_items(recipient: SignatureRecipient) -> list[dict]:
-    grouped: dict[tuple[str, str, bool], dict] = {}
-    student_name = (recipient.student_name or recipient.display_name or "").strip()
-    signer_name = _resolved_signer_name(recipient)
-
-    for position in recipient.request.configured_positions:
-        if position.mark_type != SignaturePosition.MARK_TYPE_NAME:
-            continue
-        if position.text_source == SignaturePosition.TEXT_SOURCE_STUDENT_NAME:
-            label = "학생 이름"
-            value = student_name
-            editable = False
-        else:
-            label = _signer_name_label(recipient)
-            value = signer_name
-            editable = recipient.request.is_guardian_audience
-        key = (label, value, editable)
-        item = grouped.setdefault(
-            key,
-            {
-                "label": label,
-                "value": value,
-                "editable": editable,
-                "count": 0,
-            },
-        )
-        item["count"] += 1
-
-    return list(grouped.values())
-
-
-def _build_public_check_step_items(recipient: SignatureRecipient) -> list[dict]:
-    counts = {
-        SignaturePosition.CHECK_RULE_AGREE: 0,
-        SignaturePosition.CHECK_RULE_DISAGREE: 0,
-        SignaturePosition.CHECK_RULE_ALWAYS: 0,
-    }
-    for position in recipient.request.configured_positions:
-        if position.mark_type != SignaturePosition.MARK_TYPE_CHECKMARK:
-            continue
-        counts[position.check_rule] = counts.get(position.check_rule, 0) + 1
-
-    items = []
-    labels = {
-        SignaturePosition.CHECK_RULE_AGREE: "동의하면 체크",
-        SignaturePosition.CHECK_RULE_DISAGREE: "비동의하면 체크",
-        SignaturePosition.CHECK_RULE_ALWAYS: "항상 체크",
-    }
-    for rule in (
-        SignaturePosition.CHECK_RULE_AGREE,
-        SignaturePosition.CHECK_RULE_DISAGREE,
-        SignaturePosition.CHECK_RULE_ALWAYS,
-    ):
-        count = counts.get(rule, 0)
-        if not count:
-            continue
-        items.append(
-            {
-                "label": labels[rule],
-                "count": count,
-            }
-        )
-    return items
 
 
 def _build_public_preview_marks(recipient: SignatureRecipient) -> list[dict]:
@@ -392,6 +330,56 @@ def _pop_workflow_seed(request, token, *, expected_action=""):
     if found_seed is not None:
         request.session.modified = True
     return found_seed
+
+
+def _peek_shared_lookup_verification(request, token):
+    token = (token or "").strip()
+    if not token:
+        return None
+    items = request.session.get(CONSENT_SHARED_LOOKUP_SESSION_KEY, {})
+    if not isinstance(items, dict):
+        return None
+    item = items.get(token)
+    if not isinstance(item, dict):
+        return None
+    return item
+
+
+def _store_shared_lookup_verification(request, recipient: SignatureRecipient, *, phone_last4: str):
+    items = request.session.get(CONSENT_SHARED_LOOKUP_SESSION_KEY, {})
+    if not isinstance(items, dict):
+        items = {}
+    items[recipient.access_token] = {
+        "recipient_id": recipient.id,
+        "phone_last4": (phone_last4 or "").strip(),
+    }
+    request.session[CONSENT_SHARED_LOOKUP_SESSION_KEY] = items
+    request.session.modified = True
+
+
+def _pop_shared_lookup_verification(request, token):
+    token = (token or "").strip()
+    if not token:
+        return None
+    found_item = None
+    items = request.session.get(CONSENT_SHARED_LOOKUP_SESSION_KEY, {})
+    if isinstance(items, dict):
+        found_item = items.pop(token, None)
+        request.session[CONSENT_SHARED_LOOKUP_SESSION_KEY] = items
+        if found_item is not None:
+            request.session.modified = True
+    return found_item
+
+
+def _has_shared_lookup_verification(request, recipient: SignatureRecipient) -> bool:
+    item = _peek_shared_lookup_verification(request, recipient.access_token)
+    if not item:
+        return False
+    if item.get("recipient_id") != recipient.id:
+        return False
+    if item.get("phone_last4") != (recipient.phone_last4 or ""):
+        return False
+    return True
 
 
 def _request_document_evidence(consent_request: SignatureRequest):
@@ -750,6 +738,15 @@ def _build_summary_download_filename(consent_request: SignatureRequest) -> str:
     safe_base = _sanitize_filename_base(title_seed, fallback="동의서_수합_요약")
     request_short = str(consent_request.request_id).split("-")[0]
     return f"{safe_base}_수합요약_{request_short}.pdf"
+
+
+def _build_merged_download_filename(consent_request: SignatureRequest) -> str:
+    title_seed = (consent_request.title or "").strip()
+    if title_seed.lower() in {"untitled", "untitled_document"} or title_seed in {"무제", "제목없음"}:
+        title_seed = (consent_request.document.title or "").strip()
+    safe_base = _sanitize_filename_base(title_seed, fallback="동의서_완성본")
+    request_short = str(consent_request.request_id).split("-")[0]
+    return f"{safe_base}_완성본_{request_short}.pdf"
 
 
 def _build_file_response(file_field, *, inline=True, filename_hint=""):
@@ -1978,7 +1975,63 @@ def consent_download_summary_pdf(request, request_id):
 
 @login_required
 def consent_download_merged(request, request_id):
-    return consent_download_summary_pdf(request, request_id)
+    schema_block = _schema_guard_response(request)
+    if schema_block:
+        return schema_block
+
+    consent_request = get_object_or_404(SignatureRequest, request_id=request_id, created_by=request.user)
+    try:
+        merged_file = generate_merged_pdf(consent_request)
+        filename = _build_merged_download_filename(consent_request)
+        if hasattr(merged_file, "seek"):
+            merged_file.seek(0)
+        pdf_bytes = merged_file.read() if hasattr(merged_file, "read") else b""
+        if not pdf_bytes:
+            raise ValueError("merged pdf is empty")
+
+        try:
+            consent_request.merged_pdf.save(filename, ContentFile(pdf_bytes), save=True)
+        except Exception:
+            logger.exception(
+                "[consent] merged save failed but download fallback used request_id=%s",
+                consent_request.request_id,
+            )
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        logger.info(
+            "[consent] merged pdf download request_id=%s user=%s",
+            consent_request.request_id,
+            request.user.username,
+        )
+        return _apply_sensitive_cache_headers(response)
+    except ValueError as exc:
+        if "completed recipients" in str(exc):
+            logger.info(
+                "[consent] merged pdf download blocked without completed recipients request_id=%s user=%s",
+                consent_request.request_id,
+                request.user.username,
+            )
+            messages.error(request, "응답 완료 후 완성본 PDF를 받을 수 있습니다.")
+        else:
+            logger.exception("[consent] merged download failed request_id=%s", consent_request.request_id)
+            messages.error(request, "완성본 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect("consent:detail", request_id=consent_request.request_id)
+    except PdfRuntimeUnavailable as exc:
+        logger.error(
+            "[consent] merged download blocked by missing pdf runtime request_id=%s err=%s",
+            consent_request.request_id,
+            exc,
+        )
+        messages.error(
+            request,
+            "PDF 엔진(reportlab, pypdf)이 준비되지 않아 완성본 PDF를 생성할 수 없습니다. 운영팀에 환경 설정을 요청해 주세요.",
+        )
+        return redirect("consent:detail", request_id=consent_request.request_id)
+    except Exception:
+        logger.exception("[consent] merged download failed request_id=%s", consent_request.request_id)
+        messages.error(request, "완성본 PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+        return redirect("consent:detail", request_id=consent_request.request_id)
 
 
 @login_required
@@ -2105,6 +2158,7 @@ def consent_shared_lookup(request, shared_lookup_token):
             user_agent = _request_user_agent(request)
             if len(matches) == 1:
                 recipient = matches[0]
+                _store_shared_lookup_verification(request, recipient, phone_last4=phone_last4)
                 ConsentAuditLog.objects.create(
                     request=consent_request,
                     recipient=recipient,
@@ -2157,6 +2211,7 @@ def consent_sign(request, token):
         SignatureRecipient.objects.select_related("request__document").prefetch_related("request__positions"),
         access_token=token,
     )
+    shared_lookup_verified = _has_shared_lookup_verification(request, recipient)
     if not _is_public_link_released(recipient):
         return _link_not_ready_response(request, recipient)
     evidence = _request_document_evidence(recipient.request)
@@ -2164,13 +2219,21 @@ def consent_sign(request, token):
     requires_signer_name_input = _requires_signer_name_input(recipient)
     signer_name_label = _signer_name_label(recipient)
     initial_signer_name = _resolved_signer_name(recipient)
-    name_step_items = _build_public_name_step_items(recipient)
-    check_step_items = _build_public_check_step_items(recipient)
     preview_marks = _build_public_preview_marks(recipient)
     if recipient.status in (SignatureRecipient.STATUS_SIGNED, SignatureRecipient.STATUS_DECLINED):
+        if shared_lookup_verified:
+            _pop_shared_lookup_verification(request, token)
         return redirect("consent:complete", token=token)
     if _is_active_link_expired(recipient):
+        if shared_lookup_verified:
+            _pop_shared_lookup_verification(request, token)
         return _expired_link_response(request, recipient)
+
+    requires_phone_last4 = (
+        recipient.request.is_guardian_audience
+        and bool(recipient.phone_last4)
+        and not shared_lookup_verified
+    )
 
     if request.method == "POST":
         form = ConsentSignForm(
@@ -2182,27 +2245,36 @@ def consent_sign(request, token):
             ip_address = _request_client_ip(request)
             user_agent = _request_user_agent(request)
             phone_last4 = (form.cleaned_data.get("phone_last4") or "").strip()
-            requires_phone_last4 = recipient.request.is_guardian_audience and bool(recipient.phone_last4)
             verified_at = None
             identity_assurance = SignatureRecipient.IDENTITY_TOKEN_ONLY
+            verified_ip_address = None
+            verified_user_agent = ""
 
-            if requires_phone_last4:
-                if not phone_last4 or phone_last4 != recipient.phone_last4:
-                    form.add_error("phone_last4", "전화번호 끝 4자리를 확인해 주세요.")
-                    ConsentAuditLog.objects.create(
-                        request=recipient.request,
-                        recipient=recipient,
-                        event_type=ConsentAuditLog.EVENT_VERIFY_FAIL,
-                        event_meta={
-                            "reason": "phone_last4_mismatch",
-                            **evidence,
-                        },
-                        ip_address=ip_address,
-                        user_agent=user_agent,
-                    )
-                else:
+            if recipient.request.is_guardian_audience and bool(recipient.phone_last4):
+                if shared_lookup_verified:
                     verified_at = timezone.now()
                     identity_assurance = SignatureRecipient.IDENTITY_PHONE_LAST4
+                    verified_ip_address = ip_address
+                    verified_user_agent = user_agent
+                elif requires_phone_last4:
+                    if not phone_last4 or phone_last4 != recipient.phone_last4:
+                        form.add_error("phone_last4", "전화번호 끝 4자리를 확인해 주세요.")
+                        ConsentAuditLog.objects.create(
+                            request=recipient.request,
+                            recipient=recipient,
+                            event_type=ConsentAuditLog.EVENT_VERIFY_FAIL,
+                            event_meta={
+                                "reason": "phone_last4_mismatch",
+                                **evidence,
+                            },
+                            ip_address=ip_address,
+                            user_agent=user_agent,
+                        )
+                    else:
+                        verified_at = timezone.now()
+                        identity_assurance = SignatureRecipient.IDENTITY_PHONE_LAST4
+                        verified_ip_address = ip_address
+                        verified_user_agent = user_agent
 
             if not form.errors:
                 decision = form.cleaned_data["decision"]
@@ -2217,8 +2289,8 @@ def consent_sign(request, token):
                     "ip_address", "user_agent",
                 ]
                 if requires_signer_name_input and submitted_signer_name:
-                    recipient.parent_name = submitted_signer_name
-                    update_fields.append("parent_name")
+                    recipient.signer_name_override = submitted_signer_name
+                    update_fields.append("signer_name_override")
                 recipient.signed_at = timezone.now()
                 recipient.status = (
                     SignatureRecipient.STATUS_SIGNED
@@ -2230,13 +2302,16 @@ def consent_sign(request, token):
                 recipient.user_agent = user_agent
                 if identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
                     recipient.verified_at = verified_at
-                    recipient.verified_ip_address = ip_address
-                    recipient.verified_user_agent = user_agent
+                    recipient.verified_ip_address = verified_ip_address
+                    recipient.verified_user_agent = verified_user_agent
                 else:
                     recipient.verified_at = None
                     recipient.verified_ip_address = None
                     recipient.verified_user_agent = ""
                 recipient.save(update_fields=update_fields)
+
+                if shared_lookup_verified:
+                    _pop_shared_lookup_verification(request, token)
 
                 if identity_assurance == SignatureRecipient.IDENTITY_PHONE_LAST4:
                     ConsentAuditLog.objects.create(
@@ -2245,10 +2320,13 @@ def consent_sign(request, token):
                         event_type=ConsentAuditLog.EVENT_VERIFY_SUCCESS,
                         event_meta={
                             "identity_assurance": identity_assurance,
+                            "verification_method": (
+                                "shared_lookup" if shared_lookup_verified else "direct_sign"
+                            ),
                             **evidence,
                         },
-                        ip_address=ip_address,
-                        user_agent=user_agent,
+                        ip_address=verified_ip_address,
+                        user_agent=verified_user_agent,
                     )
 
                 try:
@@ -2313,13 +2391,11 @@ def consent_sign(request, token):
             "document_download_url": reverse("consent:public_document", kwargs={"token": recipient.access_token}),
             "document_file_name": evidence.get("document_name") or recipient.request.document.title,
             "document_file_size": evidence.get("document_size") or "",
-            "requires_phone_last4": recipient.request.is_guardian_audience and bool(recipient.phone_last4),
+            "requires_phone_last4": requires_phone_last4,
             "requires_signature_input": requires_signature_input,
             "requires_signer_name_input": requires_signer_name_input,
             "is_guardian_audience": recipient.request.is_guardian_audience,
             "signer_name_label": signer_name_label,
-            "name_step_items": name_step_items,
-            "check_step_items": check_step_items,
             "preview_marks_json": json.dumps(preview_marks, ensure_ascii=False),
             "mark_summary": recipient.request.mark_summary,
             "page_summary": recipient.request.page_summary,

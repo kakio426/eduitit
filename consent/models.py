@@ -427,6 +427,7 @@ class SignatureRecipient(models.Model):
     )
     student_name = models.CharField(max_length=100)
     parent_name = models.CharField(max_length=100)
+    signer_name_override = models.CharField(max_length=100, blank=True, default="")
     phone_number = models.CharField(max_length=20)
     access_token = models.CharField(max_length=64, unique=True, default=_generate_access_token)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
