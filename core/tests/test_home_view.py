@@ -4529,6 +4529,16 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('font-size: 1.05rem;', css)
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
 
+    def test_v6_css_uses_single_and_stack_reservation_layout_variants(self):
+        css = _read_home_v6_css_bundle()
+
+        self.assertIn('.home-v6-page .home-v6-reservations-panel .home-v6-rail-button-list--single {', css)
+        self.assertIn('.home-v6-page .home-v6-reservations-panel .home-v6-rail-button-list--stack {', css)
+        self.assertIn('.home-v6-page .home-v6-reservations-panel .home-v6-reservation-button--single {', css)
+        self.assertIn('.home-v6-page .home-v6-reservations-panel .home-v6-reservation-button--stack {', css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr);', css)
+        self.assertIn('width: 100%;', css)
+
     def test_v6_css_keeps_reservation_split_grid_from_stretching_date_field(self):
         css = _read_home_v6_css_bundle()
 
@@ -4705,6 +4715,28 @@ class HomeV6ViewTest(TestCase):
         )
         self.assertIn('data-home-v6-rail-card="true"', content)
         self.assertIn('data-home-v6-rail-arrow="true"', content)
+        self.assertIn('home-v6-reservations-panel--single', content)
+        self.assertIn('home-v6-rail-button-list--single', content)
+        self.assertIn('home-v6-reservation-button--single', content)
+
+    def test_v6_home_stacks_multiple_school_reservations_in_single_column(self):
+        user = self._login('v6multireservation')
+        first_school = School.objects.create(name='가람초', slug='garam-home', owner=user)
+        second_school = School.objects.create(name='나래초', slug='narae-home', owner=user)
+        SchoolConfig.objects.create(school=first_school)
+        SchoolConfig.objects.create(school=second_school)
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.context['home_design_version'], 'v6')
+        self.assertEqual(response.context['reservation_home_card']['count'], 2)
+        self.assertIn('가람초', content)
+        self.assertIn('나래초', content)
+        self.assertIn('home-v6-reservations-panel--stack', content)
+        self.assertIn('home-v6-rail-button-list--stack', content)
+        self.assertEqual(content.count('home-v6-reservation-button--stack'), 2)
+        self.assertNotIn('home-v6-reservation-button--single', content)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
     def test_v6_mobile_places_reservation_below_quickdrop_without_duplicate(self):

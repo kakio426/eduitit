@@ -216,17 +216,17 @@
                     {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if home_user_mode == 'authenticated' and reservation_home_card %}
-                    <article class="home-v6-mobile-panel home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true" hidden aria-hidden="true">
+                    <article class="home-v6-mobile-panel home-v6-reservations-panel{% if reservation_home_card.count == 1 %} home-v6-reservations-panel--single{% else %} home-v6-reservations-panel--stack{% endif %}" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true" hidden aria-hidden="true">
                         <div class="home-v6-mobile-panel-head">
                             <div>
                                 <h2 class="home-v6-mobile-panel-title">내 학교 예약</h2>
                             </div>
                         </div>
-                        <div class="space-y-3">
+                        <div class="home-v6-reservation-mobile-list{% if reservation_home_card.count == 1 %} home-v6-reservation-mobile-list--single{% else %} home-v6-reservation-mobile-list--stack{% endif %}">
                             {% for item in reservation_home_card.items %}
                             <a
                                 href="{{ item.href }}"
-                                class="home-v6-reservation-item flex items-start justify-between gap-3 rounded-[1.4rem] border border-slate-200 bg-white/90 px-4 py-4 transition"
+                                class="home-v6-reservation-item{% if reservation_home_card.count == 1 %} home-v6-reservation-item--single{% else %} home-v6-reservation-item--stack{% endif %} flex items-start justify-between gap-3 rounded-[1.4rem] border border-slate-200 bg-white/90 px-4 py-4 transition"
                                 data-home-reservations-item="true"
                                 data-home-v6-rail-item="true"
                             >
@@ -241,7 +241,7 @@
                                     <p class="mt-1 text-xs leading-5 text-slate-500">{{ item.summary }}</p>
                                     {% endif %}
                                 </div>
-                                <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
+                                <span class="home-v6-reservation-item-arrow inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400" data-home-v6-rail-arrow="true">
                                     <i class="fa-solid fa-arrow-right"></i>
                                 </span>
                             </a>
@@ -372,7 +372,7 @@
                             </article>
 
                             {% if home_user_mode == 'authenticated' and reservation_home_card %}
-                            <section class="home-v6-reservations-panel" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
+                            <section class="home-v6-reservations-panel{% if reservation_home_card.count == 1 %} home-v6-reservations-panel--single{% else %} home-v6-reservations-panel--stack{% endif %}" data-home-reservations-card="true" data-home-v6-reservations-panel="desktop" data-home-v6-rail-card="true">
                                 <div class="home-v6-reservations-head">
                                     <div class="home-v6-reservations-title">
                                         <i class="fa-solid fa-school home-v6-title-icon"></i>
@@ -380,11 +380,11 @@
                                     </div>
                                 </div>
 
-                                <div class="home-v6-rail-button-list">
+                                <div class="home-v6-rail-button-list{% if reservation_home_card.count == 1 %} home-v6-rail-button-list--single{% else %} home-v6-rail-button-list--stack{% endif %}">
                                     {% for item in reservation_home_card.items %}
                                     <a
                                         href="{{ item.href }}"
-                                        class="home-v6-reservation-button"
+                                        class="home-v6-reservation-button{% if reservation_home_card.count == 1 %} home-v6-reservation-button--single{% else %} home-v6-reservation-button--stack{% endif %}"
                                         data-home-reservations-item="true"
                                         data-home-v6-rail-item="true"
                                     >
