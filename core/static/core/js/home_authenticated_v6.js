@@ -1045,6 +1045,21 @@
                 });
             },
 
+            activeAiHasVisibleConversation: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return Boolean(this.quickdropHasConversation() || this.isSendingQuickdrop);
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return Boolean(
+                        this.messageSaveHasConversation()
+                        || this.isSavingMessageSave
+                        || this.isExtractingMessageSave
+                        || this.isCommittingMessageSave
+                    );
+                }
+                return Boolean(this.activeAiLoading() || this.agentExecution || this.previewResultLines().length);
+            },
+
             activeAiShouldShowAssistantBubble: function () {
                 if (this.aiMessengerIsFlow('direct-send')) {
                     return Boolean(this.isSendingQuickdrop || this.quickdropHasResult());
@@ -1396,30 +1411,79 @@
                 });
             },
 
-            selectHeroChip: function (itemKey) {
+            selectServiceChip: function (modeKey, options) {
+                var nextModeKey = trimLine(String(modeKey || '').replace(/^service:/, ''));
+                var settings = options && typeof options === 'object' ? options : {};
+                var preservedDraft = typeof settings.draftText === 'string' ? settings.draftText : this.workspaceInput;
+                if (!nextModeKey) {
+                    return;
+                }
+                if (this.activeConversationItem) {
+                    this.disconnectActiveRoomSocket();
+                }
+                this.clearAgentConversationContext();
+                this.selectAgentMode(nextModeKey);
+                if (trimLine(preservedDraft)) {
+                    this.workspaceInput = preservedDraft;
+                    this.handleActiveAiComposerInput();
+                }
                 this.agentHeroExpanded = false;
-                this.selectRailItem(itemKey);
+                if (settings.focus !== false) {
+                    this.focusWorkspace();
+                }
+            },
+
+            submitWorkspaceShell: function () {
+                var rawValue = typeof this.workspaceInput === 'string' ? this.workspaceInput : '';
+                var query = trimLine(rawValue);
+                var targetModeKey = '';
+                var strippedQuery = query;
+                if (query.startsWith('/일정')) {
+                    targetModeKey = 'schedule';
+                    strippedQuery = trimLine(query.replace(/^\/일정/, ''));
+                } else if (query.startsWith('/예약')) {
+                    targetModeKey = 'reservation';
+                    strippedQuery = trimLine(query.replace(/^\/예약/, ''));
+                } else if (query.startsWith('/법률')) {
+                    targetModeKey = 'teacher-law';
+                    strippedQuery = trimLine(query.replace(/^\/법률/, ''));
+                }
+                if (targetModeKey) {
+                    this.selectServiceChip(targetModeKey, {
+                        draftText: '',
+                        focus: false,
+                    });
+                    this.workspaceInput = strippedQuery;
+                    this.handleActiveAiComposerInput();
+                }
+                if (!trimLine(this.workspaceInput) && !this.activeAiQueuedFileName()) {
+                    this.focusWorkspace();
+                    return;
+                }
+                this.agentHeroExpanded = false;
+                this.runActiveAiPrimaryAction();
+            },
+
+            handleWorkspaceShellKeydown: function (event) {
+                if (!this.shouldSubmitComposerOnEnter(event)) {
+                    return;
+                }
+                this.submitWorkspaceShell();
+            },
+
+            selectHeroChip: function (itemKey) {
+                this.selectServiceChip(itemKey);
             },
 
             dispatchHeroQuery: function () {
                 var query = trimLine(this.agentHeroQuery || '');
-                var targetKey = 'service:notice';
-                if (query.startsWith('/일정')) {
-                    targetKey = 'service:schedule';
-                } else if (query.startsWith('/예약')) {
-                    targetKey = 'service:reservation';
-                } else if (query.startsWith('/법률')) {
-                    targetKey = 'service:teacher-law';
+                if (!query) {
+                    this.focusWorkspace();
+                    return;
                 }
-                this.agentHeroExpanded = false;
-                this.selectRailItem(targetKey);
-                if (query && !query.startsWith('/')) {
-                    var self = this;
-                    setTimeout(function () {
-                        self.noticeBaseInput = query;
-                        self.workspaceInput = query;
-                    }, 80);
-                }
+                this.workspaceInput = query;
+                this.handleActiveAiComposerInput();
+                this.submitWorkspaceShell();
                 this.agentHeroQuery = '';
             },
 
