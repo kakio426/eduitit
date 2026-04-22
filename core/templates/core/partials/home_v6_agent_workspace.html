@@ -62,7 +62,53 @@
 
         <div class="home-v6-agent-main">
             <div class="home-v6-agent-main-head">
-                <div class="home-v6-agent-active">
+
+                <!-- 커맨드 히어로 (첫 진입 / 재확장 시) -->
+                <div class="home-v6-cmd-hero" x-cloak x-show="agentHeroExpanded">
+                    <div class="home-v6-cmd-hero-icon" aria-hidden="true">
+                        <i class="fa-solid fa-sparkles"></i>
+                    </div>
+                    <h2 class="home-v6-cmd-hero-title">무엇을 도와드릴까요?</h2>
+                    <div class="home-v6-cmd-bar">
+                        <span class="home-v6-cmd-bar-accent" aria-hidden="true"></span>
+                        <i class="home-v6-cmd-bar-search fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <input
+                            class="home-v6-cmd-bar-input"
+                            type="text"
+                            placeholder="알림장 내용을 적거나 명령어를 입력하세요 (/일정, /예약)"
+                            x-model="agentHeroQuery"
+                            @keydown.enter="dispatchHeroQuery()"
+                            aria-label="AI 교무비서 입력"
+                        >
+                        <button
+                            class="home-v6-cmd-bar-submit"
+                            type="button"
+                            @click="dispatchHeroQuery()"
+                        >실행</button>
+                    </div>
+                    <div class="home-v6-cmd-chips" role="list">
+                        <button class="home-v6-cmd-chip" type="button" role="listitem"
+                                @click="selectHeroChip('service:notice')">
+                            <i class="fa-regular fa-bell" aria-hidden="true"></i>알림장
+                        </button>
+                        <button class="home-v6-cmd-chip" type="button" role="listitem"
+                                @click="selectHeroChip('service:schedule')">
+                            <i class="fa-regular fa-calendar" aria-hidden="true"></i>일정
+                        </button>
+                        <button class="home-v6-cmd-chip" type="button" role="listitem"
+                                @click="selectHeroChip('service:teacher-law')">
+                            <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>교사 법률
+                        </button>
+                        <button class="home-v6-cmd-chip" type="button" role="listitem"
+                                @click="selectHeroChip('service:reservation')">
+                            <i class="fa-regular fa-clock" aria-hidden="true"></i>특별실 예약
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 컴팩트 헤더 (서비스 선택 후) -->
+                <div x-cloak x-show="!agentHeroExpanded" class="flex items-center w-full">
+                <div class="home-v6-agent-active" style="flex:1;min-width:0;">
                     <span class="home-v6-agent-active-icon" :class="{ 'is-room': activeConversationItem }" aria-hidden="true">
                         <template x-if="activeConversationItem">
                             <span x-text="(activeRoomSnapshot && activeRoomSnapshot.room && activeRoomSnapshot.room.avatar_label) || (activeConversationItem && activeConversationItem.avatar_label) || '대화'"></span>
@@ -89,8 +135,18 @@
                         <span x-text="activeHeaderStatusLabel()"></span>
                     </span>
                 </div>
+                <button
+                    type="button"
+                    class="home-v6-cmd-reopen"
+                    @click="agentHeroExpanded = true"
+                    title="새 질문"
+                    aria-label="AI 교무비서 새 질문"
+                >
+                    <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+                </button>
+                </div>
 
-                <div class="home-v6-agent-head-actions" :class="{ 'home-v6-agent-head-actions--human': activeRendererKey === 'human-chat' }">
+                <div class="home-v6-agent-head-actions" x-cloak x-show="!agentHeroExpanded" :class="{ 'home-v6-agent-head-actions--human': activeRendererKey === 'human-chat' }">
                     <div class="home-v6-agent-human-head-actions" x-cloak x-show="activeRendererKey === 'human-chat'">
                         <button
                             type="button"

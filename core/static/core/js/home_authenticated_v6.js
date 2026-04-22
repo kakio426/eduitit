@@ -757,6 +757,8 @@
             agentModeStateMap: {},
             agentPreviewRequestId: 0,
             agentExecuteRequestId: 0,
+            agentHeroExpanded: true,
+            agentHeroQuery: '',
             noticeBaseInput: '',
             noticeRefinementLabel: '',
             scheduleEditorOpen: false,
@@ -1392,6 +1394,33 @@
                 }).filter(function (section) {
                     return section.items.length;
                 });
+            },
+
+            selectHeroChip: function (itemKey) {
+                this.agentHeroExpanded = false;
+                this.selectRailItem(itemKey);
+            },
+
+            dispatchHeroQuery: function () {
+                var query = trimLine(this.agentHeroQuery || '');
+                var targetKey = 'service:notice';
+                if (query.startsWith('/일정')) {
+                    targetKey = 'service:schedule';
+                } else if (query.startsWith('/예약')) {
+                    targetKey = 'service:reservation';
+                } else if (query.startsWith('/법률')) {
+                    targetKey = 'service:teacher-law';
+                }
+                this.agentHeroExpanded = false;
+                this.selectRailItem(targetKey);
+                if (query && !query.startsWith('/')) {
+                    var self = this;
+                    setTimeout(function () {
+                        self.noticeBaseInput = query;
+                        self.workspaceInput = query;
+                    }, 80);
+                }
+                this.agentHeroQuery = '';
             },
 
             selectRailItem: async function (itemKey) {
