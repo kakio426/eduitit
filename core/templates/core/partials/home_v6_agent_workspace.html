@@ -3,8 +3,8 @@
     {% if agent_workspace_surface != 'mobile' %}data-home-v6-representative-services="true"{% endif %}
     data-home-v6-agent-workspace="true"
 >
-    <div class="home-v6-card home-v6-agent-card">
-        <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true">
+    <div class="home-v6-card home-v6-agent-card" :class="{ 'is-hero-open': agentHeroExpanded }">
+        <aside class="home-v6-agent-rail" data-home-v6-agent-mode-select="true" x-show="!agentHeroExpanded">
             <label class="home-v6-agent-rail-search" aria-label="서비스와 대화 찾기">
                 <span class="home-v6-agent-rail-search-icon" aria-hidden="true">
                     <i class="fa-solid fa-magnifying-glass"></i>
