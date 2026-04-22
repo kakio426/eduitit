@@ -682,6 +682,8 @@
             quickdropDragDepth: 0,
             isQuickdropDragActive: false,
             isTtsReading: false,
+            workspaceSpeechRecognition: null,
+            isWorkspaceVoiceListening: false,
             workspaceInput: '',
             agentModeMenuOpen: false,
             railSearchText: '',
@@ -1090,6 +1092,24 @@
                 return trimLine(this.activeMessengerUi().assistant_title || this.activeMode.helper || this.activeMode.label || 'AI 답변');
             },
 
+            activeAiPreviewNote: function () {
+                var modeKey = trimLine(this.activeModeKey || '');
+                var preview = this.agentPreview && typeof this.agentPreview === 'object' ? this.agentPreview : {};
+                var mappedNotes = {
+                    notice: '말투만 확인',
+                    schedule: '날짜·시간 확인',
+                    'teacher-law': '최종 법률 자문 아님',
+                    reservation: '장소·시간 확인',
+                };
+                if (!this.activeAiShouldShowAssistantBubble() || this.activeAiLoading()) {
+                    return '';
+                }
+                if (mappedNotes[modeKey]) {
+                    return mappedNotes[modeKey];
+                }
+                return trimLine(preview.note || '');
+            },
+
             activeAiCanCopyDraft: function () {
                 if (!this.activeMessengerCapabilities().copy_result) {
                     return false;
@@ -1185,6 +1205,209 @@
                     return '생성 중';
                 }
                 return trimLine(this.activeMode.submit_label || '전송');
+            },
+
+            workspaceShellServiceLabel: function () {
+                return trimLine(this.activeMode.label || 'AI 교무비서');
+            },
+
+            workspaceShellPlaceholder: function () {
+                var modeKey = trimLine(this.activeModeKey || '');
+                var placeholders = {
+                    notice: '보낼 내용을 적으세요.',
+                    schedule: '일정이 들어 있는 내용을 적으세요.',
+                    'teacher-law': '상황을 적으세요.',
+                    reservation: '필요한 시간과 장소를 적으세요.',
+                };
+                if (this.activeConversationItem) {
+                    return '메시지를 이어서 적으세요.';
+                }
+                return trimLine(placeholders[modeKey] || this.activeMode.placeholder || '하고 싶은 일을 적으세요.');
+            },
+
+            workspaceShellSubmitLabel: function () {
+                if (this.aiMessengerIsFlow('direct-send')) {
+                    return this.isSendingQuickdrop ? '보내는 중' : '실행';
+                }
+                if (this.aiMessengerIsFlow('pipeline')) {
+                    return (this.isSavingMessageSave || this.isExtractingMessageSave || this.isCommittingMessageSave) ? '처리 중' : '실행';
+                }
+                if (this.activeAiLoading()) {
+                    return '생성 중';
+                }
+                if (this.activeConversationItem) {
+                    return '보내기';
+                }
+                if (this.aiMessengerIsFlow('guided')) {
+                    return '실행';
+                }
+                return '보내기';
+            },
+
+            workspaceShellBadge: function () {
+                var label = this.workspaceShellServiceLabel();
+                if (this.activeConversationItem) {
+                    return '';
+                }
+                return label ? '현재 서비스 · ' + label : '현재 서비스 · AI 교무비서';
+            },
+
+            workspaceShellHint: function () {
+                var modeKey = trimLine(this.activeModeKey || '');
+                var hints = {
+                    notice: '가정통신문처럼 바로 써 드려요.',
+                    schedule: '학사 일정이나 약속을 정리해요.',
+                    'teacher-law': '상황을 적으면 대응 순서를 정리해요.',
+                    reservation: '필요한 시간과 장소를 적어 주세요.',
+                };
+                if (this.activeConversationItem) {
+                    return '';
+                }
+                return trimLine(hints[modeKey] || this.activeMode.empty_prompt || this.activeMode.usage_hint || '');
+            },
+
+            workspaceShellCanAttachUtility: function () {
+                return this.activeAiCanAttachFiles();
+            },
+
+            workspaceShellShowAttachmentUtility: function () {
+                return this.workspaceShellCanAttachUtility();
+            },
+
+            workspaceShellShowImageUtility: function () {
+                return this.workspaceShellCanAttachUtility();
+            },
+
+            workspaceShellCanReset: function () {
+                return Boolean(this.activeAiHasVisibleConversation() || trimLine(this.workspaceInput) || this.activeAiQueuedFileName());
+            },
+
+            workspaceShellSupportsVoiceInput: function () {
+                return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+            },
+
+            workspaceShellShowVoiceUtility: function () {
+                return this.workspaceShellSupportsVoiceInput();
+            },
+
+            workspaceShellVoiceLabel: function () {
+                return this.isWorkspaceVoiceListening ? '듣는 중' : '음성';
+            },
+
+            openWorkspaceAttachmentPicker: function () {
+                if (!this.workspaceShellCanAttachUtility()) {
+                    return;
+                }
+                this.openActiveAiFilePicker();
+            },
+
+            openWorkspaceImagePicker: function () {
+                if (!this.workspaceShellCanAttachUtility()) {
+                    return;
+                }
+                this.openQuickdropFilePicker({
+                    accept: 'image/*',
+                    capture: 'environment',
+                });
+            },
+
+            ensureWorkspaceSpeechRecognition: function () {
+                var RecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+                var self = this;
+                if (!RecognitionConstructor) {
+                    return null;
+                }
+                if (this.workspaceSpeechRecognition) {
+                    return this.workspaceSpeechRecognition;
+                }
+                this.workspaceSpeechRecognition = new RecognitionConstructor();
+                this.workspaceSpeechRecognition.lang = 'ko-KR';
+                this.workspaceSpeechRecognition.interimResults = false;
+                this.workspaceSpeechRecognition.continuous = false;
+                this.workspaceSpeechRecognition.maxAlternatives = 1;
+                this.workspaceSpeechRecognition.onstart = function () {
+                    self.isWorkspaceVoiceListening = true;
+                };
+                this.workspaceSpeechRecognition.onend = function () {
+                    self.isWorkspaceVoiceListening = false;
+                };
+                this.workspaceSpeechRecognition.onerror = function (event) {
+                    var errorCode = trimLine(event && event.error);
+                    self.isWorkspaceVoiceListening = false;
+                    if (errorCode === 'aborted') {
+                        return;
+                    }
+                    if (errorCode === 'not-allowed' || errorCode === 'service-not-allowed') {
+                        showFeedback('마이크 권한을 허용해 주세요.', 'info');
+                        return;
+                    }
+                    if (errorCode === 'no-speech') {
+                        showFeedback('음성이 들리지 않았습니다. 다시 눌러 주세요.', 'info');
+                        return;
+                    }
+                    showFeedback('음성 입력을 시작하지 못했습니다.', 'error');
+                };
+                this.workspaceSpeechRecognition.onresult = function (event) {
+                    var transcripts = [];
+                    var nextValue = '';
+                    Array.prototype.slice.call(event.results || [], event.resultIndex || 0).forEach(function (result) {
+                        if (!result || !result.isFinal || !result[0] || !result[0].transcript) {
+                            return;
+                        }
+                        transcripts.push(trimLine(result[0].transcript));
+                    });
+                    nextValue = trimLine(transcripts.join(' '));
+                    if (!nextValue) {
+                        return;
+                    }
+                    self.workspaceInput = trimLine([trimLine(self.workspaceInput), nextValue].filter(Boolean).join(' '));
+                    self.handleActiveAiComposerInput();
+                    self.focusWorkspace();
+                };
+                return this.workspaceSpeechRecognition;
+            },
+
+            stopWorkspaceVoiceInput: function () {
+                if (this.workspaceSpeechRecognition && typeof this.workspaceSpeechRecognition.stop === 'function') {
+                    try {
+                        this.workspaceSpeechRecognition.stop();
+                    } catch (error) {
+                        // Ignore redundant stop() calls from browsers that throw while idle.
+                    }
+                }
+                this.isWorkspaceVoiceListening = false;
+            },
+
+            toggleWorkspaceVoiceInput: function () {
+                var recognition = null;
+                if (!this.workspaceShellSupportsVoiceInput()) {
+                    showFeedback('이 브라우저에서는 음성 입력을 지원하지 않습니다.', 'info');
+                    return;
+                }
+                recognition = this.ensureWorkspaceSpeechRecognition();
+                if (!recognition) {
+                    showFeedback('음성 입력을 준비하지 못했습니다.', 'error');
+                    return;
+                }
+                if (this.isWorkspaceVoiceListening) {
+                    this.stopWorkspaceVoiceInput();
+                    return;
+                }
+                try {
+                    recognition.start();
+                } catch (error) {
+                    showFeedback('음성 입력을 시작하지 못했습니다.', 'error');
+                }
+            },
+
+            startNewWorkspaceChat: function () {
+                if (!this.workspaceShellCanReset()) {
+                    showFeedback('이미 새 대화 상태입니다.', 'info');
+                    this.focusWorkspace();
+                    return;
+                }
+                this.stopWorkspaceVoiceInput();
+                this.resetActiveAiChat();
             },
 
             activeAiCanSubmit: function () {
@@ -4000,9 +4223,31 @@
                 }) || null;
             },
 
-            openQuickdropFilePicker: function () {
+            resetQuickdropFileInputConfig: function () {
                 var input = this.quickdropFileInput();
+                var defaultAccept = trimLine(input && input.dataset ? input.dataset.defaultAccept : '');
+                if (!input) {
+                    return;
+                }
+                if (defaultAccept) {
+                    input.setAttribute('accept', defaultAccept);
+                }
+                input.removeAttribute('capture');
+            },
+
+            openQuickdropFilePicker: function (options) {
+                var input = this.quickdropFileInput();
+                var settings = options && typeof options === 'object' ? options : {};
+                var accept = trimLine(settings.accept);
+                var capture = trimLine(settings.capture);
+                var defaultAccept = trimLine(input && input.dataset ? input.dataset.defaultAccept : '');
                 if (input && typeof input.click === 'function') {
+                    input.setAttribute('accept', accept || defaultAccept || input.getAttribute('accept') || '');
+                    if (capture) {
+                        input.setAttribute('capture', capture);
+                    } else {
+                        input.removeAttribute('capture');
+                    }
                     input.click();
                 }
             },
@@ -4020,6 +4265,7 @@
                 var input = event && event.target ? event.target : null;
                 var file = input && input.files ? input.files[0] : null;
                 this.queueQuickdropFile(file, file ? file.name : '');
+                this.resetQuickdropFileInputConfig();
             },
 
             quickdropQueuedFileName: function () {
@@ -4031,6 +4277,7 @@
                 if (input) {
                     input.value = '';
                 }
+                this.resetQuickdropFileInputConfig();
                 this.quickdropQueuedFile = null;
                 this.quickdropQueuedFileDisplayName = '';
                 this.quickdropErrorText = '';
@@ -5466,6 +5713,7 @@
                 if (currentModeKey && currentModeKey !== nextModeKey) {
                     this.captureModeState(currentModeKey);
                 }
+                this.stopWorkspaceVoiceInput();
                 if (this.modeHasCapability(currentMode, 'file_attach') && !this.modeHasCapability(nextMode, 'file_attach')) {
                     this.resetQuickdropDragState();
                 }

@@ -6,129 +6,174 @@
     <div class="home-v6-card home-v6-agent-card" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
         <div class="home-v6-agent-main" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
             <div class="home-v6-agent-main-head home-v6-agent-main-head--single-shell" :class="{ 'is-empty': !activeAiHasVisibleConversation() }">
-                <div class="home-v6-cmd-hero home-v6-cmd-hero--single-shell">
-                    <div class="home-v6-agent-ai-queued home-v6-agent-ai-queued--shell" x-cloak x-show="activeAiQueuedFileName()">
-                        <span class="home-v6-agent-ai-file-pill">
-                            <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
-                                <i class="fa-solid fa-paperclip"></i>
+                <div class="home-v6-cmd-stage">
+                    <div class="home-v6-cmd-stage-backdrop" aria-hidden="true"></div>
+                    <div class="home-v6-cmd-hero home-v6-cmd-hero--single-shell">
+                        <div class="home-v6-agent-ai-queued home-v6-agent-ai-queued--shell" x-cloak x-show="activeAiQueuedFileName()">
+                            <span class="home-v6-agent-ai-file-pill">
+                                <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </span>
+                                <span x-text="activeAiQueuedFileName()"></span>
                             </span>
-                            <span x-text="activeAiQueuedFileName()"></span>
-                        </span>
-                        <button type="button" class="home-v6-agent-ai-clear" @click="clearActiveAiQueuedFile()">지우기</button>
-                    </div>
-
-                    <div
-                        class="home-v6-cmd-bar home-v6-cmd-bar--workspace"
-                        :class="{ 'is-drag-active': activeAiDragActive() }"
-                        @paste="handleActiveAiComposerPaste($event)"
-                        @dragenter="handleActiveAiComposerDragEnter($event)"
-                        @dragover="handleActiveAiComposerDragOver($event)"
-                        @dragleave="handleActiveAiComposerDragLeave($event)"
-                        @drop="handleActiveAiComposerDrop($event)"
-                    >
-                        <span class="home-v6-cmd-bar-accent" aria-hidden="true"></span>
-                        <i class="home-v6-cmd-bar-search fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-
-                        <button
-                            type="button"
-                            class="home-v6-cmd-bar-attach"
-                            x-cloak
-                            x-show="activeAiCanAttachFiles()"
-                            @click="openActiveAiFilePicker()"
-                            aria-label="파일 첨부"
-                        >
-                            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                        </button>
-
-                        <div class="home-v6-agent-ai-drop-hint" x-cloak x-show="activeAiDragActive()">
-                            <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
-                            <span>여기에 놓기</span>
+                            <button type="button" class="home-v6-agent-ai-clear" @click="clearActiveAiQueuedFile()">지우기</button>
                         </div>
 
-                        <textarea
-                            class="home-v6-cmd-bar-input home-v6-cmd-bar-input--textarea"
-                            data-home-v6-agent-input="true"
-                            data-home-v6-ai-composer-textarea="true"
-                            data-home-v7-workspace-input="true"
-                            :data-home-v6-agent-field="activeAiExecutionVariant() === 'teacher-law' ? 'question' : null"
-                            rows="1"
-                            :placeholder="activeMode.placeholder || '알림장 내용을 적거나 명령어를 입력하세요 (/일정, /예약)'"
-                            x-model="workspaceInput"
-                            @input="handleActiveAiComposerInput()"
-                            @keydown="handleWorkspaceShellKeydown($event)"
-                            aria-label="AI 교무비서 입력"
-                        ></textarea>
+                        <div class="home-v6-cmd-shell-head">
+                            <p class="home-v6-cmd-shell-title">AI 교무비서</p>
+                            <span class="home-v6-cmd-shell-badge" x-cloak x-show="workspaceShellBadge()" x-text="workspaceShellBadge()"></span>
+                        </div>
 
-                        <button
-                            class="home-v6-cmd-bar-submit"
-                            type="button"
-                            :disabled="!activeAiCanSubmit()"
-                            @click="submitWorkspaceShell()"
-                            x-text="activeAiSubmitLabel() || '실행'"
-                        ></button>
+                        <div
+                            class="home-v6-cmd-bar home-v6-cmd-bar--workspace"
+                            :class="{ 'is-drag-active': activeAiDragActive() }"
+                            @paste="handleActiveAiComposerPaste($event)"
+                            @dragenter="handleActiveAiComposerDragEnter($event)"
+                            @dragover="handleActiveAiComposerDragOver($event)"
+                            @dragleave="handleActiveAiComposerDragLeave($event)"
+                            @drop="handleActiveAiComposerDrop($event)"
+                        >
+                            <span class="home-v6-cmd-bar-accent" aria-hidden="true"></span>
+                            <i class="home-v6-cmd-bar-search fa-solid fa-magnifying-glass" aria-hidden="true"></i>
 
-                        <input
-                            id="home-v6-agent-ai-quickdrop-file-input"
-                            type="file"
-                            class="sr-only"
-                            accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                            data-home-v6-agent-quickdrop-file-input="true"
-                            @change="queueQuickdropFileFromInput($event)"
-                        >
-                    </div>
+                            <div class="home-v6-agent-ai-drop-hint" x-cloak x-show="activeAiDragActive()">
+                                <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
+                                <span>여기에 놓기</span>
+                            </div>
 
-                    <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
+                            <textarea
+                                class="home-v6-cmd-bar-input home-v6-cmd-bar-input--textarea"
+                                data-home-v6-agent-input="true"
+                                data-home-v6-ai-composer-textarea="true"
+                                data-home-v7-workspace-input="true"
+                                :data-home-v6-agent-field="activeAiExecutionVariant() === 'teacher-law' ? 'question' : null"
+                                rows="1"
+                                :placeholder="workspaceShellPlaceholder()"
+                                x-model="workspaceInput"
+                                @input="handleActiveAiComposerInput()"
+                                @keydown="handleWorkspaceShellKeydown($event)"
+                                aria-label="AI 교무비서 입력"
+                            ></textarea>
 
-                    <div class="home-v6-cmd-chips home-v6-cmd-chips--services" role="list">
-                        <button
-                            class="home-v6-cmd-chip"
-                            :class="{ 'is-active': activeModeKey === 'notice' }"
-                            type="button"
-                            role="listitem"
-                            @click="selectServiceChip('notice')"
-                        >
-                            <i class="fa-regular fa-bell" aria-hidden="true"></i>
-                            <span>알림장</span>
-                        </button>
-                        <button
-                            class="home-v6-cmd-chip"
-                            :class="{ 'is-active': activeModeKey === 'schedule' }"
-                            type="button"
-                            role="listitem"
-                            @click="selectServiceChip('schedule')"
-                        >
-                            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-                            <span>일정</span>
-                        </button>
-                        <button
-                            class="home-v6-cmd-chip"
-                            :class="{ 'is-active': activeModeKey === 'teacher-law' }"
-                            type="button"
-                            role="listitem"
-                            @click="selectServiceChip('teacher-law')"
-                        >
-                            <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                            <span>교사 법률</span>
-                        </button>
-                        <button
-                            class="home-v6-cmd-chip"
-                            :class="{ 'is-active': activeModeKey === 'reservation' }"
-                            type="button"
-                            role="listitem"
-                            @click="selectServiceChip('reservation')"
-                        >
-                            <i class="fa-regular fa-clock" aria-hidden="true"></i>
-                            <span>특별실 예약</span>
-                        </button>
-                        <button
-                            class="home-v6-cmd-chip home-v6-cmd-chip--secondary"
-                            type="button"
-                            role="listitem"
-                            x-cloak
-                            x-show="activeAiHasVisibleConversation()"
-                            @click="resetActiveAiChat()"
-                            x-text="activeAiResetLabel()"
-                        ></button>
+                            <button
+                                class="home-v6-cmd-bar-submit"
+                                type="button"
+                                :disabled="!activeAiCanSubmit()"
+                                @click="submitWorkspaceShell()"
+                                :aria-label="workspaceShellSubmitLabel()"
+                                :title="workspaceShellSubmitLabel()"
+                                x-text="workspaceShellSubmitLabel()"
+                            ></button>
+
+                            <input
+                                id="home-v6-agent-ai-quickdrop-file-input"
+                                type="file"
+                                class="sr-only"
+                                accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                                data-default-accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                                data-home-v6-agent-quickdrop-file-input="true"
+                                @change="queueQuickdropFileFromInput($event)"
+                            >
+                        </div>
+
+                        <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
+
+                        <div class="home-v6-cmd-service-chips" role="list" aria-label="AI 교무비서 서비스">
+                            <button
+                                class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'notice' }"
+                                type="button"
+                                role="listitem"
+                                title="알림장"
+                                aria-label="알림장"
+                                @click="selectServiceChip('notice')"
+                            >
+                                <span>알림장</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'schedule' }"
+                                type="button"
+                                role="listitem"
+                                title="일정"
+                                aria-label="일정"
+                                @click="selectServiceChip('schedule')"
+                            >
+                                <span>일정</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'teacher-law' }"
+                                type="button"
+                                role="listitem"
+                                title="교사 법률"
+                                aria-label="교사 법률"
+                                @click="selectServiceChip('teacher-law')"
+                            >
+                                <span>교사 법률</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'reservation' }"
+                                type="button"
+                                role="listitem"
+                                title="특별실 예약"
+                                aria-label="특별실 예약"
+                                @click="selectServiceChip('reservation')"
+                            >
+                                <span>특별실 예약</span>
+                            </button>
+                        </div>
+
+                        <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>
+
+                        <div class="home-v6-cmd-actions" role="toolbar" aria-label="AI 교무비서 유틸리티">
+                            <button
+                                class="home-v6-cmd-action"
+                                x-cloak
+                                x-show="workspaceShellShowAttachmentUtility()"
+                                type="button"
+                                title="파일 첨부"
+                                @click="openWorkspaceAttachmentPicker()"
+                            >
+                                <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                                <span class="home-v6-cmd-action-label">첨부</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-action"
+                                x-cloak
+                                x-show="workspaceShellShowImageUtility()"
+                                type="button"
+                                title="사진 첨부"
+                                @click="openWorkspaceImagePicker()"
+                            >
+                                <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                <span class="home-v6-cmd-action-label">사진</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-action"
+                                x-cloak
+                                x-show="workspaceShellShowVoiceUtility()"
+                                type="button"
+                                :class="{ 'is-active': isWorkspaceVoiceListening }"
+                                :title="workspaceShellVoiceLabel()"
+                                @click="toggleWorkspaceVoiceInput()"
+                            >
+                                <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+                                <span class="home-v6-cmd-action-label" x-text="workspaceShellVoiceLabel()"></span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-action"
+                                type="button"
+                                :class="{ 'is-disabled': !workspaceShellCanReset() }"
+                                :title="activeAiResetLabel()"
+                                :aria-disabled="workspaceShellCanReset() ? 'false' : 'true'"
+                                @click="startNewWorkspaceChat()"
+                            >
+                                <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
+                                <span class="home-v6-cmd-action-label">새 대화</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -655,6 +700,8 @@
                             <div class="home-v6-agent-ai-bubble-head">
                                 <p class="home-v6-agent-ai-bubble-title" x-text="activeAiAssistantTitle()"></p>
                             </div>
+
+                            <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="activeAiPreviewNote()" x-text="activeAiPreviewNote()"></p>
 
                             <div class="home-v6-agent-chat-loading" x-cloak x-show="activeAiLoading()">
                                 <span></span>
