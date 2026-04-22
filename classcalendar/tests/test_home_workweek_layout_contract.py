@@ -100,6 +100,21 @@ class CalendarHomeWorkweekLayoutContractTests(SimpleTestCase):
         self.assertIn(".classcalendar-home-mobile-day--today {", content)
         self.assertIn(".classcalendar-home-mobile-day--today.classcalendar-home-mobile-day--selected {", content)
 
+    def test_home_mobile_month_grid_matches_sunday_first_desktop_order(self):
+        template_path = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "classcalendar"
+            / "_calendar_app.html"
+        )
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("['일', '월', '화', '수', '목', '금', '토']", content)
+        self.assertIn("start.setDate(start.getDate() - start.getDay());", content)
+        self.assertIn("if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));", content)
+        self.assertNotIn("const mondayOffset = first.getDay() === 0 ? 6 : first.getDay() - 1;", content)
+        self.assertNotIn("const sundayOffset = last.getDay() === 0 ? 0 : 7 - last.getDay();", content)
+
     def test_month_preview_uses_compact_text_rows_without_splitting_range_flow(self):
         template_path = (
             Path(__file__).resolve().parents[1]

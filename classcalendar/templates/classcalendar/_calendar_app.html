@@ -1636,7 +1636,7 @@
                         </div>
 
                         <div class="classcalendar-home-mobile-weekdays">
-                            <template x-for="day in ['월', '화', '수', '목', '금', '토', '일']" :key="`mobile-day-${day}`">
+                            <template x-for="day in ['일', '월', '화', '수', '목', '금', '토']" :key="`mobile-day-${day}`">
                                 <div class="classcalendar-home-mobile-weekday" x-text="day"></div>
                             </template>
                         </div>
@@ -5185,11 +5185,9 @@ function calendarApp() {
             const first = new Date(year, month, 1);
             const last = new Date(year, month + 1, 0);
             const start = new Date(first);
-            const mondayOffset = first.getDay() === 0 ? 6 : first.getDay() - 1;
-            start.setDate(start.getDate() - mondayOffset);
+            start.setDate(start.getDate() - start.getDay());
             const end = new Date(last);
-            const sundayOffset = last.getDay() === 0 ? 0 : 7 - last.getDay();
-            end.setDate(end.getDate() + sundayOffset);
+            if (end.getDay() !== 6) end.setDate(end.getDate() + (6 - end.getDay()));
 
             const dates = [];
             for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
