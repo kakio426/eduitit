@@ -41,12 +41,21 @@ function messageboxPage(options = {}) {
 
         init() {
             ensureMessageboxToastBridge();
-            initCalendarMessageHub(this, {
-                enabled: !!options.enabled,
-                itemTypesEnabled: !!options.itemTypesEnabled,
-                messageLimitsScriptId: "message-capture-limits-data",
-                messageUrlsScriptId: "message-capture-urls-data",
-            });
+            const rawHost = this.$root && this.$root._x_dataStack && this.$root._x_dataStack.length
+                ? this.$root._x_dataStack[0]
+                : (this.$el && this.$el._x_dataStack && this.$el._x_dataStack.length
+                    ? this.$el._x_dataStack[0]
+                    : this);
+            if (!rawHost.messageboxBridgeInitialized) {
+                initCalendarMessageHub(rawHost, {
+                    enabled: !!options.enabled,
+                    itemTypesEnabled: !!options.itemTypesEnabled,
+                    messageLimitsScriptId: "message-capture-limits-data",
+                    messageUrlsScriptId: "message-capture-urls-data",
+                });
+                rawHost.messageboxBridgeInitialized = true;
+            }
+            this.messageboxBridgeInitialized = true;
 
             this.messageArchiveCounts = {
                 all: 0,
