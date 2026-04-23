@@ -8,13 +8,14 @@
 {% endblock %}
 
 {% block content %}
-<main id="rg-app" class="rg-root">
+<main id="rg-app" class="rg-root service-shell--compact">
     <header class="rg-topbar">
         <div class="rg-brand">
             <span class="rg-brand-icon">⚡</span>
-            <div>
+            <div class="rg-brand-copy">
+                <span class="rg-brand-kicker">READY SET TAP</span>
                 <h1>탭 순발력 챌린지</h1>
-                <p>신호 후 터치</p>
+                <p>초록 불이 뜨는 순간, 가장 빠르게 탭!</p>
             </div>
         </div>
         <div class="rg-top-actions">
@@ -23,27 +24,69 @@
     </header>
 
     <section id="rg-menu" class="rg-screen is-active" aria-hidden="false">
+        <div class="rg-hero-panel">
+            <div class="rg-hero-copy">
+                <span class="rg-kicker">교실 번개 대결</span>
+                <h2>눈은 크게, 손은 멈춤.<br>초록 불에 바로 탭!</h2>
+                <p>두근두근 기다리다가, 신호가 뜨는 순간 승부가 갈립니다.</p>
+                <div class="rg-pill-row">
+                    <span class="rg-pill">신호 전 탭 = 반칙</span>
+                    <span class="rg-pill">TOP 5 기록 경쟁</span>
+                    <span class="rg-pill">친구와 바로 VS</span>
+                </div>
+            </div>
+            <div class="rg-signal-board" aria-hidden="true">
+                <div class="rg-signal-track rg-signal-track-demo">
+                    <span class="rg-light rg-light-red is-on"></span>
+                    <span class="rg-light rg-light-yellow is-on"></span>
+                    <span class="rg-light rg-light-green"></span>
+                </div>
+                <div class="rg-signal-copy">
+                    <strong>READY</strong>
+                    <span>초록 불만 기다리기</span>
+                </div>
+            </div>
+        </div>
+
         <div class="rg-card-grid">
             <button id="rg-open-single" type="button" class="rg-mode-card">
+                <span class="rg-mode-tag">TOP 5 도전</span>
                 <strong>기록 도전</strong>
-                <span>혼자 기록 측정</span>
+                <span>혼자 최고 기록</span>
+                <small>이름 남기기</small>
             </button>
             <button id="rg-open-battle" type="button" class="rg-mode-card rg-mode-card-alt">
-                <strong>1:1 대결</strong>
-                <span>양쪽 대결</span>
+                <span class="rg-mode-tag">친구와 승부</span>
+                <strong>VS 대결</strong>
+                <span>둘이 바로 승부</span>
+                <small>한 판 더!</small>
             </button>
         </div>
 
         <section class="rg-panel">
-            <h2>명예의 전당 TOP 5</h2>
+            <div class="rg-panel-head">
+                <h2>명예의 전당 TOP 5</h2>
+                <span class="rg-panel-badge">경쟁 중</span>
+            </div>
             <ol id="rg-leaderboard" class="rg-leaderboard"></ol>
         </section>
     </section>
 
     <section id="rg-single" class="rg-screen" aria-hidden="true">
         <div class="rg-screen-head">
-            <button id="rg-single-back" type="button" class="rg-btn rg-btn-ghost">메뉴로</button>
+            <button id="rg-single-back" type="button" class="rg-btn rg-btn-ghost">메뉴</button>
+            <div class="rg-screen-chip rg-screen-chip-single">개인 기록전</div>
         </div>
+
+        <div id="rg-single-hud" class="rg-hud" data-state="idle" data-tone="idle">
+            <div class="rg-signal-track" aria-hidden="true">
+                <span class="rg-light rg-light-red"></span>
+                <span class="rg-light rg-light-yellow"></span>
+                <span class="rg-light rg-light-green"></span>
+            </div>
+            <p id="rg-single-hint" class="rg-hud-copy">초록 불만 기다리면 돼요.</p>
+        </div>
+
         <article
             id="rg-single-stage"
             class="rg-stage rg-stage-idle"
@@ -51,35 +94,70 @@
             tabindex="0"
             aria-label="싱글 모드 게임 스테이지"
         >
-            <p id="rg-single-main" class="rg-stage-main">시작 대기</p>
+            <span id="rg-single-badge" class="rg-stage-badge">READY</span>
+            <p id="rg-single-main" class="rg-stage-main">손은 멈춤!</p>
             <p id="rg-single-sub" class="rg-stage-sub">신호 전에 누르면 반칙 처리됩니다.</p>
-            <button id="rg-single-start" type="button" class="rg-btn rg-btn-primary">시작</button>
-            <button id="rg-single-retry" type="button" class="rg-btn rg-btn-primary is-hidden">다시 시작</button>
+            <div class="rg-stage-actions">
+                <button id="rg-single-start" type="button" class="rg-btn rg-btn-primary">시작</button>
+                <button id="rg-single-retry" type="button" class="rg-btn rg-btn-primary is-hidden">다시 시작</button>
+            </div>
         </article>
-        <p class="rg-note">초록색 TAP 신호가 뜬 뒤에 터치해야 정상 기록으로 인정됩니다.</p>
+
+        <form id="rg-single-save-form" class="rg-save-panel is-hidden" autocomplete="off">
+            <label class="rg-save-label" for="rg-single-name">이름 남기기</label>
+            <div class="rg-save-row">
+                <input id="rg-single-name" type="text" maxlength="16" placeholder="닉네임">
+                <button id="rg-single-save" type="submit" class="rg-btn rg-btn-primary">저장</button>
+            </div>
+            <p id="rg-single-save-status" class="rg-save-status" role="status" aria-live="polite"></p>
+        </form>
+
+        <p class="rg-note">초록 불이 뜨면 바로 탭!</p>
     </section>
 
     <section id="rg-battle" class="rg-screen" aria-hidden="true">
         <div class="rg-screen-head">
-            <button id="rg-battle-back" type="button" class="rg-btn rg-btn-ghost">메뉴로</button>
-            <button id="rg-battle-start" type="button" class="rg-btn rg-btn-primary">시작</button>
+            <button id="rg-battle-back" type="button" class="rg-btn rg-btn-ghost">메뉴</button>
+            <div class="rg-screen-chip rg-screen-chip-battle">VS 대결</div>
+        </div>
+
+        <div id="rg-battle-hud" class="rg-battle-hud" data-state="idle" data-tone="idle">
+            <div class="rg-versus-banner">
+                <span class="rg-versus-badge">VS</span>
+                <p id="rg-battle-status">친구와 동시에 준비!</p>
+            </div>
+            <div class="rg-battle-cta">
+                <button id="rg-battle-start" type="button" class="rg-btn rg-btn-primary">대결 시작</button>
+                <button id="rg-battle-restart" type="button" class="rg-btn rg-btn-primary is-hidden">한 판 더</button>
+            </div>
         </div>
 
         <div class="rg-battle-wrap">
             <button id="rg-battle-p1" type="button" class="rg-battle-side rg-p1">
+                <span class="rg-player-tag">LEFT</span>
                 <span class="rg-battle-label">왼쪽 플레이어</span>
                 <strong id="rg-battle-p1-result">대기</strong>
+                <span class="rg-battle-tip">신호 후 탭!</span>
             </button>
-            <div class="rg-battle-center">
-                <p id="rg-battle-status">시작 버튼을 누르세요.</p>
-                <button id="rg-battle-restart" type="button" class="rg-btn rg-btn-primary is-hidden">다시 시작</button>
+
+            <div id="rg-battle-center" class="rg-battle-center" data-state="idle" data-tone="idle">
+                <div class="rg-signal-track" aria-hidden="true">
+                    <span class="rg-light rg-light-red"></span>
+                    <span class="rg-light rg-light-yellow"></span>
+                    <span class="rg-light rg-light-green"></span>
+                </div>
+                <p id="rg-battle-sub" class="rg-battle-sub">가운데 버튼으로 시작하세요.</p>
             </div>
+
             <button id="rg-battle-p2" type="button" class="rg-battle-side rg-p2">
+                <span class="rg-player-tag">RIGHT</span>
                 <span class="rg-battle-label">오른쪽 플레이어</span>
                 <strong id="rg-battle-p2-result">대기</strong>
+                <span class="rg-battle-tip">신호 후 탭!</span>
             </button>
         </div>
-        <p class="rg-note">사인 전 터치 = 반칙</p>
+
+        <p class="rg-note">신호 전 터치하면 바로 패배.</p>
     </section>
 </main>
 {% endblock %}
