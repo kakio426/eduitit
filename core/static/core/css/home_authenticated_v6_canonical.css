@@ -6444,6 +6444,123 @@ transform: none;
     box-shadow: 0 14px 28px rgba(23, 32, 54, 0.16);
 }
 
+/* --- 서비스 피커 --- */
+.home-v6-page .home-v6-cmd-service-picker-wrap {
+    position: relative;
+}
+
+.home-v6-page .home-v6-cmd-service-chip--more {
+    gap: 0.35rem;
+}
+
+.home-v6-page .home-v6-cmd-service-chip--more.is-active {
+    border-color: rgba(148, 163, 184, 0.48);
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+}
+
+.home-v6-page .home-v6-cmd-service-picker {
+    position: absolute;
+    bottom: calc(100% + 0.55rem);
+    left: 0;
+    z-index: 120;
+    min-width: 17rem;
+    padding: 0.85rem;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.home-v6-page .home-v6-cmd-service-picker-label {
+    margin: 0 0 0.6rem 0.1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-item {
+    display: grid;
+    grid-template-columns: 1.8rem 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 0.5rem;
+    padding: 0.52rem 0.6rem;
+    border: none;
+    border-radius: 0.6rem;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.14s ease;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-item:hover,
+.home-v6-page .home-v6-cmd-service-picker-item:focus-visible {
+    background: rgba(241, 245, 249, 0.9);
+    outline: none;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-item.is-active {
+    background: rgba(23, 32, 54, 0.07);
+}
+
+.home-v6-page .home-v6-cmd-service-picker-icon {
+    grid-row: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 0.45rem;
+    background: rgba(241, 245, 249, 0.9);
+    color: #475569;
+    font-size: 0.8rem;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-item.is-active .home-v6-cmd-service-picker-icon {
+    background: #172036;
+    color: #ffffff;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.home-v6-page .home-v6-cmd-service-picker-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.2;
+}
+
+/* 피커 진입/퇴장 애니메이션 */
+.home-v6-picker-enter { transition: opacity 0.15s ease, transform 0.15s ease; }
+.home-v6-picker-enter-start { opacity: 0; transform: translateY(6px) scale(0.97); }
+.home-v6-picker-enter-end { opacity: 1; transform: translateY(0) scale(1); }
+.home-v6-picker-leave { transition: opacity 0.1s ease, transform 0.1s ease; }
+.home-v6-picker-leave-start { opacity: 1; transform: translateY(0) scale(1); }
+.home-v6-picker-leave-end { opacity: 0; transform: translateY(4px) scale(0.97); }
+
+@media (max-width: 480px) {
+    .home-v6-page .home-v6-cmd-service-picker {
+        min-width: 14.5rem;
+        left: auto;
+        right: 0;
+    }
+}
+
 .home-v6-page .home-v6-cmd-hint {
     margin: 0.7rem 0 0;
     color: #475569;
