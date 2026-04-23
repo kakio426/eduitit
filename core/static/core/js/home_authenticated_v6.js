@@ -685,7 +685,7 @@
             workspaceSpeechRecognition: null,
             isWorkspaceVoiceListening: false,
             workspaceInput: '',
-            agentModeMenuOpen: false,
+            shellModeMenuOpen: false,
             railSearchText: '',
             homeAgentLimitModalOpen: false,
             homeAgentLimitModal: {
@@ -1294,6 +1294,39 @@
                 return this.isWorkspaceVoiceListening ? '듣는 중' : '음성';
             },
 
+            openShellModeMenu: function () {
+                var self = this;
+                this.shellModeMenuOpen = true;
+                window.requestAnimationFrame(function () {
+                    var menu = self.$refs && self.$refs.workspaceModeMenu ? self.$refs.workspaceModeMenu : null;
+                    var firstItem = menu
+                        ? menu.querySelector('[data-home-v6-workspace-mode-option="true"]')
+                        : null;
+                    if (firstItem && typeof firstItem.focus === 'function') {
+                        firstItem.focus();
+                    }
+                });
+            },
+
+            closeShellModeMenu: function (options) {
+                var settings = options && typeof options === 'object' ? options : {};
+                var trigger = this.$refs && this.$refs.workspaceModeTrigger ? this.$refs.workspaceModeTrigger : null;
+                this.shellModeMenuOpen = false;
+                if (settings.focusTrigger && trigger && typeof trigger.focus === 'function') {
+                    window.requestAnimationFrame(function () {
+                        trigger.focus();
+                    });
+                }
+            },
+
+            toggleShellModeMenu: function () {
+                if (this.shellModeMenuOpen) {
+                    this.closeShellModeMenu({ focusTrigger: true });
+                    return;
+                }
+                this.openShellModeMenu();
+            },
+
             openWorkspaceAttachmentPicker: function () {
                 if (!this.workspaceShellCanAttachUtility()) {
                     return;
@@ -1634,10 +1667,17 @@
                 });
             },
 
+            availableShellModes: function () {
+                return this.agentModes.filter(function (mode) {
+                    return Boolean(trimLine(mode && mode.key) && trimLine(mode && mode.label));
+                });
+            },
+
             selectServiceChip: function (modeKey, options) {
                 var nextModeKey = trimLine(String(modeKey || '').replace(/^service:/, ''));
                 var settings = options && typeof options === 'object' ? options : {};
-                var preservedDraft = typeof settings.draftText === 'string' ? settings.draftText : this.workspaceInput;
+                var hasDraftOverride = typeof settings.draftText === 'string';
+                var preservedDraft = hasDraftOverride ? settings.draftText : '';
                 if (!nextModeKey) {
                     return;
                 }
@@ -1646,7 +1686,7 @@
                 }
                 this.clearAgentConversationContext();
                 this.selectAgentMode(nextModeKey);
-                if (trimLine(preservedDraft)) {
+                if (hasDraftOverride) {
                     this.workspaceInput = preservedDraft;
                     this.handleActiveAiComposerInput();
                 }
@@ -1654,6 +1694,17 @@
                 if (settings.focus !== false) {
                     this.focusWorkspace();
                 }
+            },
+
+            selectModeFromShellMenu: function (modeKey) {
+                var nextModeKey = trimLine(modeKey);
+                if (!nextModeKey) {
+                    return;
+                }
+                this.closeShellModeMenu();
+                this.selectServiceChip(nextModeKey, {
+                    focus: true,
+                });
             },
 
             submitWorkspaceShell: function () {
@@ -3127,7 +3178,7 @@
                 }
                 this.activeRailKey = item.key;
                 this.activeConversationKey = item.key;
-                this.agentModeMenuOpen = false;
+                this.closeShellModeMenu();
                 this.clearHumanChatComposer();
                 await this.refreshHumanConversation();
             },
@@ -5721,7 +5772,7 @@
                 this.isAgentExecuting = false;
                 this.activeModeKey = nextModeKey;
                 this.activeRailKey = 'service:' + String(nextModeKey || '');
-                this.agentModeMenuOpen = false;
+                this.closeShellModeMenu();
                 this.restoreModeState(nextModeKey);
                 this.scheduleAiComposerResize();
             },

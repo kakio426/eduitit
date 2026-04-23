@@ -55,6 +55,109 @@
                                 aria-label="AI 교무비서 입력"
                             ></textarea>
 
+                            <div class="home-v6-cmd-bar-trailing">
+                                <button
+                                    class="home-v6-cmd-bar-tool"
+                                    x-cloak
+                                    x-show="workspaceShellShowAttachmentUtility()"
+                                    type="button"
+                                    title="파일 첨부"
+                                    aria-label="파일 첨부"
+                                    @click="openWorkspaceAttachmentPicker()"
+                                >
+                                    <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                                </button>
+
+                                <button
+                                    class="home-v6-cmd-bar-tool"
+                                    x-cloak
+                                    x-show="workspaceShellShowImageUtility()"
+                                    type="button"
+                                    title="사진 첨부"
+                                    aria-label="사진 첨부"
+                                    @click="openWorkspaceImagePicker()"
+                                >
+                                    <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                </button>
+
+                                <button
+                                    class="home-v6-cmd-bar-tool"
+                                    x-cloak
+                                    x-show="workspaceShellShowVoiceUtility()"
+                                    type="button"
+                                    :class="{ 'is-active': isWorkspaceVoiceListening }"
+                                    :title="workspaceShellVoiceLabel()"
+                                    :aria-label="workspaceShellVoiceLabel()"
+                                    @click="toggleWorkspaceVoiceInput()"
+                                >
+                                    <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+                                </button>
+
+                                <button
+                                    class="home-v6-cmd-bar-tool"
+                                    type="button"
+                                    :class="{ 'is-disabled': !workspaceShellCanReset() }"
+                                    :title="activeAiResetLabel()"
+                                    :aria-label="activeAiResetLabel()"
+                                    :aria-disabled="workspaceShellCanReset() ? 'false' : 'true'"
+                                    @click="startNewWorkspaceChat()"
+                                >
+                                    <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
+                                </button>
+
+                                <div class="home-v6-cmd-mode-picker" @keydown.escape.window="shellModeMenuOpen ? closeShellModeMenu({ focusTrigger: true }) : null">
+                                    <button
+                                        type="button"
+                                        class="home-v6-cmd-bar-tool home-v6-cmd-bar-tool--mode"
+                                        x-ref="workspaceModeTrigger"
+                                        aria-haspopup="menu"
+                                        :aria-expanded="shellModeMenuOpen ? 'true' : 'false'"
+                                        aria-label="서비스 선택"
+                                        title="서비스 선택"
+                                        @click="toggleShellModeMenu()"
+                                    >
+                                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                                    </button>
+
+                                    <div
+                                        class="home-v6-cmd-mode-menu"
+                                        x-cloak
+                                        x-show="shellModeMenuOpen"
+                                        x-transition.opacity.scale.origin.top.right.duration.140ms
+                                        x-ref="workspaceModeMenu"
+                                        role="menu"
+                                        tabindex="-1"
+                                        @click.outside="closeShellModeMenu()"
+                                        @keydown.escape.prevent.stop="closeShellModeMenu({ focusTrigger: true })"
+                                    >
+                                        <div class="home-v6-cmd-mode-menu-list">
+                                            <template x-for="mode in availableShellModes()" :key="'workspace-mode-' + mode.key">
+                                                <button
+                                                    type="button"
+                                                    class="home-v6-cmd-mode-option"
+                                                    :class="{ 'is-active': activeModeKey === mode.key }"
+                                                    role="menuitemradio"
+                                                    :aria-checked="activeModeKey === mode.key ? 'true' : 'false'"
+                                                    data-home-v6-workspace-mode-option="true"
+                                                    @click="selectModeFromShellMenu(mode.key)"
+                                                >
+                                                    <span class="home-v6-cmd-mode-option-icon" aria-hidden="true">
+                                                        <i :class="mode.icon_class || 'fa-regular fa-circle'"></i>
+                                                    </span>
+                                                    <span class="home-v6-cmd-mode-option-label" x-text="mode.label"></span>
+                                                    <i
+                                                        class="fa-solid fa-check home-v6-cmd-mode-option-check"
+                                                        x-cloak
+                                                        x-show="activeModeKey === mode.key"
+                                                        aria-hidden="true"
+                                                    ></i>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button
                                 class="home-v6-cmd-bar-submit"
                                 type="button"
@@ -77,114 +180,6 @@
                         </div>
 
                         <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
-
-                        <div class="home-v6-cmd-service-chips" role="list" aria-label="AI 교무비서 서비스">
-                            <button
-                                class="home-v6-cmd-service-chip"
-                                :class="{ 'is-active': activeModeKey === 'notice' }"
-                                type="button"
-                                role="listitem"
-                                title="알림장"
-                                aria-label="알림장"
-                                @click="selectServiceChip('notice', { draftText: '' })"
-                            >
-                                <span>알림장</span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-service-chip"
-                                :class="{ 'is-active': activeModeKey === 'schedule' }"
-                                type="button"
-                                role="listitem"
-                                title="일정"
-                                aria-label="일정"
-                                @click="selectServiceChip('schedule', { draftText: '' })"
-                            >
-                                <span>일정</span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-service-chip"
-                                :class="{ 'is-active': activeModeKey === 'teacher-law' }"
-                                type="button"
-                                role="listitem"
-                                title="교사 법률"
-                                aria-label="교사 법률"
-                                @click="selectServiceChip('teacher-law', { draftText: '' })"
-                            >
-                                <span>교사 법률</span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-service-chip"
-                                :class="{ 'is-active': activeModeKey === 'reservation' }"
-                                type="button"
-                                role="listitem"
-                                title="특별실 예약"
-                                aria-label="특별실 예약"
-                                @click="selectServiceChip('reservation', { draftText: '' })"
-                            >
-                                <span>특별실 예약</span>
-                            </button>
-                        </div>
-
-                        <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>
-
-                        <div class="home-v6-cmd-starter-list" x-cloak x-show="!activeAiHasVisibleConversation() && activeAiHasStarterChips()">
-                            <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
-                                <button
-                                    type="button"
-                                    class="home-v6-cmd-starter-chip"
-                                    @click="runActiveAiStarter(item)"
-                                    x-text="item.label"
-                                ></button>
-                            </template>
-                        </div>
-
-                        <div class="home-v6-cmd-actions" role="toolbar" aria-label="AI 교무비서 유틸리티">
-                            <button
-                                class="home-v6-cmd-action"
-                                x-cloak
-                                x-show="workspaceShellShowAttachmentUtility()"
-                                type="button"
-                                title="파일 첨부"
-                                @click="openWorkspaceAttachmentPicker()"
-                            >
-                                <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                                <span class="home-v6-cmd-action-label">첨부</span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-action"
-                                x-cloak
-                                x-show="workspaceShellShowImageUtility()"
-                                type="button"
-                                title="사진 첨부"
-                                @click="openWorkspaceImagePicker()"
-                            >
-                                <i class="fa-regular fa-image" aria-hidden="true"></i>
-                                <span class="home-v6-cmd-action-label">사진</span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-action"
-                                x-cloak
-                                x-show="workspaceShellShowVoiceUtility()"
-                                type="button"
-                                :class="{ 'is-active': isWorkspaceVoiceListening }"
-                                :title="workspaceShellVoiceLabel()"
-                                @click="toggleWorkspaceVoiceInput()"
-                            >
-                                <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
-                                <span class="home-v6-cmd-action-label" x-text="workspaceShellVoiceLabel()"></span>
-                            </button>
-                            <button
-                                class="home-v6-cmd-action"
-                                type="button"
-                                :class="{ 'is-disabled': !workspaceShellCanReset() }"
-                                :title="activeAiResetLabel()"
-                                :aria-disabled="workspaceShellCanReset() ? 'false' : 'true'"
-                                @click="startNewWorkspaceChat()"
-                            >
-                                <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
-                                <span class="home-v6-cmd-action-label">새 대화</span>
-                            </button>
-                        </div>
                     </div>
                 </div>
 
