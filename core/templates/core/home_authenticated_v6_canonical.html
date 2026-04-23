@@ -253,7 +253,7 @@
                     {% endif %}
                     {% elif mobile_section == 'sns' %}
                     <section class="home-v6-mobile-sns-panel home-v6-mobile-panel home-v6-mobile-sns" data-home-v6-mobile-sns="true" {% if home_user_mode == 'authenticated' %}hidden aria-hidden="true"{% endif %}>
-                        {% include 'core/partials/home_v6_sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' %}
+                        {% include 'core/partials/home_v6_sns_mobile_preview_panel.html' with root_class='home-v6-mobile-sns' section_id='sns-full-section-auth-v6' start_open='false' slim_mode='1' %}
                     </section>
                     {% endif %}
                     {% endfor %}

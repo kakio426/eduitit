@@ -2277,7 +2277,8 @@ class HomeV2ViewTest(TestCase):
         content = response.content.decode('utf-8')
         self._assert_authenticated_home_uses_v6(response, content)
         self.assertIn('data-home-v6-mobile-sns="true"', content)
-        self.assertIn('@click="snsOpen = true"', content)
+        self.assertIn('data-home-v6-mobile-sns-launcher="true"', content)
+        self.assertIn('@click="snsOpen = !snsOpen"', content)
         self.assertNotIn('hx-select="#mobile-post-list-container"', content)
         self.assertNotIn('href="#sns-full-section-auth-v6"', content)
 
@@ -3590,6 +3591,7 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-calendar-panel="mobile"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-mobile-sns="true"', content)
+        self.assertIn('data-home-v6-mobile-sns-compact="true"', content)
         self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
         self.assertIn('sns-full-section-auth-v6', content)
         self.assertIn('data-home-v6-mobile-summary-button="true"', content)

@@ -1,3 +1,42 @@
+{% if slim_mode %}
+<div
+    x-data="{ snsOpen: {{ start_open|default:'false' }} }"
+    class="{{ root_class|default:'block xl:hidden mt-4 px-1' }}"{% if data_aos %} data-aos="{{ data_aos }}"{% endif %}
+>
+    <div id="{{ section_id|default:'sns-full-section-v2' }}" class="home-v6-mobile-sns-launcher-group" data-home-v6-mobile-sns-compact="true">
+        <button
+            type="button"
+            class="home-v6-mobile-sns-launcher"
+            data-home-v6-mobile-sns-launcher="true"
+            @click="snsOpen = !snsOpen"
+            :aria-expanded="snsOpen ? 'true' : 'false'"
+        >
+            <span class="home-v6-mobile-sns-launcher-icon" aria-hidden="true">
+                <i class="ph-fill ph-chat-circle-text"></i>
+            </span>
+            <span class="home-v6-mobile-sns-launcher-copy">
+                <span class="home-v6-mobile-sns-launcher-title">SNS</span>
+                <span class="home-v6-mobile-sns-launcher-summary" x-text="snsOpen ? '소통창 접기' : '실시간 소통'">실시간 소통</span>
+            </span>
+            <span class="home-v6-mobile-sns-launcher-status" x-text="snsOpen ? '닫기' : '열기'">열기</span>
+            <i class="fa-solid fa-chevron-down home-v6-mobile-sns-launcher-arrow" aria-hidden="true" :class="snsOpen && 'rotate-180'"></i>
+        </button>
+        <div
+            x-cloak
+            x-show="snsOpen"
+            x-transition:enter="transition ease-out duration-220"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-180"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            class="home-v6-mobile-sns-expanded"
+        >
+            {% include 'core/partials/sns_widget_mobile.html' with hide_header=True expand_all_mobile=True compact_posts=True %}
+        </div>
+    </div>
+</div>
+{% else %}
 <div
     x-data="{
         snsOpen: {{ start_open|default:'true' }},
@@ -100,3 +139,4 @@
         </div>
     </div>
 </div>
+{% endif %}
