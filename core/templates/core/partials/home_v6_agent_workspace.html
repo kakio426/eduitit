@@ -978,11 +978,6 @@
                             </div>
 
                             <div class="home-v6-agent-message-save-stage" x-cloak x-show="aiMessengerIsFlow('pipeline')">
-                                <div class="home-v6-agent-ai-body" x-cloak x-show="!messageSaveStage && messageSaveDraftLines().length">
-                                    <template x-for="(line, index) in messageSaveDraftLines()" :key="'message-save-draft-' + index + '-' + line">
-                                        <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
-                                    </template>
-                                </div>
                                 <div class="home-v6-agent-ai-body" x-cloak x-show="messageSaveStage === 'saved' && messageSaveResultLines().length">
                                     <template x-for="(line, index) in messageSaveResultLines()" :key="'message-save-saved-' + index + '-' + line">
                                         <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
@@ -1003,6 +998,11 @@
                                 </div>
                                 <div class="home-v6-agent-ai-body" x-cloak x-show="messageSaveStage === 'extracted' && !messageSaveCandidateList().length && messageSaveResultLines().length">
                                     <template x-for="(line, index) in messageSaveResultLines()" :key="'message-save-result-' + index + '-' + line">
+                                        <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
+                                    </template>
+                                </div>
+                                <div class="home-v6-agent-ai-body" x-cloak x-show="messageSaveStage === 'committed' && messageSaveResultLines().length">
+                                    <template x-for="(line, index) in messageSaveResultLines()" :key="'message-save-committed-' + index + '-' + line">
                                         <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
                                     </template>
                                 </div>

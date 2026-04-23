@@ -765,6 +765,7 @@
             noticeBaseInput: '',
             noticeRefinementLabel: '',
             scheduleEditorOpen: false,
+            messageSaveSourceText: '',
             messageSavePayload: {},
             messageSaveStage: '',
             messageSaveErrorText: '',
@@ -3649,8 +3650,12 @@
             },
 
             previewResultLines: function () {
-                var preview = this.agentPreview && typeof this.agentPreview === 'object' ? this.agentPreview : {};
-                var sections = Array.isArray(preview.sections) ? preview.sections : [];
+                return this.previewResultLinesFromPreview(this.agentPreview).slice(0, Number(this.activeMode.preview_line_limit || 8));
+            },
+
+            previewResultLinesFromPreview: function (preview) {
+                var payload = preview && typeof preview === 'object' ? preview : {};
+                var sections = Array.isArray(payload.sections) ? payload.sections : [];
                 var lines = [];
                 var seen = new Set();
 
@@ -3667,9 +3672,13 @@
                     sections[0].items.forEach(pushLine);
                 }
                 if (!lines.length) {
-                    pushLine(preview.summary);
+                    pushLine(payload.summary);
                 }
-                return lines.slice(0, Number(this.activeMode.preview_line_limit || 8));
+                return lines;
+            },
+
+            previewHasVisibleContent: function (preview) {
+                return Boolean(this.previewResultLinesFromPreview(preview).length);
             },
 
             clonePayload: function (value) {
@@ -3706,6 +3715,7 @@
                     noticeBaseInput: '',
                     noticeRefinementLabel: '',
                     scheduleEditorOpen: false,
+                    messageSaveSourceText: '',
                     messageSavePayload: {},
                     messageSaveStage: '',
                     messageSaveErrorText: '',
@@ -3737,6 +3747,7 @@
                     noticeBaseInput: typeof source.noticeBaseInput === 'string' ? source.noticeBaseInput : '',
                     noticeRefinementLabel: typeof source.noticeRefinementLabel === 'string' ? source.noticeRefinementLabel : '',
                     scheduleEditorOpen: Boolean(source.scheduleEditorOpen),
+                    messageSaveSourceText: typeof source.messageSaveSourceText === 'string' ? source.messageSaveSourceText : '',
                     messageSavePayload: source.messageSavePayload && typeof source.messageSavePayload === 'object'
                         ? this.clonePayload(source.messageSavePayload)
                         : {},
@@ -3764,6 +3775,7 @@
                     noticeBaseInput: this.noticeBaseInput,
                     noticeRefinementLabel: this.noticeRefinementLabel,
                     scheduleEditorOpen: this.scheduleEditorOpen,
+                    messageSaveSourceText: this.messageSaveSourceText,
                     messageSavePayload: this.messageSavePayload,
                     messageSaveStage: this.messageSaveStage,
                     messageSaveErrorText: this.messageSaveErrorText,
@@ -3784,6 +3796,7 @@
                 this.noticeBaseInput = nextState.noticeBaseInput;
                 this.noticeRefinementLabel = nextState.noticeRefinementLabel;
                 this.scheduleEditorOpen = nextState.scheduleEditorOpen;
+                this.messageSaveSourceText = nextState.messageSaveSourceText;
                 this.messageSavePayload = nextState.messageSavePayload;
                 this.messageSaveStage = nextState.messageSaveStage;
                 this.messageSaveErrorText = nextState.messageSaveErrorText;
@@ -3798,6 +3811,7 @@
             },
 
             clearMessageSaveState: function () {
+                this.messageSaveSourceText = '';
                 this.messageSavePayload = {};
                 this.messageSaveStage = '';
                 this.isSavingMessageSave = false;
@@ -4464,6 +4478,9 @@
                 if (!this.quickdropHasResult()) {
                     return '';
                 }
+                if (this.quickdropResultKind() === 'text') {
+                    return '';
+                }
                 return trimLine(this.previewResultLines()[0] || (this.agentPreview && this.agentPreview.summary) || '');
             },
 
@@ -4492,13 +4509,8 @@
                         ? '글 전송 완료'
                         : (normalizedKind === 'image' ? '사진 전송 완료' : '파일 전송 완료'),
                     summary: '',
-                    sections: [
-                        {
-                            title: '결과',
-                            items: [value],
-                        },
-                    ],
-                    note: '',
+                    sections: [],
+                    note: '전송함에서 확인',
                 });
             },
 
@@ -4712,7 +4724,10 @@
             },
 
             copyTtsDraft: async function () {
-                var lines = this.previewResultLines();
+                var lines = compactLines(this.ttsUserBubbleText());
+                if (!lines.length) {
+                    lines = this.previewResultLines();
+                }
                 if (!lines.length) {
                     showFeedback('복사할 문구가 없습니다.', 'info');
                     return;
@@ -4740,26 +4755,22 @@
             },
 
             handleMessageSaveInputChange: function () {
-                var payload = this.messageSavePayload && typeof this.messageSavePayload === 'object' ? this.messageSavePayload : {};
-                var savedText = trimLine(payload.raw_text || '');
+                var draftText = trimLine(this.workspaceInput);
                 this.messageSaveErrorText = '';
-                if (!this.messageSaveStage) {
+                if (!this.messageSaveStage && !trimLine(this.messageSaveSourceText)) {
                     return;
                 }
-                if (trimLine(this.workspaceInput) !== savedText) {
-                    this.messageSavePayload = {};
-                    this.messageSaveStage = '';
-                    this.messageSaveSelectedCandidateId = '';
-                    this.messageSaveCommitResult = {};
+                if (draftText) {
+                    this.showIdlePreview();
                 }
             },
 
             messageSaveUserBubbleText: function () {
-                return trimLine(this.workspaceInput);
+                return trimLine(this.messageSaveSourceText);
             },
 
             messageSaveCanSave: function () {
-                return Boolean(this.messageSaveUserBubbleText());
+                return Boolean(trimLine(this.workspaceInput));
             },
 
             messageSaveHasConversation: function () {
@@ -4778,7 +4789,6 @@
                     || this.isExtractingMessageSave
                     || this.isCommittingMessageSave
                     || this.messageSaveStage
-                    || this.messageSaveDraftLines().length
                 );
             },
 
@@ -4805,7 +4815,7 @@
             },
 
             messageSaveDraftLines: function () {
-                return compactLines(this.workspaceInput).slice(0, 4);
+                return compactLines(this.messageSaveSourceText).slice(0, 4);
             },
 
             messageSaveParseTemporalParts: function (value) {
@@ -4921,14 +4931,11 @@
                 var commitResult = this.messageSaveCommitResult && typeof this.messageSaveCommitResult === 'object' ? this.messageSaveCommitResult : {};
                 var lines = [];
                 if (this.messageSaveStage === 'saved') {
-                    lines = compactLines(payload.preview_text || payload.raw_text || this.workspaceInput).slice(0, 4);
+                    lines = compactLines(payload.message || '보관함에 저장됨').slice(0, 1);
                     return lines;
                 }
                 if (this.messageSaveStage === 'extracted') {
-                    lines = compactLines(payload.summary_text || '').slice(0, 2);
-                    if (!lines.length) {
-                        lines = compactLines(payload.preview_text || payload.raw_text || this.workspaceInput).slice(0, 4);
-                    }
+                    lines = compactLines(payload.summary_text || payload.message || '').slice(0, 2);
                     return lines;
                 }
                 if (this.messageSaveStage === 'committed') {
@@ -5023,6 +5030,8 @@
                 this.isSavingMessageSave = true;
                 this.isExtractingMessageSave = false;
                 this.isCommittingMessageSave = false;
+                this.messageSaveSourceText = text;
+                this.workspaceInput = '';
                 this.messageSavePayload = {};
                 this.messageSaveStage = '';
                 this.messageSaveSelectedCandidateId = '';
@@ -5071,6 +5080,8 @@
                     }, this.agentPreviewMeta);
                     showFeedback(payload.message || '메시지를 보관함에 저장했어요.', 'success');
                 } catch (error) {
+                    this.messageSaveSourceText = '';
+                    this.workspaceInput = text;
                     this.messageSaveErrorText = error && error.message ? error.message : '메시지를 저장하지 못했습니다.';
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
@@ -5258,9 +5269,9 @@
                 } else if (this.messageSaveStage === 'committed') {
                     lines = this.messageSaveResultLines();
                 } else if (this.messageSaveStage === 'saved') {
-                    lines = this.messageSaveResultLines();
-                } else {
                     lines = this.messageSaveDraftLines();
+                } else {
+                    lines = compactLines(this.workspaceInput).slice(0, 4);
                 }
                 if (!lines.length) {
                     showFeedback('복사할 메시지가 없습니다.', 'info');
@@ -5887,6 +5898,9 @@
                 var text = trimLine(typeof overrideText === 'string' ? overrideText : this.workspaceInput);
                 var previewStrategy = String(mode.preview_strategy || 'llm').toLowerCase();
                 var requestId = 0;
+                var previewStatus;
+                var normalizedPreview;
+                var executionFallback = false;
                 if (!modeKey) {
                     this.showIdlePreview();
                     return;
@@ -5949,14 +5963,32 @@
                         }
                         throw new Error(payload.error || 'AI 미리보기를 불러오지 못했습니다.');
                     }
-                    this.agentPreview = this.normalizePreview(payload.preview, this.previewProviderStatus(payload));
-                    this.agentPreviewMeta = this.previewProviderStatus(payload);
-                    this.setExecution(payload.execution);
+                    previewStatus = this.previewProviderStatus(payload);
+                    normalizedPreview = this.normalizePreview(payload.preview, previewStatus);
+                    executionFallback = modeKey === 'teacher-law'
+                        && !this.normalizeExecution(payload.execution)
+                        && !this.previewHasVisibleContent(normalizedPreview);
+                    if (executionFallback) {
+                        previewStatus = {
+                            source: 'fallback',
+                            provider: '',
+                            model: '',
+                            providerLabel: '규칙형 미리보기',
+                        };
+                        normalizedPreview = this.normalizePreview(this.buildTeacherLawPreview(text), previewStatus);
+                    }
+                    this.agentPreview = normalizedPreview;
+                    this.agentPreviewMeta = previewStatus;
+                    if (executionFallback) {
+                        this.clearExecution();
+                    } else {
+                        this.setExecution(payload.execution);
+                    }
                 } catch (error) {
                     if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
                         return;
                     }
-                    if (previewStrategy === 'service') {
+                    if (previewStrategy === 'service' && modeKey !== 'teacher-law') {
                         this.showIdlePreview();
                     } else {
                         this.agentPreviewMeta = {
@@ -5990,16 +6022,10 @@
             },
 
             buildTtsPreview: function (text) {
-                var items = compactLines(text).slice(0, 4);
                 return this.buildPreviewSkeleton({
-                    title: '읽기 문구',
-                    summary: '',
-                    sections: [
-                        {
-                            title: '결과',
-                            items: items.length ? items : [text],
-                        },
-                    ],
+                    title: '읽기 준비',
+                    summary: '바로 읽기 가능',
+                    sections: [],
                     note: '',
                 });
             },
