@@ -1698,16 +1698,16 @@
                 this.selectServiceChip(itemKey);
             },
 
-            dispatchHeroQuery: function () {
+            dispatchHeroQuery: async function () {
                 var query = trimLine(this.agentHeroQuery || '');
                 if (!query) {
                     this.focusWorkspace();
                     return;
                 }
+                this.agentHeroQuery = '';
                 this.workspaceInput = query;
                 this.handleActiveAiComposerInput();
                 this.submitWorkspaceShell();
-                this.agentHeroQuery = '';
             },
 
             selectRailItem: async function (itemKey) {

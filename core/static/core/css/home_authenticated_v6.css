@@ -1359,6 +1359,14 @@
     transform: translateY(0);
 }
 
+.home-v6-cmd-bar-submit.is-disabled,
+.home-v6-cmd-bar-submit:disabled {
+    opacity: 0.38;
+    cursor: default;
+    transform: none;
+    pointer-events: none;
+}
+
 .home-v6-cmd-chips {
     display: flex;
     gap: 0.56rem;
