@@ -5945,6 +5945,8 @@ transform: none;
     padding: 0;
     border: 0;
     background: transparent;
+    position: relative;
+    z-index: 4;
 }
 
 .home-v6-page .home-v6-agent-main-head--single-shell.is-empty {
@@ -5956,6 +5958,7 @@ transform: none;
     width: min(100%, 84rem);
     margin: 0 auto;
     isolation: isolate;
+    z-index: 4;
 }
 
 .home-v6-page .home-v6-cmd-stage-backdrop {
@@ -6004,7 +6007,7 @@ transform: none;
     text-align: left;
     backdrop-filter: blur(24px) saturate(156%);
     -webkit-backdrop-filter: blur(24px) saturate(156%);
-    overflow: hidden;
+    overflow: visible;
     z-index: 1;
 }
 
@@ -6193,7 +6196,7 @@ transform: none;
     position: absolute;
     top: calc(100% + 0.55rem);
     right: 0;
-    z-index: 25;
+    z-index: 40;
     width: min(15rem, calc(100vw - 2rem));
     padding: 0.45rem;
     border: 1px solid rgba(226, 232, 240, 0.92);
