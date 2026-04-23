@@ -1145,16 +1145,6 @@
                     <div class="home-v6-agent-chat-row" x-cloak x-show="!scheduleHasConversation()">
                         <div class="home-v6-agent-chat-bubble home-v6-agent-chat-bubble--ai">
                             <p class="home-v6-agent-chat-text" x-text="activeMode.empty_prompt || '어떤 메시지에서 일정을 찾을까요?'"></p>
-                            <div class="home-v6-agent-schedule-quick-list">
-                                <template x-for="item in scheduleQuickExamples()" :key="item.label">
-                                    <button
-                                        type="button"
-                                        class="home-v6-agent-schedule-quick-chip"
-                                        @click="runScheduleExample(item.text)"
-                                        x-text="item.label"
-                                    ></button>
-                                </template>
-                            </div>
                         </div>
                     </div>
 
