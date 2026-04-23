@@ -5888,6 +5888,18 @@ transform: none;
     text-shadow: none;
 }
 
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"],
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] .bg-white,
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] form {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+}
+
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] #feed-scroll-container {
+    background: #f8fafc !important;
+    background-color: #f8fafc !important;
+}
+
 /* Single AI shell override */
 .home-v6-page .home-v6-primary-stack,
 .home-v6-page .home-v6-side-stack {
