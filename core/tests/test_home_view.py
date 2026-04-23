@@ -1826,11 +1826,11 @@ class HomeV2ViewTest(TestCase):
         favorites_end = content.index('data-home-v6-sns-panel="true"', favorites_index)
         favorites_block = content[favorites_index:favorites_end]
 
-        self.assertIn('title="반짝반짝 우리반 알림판">반짝반짝 우리반 알림판</p>', favorites_block)
+        self.assertIn('title="반짝반짝 우리반 알림판">알림판</p>', favorites_block)
         self.assertIn('aria-label="반짝반짝 우리반 알림판 즐겨찾기 토글"', favorites_block)
         self.assertIn('title="잇티예약">잇티예약</p>', favorites_block)
         self.assertIn('title="씨앗 퀴즈">씨앗 퀴즈</p>', favorites_block)
-        self.assertIn('data-home-v6-service-icon="true"', favorites_block)
+        self.assertNotIn('data-home-v6-service-icon="true"', favorites_block)
 
     def test_build_favorite_service_title_prefers_head_nouns_for_decorated_names(self):
         self.assertEqual(build_favorite_service_title("반짝반짝 우리반 알림판"), "알림판")
@@ -4525,12 +4525,12 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorites-grid {', css)
         self.assertIn('grid-template-columns: repeat(2, minmax(0, 1fr));', css)
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {', css)
-        self.assertIn('grid-template-columns: auto minmax(0, 1fr) auto;', css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr) auto;', css)
         self.assertIn('padding-right: 0;', css)
         self.assertIn('display: -webkit-box;', css)
         self.assertIn('-webkit-line-clamp: 2;', css)
         self.assertIn('white-space: normal;', css)
-        self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
+        self.assertNotIn('.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {', css)
         self.assertNotIn('--home-v6-desktop-side-width: clamp(21.5rem, 24vw, 24.75rem);', css)
         self.assertNotIn('--home-v6-desktop-side-width: clamp(22.75rem, 25vw, 26.5rem);', css)
 

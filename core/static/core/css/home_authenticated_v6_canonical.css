@@ -2114,10 +2114,10 @@ min-height: 3.45rem;
 
 .home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {
 display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0;
-    column-gap: 0.62rem;
+    column-gap: 0.72rem;
     padding-right: 0;
     min-width: 0;
 }
@@ -2150,19 +2150,13 @@ border-color: rgba(100, 116, 139, 0.3);
         inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
-.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"] [data-home-v6-service-icon="true"] {
-border: 1px solid rgba(var(--home-v6-service-rgb), 0.14);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(var(--home-v6-service-rgb), 0.06) 100%);
-    box-shadow:
-        0 8px 18px rgba(15, 23, 42, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.96);
-}
-
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-favorite-card="true"] [data-home-v6-service-title="true"] {
 color: #201335;
     display: -webkit-box;
-    font-size: 0.88rem;
-    line-height: 1.2;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.26;
+    letter-spacing: -0.03em;
     white-space: normal;
     overflow: hidden;
     text-overflow: clip;
@@ -5223,11 +5217,11 @@ grid-template-columns: minmax(0, 1fr);
 
 .home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-body {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     width: 100%;
     align-items: center;
     gap: 0;
-    column-gap: 0.72rem;
+    column-gap: 0.84rem;
     padding-right: 0;
     min-width: 0;
     min-height: 100%;
@@ -5241,22 +5235,13 @@ grid-template-columns: minmax(0, 1fr);
     width: 100%;
 }
 
-.home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-icon="true"] {
-    width: 2.4rem;
-    height: 2.4rem;
-    min-width: 2.4rem;
-    min-height: 2.4rem;
-    border-radius: 1rem;
-    font-size: 0.92rem;
-}
-
 .home-v6-page [data-home-v6-favorites-panel="true"] [data-home-v6-service-title="true"] {
     color: #0f172a;
     display: -webkit-box;
     overflow: hidden;
-    font-size: 0.94rem;
+    font-size: 1.02rem;
     font-weight: 900;
-    line-height: 1.24;
+    line-height: 1.28;
     letter-spacing: -0.03em;
     white-space: normal;
     text-overflow: clip;
@@ -5270,10 +5255,10 @@ grid-template-columns: minmax(0, 1fr);
     position: relative;
     top: auto;
     right: auto;
-    width: 1.72rem;
-    height: 1.72rem;
-    min-width: 1.72rem;
-    min-height: 1.72rem;
+    width: 1.76rem;
+    height: 1.76rem;
+    min-width: 1.76rem;
+    min-height: 1.76rem;
     margin-top: 0;
     margin-left: 0;
     border-radius: 999px;
