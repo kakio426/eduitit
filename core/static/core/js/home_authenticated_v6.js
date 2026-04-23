@@ -686,6 +686,7 @@
             isWorkspaceVoiceListening: false,
             workspaceInput: '',
             shellModeMenuOpen: false,
+            shellModeMenuFrame: null,
             railSearchText: '',
             homeAgentLimitModalOpen: false,
             homeAgentLimitModal: {
@@ -800,6 +801,12 @@
                     self.disconnectHomeConversationSocket();
                     self.disconnectActiveRoomSocket();
                 });
+                window.addEventListener('resize', function () {
+                    self.syncShellModeMenuPosition();
+                });
+                window.addEventListener('scroll', function () {
+                    self.syncShellModeMenuPosition();
+                }, true);
             },
 
             revealHomeAgentLimitNavChip: function (href, label) {
@@ -1294,10 +1301,53 @@
                 return this.isWorkspaceVoiceListening ? '듣는 중' : '음성';
             },
 
+            shellModeMenuStyle: function () {
+                var frame = this.shellModeMenuFrame && typeof this.shellModeMenuFrame === 'object'
+                    ? this.shellModeMenuFrame
+                    : {};
+                var top = Number(frame.top || 0);
+                var left = Number(frame.left || 0);
+                var width = Number(frame.width || 240);
+                var maxHeight = Number(frame.maxHeight || 320);
+                return 'top:' + top + 'px;left:' + left + 'px;width:' + width + 'px;max-height:' + maxHeight + 'px;';
+            },
+
+            syncShellModeMenuPosition: function () {
+                var trigger = null;
+                var rect = null;
+                var viewportWidth = 0;
+                var viewportHeight = 0;
+                var width = 0;
+                var left = 0;
+                var top = 0;
+                var maxHeight = 0;
+                if (!this.shellModeMenuOpen) {
+                    return;
+                }
+                trigger = this.$refs && this.$refs.workspaceModeTrigger ? this.$refs.workspaceModeTrigger : null;
+                if (!trigger || typeof trigger.getBoundingClientRect !== 'function') {
+                    return;
+                }
+                rect = trigger.getBoundingClientRect();
+                viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+                viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+                width = Math.min(240, Math.max(208, viewportWidth - 32));
+                left = Math.min(Math.max(16, rect.right - width), Math.max(16, viewportWidth - width - 16));
+                top = rect.bottom + 10;
+                maxHeight = Math.max(180, viewportHeight - top - 16);
+                this.shellModeMenuFrame = {
+                    top: Math.round(top),
+                    left: Math.round(left),
+                    width: Math.round(width),
+                    maxHeight: Math.round(maxHeight),
+                };
+            },
+
             openShellModeMenu: function () {
                 var self = this;
                 this.shellModeMenuOpen = true;
                 window.requestAnimationFrame(function () {
+                    self.syncShellModeMenuPosition();
                     var menu = self.$refs && self.$refs.workspaceModeMenu ? self.$refs.workspaceModeMenu : null;
                     var firstItem = menu
                         ? menu.querySelector('[data-home-v6-workspace-mode-option="true"]')
@@ -1312,6 +1362,7 @@
                 var settings = options && typeof options === 'object' ? options : {};
                 var trigger = this.$refs && this.$refs.workspaceModeTrigger ? this.$refs.workspaceModeTrigger : null;
                 this.shellModeMenuOpen = false;
+                this.shellModeMenuFrame = null;
                 if (settings.focusTrigger && trigger && typeof trigger.focus === 'function') {
                     window.requestAnimationFrame(function () {
                         trigger.focus();
