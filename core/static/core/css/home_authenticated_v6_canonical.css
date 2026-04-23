@@ -5855,6 +5855,39 @@ transform: none;
 }
 }
 
+/* Keep the SNS rail optically crisp; glass/mask compositing softens the header too much on Safari/WebKit. */
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] {
+    position: relative;
+    isolation: isolate;
+    background: #ffffff;
+    background-clip: padding-box;
+    filter: none;
+    transform: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+    backface-visibility: visible;
+}
+
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"]::before,
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"]::after {
+    content: none;
+}
+
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] > * {
+    position: relative;
+    z-index: 1;
+}
+
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] h2,
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] p,
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] i,
+.home-v6-page [data-home-v6-sns-panel="true"] [data-home-v6-sns-rail="true"] span {
+    filter: none;
+    text-shadow: none;
+}
+
 /* Single AI shell override */
 .home-v6-page .home-v6-primary-stack,
 .home-v6-page .home-v6-side-stack {
