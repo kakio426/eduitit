@@ -5594,7 +5594,14 @@
                 if (!this.reservationHasExecution()) {
                     return;
                 }
+                var hadRoom = trimLine(this.agentExecutionDraft.room_id || '');
+                var hadPeriod = trimLine(this.agentExecutionDraft.period || '');
                 this.agentExecutionDraft.school_slug = trimLine(schoolSlug);
+                if (hadRoom || hadPeriod) {
+                    this.agentExecutionDraft.room_id = '';
+                    this.agentExecutionDraft.period = '';
+                    showFeedback('학교 변경으로 특별실과 교시를 다시 선택해 주세요.', 'info');
+                }
                 this.clearExecutionFieldError('school_slug');
                 this.clearExecutionFieldError('room_id');
                 this.clearExecutionFieldError('period');
@@ -5622,7 +5629,14 @@
                 if (!this.reservationHasExecution()) {
                     return;
                 }
-                this.agentExecutionDraft.owner_type = trimLine(ownerType) === 'custom' ? 'custom' : 'class';
+                var nextType = trimLine(ownerType) === 'custom' ? 'custom' : 'class';
+                this.agentExecutionDraft.owner_type = nextType;
+                if (nextType === 'custom') {
+                    this.agentExecutionDraft.grade = '';
+                    this.agentExecutionDraft.class_no = '';
+                } else {
+                    this.agentExecutionDraft.target_label = '';
+                }
                 this.clearExecutionFieldError('grade');
                 this.clearExecutionFieldError('class_no');
                 this.clearExecutionFieldError('target_label');
@@ -5865,6 +5879,7 @@
                 var baseText = trimLine(this.noticeBaseInput || this.workspaceInput);
                 var refineText = trimLine(instruction);
                 if (!baseText) {
+                    showFeedback('먼저 알림장 내용을 입력해 주세요.', 'info');
                     this.focusWorkspace();
                     return;
                 }
