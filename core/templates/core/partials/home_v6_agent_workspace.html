@@ -86,7 +86,7 @@
                                 role="listitem"
                                 title="알림장"
                                 aria-label="알림장"
-                                @click="selectServiceChip('notice')"
+                                @click="selectServiceChip('notice', { draftText: '' })"
                             >
                                 <span>알림장</span>
                             </button>
@@ -97,7 +97,7 @@
                                 role="listitem"
                                 title="일정"
                                 aria-label="일정"
-                                @click="selectServiceChip('schedule')"
+                                @click="selectServiceChip('schedule', { draftText: '' })"
                             >
                                 <span>일정</span>
                             </button>
@@ -108,7 +108,7 @@
                                 role="listitem"
                                 title="교사 법률"
                                 aria-label="교사 법률"
-                                @click="selectServiceChip('teacher-law')"
+                                @click="selectServiceChip('teacher-law', { draftText: '' })"
                             >
                                 <span>교사 법률</span>
                             </button>
@@ -119,7 +119,7 @@
                                 role="listitem"
                                 title="특별실 예약"
                                 aria-label="특별실 예약"
-                                @click="selectServiceChip('reservation')"
+                                @click="selectServiceChip('reservation', { draftText: '' })"
                             >
                                 <span>특별실 예약</span>
                             </button>
