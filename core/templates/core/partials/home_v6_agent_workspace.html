@@ -103,7 +103,7 @@
                             </button>
 
                             <!-- 서비스 피커 -->
-                            <div class="home-v6-cmd-service-picker-wrap" x-data @keydown.escape.window="agentServicePickerOpen = false">
+                            <div class="home-v6-cmd-service-picker-wrap" x-data @click.outside="agentServicePickerOpen = false" @keydown.escape.window="agentServicePickerOpen = false">
                                 <button
                                     class="home-v6-cmd-service-chip home-v6-cmd-service-chip--more"
                                     :class="{ 'is-active': agentServicePickerOpen }"
@@ -125,7 +125,6 @@
                                     x-transition:leave="home-v6-picker-leave"
                                     x-transition:leave-start="home-v6-picker-leave-start"
                                     x-transition:leave-end="home-v6-picker-leave-end"
-                                    @click.outside="agentServicePickerOpen = false"
                                     role="menu"
                                     aria-label="AI 서비스 목록"
                                 >
