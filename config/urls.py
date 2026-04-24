@@ -54,6 +54,7 @@ urlpatterns = [
     path('janggi/', include('janggi.urls', namespace='janggi')),
     path('fairy-games/', include('fairy_games.urls', namespace='fairy_games')),
     path('reflex-game/', include('reflex_game.urls', namespace='reflex_game')),
+    path('math-games/', include('math_games.urls', namespace='math_games')),
     path('ppobgi/', include('ppobgi.urls', namespace='ppobgi')),
     path('studentmbti/', include('studentmbti.urls', namespace='studentmbti')),
     path('collect/', include('collect.urls', namespace='collect')),

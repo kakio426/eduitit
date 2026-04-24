@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}수학 전략 게임 | Eduitit{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="mg-shell mg-shell--landing service-shell--compact">
+    <div class="mg-wrap">
+        <header class="mg-page-head">
+            <span class="mg-kicker">수학 전략</span>
+            <h1>수학 전략 게임</h1>
+            <p>규칙을 보고, 수를 고르고, 바로 겨룹니다.</p>
+        </header>
+
+        <section class="mg-game-grid" aria-label="게임 선택">
+            <a class="mg-game-card mg-game-card--nim" href="{% url 'math_games:nim' %}">
+                <span class="mg-card-icon" aria-hidden="true">N</span>
+                <strong>님</strong>
+                <span>더미에서 가져가기</span>
+                <em>시작</em>
+            </a>
+            <a class="mg-game-card mg-game-card--tf" href="{% url 'math_games:twenty_four' %}">
+                <span class="mg-card-icon" aria-hidden="true">24</span>
+                <strong>24 게임</strong>
+                <span>사칙연산 만들기</span>
+                <em>시작</em>
+            </a>
+        </section>
+    </div>
+</main>
+{% endblock %}

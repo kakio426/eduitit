@@ -61,6 +61,7 @@ pytz>=2024.1
 django-htmx==1.19.0
 qrcode>=8.0
 scikit-learn>=1.5,<2.0
+open-spiel==1.6.12
 
 # Error Tracking
 sentry-sdk>=2.0.0

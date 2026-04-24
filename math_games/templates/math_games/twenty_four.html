@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}24 게임 | 수학 전략 게임{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<main
+    id="mg-twenty-four"
+    class="mg-shell service-shell--compact"
+    data-mg-twenty-four
+    data-start-url="{% url 'math_games:api_twenty_four_start' %}"
+>
+    <div class="mg-wrap">
+        <header class="mg-play-head">
+            <a class="mg-back" href="{% url 'math_games:index' %}">목록</a>
+            <div>
+                <span class="mg-kicker">MAKE 24</span>
+                <h1>24 게임</h1>
+            </div>
+            <span class="mg-goal-badge">목표 24</span>
+        </header>
+
+        <section class="mg-board-panel mg-board-panel--twenty-four">
+            <div class="mg-toolbar">
+                <button id="mg-tf-start" type="button" class="mg-primary">시작</button>
+                <button id="mg-tf-hint" type="button" class="mg-secondary" disabled>힌트</button>
+            </div>
+
+            <div id="mg-tf-numbers" class="mg-number-row" aria-live="polite"></div>
+
+            <form id="mg-tf-form" class="mg-answer-row" autocomplete="off">
+                <label class="mg-sr-only" for="mg-tf-expression">식</label>
+                <input id="mg-tf-expression" type="text" inputmode="text" placeholder="(8-3)*..." disabled>
+                <button type="submit" class="mg-primary" disabled>정답</button>
+            </form>
+
+            <div id="mg-tf-pad" class="mg-pad" aria-label="입력">
+                <button type="button" data-token="+">+</button>
+                <button type="button" data-token="-">−</button>
+                <button type="button" data-token="*">×</button>
+                <button type="button" data-token="/">÷</button>
+                <button type="button" data-token="(">(</button>
+                <button type="button" data-token=")">)</button>
+                <button type="button" data-action="backspace">⌫</button>
+                <button type="button" data-action="clear">C</button>
+            </div>
+
+            <div class="mg-status-row">
+                <p id="mg-tf-status" class="mg-status">시작</p>
+                <p id="mg-tf-hint-text" class="mg-thought"></p>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'math_games/js/main.js' %}"></script>
+{% endblock %}

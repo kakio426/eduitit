@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}님 | 수학 전략 게임{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<main
+    id="mg-nim"
+    class="mg-shell service-shell--compact"
+    data-mg-nim
+    data-start-url="{% url 'math_games:api_nim_start' %}"
+>
+    <div class="mg-wrap">
+        <header class="mg-play-head">
+            <a class="mg-back" href="{% url 'math_games:index' %}">목록</a>
+            <div>
+                <span class="mg-kicker">NIM</span>
+                <h1>님</h1>
+            </div>
+            <span class="mg-goal-badge">마지막 승리</span>
+        </header>
+
+        <section class="mg-board-panel mg-board-panel--nim">
+            <div class="mg-toolbar" aria-label="난이도">
+                <label class="mg-radio"><input type="radio" name="mg-nim-level" value="random"> 쉬움</label>
+                <label class="mg-radio"><input type="radio" name="mg-nim-level" value="mcts" checked> 보통</label>
+                <label class="mg-radio"><input type="radio" name="mg-nim-level" value="minimax"> 어려움</label>
+                <button id="mg-nim-start" type="button" class="mg-primary">시작</button>
+            </div>
+
+            <div id="mg-nim-piles" class="mg-piles" aria-live="polite"></div>
+
+            <div class="mg-status-row">
+                <p id="mg-nim-status" class="mg-status">시작</p>
+                <p id="mg-nim-thought" class="mg-thought"></p>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'math_games/js/main.js' %}"></script>
+{% endblock %}

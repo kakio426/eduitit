@@ -1,0 +1,9 @@
+<div class="mg-partial-state">
+    <p>{{ feedback|default:"진행" }}</p>
+    <div class="mg-partial-piles">
+        {% for pile in state.piles %}
+            <span>{{ forloop.counter }}번 {{ pile }}</span>
+        {% endfor %}
+    </div>
+    {% if thought %}<p>{{ thought }}</p>{% endif %}
+</div>
