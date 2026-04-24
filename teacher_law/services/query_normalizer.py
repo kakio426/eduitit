@@ -447,7 +447,8 @@ def infer_legal_goal(question: str, *, legal_issues: list[str]) -> str:
         return "legal_risk"
     if "위법성" in legal_issues or any(keyword in normalized for keyword in ("처벌", "위법", "고소")):
         return "legal_risk"
-    return ""
+    # 키워드 미탐지 시 가장 일반적인 목표로 기본값 반환
+    return "immediate_action"
 
 
 def detect_incident_type(question: str, *, legal_issues: list[str], scene: list[str]) -> str:

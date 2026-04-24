@@ -121,6 +121,73 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
     }
 
 
+def generate_legal_answer_fallback(*, question: str, profile: dict, timeout_seconds: int = 12) -> dict:
+    """법령 조문을 찾지 못했을 때 LLM 일반 지식으로 답변을 생성합니다.
+    needs_human_help는 항상 True, citations는 빈 배열로 반환합니다.
+    """
+    if not is_configured():
+        raise LlmClientError("DeepSeek API key is not configured.")
+
+    prompt = (
+        "당신은 교사를 위한 법령 정보 요약 도우미입니다. "
+        "반드시 JSON 객체만 반환하세요. "
+        "이번 질문은 관련 법령 조문을 직접 검색하지 못했습니다. "
+        "교육 현장 법령에 관한 일반 지식을 바탕으로 답변하되, "
+        "구체적 조문을 단정하지 말고 일반적 해석 수준으로 설명하세요. "
+        "needs_human_help는 반드시 true, citations는 반드시 빈 배열로 반환하세요. "
+        "summary는 220자 이하, reasoning_summary는 320자 이하, action_items는 1~4개입니다."
+    )
+    user_prompt = "\n\n".join(
+        [
+            f"질문: {question}",
+            f"정규화 질문: {profile.get('normalized_question')}",
+            f"사건 유형: {profile.get('incident_type') or profile.get('topic') or '미분류'}",
+            f"궁금한 것: {profile.get('legal_goal_label') or profile.get('legal_goal') or '없음'}",
+            f"행위 주체: {', '.join(profile.get('actors') or []) or '없음'}",
+            f"상대: {profile.get('counterpart_label') or '없음'}",
+            f"쟁점: {', '.join(profile.get('legal_issues') or []) or '없음'}",
+            "",
+            "JSON 스키마:",
+            json.dumps(
+                {
+                    "summary": "",
+                    "reasoning_summary": "",
+                    "action_items": [""],
+                    "citations": [],
+                    "risk_level": "medium",
+                    "needs_human_help": True,
+                    "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
+                    "scope_supported": False,
+                },
+                ensure_ascii=False,
+            ),
+        ]
+    ).strip()
+
+    payload = _call_json_response(
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        timeout_seconds=timeout_seconds,
+    )
+    action_items = payload.get("action_items") or []
+    if not isinstance(action_items, list):
+        action_items = []
+    return {
+        "summary": str(payload.get("summary") or "").strip(),
+        "reasoning_summary": str(payload.get("reasoning_summary") or "").strip(),
+        "action_items": [str(item).strip() for item in action_items if str(item).strip()][:4],
+        "citations": [],
+        "risk_level": str(payload.get("risk_level") or "medium").strip().lower() or "medium",
+        "needs_human_help": True,
+        "disclaimer": str(
+            payload.get("disclaimer") or "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다."
+        ).strip(),
+        "scope_supported": False,
+    }
+
+
 def _call_json_response(*, messages, timeout_seconds=12, attempts=2):
     last_error = None
     for attempt in range(attempts):

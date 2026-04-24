@@ -26,7 +26,7 @@ from .law_api import (
     select_relevant_case_citations,
     select_relevant_citations,
 )
-from .llm_client import LlmClientError, generate_legal_answer, is_configured as is_llm_configured
+from .llm_client import LlmClientError, generate_legal_answer, generate_legal_answer_fallback, is_configured as is_llm_configured
 from .query_normalizer import (
     ANSWER_POLICY_VERSION,
     build_query_profile,
@@ -323,7 +323,7 @@ def answer_legal_question(
 
         raise LawApiConfigError("국가법령정보 API 인증값이 아직 연결되지 않았습니다.")
 
-    total_timeout_seconds = int(getattr(settings, "TEACHER_LAW_TOTAL_TIMEOUT_SECONDS", 20))
+    total_timeout_seconds = int(getattr(settings, "TEACHER_LAW_TOTAL_TIMEOUT_SECONDS", 30))
     detail_limit = min(int(getattr(settings, "TEACHER_LAW_DETAIL_FETCH_LIMIT", 3)), max(len(profile.get("law_allowlist") or []), 1))
     case_queries = list(profile.get("case_queries") or [])[:2]
 
@@ -456,6 +456,42 @@ def answer_legal_question(
 
     visible_citations = law_citations[:2] + case_citations[:1]
     if not law_citations:
+        # 법령 조문을 찾지 못한 경우: LLM 일반 지식으로 폴백 답변 시도
+        try:
+            _ensure_total_timeout(started, total_timeout_seconds)
+            llm_fallback_answer = generate_legal_answer_fallback(
+                question=profile.get("original_question") or question,
+                profile=profile,
+                timeout_seconds=int(getattr(settings, "TEACHER_LAW_LLM_TIMEOUT_SECONDS", 12)),
+            )
+            payload = _normalize_answer_payload(
+                llm_fallback_answer,
+                [],
+                profile,
+                screened_case_match=screened_case_match,
+            )
+            audit = {
+                "cache_hit": False,
+                "search_attempt_count": search_attempt_count,
+                "search_result_count": search_result_count,
+                "detail_fetch_count": detail_fetch_count,
+                "selected_laws_json": selected_sources,
+                "failure_reason": "no_citations_llm_fallback",
+                "error_message": "",
+                "elapsed_ms": _elapsed_ms(started),
+            }
+            logger.info(
+                "[TeacherLaw] Action: GENERATE_ANSWER, Status: LLM_FALLBACK, Topic: %s, Provider: %s",
+                profile.get("topic") or "unknown",
+                law_provider,
+            )
+            return {"status": "ok", "profile": profile, "payload": payload, "audit": audit}
+        except Exception as fallback_exc:
+            logger.warning(
+                "[TeacherLaw] LLM fallback failed, falling back to clarify. Topic: %s, Error: %s",
+                profile.get("topic") or "unknown",
+                fallback_exc,
+            )
         payload = _build_clarify_payload(profile, selected_sources)
         audit = {
             "cache_hit": False,
