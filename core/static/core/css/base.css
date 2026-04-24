@@ -542,11 +542,11 @@ h4,
 .shell-nav-brand-icon {
     width: 2rem;
     height: 2rem;
-    font-size: 0.84rem;
+    flex: 0 0 auto;
     border-radius: 999px;
     color: var(--color-accent-strong);
-    border: 1px solid rgba(52, 37, 95, 0.08);
-    background: rgba(255, 255, 255, 0.54);
+    border: 0;
+    background: transparent;
     box-shadow: none;
     transition:
         transform var(--motion-duration-fast) var(--motion-ease-standard),
@@ -559,8 +559,20 @@ h4,
 .shell-nav-brand-link:focus-visible .shell-nav-brand-icon {
     transform: translateY(var(--motion-lift-subtle));
     color: var(--color-accent-strong);
-    background: rgba(255, 255, 255, 0.56);
-    border-color: rgba(52, 37, 95, 0.12);
+}
+
+.shell-brand-mark {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.shell-footer-brand-mark {
+    display: block;
+    width: 82%;
+    height: 82%;
+    object-fit: contain;
 }
 
 .shell-nav-brand-wordmark {
