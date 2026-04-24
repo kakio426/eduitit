@@ -762,7 +762,8 @@ def select_relevant_citations(details: dict, profile: dict, *, limit: int = 2) -
         haystack = normalize_for_matching(f"{article.get('article_label')} {article.get('article_text')}")
         strong_score = sum(4 for term in strong_terms if term and term in haystack)
         weak_score = sum(1 for term in weak_terms if term and term in haystack)
-        if strong_score <= 0:
+        # strong 키워드가 없어도 weak 키워드 2개 이상이면 약한 후보로 포함
+        if strong_score <= 0 and weak_score < 2:
             continue
         score = strong_score + weak_score
         if _looks_like_generic_article(article):

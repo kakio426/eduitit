@@ -121,6 +121,77 @@ def generate_legal_answer(*, question: str, profile: dict, citations: list[dict]
     }
 
 
+_INCIDENT_TYPE_MENU = (
+    "school_safety(안전사고·책임) | "
+    "education_activity(교육활동 침해·폭언·폭행) | "
+    "recording_defamation(녹음·명예훼손·공개) | "
+    "privacy_photo(개인정보·사진·영상) | "
+    "student_guidance(생활지도·체벌·압수) | "
+    "school_violence(학교폭력) | "
+    "reporting_duty(신고의무·아동학대) | "
+    "records_docs(기록·문서) | "
+    "other(해당 없음)"
+)
+
+_VALID_INCIDENT_TYPES = frozenset({
+    "school_safety", "education_activity", "recording_defamation",
+    "privacy_photo", "student_guidance", "school_violence",
+    "reporting_duty", "records_docs",
+})
+
+
+def normalize_question_to_legal(*, question: str, timeout_seconds: int = 6) -> dict:
+    """교사의 일상 언어 질문을 법적 검색어로 변환합니다.
+
+    Returns:
+        {
+            "incident_type": str,       # 위 _VALID_INCIDENT_TYPES 중 하나 (없으면 "")
+            "law_names": list[str],     # 관련 법령명 최대 3개
+            "search_keywords": list[str], # 조문 검색용 법률 용어 최대 5개
+            "legal_summary": str,       # 질문 법적 핵심 한 문장
+        }
+    """
+    if not is_configured():
+        raise LlmClientError("DeepSeek API key is not configured.")
+
+    prompt = (
+        "교사 법률 분류 도우미입니다. 반드시 JSON 객체만 반환하세요. "
+        f"incident_type은 반드시 다음 중 하나: {_INCIDENT_TYPE_MENU}. "
+        "law_names는 질문과 관련된 한국 법령명 목록(최대 3개), "
+        "search_keywords는 법령 조문 검색에 쓸 핵심 법률 용어 목록(최대 5개), "
+        "legal_summary는 질문의 법적 핵심을 한 문장으로."
+    )
+    user_prompt = f"교사 질문: {question}"
+
+    payload = _call_json_response(
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        timeout_seconds=timeout_seconds,
+        attempts=1,  # 빠른 실패, 호출부에서 예외 catch
+    )
+
+    incident_type = str(payload.get("incident_type") or "").strip().split("(")[0].strip()
+    if incident_type not in _VALID_INCIDENT_TYPES:
+        incident_type = ""
+
+    law_names = payload.get("law_names") or []
+    if not isinstance(law_names, list):
+        law_names = []
+
+    search_keywords = payload.get("search_keywords") or []
+    if not isinstance(search_keywords, list):
+        search_keywords = []
+
+    return {
+        "incident_type": incident_type,
+        "law_names": [str(n).strip() for n in law_names if str(n).strip()][:3],
+        "search_keywords": [str(k).strip() for k in search_keywords if str(k).strip()][:5],
+        "legal_summary": str(payload.get("legal_summary") or "").strip(),
+    }
+
+
 def generate_legal_answer_fallback(*, question: str, profile: dict, timeout_seconds: int = 12) -> dict:
     """법령 조문을 찾지 못했을 때 LLM 일반 지식으로 답변을 생성합니다.
     needs_human_help는 항상 True, citations는 빈 배열로 반환합니다.

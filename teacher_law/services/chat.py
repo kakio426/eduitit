@@ -26,7 +26,7 @@ from .law_api import (
     select_relevant_case_citations,
     select_relevant_citations,
 )
-from .llm_client import LlmClientError, generate_legal_answer, generate_legal_answer_fallback, is_configured as is_llm_configured
+from .llm_client import LlmClientError, generate_legal_answer, generate_legal_answer_fallback, normalize_question_to_legal, is_configured as is_llm_configured
 from .query_normalizer import (
     ANSWER_POLICY_VERSION,
     build_query_profile,
@@ -322,6 +322,37 @@ def answer_legal_question(
         from .law_api import LawApiConfigError
 
         raise LawApiConfigError("국가법령정보 API 인증값이 아직 연결되지 않았습니다.")
+
+    # LLM 사전 정규화: 일상 언어 → 법적 키워드 변환
+    # allowlist가 비어있거나 incident_type을 못 잡은 경우에만 실행
+    _needs_normalize = not profile.get("law_allowlist") or not profile.get("incident_type")
+    if _needs_normalize:
+        try:
+            _norm = normalize_question_to_legal(
+                question=question,
+                timeout_seconds=int(getattr(settings, "TEACHER_LAW_NORMALIZE_TIMEOUT_SECONDS", 6)),
+            )
+            # incident_type 보강 (미탐지 시만)
+            if not profile.get("incident_type") and _norm.get("incident_type"):
+                profile["incident_type"] = _norm["incident_type"]
+            # law_allowlist 보강 (LLM이 찾아낸 법령명 추가)
+            existing_laws = set(profile.get("law_allowlist") or [])
+            extra_laws = [n for n in (_norm.get("law_names") or []) if n not in existing_laws]
+            if extra_laws:
+                profile["law_allowlist"] = list(existing_laws) + extra_laws
+            # law_query_hint 보강 (조문 검색 적중률 향상)
+            if _norm.get("search_keywords"):
+                existing_hint = profile.get("law_query_hint") or ""
+                extra_hint = " ".join(_norm["search_keywords"])
+                profile["law_query_hint"] = f"{existing_hint} {extra_hint}".strip()
+            logger.info(
+                "[TeacherLaw] Action: LLM_NORMALIZE, Status: OK, incident=%s, laws=%s, keywords=%s",
+                _norm.get("incident_type"),
+                _norm.get("law_names"),
+                _norm.get("search_keywords"),
+            )
+        except Exception as _norm_exc:
+            logger.warning("[TeacherLaw] LLM normalize failed (계속 진행): %s", _norm_exc)
 
     total_timeout_seconds = int(getattr(settings, "TEACHER_LAW_TOTAL_TIMEOUT_SECONDS", 30))
     detail_limit = min(int(getattr(settings, "TEACHER_LAW_DETAIL_FETCH_LIMIT", 3)), max(len(profile.get("law_allowlist") or []), 1))
