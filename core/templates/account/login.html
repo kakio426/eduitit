@@ -24,51 +24,85 @@
 
 {% block content %}
 <main class="auth-shell-page auth-shell-page--login-spectrum auth-shell-main">
-    <div class="auth-shell-wrap">
-        <section class="auth-shell-card auth-shell-card--login-spectrum">
-            <div class="auth-shell-header">
-                <a href="/" class="auth-shell-brand">
-                    <span class="auth-shell-brand-icon">
-                        <img src="{% static 'images/eduitit_logo_mark.png' %}" alt="" aria-hidden="true">
-                    </span>
-                    <span>EDUITIT</span>
-                </a>
-                <h1 class="auth-shell-title auth-shell-title--compact">내 교실 열기</h1>
-            </div>
+    <div class="auth-shell-wrap auth-shell-wrap--login">
+        <div class="auth-login-layout">
+            <aside class="auth-login-panel" aria-label="에듀잇티 소개">
+                <p class="auth-login-panel-kicker">FOR TEACHERS</p>
+                <h2 class="auth-login-panel-title">교육에만<br>집중할 수 있도록</h2>
+                <ul class="auth-login-list">
+                    <li>
+                        <span class="auth-login-dot auth-login-dot--cyan"></span>
+                        <span>
+                            <strong>업무 부담 절감</strong>
+                            <em>반복적인 행정 업무를 자동화합니다</em>
+                        </span>
+                    </li>
+                    <li>
+                        <span class="auth-login-dot auth-login-dot--yellow"></span>
+                        <span>
+                            <strong>스마트한 교실 관리</strong>
+                            <em>학생 활동을 한눈에 파악하고 관리합니다</em>
+                        </span>
+                    </li>
+                    <li>
+                        <span class="auth-login-dot auth-login-dot--pink"></span>
+                        <span>
+                            <strong>교육 활동 지원</strong>
+                            <em>더 풍부하고 즐거운 수업을 만들어드립니다</em>
+                        </span>
+                    </li>
+                </ul>
+            </aside>
 
-            {% if request.GET.next %}
-            <div class="auth-shell-notice">
-                <p class="auth-shell-notice-title">로그인 후 바로 열립니다.</p>
-            </div>
-            {% endif %}
+            <section class="auth-shell-card auth-shell-card--login-spectrum">
+                <div class="auth-shell-header">
+                    <a href="/" class="auth-shell-brand">
+                        <span class="auth-shell-brand-icon">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18.4 10.45C18.18 7.96 16.1 6 13.56 6C11.9 6 10.44 6.83 9.56 8.1C9.1 7.92 8.62 7.83 8.1 7.83C5.84 7.83 4 9.67 4 11.93C4 12.08 4.01 12.23 4.03 12.38C2.82 12.9 2 14.08 2 15.43C2 17.25 3.48 18.72 5.3 18.72H17.9C20.16 18.72 22 16.89 22 14.63C22 12.52 20.41 10.79 18.4 10.45Z" fill="currentColor" opacity="0.95" />
+                                <path d="M14.25 15.55L11.7 18.1H10.2V16.6L12.75 14.05L14.25 15.55Z" fill="currentColor" />
+                                <path d="M15.1 14.7L13.6 13.2L14.42 12.38C14.72 12.08 15.2 12.08 15.5 12.38L15.92 12.8C16.22 13.1 16.22 13.58 15.92 13.88L15.1 14.7Z" fill="currentColor" />
+                            </svg>
+                        </span>
+                        <span class="auth-shell-brand-text">
+                            <span class="auth-shell-brand-ko">에듀잇티</span>
+                            <span class="auth-shell-brand-en">EDUITIT</span>
+                        </span>
+                    </a>
+                    <h1 class="auth-shell-title auth-shell-title--compact">선생님의 하루를<br>더 가볍게</h1>
+                    <p class="auth-shell-summary">카카오 또는 네이버 계정으로<br>바로 시작하세요.</p>
+                </div>
 
-            <div class="auth-shell-stack">
-                <a href="{% provider_login_url 'kakao' %}"
-                    class="auth-shell-provider auth-shell-provider--kakao">
-                    <svg viewBox="0 0 24 24" class="h-7 w-7 fill-[#2F1A1A]" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path
-                            d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
-                    </svg>
-                    <span class="tracking-tight">카카오로 로그인</span>
-                </a>
+                <div class="auth-shell-divider auth-shell-divider--login"><span>소셜 계정으로 로그인</span></div>
 
-                <a href="{% provider_login_url 'naver' %}"
-                    class="auth-shell-provider auth-shell-provider--naver">
-                    <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
-                    </svg>
-                    <span class="tracking-tight">네이버로 로그인</span>
-                </a>
-            </div>
+                <div class="auth-shell-stack">
+                    <a href="{% provider_login_url 'kakao' %}"
+                        class="auth-shell-provider auth-shell-provider--kakao">
+                        <svg viewBox="0 0 24 24" class="h-7 w-7 fill-[#2F1A1A]" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path
+                                d="M12 3C7.58 3 4 5.79 4 9.24C4 11.41 5.43 13.33 7.62 14.4L6.68 17.84C6.6 18.13 6.95 18.35 7.19 18.15L11.55 14.86C11.7 14.87 11.85 14.87 12 14.87C16.42 14.87 20 12.08 20 8.63C20 5.18 16.42 3 12 3Z" />
+                        </svg>
+                        <span class="tracking-tight">카카오로 로그인</span>
+                    </a>
 
-            <div class="auth-shell-links auth-shell-links--standalone">
-                <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
-                <span>·</span>
-                <a href="{% url 'policy' %}#privacy" class="auth-shell-link">개인정보처리방침</a>
-                <span>·</span>
-                <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
-            </div>
-        </section>
+                    <a href="{% provider_login_url 'naver' %}"
+                        class="auth-shell-provider auth-shell-provider--naver">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M16.273 12.845L7.388 1H1V23H7.818V11.16L16.643 23H23V1H16.273V12.845Z" />
+                        </svg>
+                        <span class="tracking-tight">네이버로 로그인</span>
+                    </a>
+                </div>
+
+                <div class="auth-shell-links auth-shell-links--standalone">
+                    <a href="{% url 'policy' %}#terms" class="auth-shell-link">이용약관</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#privacy" class="auth-shell-link">개인정보처리방침</a>
+                    <span>·</span>
+                    <a href="{% url 'policy' %}#operations" class="auth-shell-link">운영정책</a>
+                </div>
+            </section>
+        </div>
     </div>
 </main>
 {% endblock %}
