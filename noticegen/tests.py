@@ -16,7 +16,12 @@ from .prompts import (
     build_user_prompt,
     get_tone_for_target,
 )
-from .views import _build_cache_key_data, _build_page_context, _collect_output_quality_issues
+from .views import (
+    _build_cache_key_data,
+    _build_page_context,
+    _build_retry_user_prompt,
+    _collect_output_quality_issues,
+)
 
 
 class NoticeGenViewTests(TestCase):
@@ -327,9 +332,12 @@ class NoticeGenViewTests(TestCase):
         system_prompt = build_system_prompt("parent", LENGTH_LONG)
         user_prompt = build_user_prompt("parent", "notice", "실내화를 챙겨 주세요", "", LENGTH_LONG)
 
+        self.assertEqual(PROMPT_VERSION, "v6-caveman")
+        self.assertLess(len(system_prompt), 650)
+        self.assertLess(len(user_prompt), 320)
         self.assertIn("분량 규칙", system_prompt)
         self.assertIn("선택 분량: 길게", system_prompt)
-        self.assertIn("문장은 한 단락처럼 읽히도록 자연스럽게 연결", system_prompt)
+        self.assertIn("문장은 한 단락처럼 자연스럽게 연결", system_prompt)
         self.assertNotIn("정확히 3문장", system_prompt)
         self.assertIn("문어체", system_prompt)
         self.assertIn("거예요", system_prompt)
@@ -341,6 +349,23 @@ class NoticeGenViewTests(TestCase):
         self.assertIn("문어체 공지문", user_prompt)
         self.assertIn("학부모에게 직접 보내는 완성 문장", user_prompt)
         self.assertIn("안내해 주세요", user_prompt)
+
+    def test_retry_prompt_uses_compact_caveman_correction(self):
+        retry_prompt = _build_retry_user_prompt(
+            "기본 프롬프트",
+            ["TOO_SHORT:medium", "MISSING_TERMS:도시락", "UNVERIFIED_DETAILS:오전 9시"],
+            target="parent",
+            length_style=LENGTH_MEDIUM,
+            result_text="짧은 초안입니다.",
+        )
+
+        self.assertIn("직전:", retry_prompt)
+        self.assertIn("수정:", retry_prompt)
+        self.assertIn("너무 짧음", retry_prompt)
+        self.assertIn("누락 포함: 도시락", retry_prompt)
+        self.assertIn("입력에 없는 정보 제거: 오전 9시", retry_prompt)
+        self.assertNotIn("직전 출력이 너무 짧았습니다", retry_prompt)
+        self.assertLess(len(retry_prompt), 170)
 
     def test_default_page_context_starts_with_parent_target(self):
         page_context = _build_page_context()
@@ -416,7 +441,9 @@ class NoticeGenViewTests(TestCase):
     def test_main_uses_teacher_first_sections(self):
         response = self.client.get(reverse("noticegen:main"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "로그인 없이 2회")
+        self.assertContains(response, "남은 체험")
+        self.assertEqual(response.context["remaining_count"], 2)
+        self.assertEqual(response.context["daily_limit"], 2)
         self.assertContains(response, "알림장·주간학습 멘트")
         self.assertContains(response, "직접 조정")
         self.assertContains(response, "생성 결과")

@@ -722,28 +722,24 @@ def _build_retry_user_prompt(user_prompt, issues, *, target, length_style, resul
     if any(issue.startswith("TOO_SHORT:") for issue in issues):
         length_rule = LENGTH_RULES.get(length_style, LENGTH_RULES[LENGTH_MEDIUM])
         correction_lines.append(
-            f"- 직전 출력이 너무 짧았습니다. 이번에는 최소 {length_rule.get('min_chars', 0)}자 이상으로, "
-            f"{length_rule['sentence_range']} 흐름이 느껴지도록 내용을 충분히 보강하세요."
+            f"- 너무 짧음. 최소 {length_rule.get('min_chars', 0)}자, {length_rule['sentence_range']}."
         )
     if target == TARGET_PARENT and "PARENT_META_INSTRUCTION" in issues:
         correction_lines.append(
-            "- 직전 출력은 학부모에게 직접 보내는 안내문이 아니라 교사 메모처럼 들렸습니다. "
-            "'안내해 주세요', '전달해 주세요', '지도해 주세요'로 끝내지 말고 학부모가 바로 읽는 문장으로 다시 작성하세요."
+            "- 학부모 직접 안내문으로. 안내해 주세요/전달해 주세요/지도해 주세요 금지."
         )
     for issue in issues:
         if issue.startswith("MISSING_TERMS:"):
-            correction_lines.append(f"- 누락된 핵심 전달사항을 반드시 포함하세요: {issue.split(':', 1)[1]}.")
+            correction_lines.append(f"- 누락 포함: {issue.split(':', 1)[1]}.")
         if issue.startswith("UNVERIFIED_DETAILS:"):
-            correction_lines.append(
-                f"- 입력에 없는 세부정보를 임의로 넣지 마세요. 제거할 표현: {issue.split(':', 1)[1]}."
-            )
+            correction_lines.append(f"- 입력에 없는 정보 제거: {issue.split(':', 1)[1]}.")
     if not correction_lines:
         return user_prompt
     return (
         user_prompt
-        + "\n\n직전 초안:\n"
+        + "\n\n직전:\n"
         + result_text
-        + "\n\n재작성 지시:\n"
+        + "\n\n수정:\n"
         + "\n".join(correction_lines)
     )
 
