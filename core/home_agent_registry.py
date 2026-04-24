@@ -135,12 +135,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "order": 10,
             },
         ),
-        starter_items=_starter_items(
-            {"label": "체험학습", "text": "내일 체험학습, 8시 40분까지 등교, 도시락과 물 챙겨 주세요."},
-            {"label": "준비물", "text": "내일 미술 준비물, 가위와 풀, 색종이를 보내 주세요."},
-            {"label": "일정 변경", "text": "금요일 체육 수업이 실내 활동으로 바뀌었습니다. 실내화 준비해 주세요."},
-            {"label": "주간학습", "text": "다음 주 주간학습 안내, 받아쓰기와 수학 익힘, 독서 기록장을 챙겨 주세요."},
-        ),
     ),
     HomeAgentServiceDefinition(
         key="schedule",
@@ -284,12 +278,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "label": "교사법률",
                 "order": 20,
             },
-        ),
-        starter_items=_starter_items(
-            {"label": "학부모 민원", "text": "학부모가 밤마다 전화를 반복합니다. 어떻게 대응해야 하나요?"},
-            {"label": "생활지도", "text": "생활지도 중 보호자가 항의 전화를 반복하고 있습니다. 기록은 어떻게 남겨야 하나요?"},
-            {"label": "촬영/녹음", "text": "수업 장면을 학부모가 녹음했다고 합니다. 먼저 무엇을 확인해야 하나요?"},
-            {"label": "폭언", "text": "학생 보호자가 통화 중 폭언을 했습니다. 어떤 순서로 대응하면 되나요?"},
         ),
     ),
     HomeAgentServiceDefinition(
@@ -456,12 +444,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "order": 40,
             },
         ),
-        starter_items=_starter_items(
-            {"label": "글", "kind": "text", "text": "오늘 6교시 체육관 사용합니다."},
-            {"label": "링크", "kind": "text", "text": "학년 회의 링크 https://example.com"},
-            {"label": "사진", "kind": "file"},
-            {"label": "파일", "kind": "file"},
-        ),
     ),
     HomeAgentServiceDefinition(
         key="tts",
@@ -524,12 +506,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "label": "TTS",
                 "order": 20,
             },
-        ),
-        starter_items=_starter_items(
-            {"label": "이동", "text": "지금부터 체육관으로 이동합니다. 줄을 맞춰 조용히 이동합니다."},
-            {"label": "정리", "text": "쉬는 시간 종료 1분 전입니다. 자리에 앉아 다음 수업을 준비합니다."},
-            {"label": "조회", "text": "지금부터 아침 조회를 시작합니다. 오늘 일정을 함께 확인하겠습니다."},
-            {"label": "하교", "text": "오늘 수업이 모두 끝났습니다. 주변을 정리하고 안전하게 하교합니다."},
         ),
     ),
     HomeAgentServiceDefinition(
@@ -605,12 +581,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "label": "메시지 저장",
                 "order": 30,
             },
-        ),
-        starter_items=_starter_items(
-            {"label": "학부모 문자", "text": "학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 가능 여부 회신 부탁드립니다."},
-            {"label": "회의 안내", "text": "금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요."},
-            {"label": "행사 공지", "text": "4월 25일 오전 9시 운동장 집합입니다. 체육대회 준비물은 물과 모자입니다."},
-            {"label": "수업 변경", "text": "내일 2교시 과학실 수업이 4교시로 바뀝니다. 실험 준비물은 그대로 가져옵니다."},
         ),
     ),
 )
