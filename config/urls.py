@@ -75,6 +75,7 @@ urlpatterns = [
     path('ocrdesk/', include('ocrdesk.urls', namespace='ocrdesk')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),
     path('docviewer/', include('docviewer.urls', namespace='docviewer')),
+    path('pdf/', include('pdfhub.urls', namespace='pdfhub')),
     path('slidesmith/', include('slidesmith.urls', namespace='slidesmith')),
     path('blockclass/', include('blockclass.urls', namespace='blockclass')),
     path('textbooks/', include('textbooks.urls', namespace='textbooks')),

@@ -203,6 +203,17 @@ class ServiceLauncherContextTests(TestCase):
         self.assertEqual(item["href"], reverse("docsign:list"))
         self.assertFalse(item["is_external"])
 
+    def test_pdfhub_is_auto_included_after_ensure_command(self):
+        call_command("ensure_pdfhub")
+
+        context = search_products(self._request())
+        payload = json.loads(context["service_launcher_json"])
+
+        item = next(item for item in payload if item["title"] == "PDF 작업실")
+        self.assertEqual(item["group_key"], "doc_write")
+        self.assertEqual(item["href"], reverse("pdfhub:main"))
+        self.assertFalse(item["is_external"])
+
     def test_teacher_law_is_sorted_first_in_guide_group(self):
         Product.objects.create(
             title="다른 가이드",

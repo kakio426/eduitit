@@ -122,6 +122,7 @@ INSTALLED_APPS = [
     'reservations.apps.ReservationsConfig',
     'parentcomm.apps.ParentcommConfig',
     'docviewer.apps.DocviewerConfig',
+    'pdfhub.apps.PdfhubConfig',
     'slidesmith.apps.SlidesmithConfig',
     'blockclass.apps.BlockclassConfig',
     'infoboard.apps.InfoboardConfig',

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}PDF 작업실{% endblock %}
+
+{% block content %}
+<main class="service-shell min-h-screen bg-slate-50 px-4 pb-20">
+  <div class="mx-auto max-w-6xl space-y-7">
+    <header class="flex flex-col gap-4 pt-1 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">PDF 작업실</h1>
+      </div>
+      <div class="flex flex-wrap gap-2 text-xs font-bold text-slate-600">
+        <span class="rounded-full bg-white px-3 py-2 ring-1 ring-slate-200">기존 서비스</span>
+        <span class="rounded-full bg-white px-3 py-2 ring-1 ring-slate-200">업로드 없음</span>
+      </div>
+    </header>
+
+    <section aria-labelledby="pdfhub-primary-title" class="space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="pdfhub-primary-title" class="text-lg font-black text-slate-900">오늘 할 일</h2>
+        <span class="text-xs font-bold text-slate-500">4개</span>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {% for action in primary_actions %}
+        <a
+          href="{{ action.href }}"
+          data-pdfhub-action="{{ action.key }}"
+          class="group flex min-h-32 flex-col justify-between rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-red-100"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-800">
+              <i class="{{ action.icon }}" aria-hidden="true"></i>
+            </span>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ action.status }}</span>
+          </div>
+          <div class="mt-5 flex items-end justify-between gap-3">
+            <h3 class="text-2xl font-black text-slate-950">{{ action.label }}</h3>
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white transition group-hover:bg-red-700">
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section aria-labelledby="pdfhub-secondary-title" class="space-y-3">
+      <h2 id="pdfhub-secondary-title" class="text-lg font-black text-slate-900">보조 작업</h2>
+      <div class="grid gap-3 md:grid-cols-3">
+        {% for action in secondary_actions %}
+        <a
+          href="{{ action.href }}"
+          data-pdfhub-action="{{ action.key }}"
+          class="flex min-h-20 items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-200"
+        >
+          <span class="flex min-w-0 items-center gap-3">
+            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+              <i class="{{ action.icon }}" aria-hidden="true"></i>
+            </span>
+            <span class="min-w-0">
+              <span class="block truncate text-base font-black text-slate-950">{{ action.label }}</span>
+              <span class="block text-xs font-bold text-slate-500">{{ action.status }}</span>
+            </span>
+          </span>
+          <i class="fa-solid fa-chevron-right shrink-0 text-slate-400" aria-hidden="true"></i>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section aria-labelledby="pdfhub-next-title" class="space-y-3">
+      <h2 id="pdfhub-next-title" class="text-lg font-black text-slate-900">다음 기능</h2>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {% for action in next_actions %}
+        <div
+          data-pdfhub-next="{{ action.key }}"
+          aria-disabled="true"
+          class="flex min-h-18 items-center justify-between rounded-lg border border-dashed border-slate-300 bg-slate-100 px-5 py-4 text-slate-500"
+        >
+          <span class="flex items-center gap-3">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400">
+              <i class="{{ action.icon }}" aria-hidden="true"></i>
+            </span>
+            <span class="text-base font-black">{{ action.label }}</span>
+          </span>
+          <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-500">{{ action.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

@@ -47,6 +47,7 @@ class Command(BaseCommand):
             ("ensure_parentcomm", lambda: call_command("ensure_parentcomm")),
             ("ensure_insights", lambda: call_command("ensure_insights")),
             ("ensure_docviewer", lambda: call_command("ensure_docviewer")),
+            ("ensure_pdfhub", lambda: call_command("ensure_pdfhub")),
             ("ensure_slidesmith", lambda: call_command("ensure_slidesmith")),
             ("ensure_blockclass", lambda: call_command("ensure_blockclass")),
             ("ensure_textbooks", lambda: call_command("ensure_textbooks")),
