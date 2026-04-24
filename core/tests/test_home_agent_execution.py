@@ -177,6 +177,82 @@ class HomeAgentExecutionTests(TestCase):
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.USER).count(), 1)
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.ASSISTANT).count(), 1)
 
+    @patch(
+        "teacher_law.views.answer_legal_question",
+        return_value={
+            "status": "ok",
+            "profile": {
+                "original_question": "이전 질문: 학부모가 사진을 올렸습니다.\n추가 질문: 내릴 수 있게 요청해도 되나요?",
+                "normalized_question": "사진 게시 중단 요청",
+                "topic": "privacy_photo",
+                "scope_supported": True,
+                "risk_flags": [],
+                "candidate_queries": ["사진 게시 중단"],
+                "quick_question_key": "",
+            },
+            "payload": {
+                "summary": "게시 범위와 동의 여부를 확인한 뒤 요청하세요.",
+                "action_items": [],
+                "citations": [],
+                "risk_level": "medium",
+                "needs_human_help": False,
+                "disclaimer": "일반 정보 안내입니다.",
+                "scope_supported": True,
+            },
+            "audit": {
+                "cache_hit": False,
+                "search_attempt_count": 1,
+                "search_result_count": 1,
+                "detail_fetch_count": 1,
+                "selected_laws_json": [],
+                "failure_reason": "",
+                "error_message": "",
+                "elapsed_ms": 200,
+            },
+        },
+    )
+    def test_home_agent_execute_uses_teacher_law_context_but_stores_followup_question(self, mock_answer_legal_question):
+        response = self.client.post(
+            reverse("home_agent_execute"),
+            data=json.dumps(
+                {
+                    "mode_key": "teacher-law",
+                    "data": {
+                        "question": "내릴 수 있게 요청해도 되나요?",
+                        "context_turns": [
+                            {
+                                "question": "학부모가 사진을 올렸습니다.",
+                                "summary": "공개 범위와 동의 여부를 먼저 봅니다.",
+                            },
+                            {
+                                "question": "바로 삭제 요청을 해도 되나요?",
+                                "summary": "사실관계를 확인하고 요청 주체를 정리합니다.",
+                            },
+                        ],
+                        "incident_type": "privacy_photo",
+                        "legal_goal": "posting_allowed",
+                        "scene": "",
+                        "counterpart": "parent",
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["preview"]["title"], "법률 답변")
+        self.assertEqual(response.json()["message"], "법률 대화에 남겼습니다.")
+        called_question = mock_answer_legal_question.call_args.kwargs["question"]
+        self.assertIn("이전 대화", called_question)
+        self.assertIn("1. 질문: 학부모가 사진을 올렸습니다.", called_question)
+        self.assertIn("2. 질문: 바로 삭제 요청을 해도 되나요?", called_question)
+        self.assertIn("추가 질문: 내릴 수 있게 요청해도 되나요?", called_question)
+        self.assertEqual(
+            LegalChatMessage.objects.get(role=LegalChatMessage.Role.USER).body,
+            "내릴 수 있게 요청해도 되나요?",
+        )
+
     def test_home_agent_execute_returns_teacher_law_field_errors(self):
         response = self.client.post(
             reverse("home_agent_execute"),

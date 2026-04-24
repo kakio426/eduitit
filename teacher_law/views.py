@@ -393,6 +393,43 @@ def _read_request_value(request, payload: dict | None, field_name: str) -> str:
     return str(request.POST.get(field_name) or "").strip()
 
 
+def _compact_context_text(value) -> str:
+    return " ".join(str(value or "").split()).strip()
+
+
+def _normalize_context_turns(value) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    turns = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        question = _compact_context_text(item.get("question"))
+        if not question:
+            continue
+        turns.append(
+            {
+                "question": question,
+                "summary": _compact_context_text(item.get("summary")),
+            }
+        )
+    return turns[-3:]
+
+
+def _build_contextual_question(*, question: str, context_turns: list[dict]) -> str:
+    clean_question = _compact_context_text(question)
+    turns = _normalize_context_turns(context_turns)
+    if not turns:
+        return clean_question
+    parts = ["이전 대화"]
+    for index, turn in enumerate(turns, start=1):
+        parts.append(f"{index}. 질문: {turn['question']}")
+        if turn.get("summary"):
+            parts.append(f"{index}. 답변 요약: {turn['summary']}")
+    parts.append(f"추가 질문: {clean_question}")
+    return "\n".join(parts)
+
+
 @login_required
 def main_view(request):
     return render(request, "teacher_law/main.html", _build_page_context(request))
@@ -410,6 +447,18 @@ def ask_question_api(request):
     legal_goal = _read_request_value(request, payload, "legal_goal")
     scene = _read_request_value(request, payload, "scene")
     counterpart = _read_request_value(request, payload, "counterpart")
+    context_question = _read_request_value(request, payload, "context_question")
+    context_summary = _read_request_value(request, payload, "context_summary")
+    context_turns = _normalize_context_turns((payload or {}).get("context_turns") if _is_json_request(request) else [])
+    if not context_turns and context_question:
+        context_turns = _normalize_context_turns(
+            [
+                {
+                    "question": context_question,
+                    "summary": context_summary,
+                }
+            ]
+        )
 
     if not question:
         if _is_json_request(request):
@@ -459,8 +508,12 @@ def ask_question_api(request):
     )
 
     try:
-        result = answer_legal_question(
+        answer_question = _build_contextual_question(
             question=question,
+            context_turns=context_turns,
+        )
+        result = answer_legal_question(
+            question=answer_question,
             incident_type=incident_type,
             legal_goal=legal_goal,
             scene=scene,

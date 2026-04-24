@@ -151,14 +151,81 @@ def _generate_schedule_preview(*, mode_spec: dict, text: str) -> dict:
     )
 
 
-def _generate_teacher_law_preview(*, mode_spec: dict, text: str) -> dict:
+def _normalize_teacher_law_context_turns(value) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    turns = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        turn_question = _compact_text(item.get("question"))
+        if not turn_question:
+            continue
+        turns.append(
+            {
+                "question": turn_question,
+                "summary": _compact_text(item.get("summary")),
+            }
+        )
+    return turns[-3:]
+
+
+def _build_teacher_law_context_question(
+    *,
+    question: str,
+    context_turns: list[dict] | None = None,
+    context_question: str = "",
+    context_summary: str = "",
+) -> str:
+    clean_question = _compact_text(question)
+    turns = _normalize_teacher_law_context_turns(context_turns)
+    if not turns and _compact_text(context_question):
+        turns = [
+            {
+                "question": _compact_text(context_question),
+                "summary": _compact_text(context_summary),
+            }
+        ]
+    if not turns:
+        return clean_question
+    context_parts = ["이전 대화"]
+    for index, turn in enumerate(turns, start=1):
+        context_parts.append(f"{index}. 질문: {turn['question']}")
+        if turn.get("summary"):
+            context_parts.append(f"{index}. 답변 요약: {turn['summary']}")
+    context_parts.append(f"추가 질문: {clean_question}")
+    return "\n".join(context_parts)
+
+
+def _teacher_law_context_turns_from_payload(context: dict | None) -> list[dict]:
+    payload = context if isinstance(context, dict) else {}
+    followup = payload.get("teacher_law_followup") if isinstance(payload.get("teacher_law_followup"), dict) else {}
+    turns = _normalize_teacher_law_context_turns(followup.get("turns"))
+    if turns:
+        return turns
+    return _normalize_teacher_law_context_turns(
+        [
+            {
+                "question": followup.get("question"),
+                "summary": followup.get("summary"),
+            }
+        ]
+    )
+
+
+def _generate_teacher_law_preview(*, mode_spec: dict, text: str, context: dict | None = None) -> dict:
     from teacher_law.services import answer_legal_question
     from teacher_law.services.chat import TeacherLawDisabledError
     from teacher_law.services.law_api import LawApiConfigError
     from teacher_law.services.llm_client import LlmClientError
 
+    context_turns = _teacher_law_context_turns_from_payload(context)
+    answer_question = _build_teacher_law_context_question(
+        question=text,
+        context_turns=context_turns,
+    )
     try:
-        result = answer_legal_question(question=text)
+        result = answer_legal_question(question=answer_question)
     except (TeacherLawDisabledError, LawApiConfigError, LlmClientError) as exc:
         raise HomeAgentServiceUnavailable(str(exc)) from exc
 
@@ -192,7 +259,11 @@ def _generate_teacher_law_preview(*, mode_spec: dict, text: str) -> dict:
             title="법률 답변" if not payload.get("clarify_needed") else "추가 확인",
             items=items or ["질문과 바로 맞는 답변을 아직 만들지 못했습니다."],
         ),
-        execution=_build_teacher_law_execution(result=result, question=text),
+        execution=_build_teacher_law_execution(
+            result=result,
+            question=text,
+            context_turns=context_turns,
+        ),
     )
 
 
@@ -492,6 +563,18 @@ def _execute_teacher_law_action(*, request, mode_spec: dict, data: dict) -> dict
     legal_goal = _compact_text(data.get("legal_goal"))
     scene = _compact_text(data.get("scene"))
     counterpart = _compact_text(data.get("counterpart"))
+    context_turns = _normalize_teacher_law_context_turns(data.get("context_turns"))
+    context_question = _compact_text(data.get("context_question"))
+    context_summary = _compact_text(data.get("context_summary"))
+    if not context_turns and context_question:
+        context_turns = _normalize_teacher_law_context_turns(
+            [
+                {
+                    "question": context_question,
+                    "summary": context_summary,
+                }
+            ]
+        )
 
     if not question:
         raise HomeAgentExecutionError("질문을 입력해 주세요.")
@@ -502,6 +585,9 @@ def _execute_teacher_law_action(*, request, mode_spec: dict, data: dict) -> dict
         "legal_goal": legal_goal,
         "scene": scene,
         "counterpart": counterpart,
+        "context_turns": context_turns,
+        "context_question": context_question,
+        "context_summary": context_summary,
     }
     subrequest = _build_json_subrequest(
         request,
@@ -538,10 +624,10 @@ def _execute_teacher_law_action(*, request, mode_spec: dict, data: dict) -> dict
         provider="teacher_law",
         preview=_build_preview(
             mode_spec=mode_spec,
-            title="법률 대화에 남겼습니다.",
+            title="법률 답변",
             items=items or ["법률 대화에 저장했습니다."],
         ),
-        message="법률 서비스 대화에 저장했습니다.",
+        message="법률 대화에 남겼습니다.",
     )
 
 
@@ -583,7 +669,14 @@ def _build_schedule_execution(candidates: list[dict]) -> dict | None:
     }
 
 
-def _build_teacher_law_execution(*, result: dict, question: str) -> dict:
+def _build_teacher_law_execution(
+    *,
+    result: dict,
+    question: str,
+    context_turns: list[dict] | None = None,
+    context_question: str = "",
+    context_summary: str = "",
+) -> dict:
     from teacher_law.services.query_normalizer import get_input_options
 
     payload = result.get("payload") or {}
@@ -596,6 +689,16 @@ def _build_teacher_law_execution(*, result: dict, question: str) -> dict:
     ][:3]
     if not warnings and payload.get("clarify_needed") and _compact_text(payload.get("clarify_reason")):
         warnings.append(_compact_text(payload.get("clarify_reason")))
+    normalized_context_turns = _normalize_teacher_law_context_turns(context_turns)
+    if not normalized_context_turns and context_question:
+        normalized_context_turns = _normalize_teacher_law_context_turns(
+            [
+                {
+                    "question": context_question,
+                    "summary": context_summary,
+                }
+            ]
+        )
 
     return {
         "kind": "teacher-law",
@@ -607,6 +710,9 @@ def _build_teacher_law_execution(*, result: dict, question: str) -> dict:
             "legal_goal": _compact_text(profile.get("legal_goal")),
             "scene": _compact_text(profile.get("scene_value")),
             "counterpart": _compact_text(profile.get("counterpart")),
+            "context_turns": normalized_context_turns,
+            "context_question": normalized_context_turns[-1]["question"] if normalized_context_turns else "",
+            "context_summary": normalized_context_turns[-1]["summary"] if normalized_context_turns else "",
         },
         "incident_options": [
             {
@@ -1029,10 +1135,11 @@ def _preview_schedule_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
     )
 
 
-def _preview_teacher_law_adapter(*, mode_spec: dict, text: str, **_kwargs) -> dict:
+def _preview_teacher_law_adapter(*, mode_spec: dict, text: str, context: dict | None = None, **_kwargs) -> dict:
     return _generate_teacher_law_preview(
         mode_spec=mode_spec,
         text=text,
+        context=context,
     )
 
 

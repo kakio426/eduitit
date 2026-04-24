@@ -56,6 +56,51 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         self.assertEqual(result["execution"]["kind"], "teacher-law")
         self.assertTrue(result["execution"]["incident_options"])
 
+    @patch(
+        "teacher_law.services.answer_legal_question",
+        return_value={
+            "status": "ok",
+            "payload": {
+                "summary": "관리자 공유와 게시 중단 요청을 먼저 검토하세요.",
+                "action_items": [],
+            },
+            "profile": {
+                "incident_type": "privacy_photo",
+                "legal_goal": "posting_allowed",
+            },
+        },
+    )
+    def test_teacher_law_followup_context_is_used_without_replacing_draft_question(self, mock_answer_legal_question):
+        result = generate_service_preview(
+            request=self._request(),
+            mode_key="teacher-law",
+            mode_spec={"badge": "교사 법률", "default_title": "법률 검토 메모"},
+            text="그럼 학교가 바로 요청할 조치는요?",
+            context={
+                "teacher_law_followup": {
+                    "turns": [
+                        {
+                            "question": "학부모가 아이들 사진을 인터넷에 올렸습니다.",
+                            "summary": "공개 범위와 동의 여부를 먼저 확인해야 합니다.",
+                        },
+                        {
+                            "question": "게시 중단 요청은 누가 해야 하나요?",
+                            "summary": "학교가 사실관계를 확인해 보호자에게 요청합니다.",
+                        },
+                    ],
+                }
+            },
+        )
+
+        called_question = mock_answer_legal_question.call_args.kwargs["question"]
+        self.assertIn("이전 대화", called_question)
+        self.assertIn("1. 질문: 학부모가 아이들 사진을 인터넷에 올렸습니다.", called_question)
+        self.assertIn("2. 질문: 게시 중단 요청은 누가 해야 하나요?", called_question)
+        self.assertIn("추가 질문: 그럼 학교가 바로 요청할 조치는요?", called_question)
+        self.assertEqual(result["execution"]["draft"]["question"], "그럼 학교가 바로 요청할 조치는요?")
+        self.assertEqual(len(result["execution"]["draft"]["context_turns"]), 2)
+        self.assertEqual(result["execution"]["draft"]["context_question"], "게시 중단 요청은 누가 해야 하나요?")
+
     def test_schedule_mode_uses_classcalendar_parser_candidates(self):
         result = generate_service_preview(
             request=self._request(),

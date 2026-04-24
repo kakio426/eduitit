@@ -771,6 +771,8 @@
             messageSaveErrorText: '',
             messageSaveSelectedCandidateId: '',
             messageSaveCommitResult: {},
+            teacherLawLastQuestion: '',
+            teacherLawFollowupContext: {},
             isSavingMessageSave: false,
             isExtractingMessageSave: false,
             isCommittingMessageSave: false,
@@ -1224,7 +1226,7 @@
                 var placeholders = {
                     notice: '보낼 내용을 적으세요.',
                     schedule: '일정이 들어 있는 내용을 적으세요.',
-                    'teacher-law': '상황을 적으세요.',
+                    'teacher-law': this.teacherLawHasFollowupContext() ? '이어서 물어보세요.' : '상황을 적으세요.',
                     reservation: '필요한 시간과 장소를 적으세요.',
                 };
                 if (this.activeConversationItem) {
@@ -1246,6 +1248,9 @@
                 if (this.activeConversationItem) {
                     return '보내기';
                 }
+                if (this.activeModeKey === 'teacher-law' && this.teacherLawHasFollowupContext()) {
+                    return '보내기';
+                }
                 if (this.aiMessengerIsFlow('guided')) {
                     return '실행';
                 }
@@ -1265,7 +1270,7 @@
                 var hints = {
                     notice: '가정통신문처럼 바로 써 드려요.',
                     schedule: '학사 일정이나 약속을 정리해요.',
-                    'teacher-law': '상황을 적으면 대응 순서를 정리해요.',
+                    'teacher-law': this.teacherLawHasFollowupContext() ? '방금 법률 대화를 이어갑니다.' : '상황을 적으면 대응 순서를 정리해요.',
                     reservation: '필요한 시간과 장소를 적어 주세요.',
                 };
                 if (this.activeConversationItem) {
@@ -3721,6 +3726,8 @@
                     messageSaveErrorText: '',
                     messageSaveSelectedCandidateId: '',
                     messageSaveCommitResult: {},
+                    teacherLawLastQuestion: '',
+                    teacherLawFollowupContext: {},
                 }, overrides || {});
             },
 
@@ -3757,6 +3764,10 @@
                     messageSaveCommitResult: source.messageSaveCommitResult && typeof source.messageSaveCommitResult === 'object'
                         ? this.clonePayload(source.messageSaveCommitResult)
                         : {},
+                    teacherLawLastQuestion: typeof source.teacherLawLastQuestion === 'string' ? source.teacherLawLastQuestion : '',
+                    teacherLawFollowupContext: source.teacherLawFollowupContext && typeof source.teacherLawFollowupContext === 'object'
+                        ? this.clonePayload(source.teacherLawFollowupContext)
+                        : {},
                 });
             },
 
@@ -3781,6 +3792,8 @@
                     messageSaveErrorText: this.messageSaveErrorText,
                     messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
                     messageSaveCommitResult: this.messageSaveCommitResult,
+                    teacherLawLastQuestion: this.teacherLawLastQuestion,
+                    teacherLawFollowupContext: this.teacherLawFollowupContext,
                 });
             },
 
@@ -3802,6 +3815,8 @@
                 this.messageSaveErrorText = nextState.messageSaveErrorText;
                 this.messageSaveSelectedCandidateId = nextState.messageSaveSelectedCandidateId;
                 this.messageSaveCommitResult = nextState.messageSaveCommitResult;
+                this.teacherLawLastQuestion = nextState.teacherLawLastQuestion;
+                this.teacherLawFollowupContext = nextState.teacherLawFollowupContext;
             },
 
             clearExecution: function () {
@@ -4273,6 +4288,11 @@
                         providerLabel: '',
                     };
                     this.agentPreview = this.normalizePreview(payload.preview, this.agentPreviewMeta);
+                    if (modeKey === 'teacher-law') {
+                        this.rememberTeacherLawFollowup(payload, this.agentExecutionDraft.question || this.workspaceInput);
+                        this.workspaceInput = '';
+                        this.handleActiveAiComposerInput();
+                    }
                     this.clearExecution();
                     showFeedback(payload.message || '저장했습니다.', 'success');
                 } catch (error) {
@@ -5642,7 +5662,73 @@
             },
 
             teacherLawUserBubbleText: function () {
-                return trimLine(this.workspaceInput);
+                return trimLine(this.workspaceInput) || trimLine(this.teacherLawLastQuestion);
+            },
+
+            normalizeTeacherLawTurn: function (turn) {
+                var source = turn && typeof turn === 'object' ? turn : {};
+                var question = trimLine(source.question);
+                if (!question) {
+                    return null;
+                }
+                return {
+                    question: question,
+                    summary: trimLine(source.summary),
+                };
+            },
+
+            teacherLawContextTurns: function () {
+                var context = this.teacherLawFollowupContext && typeof this.teacherLawFollowupContext === 'object'
+                    ? this.teacherLawFollowupContext
+                    : {};
+                var turns = Array.isArray(context.turns)
+                    ? context.turns.map(this.normalizeTeacherLawTurn, this).filter(Boolean)
+                    : [];
+                if (!turns.length) {
+                    var fallbackTurn = this.normalizeTeacherLawTurn(context);
+                    if (fallbackTurn) {
+                        turns = [fallbackTurn];
+                    }
+                }
+                return turns.slice(-3);
+            },
+
+            teacherLawHasFollowupContext: function () {
+                return Boolean(this.teacherLawContextTurns().length);
+            },
+
+            teacherLawFollowupSummary: function () {
+                var turns = this.teacherLawContextTurns();
+                return turns.length ? trimLine(turns[turns.length - 1].summary) : '';
+            },
+
+            rememberTeacherLawFollowup: function (payload, fallbackQuestion) {
+                var preview = payload && payload.preview && typeof payload.preview === 'object' ? payload.preview : {};
+                var question = trimLine(
+                    payload
+                    && payload.execution_draft
+                    && payload.execution_draft.question
+                ) || trimLine(
+                    this.agentExecutionDraft && this.agentExecutionDraft.question
+                ) || trimLine(fallbackQuestion);
+                var summary = trimLine(preview.summary || '');
+                if (!summary) {
+                    summary = trimLine(this.previewResultLinesFromPreview(preview)[0] || '');
+                }
+                if (!question) {
+                    this.teacherLawFollowupContext = {};
+                    this.teacherLawLastQuestion = '';
+                    return;
+                }
+                this.teacherLawLastQuestion = question;
+                var turns = this.teacherLawContextTurns();
+                turns.push({
+                    question: question,
+                    summary: summary,
+                });
+                this.teacherLawFollowupContext = {
+                    turns: turns.slice(-3),
+                };
             },
 
             teacherLawHasExecution: function () {
@@ -5723,6 +5809,8 @@
 
             resetTeacherLawChat: function () {
                 this.workspaceInput = '';
+                this.teacherLawLastQuestion = '';
+                this.teacherLawFollowupContext = {};
                 this.showIdlePreview();
                 this.focusWorkspace();
             },
@@ -5873,6 +5961,11 @@
                         selected_asset_ids: Array.isArray(context.selected_asset_ids) ? context.selected_asset_ids : [],
                         selected_message_texts: Array.isArray(context.selected_message_texts) ? context.selected_message_texts : [],
                         selected_asset_names: Array.isArray(context.selected_asset_names) ? context.selected_asset_names : [],
+                        teacher_law_followup: targetModeKey === 'teacher-law' && this.teacherLawHasFollowupContext()
+                            ? {
+                                turns: this.teacherLawContextTurns(),
+                            }
+                            : {},
                     },
                 };
             },
