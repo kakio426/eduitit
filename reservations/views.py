@@ -1166,6 +1166,7 @@ def create_reservation(request, school_slug):
             request.session.modified = True
         
         messages.success(request, f"{period}교시 예약이 완료되었습니다.")
+        remember_recent_reservation_school(request.user, school)
         _set_reservation_followup_context(request, school, reservation, edit_code=edit_code)
         
         # HTMX Redirect to refresh grid
@@ -1271,6 +1272,7 @@ def update_reservation(request, school_slug, reservation_id):
         reservation.save(update_fields=update_fields)
 
         messages.success(request, f"{period}교시 예약이 수정되었습니다.")
+        remember_recent_reservation_school(request.user, school)
         _set_reservation_followup_context(request, school, reservation, edit_code=edit_code_changed)
 
         response = HttpResponse()
@@ -1340,6 +1342,7 @@ def claim_reservation_access(request, school_slug, reservation_id):
         f"?date={reservation.date.strftime('%Y-%m-%d')}&reservation={reservation.id}"
     )
     messages.success(request, "내 예약을 열었습니다.")
+    remember_recent_reservation_school(request.user, school)
     if request.htmx:
         response = HttpResponse()
         response['HX-Redirect'] = redirect_url

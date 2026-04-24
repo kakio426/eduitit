@@ -202,6 +202,36 @@ class ReservationsViewTest(TestCase):
         outsider_profile.refresh_from_db()
         self.assertEqual(outsider_profile.recent_reservation_school_ids, [self.school.id])
 
+    def test_logged_in_public_reservation_create_saves_school_to_recent_history(self):
+        outsider = User.objects.create_user(username='recentcreator', password='password2', email='recentcreator@example.com')
+        outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
+        outsider_profile.nickname = '예약교사'
+        outsider_profile.save(update_fields=['nickname'])
+
+        self.client.force_login(outsider)
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 1,
+                'grade': 4,
+                'class_no': 2,
+                'name': '예약교사',
+                'edit_code': self.default_edit_code,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        outsider_profile.refresh_from_db()
+        self.assertEqual(outsider_profile.recent_reservation_school_ids, [self.school.id])
+
+        entry_response = self.client.get(reverse('reservations:smart_entry'))
+        self.assertRedirects(
+            entry_response,
+            reverse('reservations:reservation_index', args=[self.school.slug]),
+        )
+
     def test_smart_entry_redirects_recent_public_link_user_to_recent_school(self):
         outsider = User.objects.create_user(username='smartrecent', password='password2', email='smartrecent@example.com')
         outsider_profile, _ = UserProfile.objects.get_or_create(user=outsider)
