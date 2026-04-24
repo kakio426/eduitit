@@ -216,12 +216,6 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
                 "order": 10,
             },
         ),
-        starter_items=_starter_items(
-            {"label": "상담", "text": "학부모님, 다음 주 수요일 오후 3시에 상담 가능합니다. 학교 상담실로 와 주세요."},
-            {"label": "회의", "text": "금요일 14시에 학년 회의실에서 회의합니다. 자료는 10분 전까지 올려 주세요."},
-            {"label": "행사", "text": "4월 25일 오전 9시 운동장 집합입니다. 체육대회 준비물은 물과 모자입니다."},
-            {"label": "변경", "text": "내일 2교시 과학실 수업이 4교시로 바뀝니다. 실험 준비물은 그대로 가져옵니다."},
-        ),
     ),
     HomeAgentServiceDefinition(
         key="teacher-law",
