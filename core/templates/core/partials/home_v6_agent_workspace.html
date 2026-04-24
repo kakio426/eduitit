@@ -92,6 +92,28 @@
                             </button>
                             <button
                                 class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'schedule' }"
+                                type="button"
+                                role="listitem"
+                                title="일정"
+                                aria-label="일정"
+                                @click="selectServiceChip('schedule', { draftText: '' })"
+                            >
+                                <span>일정</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-service-chip"
+                                :class="{ 'is-active': activeModeKey === 'teacher-law' }"
+                                type="button"
+                                role="listitem"
+                                title="교사 법률"
+                                aria-label="교사 법률"
+                                @click="selectServiceChip('teacher-law', { draftText: '' })"
+                            >
+                                <span>교사 법률</span>
+                            </button>
+                            <button
+                                class="home-v6-cmd-service-chip"
                                 :class="{ 'is-active': activeModeKey === 'reservation' }"
                                 type="button"
                                 role="listitem"
@@ -101,63 +123,6 @@
                             >
                                 <span>특별실 예약</span>
                             </button>
-
-                            <!-- 서비스 피커 -->
-                            <div class="home-v6-cmd-service-picker-wrap" x-data @click.outside="agentServicePickerOpen = false" @keydown.escape.window="agentServicePickerOpen = false">
-                                <button
-                                    class="home-v6-cmd-service-chip home-v6-cmd-service-chip--more"
-                                    :class="{ 'is-active': agentServicePickerOpen }"
-                                    type="button"
-                                    aria-label="더 많은 서비스"
-                                    :aria-expanded="agentServicePickerOpen"
-                                    @click="agentServicePickerOpen = !agentServicePickerOpen"
-                                >
-                                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/></svg>
-                                    <span>더보기</span>
-                                </button>
-                                <div
-                                    class="home-v6-cmd-service-picker"
-                                    x-cloak
-                                    x-show="agentServicePickerOpen"
-                                    x-transition:enter="home-v6-picker-enter"
-                                    x-transition:enter-start="home-v6-picker-enter-start"
-                                    x-transition:enter-end="home-v6-picker-enter-end"
-                                    x-transition:leave="home-v6-picker-leave"
-                                    x-transition:leave-start="home-v6-picker-leave-start"
-                                    x-transition:leave-end="home-v6-picker-leave-end"
-                                    role="menu"
-                                    aria-label="AI 서비스 목록"
-                                >
-                                    <p class="home-v6-cmd-service-picker-label">서비스 선택</p>
-                                    <div class="home-v6-cmd-service-picker-grid">
-                                        <button type="button" class="home-v6-cmd-service-picker-item" :class="{ 'is-active': activeModeKey === 'schedule' }" role="menuitem" @click="selectServiceChip('schedule', { draftText: '' })">
-                                            <span class="home-v6-cmd-service-picker-icon"><i class="fa-regular fa-calendar"></i></span>
-                                            <span class="home-v6-cmd-service-picker-name">일정</span>
-                                            <span class="home-v6-cmd-service-picker-hint">메시지에서 날짜 추출</span>
-                                        </button>
-                                        <button type="button" class="home-v6-cmd-service-picker-item" :class="{ 'is-active': activeModeKey === 'teacher-law' }" role="menuitem" @click="selectServiceChip('teacher-law', { draftText: '' })">
-                                            <span class="home-v6-cmd-service-picker-icon"><i class="fa-solid fa-scale-balanced"></i></span>
-                                            <span class="home-v6-cmd-service-picker-name">교사 법률</span>
-                                            <span class="home-v6-cmd-service-picker-hint">교권·민원 대응 방안</span>
-                                        </button>
-                                        <button type="button" class="home-v6-cmd-service-picker-item" :class="{ 'is-active': activeModeKey === 'quickdrop' }" role="menuitem" @click="selectServiceChip('quickdrop', { draftText: '' })">
-                                            <span class="home-v6-cmd-service-picker-icon"><i class="fa-solid fa-paper-plane"></i></span>
-                                            <span class="home-v6-cmd-service-picker-name">바로 전송</span>
-                                            <span class="home-v6-cmd-service-picker-hint">다른 기기로 즉시 전송</span>
-                                        </button>
-                                        <button type="button" class="home-v6-cmd-service-picker-item" :class="{ 'is-active': activeModeKey === 'tts' }" role="menuitem" @click="selectServiceChip('tts', { draftText: '' })">
-                                            <span class="home-v6-cmd-service-picker-icon"><i class="fa-solid fa-volume-high"></i></span>
-                                            <span class="home-v6-cmd-service-picker-name">TTS 읽어주기</span>
-                                            <span class="home-v6-cmd-service-picker-hint">방송 문구 음성 출력</span>
-                                        </button>
-                                        <button type="button" class="home-v6-cmd-service-picker-item" :class="{ 'is-active': activeModeKey === 'message-save' }" role="menuitem" @click="selectServiceChip('message-save', { draftText: '' })">
-                                            <span class="home-v6-cmd-service-picker-icon"><i class="fa-regular fa-bookmark"></i></span>
-                                            <span class="home-v6-cmd-service-picker-name">메시지 저장</span>
-                                            <span class="home-v6-cmd-service-picker-hint">수신 메시지 보관</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
                         <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>

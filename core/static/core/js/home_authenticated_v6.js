@@ -762,7 +762,6 @@
             agentExecuteRequestId: 0,
             agentHeroExpanded: true,
             agentHeroQuery: '',
-            agentServicePickerOpen: false,
             noticeBaseInput: '',
             noticeRefinementLabel: '',
             scheduleEditorOpen: false,
@@ -1749,7 +1748,6 @@
                     this.handleActiveAiComposerInput();
                 }
                 this.agentHeroExpanded = false;
-                this.agentServicePickerOpen = false;
                 if (settings.focus !== false) {
                     this.focusWorkspace();
                 }
