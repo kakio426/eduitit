@@ -1,6 +1,7 @@
 import json
+import re
 
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from .models import MathGameMove, MathGameSession
@@ -53,11 +54,53 @@ class TwentyFourServiceTests(TestCase):
 
 
 class MathGamesViewTests(TestCase):
+    def _csrf_token_from_page(self, client, route_name):
+        response = client.get(reverse(route_name))
+        self.assertEqual(response.status_code, 200)
+        match = re.search(r'data-csrf-token="([^"]+)"', response.content.decode())
+        self.assertIsNotNone(match)
+        return match.group(1)
+
     def test_pages_render(self):
         for route_name in ["math_games:index", "math_games:nim", "math_games:twenty_four"]:
             with self.subTest(route_name=route_name):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
+
+    def test_game_pages_render_csrf_token_for_fetch(self):
+        for route_name in ["math_games:nim", "math_games:twenty_four"]:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "data-csrf-token=")
+
+    def test_nim_start_accepts_template_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        token = self._csrf_token_from_page(csrf_client, "math_games:nim")
+
+        response = csrf_client.post(
+            reverse("math_games:api_nim_start"),
+            data=json.dumps({"difficulty": "random"}),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("session_id", response.json())
+
+    def test_twenty_four_start_accepts_template_csrf_token(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        token = self._csrf_token_from_page(csrf_client, "math_games:twenty_four")
+
+        response = csrf_client.post(
+            reverse("math_games:api_twenty_four_start"),
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("session_id", response.json())
 
     def test_nim_start_and_move_returns_ai_response(self):
         start_response = self.client.post(

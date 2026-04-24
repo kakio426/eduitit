@@ -13,6 +13,7 @@
     class="mg-shell service-shell--compact"
     data-mg-twenty-four
     data-start-url="{% url 'math_games:api_twenty_four_start' %}"
+    data-csrf-token="{{ csrf_token }}"
 >
     <div class="mg-wrap">
         <header class="mg-play-head">
@@ -40,6 +41,7 @@
             <div class="mg-toolbar">
                 <button id="mg-tf-start" type="button" class="mg-primary">카드 받기</button>
                 <button id="mg-tf-hint" type="button" class="mg-secondary" disabled>힌트</button>
+                <button type="button" class="mg-secondary" data-mg-help-open>게임 설명</button>
             </div>
 
             <div id="mg-tf-numbers" class="mg-number-row mg-number-row--preview" aria-live="polite">
@@ -71,6 +73,29 @@
                 <p id="mg-tf-hint-text" class="mg-thought"></p>
             </div>
         </section>
+
+        <div class="mg-help-modal" data-mg-help-modal hidden role="dialog" aria-modal="true" aria-labelledby="mg-tf-help-title">
+            <div class="mg-help-backdrop" data-mg-help-close></div>
+            <section class="mg-help-card" tabindex="-1">
+                <button type="button" class="mg-help-close" data-mg-help-close aria-label="설명 닫기">닫기</button>
+                <span class="mg-kicker">게임 설명</span>
+                <h2 id="mg-tf-help-title">24 만들기</h2>
+                <div class="mg-help-visual mg-help-visual--tf" aria-hidden="true">
+                    <span>3</span>
+                    <span>6</span>
+                    <span>8</span>
+                    <span>9</span>
+                    <b>+ − × ÷</b>
+                </div>
+                <ol class="mg-help-steps">
+                    <li><strong>카드 받기</strong><span>숫자 카드 4장을 받습니다.</span></li>
+                    <li><strong>한 번씩 쓰기</strong><span>각 숫자는 정확히 한 번만 씁니다.</span></li>
+                    <li><strong>24 만들기</strong><span>사칙연산과 괄호로 결과가 24가 되게 합니다.</span></li>
+                </ol>
+                <p class="mg-help-tip">막히면 힌트로 첫 계산 방향을 볼 수 있습니다.</p>
+                <button type="button" class="mg-primary" data-mg-help-close>알겠어</button>
+            </section>
+        </div>
     </div>
 </main>
 {% endblock %}

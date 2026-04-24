@@ -1,6 +1,8 @@
 "use strict";
 
 (function () {
+    const GENERIC_ERROR = "다시 시도해 주세요";
+
     function getCookie(name) {
         const parts = document.cookie ? document.cookie.split(";") : [];
         for (const part of parts) {
@@ -12,13 +14,35 @@
         return "";
     }
 
+    function getCsrfToken() {
+        const tokenNode = document.querySelector("[data-csrf-token]");
+        if (tokenNode && tokenNode.dataset.csrfToken) {
+            return tokenNode.dataset.csrfToken;
+        }
+        const inputNode = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (inputNode && inputNode.value) {
+            return inputNode.value;
+        }
+        return getCookie("csrftoken");
+    }
+
+    function fallbackMessage(response) {
+        if (response.status === 403) {
+            return "새로고침 후 다시 눌러 주세요";
+        }
+        if (response.status >= 500) {
+            return "서버 준비가 필요해요";
+        }
+        return GENERIC_ERROR;
+    }
+
     async function requestJson(url, payload) {
         const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
+                "X-CSRFToken": getCsrfToken(),
             },
             body: JSON.stringify(payload || {}),
         });
@@ -26,10 +50,10 @@
         try {
             data = await response.json();
         } catch (error) {
-            data = { feedback: "오류" };
+            data = {};
         }
         if (!response.ok) {
-            const message = data.feedback || "오류";
+            const message = data.feedback || fallbackMessage(response);
             throw new Error(message);
         }
         return data;
@@ -215,7 +239,7 @@
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");
-                setText(statusNode, error.message);
+                setText(statusNode, error.message || GENERIC_ERROR);
             } finally {
                 startButton.disabled = false;
             }
@@ -237,7 +261,7 @@
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");
-                setText(statusNode, error.message);
+                setText(statusNode, error.message || GENERIC_ERROR);
                 button.disabled = false;
             }
         });
@@ -327,7 +351,7 @@
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");
-                setText(statusNode, error.message);
+                setText(statusNode, error.message || GENERIC_ERROR);
             } finally {
                 startButton.disabled = false;
             }
@@ -375,7 +399,7 @@
                 removeStateClasses(root);
                 root.classList.add("is-error");
                 flashClass(input, "is-error", 420);
-                setText(statusNode, error.message);
+                setText(statusNode, error.message || GENERIC_ERROR);
             } finally {
                 if (!solved) {
                     submitButton.disabled = false;
@@ -395,7 +419,7 @@
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");
-                setText(statusNode, error.message);
+                setText(statusNode, error.message || GENERIC_ERROR);
             } finally {
                 if (!solved) {
                     hintButton.disabled = false;
@@ -404,6 +428,72 @@
         });
     }
 
+    function initHelpModals() {
+        const modals = Array.from(document.querySelectorAll("[data-mg-help-modal]"));
+        if (!modals.length) {
+            return;
+        }
+
+        let activeModal = null;
+        let lastFocus = null;
+
+        function setBodyLock() {
+            const hasOpenModal = modals.some((modal) => !modal.hidden);
+            document.body.classList.toggle("mg-modal-open", hasOpenModal);
+        }
+
+        function openModal(modal, opener) {
+            lastFocus = opener || document.activeElement;
+            activeModal = modal;
+            modal.hidden = false;
+            modal.classList.remove("is-closing");
+            void modal.offsetWidth;
+            modal.classList.add("is-open");
+            setBodyLock();
+            const focusTarget = modal.querySelector(".mg-help-card");
+            if (focusTarget) {
+                focusTarget.focus({ preventScroll: true });
+            }
+        }
+
+        function closeModal(modal) {
+            if (!modal || modal.hidden) {
+                return;
+            }
+            modal.classList.remove("is-open");
+            modal.classList.add("is-closing");
+            window.setTimeout(() => {
+                modal.hidden = true;
+                modal.classList.remove("is-closing");
+                if (activeModal === modal) {
+                    activeModal = null;
+                }
+                setBodyLock();
+                if (lastFocus && typeof lastFocus.focus === "function") {
+                    lastFocus.focus({ preventScroll: true });
+                }
+            }, 180);
+        }
+
+        modals.forEach((modal) => {
+            const shell = modal.closest(".mg-shell");
+            const openers = shell ? shell.querySelectorAll("[data-mg-help-open]") : [];
+            openers.forEach((opener) => {
+                opener.addEventListener("click", () => openModal(modal, opener));
+            });
+            modal.querySelectorAll("[data-mg-help-close]").forEach((closer) => {
+                closer.addEventListener("click", () => closeModal(modal));
+            });
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && activeModal) {
+                closeModal(activeModal);
+            }
+        });
+    }
+
     initNim();
     initTwentyFour();
+    initHelpModals();
 }());

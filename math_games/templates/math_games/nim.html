@@ -13,6 +13,7 @@
     class="mg-shell service-shell--compact"
     data-mg-nim
     data-start-url="{% url 'math_games:api_nim_start' %}"
+    data-csrf-token="{{ csrf_token }}"
 >
     <div class="mg-wrap">
         <header class="mg-play-head">
@@ -41,6 +42,7 @@
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="random"> 쉬움</label>
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="mcts" checked> 보통</label>
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="minimax"> 어려움</label>
+                <button type="button" class="mg-secondary" data-mg-help-open>게임 설명</button>
                 <button id="mg-nim-start" type="button" class="mg-primary">AI와 시작</button>
             </div>
 
@@ -82,6 +84,27 @@
                 <p id="mg-nim-thought" class="mg-thought"></p>
             </div>
         </section>
+
+        <div class="mg-help-modal" data-mg-help-modal hidden role="dialog" aria-modal="true" aria-labelledby="mg-nim-help-title">
+            <div class="mg-help-backdrop" data-mg-help-close></div>
+            <section class="mg-help-card" tabindex="-1">
+                <button type="button" class="mg-help-close" data-mg-help-close aria-label="설명 닫기">닫기</button>
+                <span class="mg-kicker">게임 설명</span>
+                <h2 id="mg-nim-help-title">더미 가져가기</h2>
+                <div class="mg-help-visual mg-help-visual--nim" aria-hidden="true">
+                    <div><span></span><span></span><span></span></div>
+                    <div><span></span><span></span><span></span><span></span></div>
+                    <div><span></span><span></span><span></span><span></span><span></span></div>
+                </div>
+                <ol class="mg-help-steps">
+                    <li><strong>더미 선택</strong><span>1번, 2번, 3번 중 하나를 고릅니다.</span></li>
+                    <li><strong>1~3개 가져가기</strong><span>한 번에 가져갈 수 있는 돌은 최대 3개입니다.</span></li>
+                    <li><strong>마지막 돌 승리</strong><span>마지막 돌을 가져가면 그 판을 이깁니다.</span></li>
+                </ol>
+                <p class="mg-help-tip">어려움은 빈틈없이 두는 전략 컴퓨터입니다.</p>
+                <button type="button" class="mg-primary" data-mg-help-close>알겠어</button>
+            </section>
+        </div>
     </div>
 </main>
 {% endblock %}
