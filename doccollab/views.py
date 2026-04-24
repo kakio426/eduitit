@@ -13,6 +13,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from .assistant_service import (
+    DocumentAssistantError,
+    analyze_revision,
+    answer_analysis_question,
+    current_analysis_for_revision,
+    serialize_analysis,
+    serialize_question,
+)
 from .models import DocMembership, DocRevision, DocRoom, DocWorksheet
 from .services import (
     accessible_rooms_queryset,
@@ -80,6 +88,15 @@ def _validation_message(exc):
     if messages:
         return str(messages[0])
     return str(exc)
+
+
+def _request_payload(request):
+    if "application/json" not in str(request.content_type or ""):
+        return request.POST
+    try:
+        return json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return {}
 
 
 def _membership_for_room(room, user):
@@ -239,6 +256,7 @@ def _build_dashboard_context(request):
         "shared_rooms": shared_rooms,
         "recent_revisions": recent_revisions,
         "today_rooms": today_rooms,
+        "today_room_cards": _dashboard_room_cards(today_rooms_qs, request.user, limit=4),
         "my_room_cards": _dashboard_room_cards(my_rooms_qs, request.user),
         "shared_room_cards": _dashboard_room_cards(shared_rooms_qs, request.user, limit=6),
         "today_room_count": today_rooms_qs.count(),
@@ -456,6 +474,27 @@ def room_detail(request, room_id):
     latest_revision = room.revisions.order_by("-revision_number").first()
     published_revision = room.revisions.filter(is_published=True).order_by("-revision_number").first()
     current_revision = published_revision if public_library_view and published_revision else latest_revision
+    assistant_enabled = bool(
+        current_revision
+        and not public_library_view
+        and room.origin_kind == DocRoom.OriginKind.UPLOAD
+    )
+    assistant_analysis = current_analysis_for_revision(room, current_revision) if assistant_enabled else None
+    assistant_analysis_payload = serialize_analysis(assistant_analysis)
+    room_payload = room_payload_for_template(
+        room=room,
+        membership=membership,
+        request=request,
+        editing_supported=editing_supported,
+    )
+    room_payload.update(
+        {
+            "assistantEnabled": assistant_enabled,
+            "assistantAnalysis": assistant_analysis_payload,
+            "assistantAnalyzeUrl": reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
+            "assistantAskUrl": reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+        }
+    )
     access_context = _room_access_context(room, membership)
     source_download_url = reverse("doccollab:download_source", kwargs={"room_id": room.id}) if room.source_file else ""
     fallback_download_url = (
@@ -475,12 +514,7 @@ def room_detail(request, room_id):
         "shared_members": _shared_members_for_room(room),
         "editing_supported": editing_supported,
         "read_only_reason": read_only_reason,
-        "room_payload": room_payload_for_template(
-            room=room,
-            membership=membership,
-            request=request,
-            editing_supported=editing_supported,
-        ),
+        "room_payload": room_payload,
         "can_edit": getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR},
         "can_manage": getattr(membership, "role", "") == DocMembership.Role.OWNER,
         "display_name": display_name_for_user(request.user),
@@ -493,6 +527,11 @@ def room_detail(request, room_id):
         "fallback_download_url": fallback_download_url,
         "worksheet_publish_url": reverse("doccollab:worksheet_publish", kwargs={"room_id": room.id}) if worksheet else "",
         "worksheet_clone_url": reverse("doccollab:worksheet_clone", kwargs={"room_id": room.id}) if worksheet else "",
+        "assistant_enabled": assistant_enabled,
+        "assistant_analysis": assistant_analysis,
+        "assistant_analysis_payload": assistant_analysis_payload,
+        "assistant_analyze_url": reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
+        "assistant_ask_url": reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
     }
     return render(request, "doccollab/room.html", context)
 
@@ -627,6 +666,90 @@ def save_revision(request, room_id):
             "download_url": reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}),
         }
     )
+
+
+@login_required
+@require_POST
+def assistant_analyze(request, room_id):
+    room, _membership = _load_room_or_404(request, room_id)
+    if room.origin_kind != DocRoom.OriginKind.UPLOAD:
+        message_text = "업로드 문서만 정리합니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=400)
+        messages.error(request, message_text)
+        return redirect("doccollab:room_detail", room_id=room.id)
+
+    revision = room.revisions.order_by("-revision_number").first()
+    try:
+        analysis, reused = analyze_revision(room=room, revision=revision, user=request.user)
+    except DocumentAssistantError as exc:
+        if _is_json_request(request):
+            return JsonResponse({"message": exc.message}, status=exc.status_code)
+        messages.error(request, exc.message)
+        return redirect("doccollab:room_detail", room_id=room.id)
+    except Exception:
+        logger.exception(
+            "doccollab assistant analyze failed for room=%s user=%s",
+            room.id,
+            getattr(request.user, "id", None),
+        )
+        message_text = "문서를 정리하는 중 오류가 발생했습니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=500)
+        messages.error(request, message_text)
+        return redirect("doccollab:room_detail", room_id=room.id)
+
+    payload = {"analysis": serialize_analysis(analysis), "reused": reused}
+    if _is_json_request(request):
+        return JsonResponse(payload)
+    messages.success(request, "AI 정리를 마쳤습니다.")
+    return redirect("doccollab:room_detail", room_id=room.id)
+
+
+@login_required
+@require_POST
+def assistant_ask(request, room_id):
+    room, _membership = _load_room_or_404(request, room_id)
+    if room.origin_kind != DocRoom.OriginKind.UPLOAD:
+        message_text = "업로드 문서만 질문합니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=400)
+        messages.error(request, message_text)
+        return redirect("doccollab:room_detail", room_id=room.id)
+
+    revision = room.revisions.order_by("-revision_number").first()
+    analysis = current_analysis_for_revision(room, revision)
+    payload = _request_payload(request)
+    question_text = str(payload.get("question") or "").strip()
+    try:
+        question, reused = answer_analysis_question(
+            analysis=analysis,
+            user=request.user,
+            question=question_text,
+        )
+    except DocumentAssistantError as exc:
+        if _is_json_request(request):
+            return JsonResponse({"message": exc.message}, status=exc.status_code)
+        messages.error(request, exc.message)
+        return redirect("doccollab:room_detail", room_id=room.id)
+    except Exception:
+        logger.exception(
+            "doccollab assistant question failed for room=%s user=%s",
+            room.id,
+            getattr(request.user, "id", None),
+        )
+        message_text = "질문 답변 중 오류가 발생했습니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=500)
+        messages.error(request, message_text)
+        return redirect("doccollab:room_detail", room_id=room.id)
+
+    response_payload = serialize_question(question, reused=reused)
+    if _is_json_request(request):
+        return JsonResponse(response_payload)
+    messages.success(request, "답변을 준비했습니다.")
+    return redirect("doccollab:room_detail", room_id=room.id)
+
 
 @login_required
 @require_POST

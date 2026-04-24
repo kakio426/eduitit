@@ -58,6 +58,23 @@
                                 저장
                             </button>
                             {% endif %}
+                            <a
+                                id="doccollab-download-link"
+                                href="{% if fallback_download_url %}{{ fallback_download_url }}{% else %}#{% endif %}"
+                                class="doccollab-secondary {% if not fallback_download_url %}doccollab-secondary--disabled{% endif %}"
+                                {% if not fallback_download_url %}aria-disabled="true"{% endif %}
+                            >
+                                다운로드
+                            </a>
+                            {% if assistant_enabled %}
+                            <form method="post" action="{{ assistant_analyze_url }}" data-doccollab-assistant-form="true">
+                                {% csrf_token %}
+                                <button type="submit" id="doccollab-assistant-button" class="doccollab-secondary">
+                                    AI 정리
+                                </button>
+                            </form>
+                            <button type="button" class="doccollab-secondary" disabled title="PDF는 선택형 외부 API 연결 후 사용합니다.">PDF</button>
+                            {% endif %}
                             {% if is_generated_worksheet and can_manage and not public_library_view %}
                             <form method="post" action="{{ worksheet_publish_url }}">
                                 {% csrf_token %}
@@ -76,20 +93,6 @@
                                 {% csrf_token %}
                                 <button type="submit" class="doccollab-secondary">내 자료로</button>
                             </form>
-                            {% endif %}
-                            <a
-                                id="doccollab-download-link"
-                                href="{% if fallback_download_url %}{{ fallback_download_url }}{% else %}#{% endif %}"
-                                class="doccollab-secondary {% if not fallback_download_url %}doccollab-secondary--disabled{% endif %}"
-                                {% if not fallback_download_url %}aria-disabled="true"{% endif %}
-                            >
-                                다운로드
-                            </a>
-                            {% if not public_library_view %}
-                            <a href="{% url 'doccollab:room_revisions' room.id %}" class="doccollab-secondary">버전</a>
-                            {% endif %}
-                            {% if can_manage and not public_library_view %}
-                            <a href="#doccollab-share-members" class="doccollab-secondary">공유</a>
                             {% endif %}
                         </div>
                     </div>
@@ -144,6 +147,63 @@
                     <div><span>저장</span><strong>저장본 HWP</strong></div>
                 </div>
 
+                {% if assistant_enabled %}
+                <details class="doccollab-disclosure doccollab-disclosure--panel doccollab-assistant-panel" open>
+                    <summary>할 일</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div class="doccollab-support-block">
+                            <div class="doccollab-table-head">
+                                <span id="doccollab-assistant-status" class="doccollab-chip doccollab-chip--soft">
+                                    {% if assistant_analysis_payload %}{{ assistant_analysis_payload.status_label }}{% else %}정리 전{% endif %}
+                                </span>
+                                <form method="post" action="{{ assistant_analyze_url }}" data-doccollab-assistant-form="true">
+                                    {% csrf_token %}
+                                    <button type="submit" class="doccollab-secondary doccollab-secondary--row">정리</button>
+                                </form>
+                            </div>
+                            <p id="doccollab-assistant-summary" class="doccollab-room-submeta">
+                                {% if assistant_analysis_payload and assistant_analysis_payload.summary_text %}
+                                {{ assistant_analysis_payload.summary_text }}
+                                {% elif assistant_analysis_payload and assistant_analysis_payload.error_message %}
+                                {{ assistant_analysis_payload.error_message }}
+                                {% else %}
+                                AI 정리 전
+                                {% endif %}
+                            </p>
+                            <div id="doccollab-assistant-items" class="doccollab-assistant-items">
+                                {% if assistant_analysis_payload and assistant_analysis_payload.work_items %}
+                                    {% for item in assistant_analysis_payload.work_items %}
+                                    <div class="doccollab-assistant-item">
+                                        <strong>{{ item.title }}</strong>
+                                        <span>{{ item.action_text }}</span>
+                                        {% if item.due_text %}<em>{{ item.due_text }}</em>{% endif %}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="doccollab-empty">정리 후 표시됩니다.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="doccollab-disclosure doccollab-disclosure--panel doccollab-assistant-panel" open>
+                    <summary>질문</summary>
+                    <div class="doccollab-disclosure-body">
+                        <form method="post" action="{{ assistant_ask_url }}" class="doccollab-form" data-doccollab-question-form="true">
+                            {% csrf_token %}
+                            <label class="doccollab-field">
+                                <span>질문</span>
+                                <input type="text" name="question" maxlength="300" placeholder="예: 마감일">
+                            </label>
+                            <button type="submit" id="doccollab-question-button" class="doccollab-secondary">묻기</button>
+                        </form>
+                        <div id="doccollab-assistant-answer" class="doccollab-assistant-answer" hidden></div>
+                        <div id="doccollab-assistant-citations" class="doccollab-assistant-citations"></div>
+                    </div>
+                </details>
+                {% endif %}
+
                 {% if worksheet %}
                 <details class="doccollab-disclosure doccollab-disclosure--panel" open>
                     <summary>학습 주제</summary>
@@ -177,35 +237,6 @@
                     </div>
                 </details>
 
-                <details class="doccollab-disclosure doccollab-disclosure--panel" open>
-                    <summary>편집 기록 {{ edit_history|length }}</summary>
-                    <div class="doccollab-disclosure-body">
-                        <div id="doccollab-edit-history-list" class="doccollab-list doccollab-list--tight">
-                            {% for event in edit_history %}
-                            <div class="doccollab-room-row doccollab-room-row--history" data-edit-event-id="{{ event.id }}">
-                                <div class="doccollab-room-main">
-                                    <div class="doccollab-room-heading">
-                                        <span class="doccollab-room-title">{{ event.display_name|default:"사용자" }}</span>
-                                        <div class="doccollab-room-badges">
-                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_label|default:"수정" }}</span>
-                                            {% if event.event_count > 1 %}
-                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.event_count }}건</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <span class="doccollab-room-submeta">{{ event.summary }}</span>
-                                    <div class="doccollab-room-meta-row">
-                                        <span class="doccollab-room-meta">{{ event.created_at_display }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="doccollab-empty">아직 기록된 편집이 없습니다.</div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </details>
-
                 {% if can_edit and not public_library_view %}
                 <details class="doccollab-disclosure doccollab-disclosure--panel" open>
                     <summary>표 수정</summary>
@@ -229,7 +260,7 @@
 
                 {% if not public_library_view %}
                 <details id="doccollab-share-members" class="doccollab-disclosure doccollab-disclosure--panel">
-                    <summary>문서 공유 {{ shared_members|length }}</summary>
+                    <summary>공유 {{ shared_members|length }}</summary>
                     <div class="doccollab-disclosure-body">
                         <div class="doccollab-list doccollab-list--tight">
                             {% for item in shared_members %}
@@ -287,6 +318,35 @@
                             {% else %}
                             <div class="doccollab-empty">아직 접속 중인 사람이 없습니다.</div>
                             {% endif %}
+                        </div>
+                    </div>
+                </details>
+
+                <details class="doccollab-disclosure doccollab-disclosure--panel">
+                    <summary>편집 기록 {{ edit_history|length }}</summary>
+                    <div class="doccollab-disclosure-body">
+                        <div id="doccollab-edit-history-list" class="doccollab-list doccollab-list--tight">
+                            {% for event in edit_history %}
+                            <div class="doccollab-room-row doccollab-room-row--history" data-edit-event-id="{{ event.id }}">
+                                <div class="doccollab-room-main">
+                                    <div class="doccollab-room-heading">
+                                        <span class="doccollab-room-title">{{ event.display_name|default:"사용자" }}</span>
+                                        <div class="doccollab-room-badges">
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.command_label|default:"수정" }}</span>
+                                            {% if event.event_count > 1 %}
+                                            <span class="doccollab-chip doccollab-chip--soft">{{ event.event_count }}건</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <span class="doccollab-room-submeta">{{ event.summary }}</span>
+                                    <div class="doccollab-room-meta-row">
+                                        <span class="doccollab-room-meta">{{ event.created_at_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="doccollab-empty">아직 기록된 편집이 없습니다.</div>
+                            {% endfor %}
                         </div>
                     </div>
                 </details>

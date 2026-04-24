@@ -107,6 +107,10 @@
     margin-bottom: 1.25rem;
 }
 
+.doccollab-action-grid--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .doccollab-room-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
@@ -624,6 +628,77 @@
     justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 0.85rem;
+}
+
+.doccollab-assistant-panel .doccollab-support-block {
+    gap: 0.75rem;
+}
+
+.doccollab-assistant-items,
+.doccollab-assistant-citations {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.doccollab-assistant-item,
+.doccollab-assistant-citation,
+.doccollab-assistant-answer {
+    border-radius: 18px;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: #fff;
+    padding: 0.8rem 0.9rem;
+}
+
+.doccollab-assistant-item {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.doccollab-assistant-item strong,
+.doccollab-assistant-citation strong {
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.doccollab-assistant-item span,
+.doccollab-assistant-citation span,
+.doccollab-assistant-answer {
+    color: #475569;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.doccollab-assistant-item em {
+    justify-self: start;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #9a3412;
+    padding: 0.22rem 0.55rem;
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.doccollab-assistant-answer {
+    margin-top: 0.75rem;
+    color: #0f172a;
+}
+
+.doccollab-assistant-answer--muted {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.doccollab-assistant-citations {
+    margin-top: 0.55rem;
+}
+
+.doccollab-assistant-citation {
+    display: grid;
+    gap: 0.25rem;
+    background: #f8fafc;
 }
 
 .doccollab-editor-surface--readonly {

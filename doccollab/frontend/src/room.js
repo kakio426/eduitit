@@ -213,6 +213,15 @@ class DoccollabRoom {
     this.publishButton = document.getElementById("doccollab-publish-button");
     this.tableSelectionLabel = document.getElementById("doccollab-table-selection");
     this.tableCommandButtons = Array.from(document.querySelectorAll("[data-doccollab-table-command]"));
+    this.assistantForms = Array.from(document.querySelectorAll("[data-doccollab-assistant-form='true']"));
+    this.assistantStatusEl = document.getElementById("doccollab-assistant-status");
+    this.assistantSummaryEl = document.getElementById("doccollab-assistant-summary");
+    this.assistantItemsEl = document.getElementById("doccollab-assistant-items");
+    this.questionForm = document.querySelector("[data-doccollab-question-form='true']");
+    this.questionInput = this.questionForm?.querySelector("input[name='question']");
+    this.questionButton = document.getElementById("doccollab-question-button");
+    this.assistantAnswerEl = document.getElementById("doccollab-assistant-answer");
+    this.assistantCitationsEl = document.getElementById("doccollab-assistant-citations");
     this.renderedRevisionIds = new Set(
       Array.from(document.querySelectorAll("[data-revision-id]"))
         .map((node) => node.dataset.revisionId)
@@ -235,6 +244,8 @@ class DoccollabRoom {
     this.lastChangedAt = null;
     this.lastKnownPageCount = 0;
     this.lastLocalRevisionId = "";
+    this.assistantBusy = false;
+    this.questionBusy = false;
     this.baseRevisionId = payload.collabState?.base_revision_id || payload.currentRevision?.id || "";
     this.pendingReplayBatches = [];
     this.localBatchIds = new Set();
@@ -269,6 +280,17 @@ class DoccollabRoom {
         void this.applyTableCommand(button.dataset.doccollabTableCommand || "");
       });
     });
+    this.assistantForms.forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        void this.runAssistantAnalysis();
+      });
+    });
+    this.questionForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void this.askAssistantQuestion();
+    });
+    this.renderAssistantAnalysis(this.payload.assistantAnalysis || null, { keepAnswer: true });
     this.updateTablePanel();
   }
 
@@ -505,6 +527,7 @@ class DoccollabRoom {
         this.pendingReplayBatches = [];
         this.upsertRevision(payload.revision);
         this.broadcastSavedRevision(payload.revision.id || "", payload.edit_events || []);
+        this.resetAssistantForNewRevision();
       }
       if (Array.isArray(payload.edit_history)) {
         this.replaceEditHistory(payload.edit_history);
@@ -523,6 +546,221 @@ class DoccollabRoom {
       this.saveButton?.removeAttribute("disabled");
       this.saveButton?.removeAttribute("aria-busy");
     }
+  }
+
+  async runAssistantAnalysis() {
+    if (!this.payload.assistantEnabled || !this.payload.assistantAnalyzeUrl || this.assistantBusy) {
+      return;
+    }
+    this.assistantBusy = true;
+    this.setAssistantButtonsDisabled(true);
+    this.setAssistantStatus("정리 중");
+    try {
+      const response = await fetch(this.payload.assistantAnalyzeUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": readCsrfToken(this.payload.csrfToken),
+        },
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.message || "AI 정리에 실패했습니다.");
+      }
+      const payload = await response.json();
+      this.payload.assistantAnalysis = payload.analysis || null;
+      this.renderAssistantAnalysis(this.payload.assistantAnalysis);
+      this.setStatus("AI 정리 완료");
+    } catch (error) {
+      const message = error?.message || "AI 정리에 실패했습니다.";
+      this.setAssistantStatus(message, true);
+      this.setStatus(message, true);
+      window.alert(message);
+    } finally {
+      this.assistantBusy = false;
+      this.setAssistantButtonsDisabled(false);
+    }
+  }
+
+  async askAssistantQuestion() {
+    if (!this.payload.assistantEnabled || !this.payload.assistantAskUrl || this.questionBusy) {
+      return;
+    }
+    const question = String(this.questionInput?.value || "").trim();
+    if (!question) {
+      this.renderQuestionError("질문을 입력해 주세요.");
+      this.questionInput?.focus();
+      return;
+    }
+    this.questionBusy = true;
+    if (this.questionButton) {
+      this.questionButton.disabled = true;
+      this.questionButton.setAttribute("aria-busy", "true");
+    }
+    this.renderQuestionError("");
+    try {
+      const response = await fetch(this.payload.assistantAskUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": readCsrfToken(this.payload.csrfToken),
+        },
+        body: JSON.stringify({ question }),
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.message || "답변을 만들지 못했습니다.");
+      }
+      const payload = await response.json();
+      this.renderQuestionAnswer(payload);
+    } catch (error) {
+      const message = error?.message || "답변을 만들지 못했습니다.";
+      this.renderQuestionError(message);
+      window.alert(message);
+    } finally {
+      this.questionBusy = false;
+      if (this.questionButton) {
+        this.questionButton.disabled = false;
+        this.questionButton.removeAttribute("aria-busy");
+      }
+    }
+  }
+
+  renderAssistantAnalysis(analysis, options = {}) {
+    if (!this.assistantStatusEl) {
+      return;
+    }
+    if (!analysis) {
+      this.setAssistantStatus("정리 전");
+      if (this.assistantSummaryEl) {
+        this.assistantSummaryEl.textContent = "AI 정리 전";
+      }
+      this.renderAssistantItems([]);
+      if (!options.keepAnswer) {
+        this.clearAssistantAnswer();
+      }
+      return;
+    }
+    const isFailed = analysis.status === "failed";
+    this.setAssistantStatus(analysis.status_label || analysis.status || "정리 완료", isFailed);
+    if (this.assistantSummaryEl) {
+      this.assistantSummaryEl.textContent = analysis.summary_text || analysis.error_message || "정리 결과 없음";
+    }
+    this.renderAssistantItems(Array.isArray(analysis.work_items) ? analysis.work_items : []);
+    if (!options.keepAnswer) {
+      this.clearAssistantAnswer();
+    }
+  }
+
+  renderAssistantItems(items) {
+    if (!this.assistantItemsEl) {
+      return;
+    }
+    this.assistantItemsEl.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "doccollab-empty";
+      empty.textContent = "정리 후 표시됩니다.";
+      this.assistantItemsEl.appendChild(empty);
+      return;
+    }
+    items.slice(0, 8).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "doccollab-assistant-item";
+      const title = document.createElement("strong");
+      title.textContent = item.title || "확인";
+      const action = document.createElement("span");
+      action.textContent = item.action_text || item.evidence_text || "";
+      row.append(title, action);
+      if (item.due_text) {
+        const due = document.createElement("em");
+        due.textContent = item.due_text;
+        row.appendChild(due);
+      }
+      this.assistantItemsEl.appendChild(row);
+    });
+  }
+
+  renderQuestionAnswer(payload) {
+    if (!this.assistantAnswerEl) {
+      return;
+    }
+    this.assistantAnswerEl.hidden = false;
+    this.assistantAnswerEl.textContent = payload.answer || "답변 없음";
+    this.assistantAnswerEl.classList.toggle("doccollab-assistant-answer--muted", Boolean(payload.has_insufficient_evidence));
+    this.renderQuestionCitations(Array.isArray(payload.citations) ? payload.citations : []);
+  }
+
+  renderQuestionError(message) {
+    if (!this.assistantAnswerEl) {
+      return;
+    }
+    if (!message) {
+      this.assistantAnswerEl.hidden = true;
+      this.assistantAnswerEl.textContent = "";
+      this.renderQuestionCitations([]);
+      return;
+    }
+    this.assistantAnswerEl.hidden = false;
+    this.assistantAnswerEl.textContent = message;
+    this.assistantAnswerEl.classList.add("doccollab-assistant-answer--muted");
+    this.renderQuestionCitations([]);
+  }
+
+  renderQuestionCitations(citations) {
+    if (!this.assistantCitationsEl) {
+      return;
+    }
+    this.assistantCitationsEl.innerHTML = "";
+    citations.slice(0, 3).forEach((citation) => {
+      const item = document.createElement("div");
+      item.className = "doccollab-assistant-citation";
+      const label = document.createElement("strong");
+      label.textContent = citation.label || "근거";
+      const text = document.createElement("span");
+      text.textContent = citation.text || "";
+      item.append(label, text);
+      this.assistantCitationsEl.appendChild(item);
+    });
+  }
+
+  clearAssistantAnswer() {
+    this.renderQuestionError("");
+  }
+
+  resetAssistantForNewRevision() {
+    if (!this.payload.assistantEnabled) {
+      return;
+    }
+    this.payload.assistantAnalysis = null;
+    this.renderAssistantAnalysis(null);
+  }
+
+  setAssistantStatus(message, isError = false) {
+    if (!this.assistantStatusEl) {
+      return;
+    }
+    this.assistantStatusEl.textContent = message;
+    this.assistantStatusEl.style.background = isError ? "#fef2f2" : "";
+    this.assistantStatusEl.style.color = isError ? "#b91c1c" : "";
+  }
+
+  setAssistantButtonsDisabled(disabled) {
+    this.assistantForms.forEach((form) => {
+      form.querySelectorAll("button").forEach((button) => {
+        button.disabled = disabled;
+        if (disabled) {
+          button.setAttribute("aria-busy", "true");
+        } else {
+          button.removeAttribute("aria-busy");
+        }
+      });
+    });
   }
 
   connectSocket() {

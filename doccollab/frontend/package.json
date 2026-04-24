@@ -7,7 +7,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@rhwp/core": "^0.7.2"
+    "@rhwp/core": "^0.7.3"
   },
   "devDependencies": {
     "vite": "^7.2.1"

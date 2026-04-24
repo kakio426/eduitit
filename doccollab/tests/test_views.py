@@ -1,13 +1,18 @@
+import zipfile
+from io import BytesIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from core.models import UserProfile
 from doccollab.models import (
+    DocAnalysis,
+    DocAssistantQuestion,
     DocEditEvent,
     DocMembership,
     DocRevision,
@@ -17,6 +22,7 @@ from doccollab.models import (
     revision_upload_to,
     room_source_upload_to,
 )
+from doccollab.assistant_service import MAX_DOCUMENT_BYTES, MAX_QUESTIONS_PER_ANALYSIS
 from doccollab.services import (
     accessible_rooms_queryset,
     append_room_collab_update,
@@ -41,6 +47,26 @@ def hwpx_upload(name="document.hwpx", content=b"fake hwpx bytes"):
 
 
 def hwp_upload(name="document.hwp", content=b"fake hwp bytes"):
+    return SimpleUploadedFile(name, content, content_type="application/octet-stream")
+
+
+def valid_hwpx_bytes(paragraphs=None):
+    body = "".join(f"<p><run><t>{text}</t></run></p>" for text in (paragraphs or []))
+    section_xml = f"<section>{body}</section>".encode("utf-8")
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Contents/section0.xml", section_xml)
+    return buffer.getvalue()
+
+
+def valid_hwpx_upload(name="notice.hwpx", paragraphs=None):
+    content = valid_hwpx_bytes(
+        paragraphs
+        or [
+            "2026.04.30까지 신청서를 제출해 주세요.",
+            "학생 준비물 안내와 담임 협조가 필요합니다.",
+        ]
+    )
     return SimpleUploadedFile(name, content, content_type="application/octet-stream")
 
 
@@ -80,6 +106,48 @@ class DoccollabViewTests(TestCase):
             title=title,
             uploaded_file=upload_factory(file_name, content=f"{title}-bytes".encode("utf-8")),
         )
+
+    def _create_valid_hwpx_room(self, *, title="AI 공문"):
+        return create_room_from_upload(
+            user=self.owner,
+            title=title,
+            uploaded_file=valid_hwpx_upload(f"{title}.hwpx"),
+        )
+
+    def _create_raw_revision_room(self, *, title, file_name, raw_bytes):
+        workspace = DocWorkspace.objects.create(name=title, created_by=self.owner)
+        DocMembership.objects.create(
+            workspace=workspace,
+            user=self.owner,
+            role=DocMembership.Role.OWNER,
+            status=DocMembership.Status.ACTIVE,
+            invited_by=self.owner,
+        )
+        source_format = DocRoom.SourceFormat.HWP if file_name.lower().endswith(".hwp") else DocRoom.SourceFormat.HWPX
+        export_format = (
+            DocRevision.ExportFormat.SOURCE_HWP
+            if source_format == DocRoom.SourceFormat.HWP
+            else DocRevision.ExportFormat.SOURCE_HWPX
+        )
+        room = DocRoom.objects.create(
+            workspace=workspace,
+            title=title,
+            created_by=self.owner,
+            source_name=file_name,
+            source_format=source_format,
+            source_sha256="0" * 64,
+        )
+        revision = DocRevision.objects.create(
+            room=room,
+            revision_number=1,
+            file=ContentFile(raw_bytes, name=file_name),
+            original_name=file_name,
+            file_sha256="0" * 64,
+            export_format=export_format,
+            note="원본 업로드",
+            created_by=self.owner,
+        )
+        return room, revision
 
     def _worksheet_payload(self, *, title="물의 순환 학습지", summary="구름과 비를 따라가요.", short=False):
         return {
@@ -299,14 +367,18 @@ class DoccollabViewTests(TestCase):
 
         my_card_titles = [room["title"] for room in response.context["my_room_cards"]]
         shared_card_titles = [room["title"] for room in response.context["shared_room_cards"]]
+        today_card_titles = [room["title"] for room in response.context["today_room_cards"]]
 
         self.assertIn(own_room.title, my_card_titles)
         self.assertIn(shared_room.title, shared_card_titles)
+        self.assertIn(own_room.title, today_card_titles)
         self.assertContains(response, "잇티한글")
+        self.assertContains(response, "오늘 연 문서")
         self.assertContains(response, "최근 수정한 문서")
         self.assertContains(response, "공유받은 문서")
         self.assertContains(response, "파일 열기")
         self.assertContains(response, "선택 후 바로 열림")
+        self.assertNotContains(response, "학습지 만들기")
         self.assertContains(response, reverse("doccollab:remove_room", kwargs={"room_id": own_room.id}))
         self.assertContains(response, reverse("doccollab:remove_room", kwargs={"room_id": shared_room.id}))
         self.assertContains(response, "수정")
@@ -378,7 +450,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(len(response.context["shared_members"]), 2)
         self.assertContains(response, "문서 편집")
         self.assertContains(response, "공유받은 문서")
-        self.assertContains(response, "문서 공유")
+        self.assertContains(response, "공유 2")
         self.assertContains(response, "표 수정")
         self.assertContains(response, "아래 행")
 
@@ -404,8 +476,10 @@ class DoccollabViewTests(TestCase):
 
         payload = response.json()
         revision = DocRevision.objects.get(id=payload["revision"]["id"])
+        download_response = self.client.get(payload["download_url"])
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(download_response.status_code, 200)
         self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
         self.assertEqual(payload["edit_events"][0]["summary"], f"저장본 저장 · r{revision.revision_number}")
         self.assertEqual(
@@ -492,6 +566,123 @@ class DoccollabViewTests(TestCase):
             reverse("doccollab:download_source", kwargs={"room_id": room.id}),
         )
         self.assertTrue(payload["studioUrl"].endswith("/static/doccollab/rhwp-studio/index.html"))
+
+    def test_room_detail_shows_assistant_actions_for_uploaded_documents(self):
+        room, _revision = self._create_valid_hwpx_room(title="AI 문서")
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+            HTTP_USER_AGENT=self.CHROME_UA,
+        )
+        payload = response.context["room_payload"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["assistant_enabled"])
+        self.assertTrue(payload["assistantEnabled"])
+        self.assertEqual(payload["assistantAnalyzeUrl"], reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}))
+        self.assertEqual(payload["assistantAskUrl"], reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}))
+        self.assertContains(response, "AI 정리")
+        self.assertContains(response, "PDF")
+        self.assertContains(response, "할 일")
+        self.assertContains(response, "질문")
+
+    def test_assistant_analyze_extracts_hwpx_and_first_get_200(self):
+        room, _revision = self._create_valid_hwpx_room(title="정리 공문")
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
+            HTTP_ACCEPT="application/json",
+        )
+        detail = self.client.get(reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
+
+        analysis = DocAnalysis.objects.get(room=room)
+        payload = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(analysis.status, DocAnalysis.Status.READY)
+        self.assertEqual(payload["analysis"]["status"], "ready")
+        self.assertEqual(payload["analysis"]["work_items"][0]["due_text"], "2026.04.30")
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "제출 확인")
+
+    def test_assistant_analyze_returns_expected_errors_without_500(self):
+        cases = [
+            ("손상", "broken.hwpx", b"not-a-zip", 400, "HWPX 파일 형식이 올바르지 않습니다."),
+            ("빈 파일", "empty.hwpx", b"", 400, "빈 파일은 정리할 수 없습니다."),
+            ("초과", "large.hwpx", b"x" * (MAX_DOCUMENT_BYTES + 1), 400, "문서가 너무 큽니다. 나눠서 올려 주세요."),
+            ("미지원", "note.txt", b"plain text", 400, "HWP 또는 HWPX 파일만 정리합니다."),
+        ]
+        self.client.force_login(self.owner)
+
+        for title, file_name, raw_bytes, status_code, message in cases:
+            with self.subTest(title=title):
+                room, _revision = self._create_raw_revision_room(
+                    title=f"{title} 문서",
+                    file_name=file_name,
+                    raw_bytes=raw_bytes,
+                )
+                response = self.client.post(
+                    reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
+                    HTTP_ACCEPT="application/json",
+                )
+
+                self.assertEqual(response.status_code, status_code)
+                self.assertEqual(response.json()["message"], message)
+                self.assertEqual(DocAnalysis.objects.filter(room=room, status=DocAnalysis.Status.FAILED).count(), 1)
+
+    def test_assistant_question_cache_no_evidence_and_rate_limit(self):
+        room, _revision = self._create_valid_hwpx_room(title="질문 공문")
+        self.client.force_login(self.owner)
+        analyze = self.client.post(
+            reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
+            HTTP_ACCEPT="application/json",
+        )
+        analysis = DocAnalysis.objects.get(id=analyze.json()["analysis"]["id"])
+
+        first = self.client.post(
+            reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+            {"question": "마감일은 언제인가요?"},
+            HTTP_ACCEPT="application/json",
+        )
+        cached = self.client.post(
+            reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+            {"question": "마감일은 언제인가요?"},
+            HTTP_ACCEPT="application/json",
+        )
+        no_evidence = self.client.post(
+            reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+            {"question": "급식 메뉴는 무엇인가요?"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertIn("2026.04.30", first.json()["answer"])
+        self.assertFalse(first.json()["has_insufficient_evidence"])
+        self.assertTrue(first.json()["citations"])
+        self.assertEqual(cached.status_code, 200)
+        self.assertTrue(cached.json()["reused"])
+        self.assertEqual(no_evidence.status_code, 200)
+        self.assertTrue(no_evidence.json()["has_insufficient_evidence"])
+
+        existing_count = analysis.questions.count()
+        for index in range(MAX_QUESTIONS_PER_ANALYSIS - existing_count):
+            DocAssistantQuestion.objects.create(
+                analysis=analysis,
+                created_by=self.owner,
+                question=f"질문 {index}",
+                normalized_question=f"limit-{index}",
+                answer="답변",
+                provider="doccollab-local-v1",
+            )
+        limited = self.client.post(
+            reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+            {"question": "새로운 질문입니다."},
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(limited.json()["message"], "질문이 많습니다. 잠시 후 다시 시도해 주세요.")
 
     def test_room_detail_does_not_depend_on_storage_url_generation(self):
         room, _revision = self._create_room(self.owner, "URL 방어", "guard.hwpx")

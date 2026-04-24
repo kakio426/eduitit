@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from .models import DocEditEvent, DocMembership, DocPresence, DocRevision, DocRoom, DocSnapshot, DocWorkspace
+from .models import (
+    DocAnalysis,
+    DocAssistantQuestion,
+    DocEditEvent,
+    DocMembership,
+    DocPresence,
+    DocRevision,
+    DocRoom,
+    DocSnapshot,
+    DocWorkspace,
+)
 
 
 @admin.register(DocWorkspace)
@@ -29,6 +39,20 @@ class DocRevisionAdmin(admin.ModelAdmin):
     list_display = ("room", "revision_number", "export_format", "is_published", "created_at")
     list_filter = ("export_format", "is_published")
     search_fields = ("room__title", "original_name")
+
+
+@admin.register(DocAnalysis)
+class DocAnalysisAdmin(admin.ModelAdmin):
+    list_display = ("room", "status", "engine", "source_revision", "updated_at")
+    list_filter = ("status", "engine")
+    search_fields = ("room__title", "summary_text", "error_message")
+
+
+@admin.register(DocAssistantQuestion)
+class DocAssistantQuestionAdmin(admin.ModelAdmin):
+    list_display = ("analysis", "question", "provider", "has_insufficient_evidence", "created_at")
+    list_filter = ("provider", "has_insufficient_evidence")
+    search_fields = ("analysis__room__title", "question", "answer")
 
 
 @admin.register(DocSnapshot)

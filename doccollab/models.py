@@ -203,6 +203,88 @@ class DocWorksheet(models.Model):
         return self.room.title
 
 
+class DocAnalysis(models.Model):
+    class Status(models.TextChoices):
+        PROCESSING = "processing", "정리 중"
+        READY = "ready", "정리 완료"
+        FAILED = "failed", "정리 실패"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(
+        DocRoom,
+        on_delete=models.CASCADE,
+        related_name="analyses",
+    )
+    source_revision = models.ForeignKey(
+        "DocRevision",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="analyses",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PROCESSING)
+    engine = models.CharField(max_length=40, blank=True, default="")
+    raw_markdown = models.TextField(blank=True, default="")
+    parse_payload = models.JSONField(default=dict, blank=True)
+    summary_text = models.CharField(max_length=200, blank=True, default="")
+    error_message = models.CharField(max_length=200, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_doc_analyses",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["room", "source_revision"], name="uniq_doc_analysis_room_revision"),
+        ]
+        indexes = [
+            models.Index(fields=["room", "status"]),
+            models.Index(fields=["source_revision", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.room.title} - {self.get_status_display()}"
+
+
+class DocAssistantQuestion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analysis = models.ForeignKey(
+        DocAnalysis,
+        on_delete=models.CASCADE,
+        related_name="questions",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_doc_assistant_questions",
+    )
+    question = models.CharField(max_length=300)
+    normalized_question = models.CharField(max_length=300)
+    answer = models.TextField(blank=True, default="")
+    citations_json = models.JSONField(default=list, blank=True)
+    has_insufficient_evidence = models.BooleanField(default=False)
+    provider = models.CharField(max_length=40, blank=True, default="doccollab-local-v1")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("analysis", "normalized_question", "provider")]
+        indexes = [
+            models.Index(fields=["analysis", "created_at"]),
+        ]
+
+    def __str__(self):
+        return self.question
+
+
 class DocRevision(models.Model):
     class ExportFormat(models.TextChoices):
         SOURCE_HWP = "source_hwp", "원본 HWP"
