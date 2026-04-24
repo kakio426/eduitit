@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}님 | 수학 전략 게임{% endblock %}
+{% block title %}더미 가져가기 | 수학 전략 게임{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
@@ -18,24 +18,67 @@
         <header class="mg-play-head">
             <a class="mg-back" href="{% url 'math_games:index' %}">목록</a>
             <div>
-                <span class="mg-kicker">NIM</span>
-                <h1>님</h1>
+                <span class="mg-kicker">Nim 전략 게임</span>
+                <h1>더미 가져가기</h1>
             </div>
-            <span class="mg-goal-badge">마지막 승리</span>
+            <span class="mg-goal-badge">마지막 돌 승리</span>
         </header>
 
         <section class="mg-board-panel mg-board-panel--nim">
+            <div class="mg-board-intro">
+                <div>
+                    <strong>AI와 한 판</strong>
+                    <span>더미를 고르고 1~3개를 가져갑니다.</span>
+                </div>
+                <div class="mg-rule-chips" aria-label="규칙">
+                    <span>1~3개</span>
+                    <span>마지막 승리</span>
+                    <span>AI 대결</span>
+                </div>
+            </div>
+
             <div class="mg-toolbar" aria-label="난이도">
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="random"> 쉬움</label>
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="mcts" checked> 보통</label>
                 <label class="mg-radio"><input type="radio" name="mg-nim-level" value="minimax"> 어려움</label>
-                <button id="mg-nim-start" type="button" class="mg-primary">시작</button>
+                <button id="mg-nim-start" type="button" class="mg-primary">AI와 시작</button>
             </div>
 
-            <div id="mg-nim-piles" class="mg-piles" aria-live="polite"></div>
+            <div id="mg-nim-piles" class="mg-piles mg-piles--preview" aria-live="polite">
+                <section class="mg-pile mg-pile--preview" aria-hidden="true">
+                    <div class="mg-pile-head"><span>1번</span><span>3개</span></div>
+                    <div class="mg-stones">
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                    </div>
+                    <div class="mg-take-row"><span>1</span><span>2</span><span>3</span></div>
+                </section>
+                <section class="mg-pile mg-pile--preview" aria-hidden="true">
+                    <div class="mg-pile-head"><span>2번</span><span>4개</span></div>
+                    <div class="mg-stones">
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                    </div>
+                    <div class="mg-take-row"><span>1</span><span>2</span><span>3</span></div>
+                </section>
+                <section class="mg-pile mg-pile--preview" aria-hidden="true">
+                    <div class="mg-pile-head"><span>3번</span><span>5개</span></div>
+                    <div class="mg-stones">
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                        <span class="mg-stone"></span>
+                    </div>
+                    <div class="mg-take-row"><span>1</span><span>2</span><span>3</span></div>
+                </section>
+            </div>
 
             <div class="mg-status-row">
-                <p id="mg-nim-status" class="mg-status">시작</p>
+                <p id="mg-nim-status" class="mg-status">난이도 선택</p>
                 <p id="mg-nim-thought" class="mg-thought"></p>
             </div>
         </section>

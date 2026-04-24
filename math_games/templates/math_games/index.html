@@ -11,23 +11,53 @@
 <main class="mg-shell mg-shell--landing service-shell--compact">
     <div class="mg-wrap">
         <header class="mg-page-head">
-            <span class="mg-kicker">수학 전략</span>
+            <span class="mg-kicker">게임 로비</span>
             <h1>수학 전략 게임</h1>
-            <p>규칙을 보고, 수를 고르고, 바로 겨룹니다.</p>
+            <p>게임판을 고르고 바로 시작합니다.</p>
         </header>
 
-        <section class="mg-game-grid" aria-label="게임 선택">
+        <section class="mg-lobby-stage" aria-label="게임 선택">
             <a class="mg-game-card mg-game-card--nim" href="{% url 'math_games:nim' %}">
-                <span class="mg-card-icon" aria-hidden="true">N</span>
-                <strong>님</strong>
-                <span>더미에서 가져가기</span>
-                <em>시작</em>
+                <div class="mg-card-copy">
+                    <span class="mg-card-label">AI 대결</span>
+                    <strong>더미 가져가기</strong>
+                    <span>Nim 전략 게임</span>
+                </div>
+                <div class="mg-game-preview mg-game-preview--nim" aria-hidden="true">
+                    <div class="mg-preview-pile">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="mg-preview-pile">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="mg-preview-pile">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <div class="mg-rule-chips" aria-hidden="true">
+                    <span>1~3개</span>
+                    <span>마지막 승리</span>
+                </div>
+                <em>이 게임 하기</em>
             </a>
             <a class="mg-game-card mg-game-card--tf" href="{% url 'math_games:twenty_four' %}">
-                <span class="mg-card-icon" aria-hidden="true">24</span>
-                <strong>24 게임</strong>
-                <span>사칙연산 만들기</span>
-                <em>시작</em>
+                <div class="mg-card-copy">
+                    <span class="mg-card-label">퍼즐</span>
+                    <strong>24 만들기</strong>
+                    <span>사칙연산 카드 게임</span>
+                </div>
+                <div class="mg-game-preview mg-game-preview--tf" aria-hidden="true">
+                    <span>3</span>
+                    <span>6</span>
+                    <span>8</span>
+                    <span>9</span>
+                    <b>+ − × ÷</b>
+                </div>
+                <div class="mg-rule-chips" aria-hidden="true">
+                    <span>숫자 4개</span>
+                    <span>목표 24</span>
+                </div>
+                <em>이 게임 하기</em>
             </a>
         </section>
     </div>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}24 게임 | 수학 전략 게임{% endblock %}
+{% block title %}24 만들기 | 수학 전략 게임{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
@@ -18,19 +18,36 @@
         <header class="mg-play-head">
             <a class="mg-back" href="{% url 'math_games:index' %}">목록</a>
             <div>
-                <span class="mg-kicker">MAKE 24</span>
-                <h1>24 게임</h1>
+                <span class="mg-kicker">사칙연산 퍼즐</span>
+                <h1>24 만들기</h1>
             </div>
             <span class="mg-goal-badge">목표 24</span>
         </header>
 
         <section class="mg-board-panel mg-board-panel--twenty-four">
+            <div class="mg-board-intro">
+                <div>
+                    <strong>카드 4장으로 24</strong>
+                    <span>숫자를 한 번씩 쓰고 식을 만듭니다.</span>
+                </div>
+                <div class="mg-rule-chips" aria-label="규칙">
+                    <span>숫자 4개</span>
+                    <span>사칙연산</span>
+                    <span>목표 24</span>
+                </div>
+            </div>
+
             <div class="mg-toolbar">
-                <button id="mg-tf-start" type="button" class="mg-primary">시작</button>
+                <button id="mg-tf-start" type="button" class="mg-primary">카드 받기</button>
                 <button id="mg-tf-hint" type="button" class="mg-secondary" disabled>힌트</button>
             </div>
 
-            <div id="mg-tf-numbers" class="mg-number-row" aria-live="polite"></div>
+            <div id="mg-tf-numbers" class="mg-number-row mg-number-row--preview" aria-live="polite">
+                <span class="mg-number-preview" aria-hidden="true">3</span>
+                <span class="mg-number-preview" aria-hidden="true">6</span>
+                <span class="mg-number-preview" aria-hidden="true">8</span>
+                <span class="mg-number-preview" aria-hidden="true">9</span>
+            </div>
 
             <form id="mg-tf-form" class="mg-answer-row" autocomplete="off">
                 <label class="mg-sr-only" for="mg-tf-expression">식</label>
@@ -50,7 +67,7 @@
             </div>
 
             <div class="mg-status-row">
-                <p id="mg-tf-status" class="mg-status">시작</p>
+                <p id="mg-tf-status" class="mg-status">카드 받기</p>
                 <p id="mg-tf-hint-text" class="mg-thought"></p>
             </div>
         </section>

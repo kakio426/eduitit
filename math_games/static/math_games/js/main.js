@@ -158,6 +158,7 @@
             if (payload.result === "win" || payload.result === "lose") {
                 addBurst(root);
             }
+            pilesNode.classList.remove("mg-piles--preview");
             pilesNode.innerHTML = "";
 
             const piles = Array.isArray(state.piles) ? state.piles : [];
@@ -205,12 +206,12 @@
 
         async function start() {
             startButton.disabled = true;
-            setText(statusNode, "시작");
+            setText(statusNode, "보드 준비");
             setText(thoughtNode, "");
             removeStateClasses(root);
             try {
                 render(await requestJson(startUrl, { difficulty: selectedDifficulty() }));
-                startButton.textContent = "다시";
+                startButton.textContent = "새 판";
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");
@@ -276,6 +277,7 @@
             const state = payload.state || {};
             solved = payload.result === "solved";
             setFeedbackClass(root, payload);
+            numbersNode.classList.remove("mg-number-row--preview");
             numbersNode.innerHTML = "";
             const numbers = Array.isArray(state.numbers) ? state.numbers : [];
             numbers.forEach((number) => {
@@ -313,7 +315,7 @@
 
         startButton.addEventListener("click", async () => {
             startButton.disabled = true;
-            setText(statusNode, "시작");
+            setText(statusNode, "카드 준비");
             setText(hintNode, "");
             removeStateClasses(root);
             input.classList.remove("is-error");
@@ -321,7 +323,7 @@
                 render(await requestJson(startUrl, {}), { popNumbers: true });
                 input.value = "";
                 input.focus();
-                startButton.textContent = "다시";
+                startButton.textContent = "새 카드";
             } catch (error) {
                 removeStateClasses(root);
                 root.classList.add("is-error");

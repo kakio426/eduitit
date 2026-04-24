@@ -22,5 +22,5 @@ class EnsureMathGamesCommandTest(TestCase):
         self.assertGreaterEqual(manual.sections.count(), 3)
         self.assertCountEqual(
             list(product.features.values_list("title", flat=True)),
-            ["님", "24 게임", "힌트"],
+            ["더미 가져가기", "24 만들기", "힌트"],
         )
