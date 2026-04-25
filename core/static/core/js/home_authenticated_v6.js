@@ -773,6 +773,7 @@
             messageSaveCommitResult: {},
             teacherLawLastQuestion: '',
             teacherLawFollowupContext: {},
+            chatHistory: [],
             isSavingMessageSave: false,
             isExtractingMessageSave: false,
             isCommittingMessageSave: false,
@@ -1491,13 +1492,74 @@
             },
 
             startNewWorkspaceChat: function () {
-                if (!this.workspaceShellCanReset()) {
+                if (!this.workspaceShellCanReset() && (!this.chatHistory || !this.chatHistory.length)) {
                     showFeedback('이미 새 대화 상태입니다.', 'info');
                     this.focusWorkspace();
                     return;
                 }
                 this.stopWorkspaceVoiceInput();
+                this.chatHistory = [];
                 this.resetActiveAiChat();
+            },
+
+            pushToChatHistory: function () {
+                try {
+                    var userKind = this.activeAiUserBubbleKind();
+                    var userText = this.activeAiUserBubbleText();
+                    if (!userText) {
+                        return;
+                    }
+                    var lines = [];
+                    try {
+                        var srcLines = this.previewResultLines();
+                        if (Array.isArray(srcLines)) {
+                            lines = srcLines.slice();
+                        }
+                    } catch (e) {
+                        lines = [];
+                    }
+                    var title = '';
+                    try { title = this.activeAiAssistantTitle() || ''; } catch (e) { title = ''; }
+                    var note = '';
+                    try { note = this.activeAiPreviewNote() || ''; } catch (e) { note = ''; }
+                    var openHref = '';
+                    var openLabel = '';
+                    try {
+                        if (this.activeAiHasOpenLink()) {
+                            openHref = this.activeAiOpenHref() || '';
+                            openLabel = this.activeAiOpenLabel() || '';
+                        }
+                    } catch (e) {
+                        openHref = '';
+                        openLabel = '';
+                    }
+                    if (!lines.length && !title && !note && !openHref) {
+                        return;
+                    }
+                    var modeLabel = '';
+                    try { modeLabel = (this.activeMode && this.activeMode.label) || ''; } catch (e) { modeLabel = ''; }
+                    this.chatHistory.push({
+                        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+                        modeKey: this.activeModeKey,
+                        modeLabel: modeLabel,
+                        userBubble: {
+                            kind: userKind || 'text',
+                            text: userText,
+                        },
+                        aiResult: {
+                            title: title,
+                            lines: lines,
+                            note: note,
+                            openHref: openHref,
+                            openLabel: openLabel,
+                        },
+                    });
+                    if (this.chatHistory.length > 50) {
+                        this.chatHistory = this.chatHistory.slice(-50);
+                    }
+                } catch (e) {
+                    /* 히스토리 push 실패해도 본 기능에는 영향 없음 */
+                }
             },
 
             activeAiCanSubmit: function () {
@@ -6039,6 +6101,7 @@
 
                 var runtime = workspaceConfig.agent_runtime || {};
                 var csrfToken = getCsrfToken();
+                this.pushToChatHistory();
                 requestId = this.agentPreviewRequestId + 1;
                 this.agentPreviewRequestId = requestId;
                 this.isAgentLoading = true;

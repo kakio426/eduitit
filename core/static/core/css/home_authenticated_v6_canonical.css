@@ -6871,3 +6871,94 @@ transform: none;
         display: none;
     }
 }
+
+/* ===========================================================
+ * Chat UI — 서비스 탭 네비게이션
+ * =========================================================== */
+.home-v6-svc-nav {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding: 0.56rem 0;
+    margin-top: 0.72rem;
+    border-top: 1px solid rgba(203, 213, 225, 0.45);
+    flex-shrink: 0;
+    scrollbar-width: none;
+}
+.home-v6-svc-nav::-webkit-scrollbar { display: none; }
+
+.home-v6-svc-nav-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.34rem 0.9rem;
+    border-radius: 999px;
+    border: 1.5px solid rgba(203, 213, 225, 0.8);
+    background: rgba(255, 255, 255, 0.92);
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.home-v6-svc-nav-chip:hover {
+    border-color: rgba(var(--home-v6-brand-rgb), 0.4);
+    color: var(--home-v6-brand, #1e293b);
+    background: rgba(var(--home-v6-brand-rgb), 0.04);
+}
+.home-v6-svc-nav-chip.is-active {
+    background: var(--home-v6-brand);
+    border-color: var(--home-v6-brand);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(var(--home-v6-brand-rgb), 0.24);
+}
+
+/* ===========================================================
+ * Chat UI — 통합 히스토리 스레드
+ * =========================================================== */
+.home-v6-chat-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1rem 0.1rem 0;
+}
+.home-v6-chat-history-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 0.56rem;
+}
+.home-v6-chat-history-pair .home-v6-agent-chat-row {
+    display: flex;
+    gap: 0.56rem;
+    align-items: flex-start;
+}
+.home-v6-chat-history-pair .home-v6-agent-chat-row--user {
+    justify-content: flex-end;
+}
+.home-v6-chat-history-ai-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(var(--home-v6-brand-rgb), 0.95), rgba(var(--home-v6-brand-rgb), 0.48));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(var(--home-v6-brand-rgb), 0.22);
+    margin-top: 2px;
+}
+.home-v6-chat-history-mode-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: rgba(var(--home-v6-brand-rgb), 0.95);
+    background: rgba(var(--home-v6-brand-rgb), 0.09);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}

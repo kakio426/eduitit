@@ -1,10 +1,9 @@
 <section
     class="home-v6-representative-section"
-    :class="{ 'is-mode-menu-open': shellModeMenuOpen }"
     {% if agent_workspace_surface != 'mobile' %}data-home-v6-representative-services="true"{% endif %}
     data-home-v6-agent-workspace="true"
 >
-    <div class="home-v6-card home-v6-agent-card" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation(), 'is-mode-menu-open': shellModeMenuOpen }">
+    <div class="home-v6-card home-v6-agent-card" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
         <div class="home-v6-agent-main" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
             <div class="home-v6-agent-main-head home-v6-agent-main-head--single-shell" :class="{ 'is-empty': !activeAiHasVisibleConversation() }">
                 <div class="home-v6-cmd-stage">
@@ -105,65 +104,6 @@
                                 >
                                     <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
                                 </button>
-
-                                <div class="home-v6-cmd-mode-picker" @keydown.escape.window="shellModeMenuOpen ? closeShellModeMenu({ focusTrigger: true }) : null">
-                                    <button
-                                        type="button"
-                                        class="home-v6-cmd-bar-tool home-v6-cmd-bar-tool--mode"
-                                        x-ref="workspaceModeTrigger"
-                                        aria-haspopup="menu"
-                                        :aria-expanded="shellModeMenuOpen ? 'true' : 'false'"
-                                        aria-label="서비스 선택"
-                                        title="서비스 선택"
-                                        @click="toggleShellModeMenu()"
-                                    >
-                                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                                    </button>
-
-                                    <template x-teleport="body">
-                                        <div
-                                            class="home-v6-cmd-mode-menu-portal"
-                                            x-cloak
-                                            x-show="shellModeMenuOpen"
-                                            x-transition.opacity.duration.140ms
-                                        >
-                                            <div
-                                                class="home-v6-cmd-mode-menu home-v6-cmd-mode-menu--portal"
-                                                x-ref="workspaceModeMenu"
-                                                :style="shellModeMenuStyle()"
-                                                role="menu"
-                                                tabindex="-1"
-                                                @click.outside="closeShellModeMenu()"
-                                                @keydown.escape.prevent.stop="closeShellModeMenu({ focusTrigger: true })"
-                                            >
-                                                <div class="home-v6-cmd-mode-menu-list">
-                                                    <template x-for="mode in availableShellModes()" :key="'workspace-mode-' + mode.key">
-                                                        <button
-                                                            type="button"
-                                                            class="home-v6-cmd-mode-option"
-                                                            :class="{ 'is-active': activeModeKey === mode.key }"
-                                                            role="menuitemradio"
-                                                            :aria-checked="activeModeKey === mode.key ? 'true' : 'false'"
-                                                            data-home-v6-workspace-mode-option="true"
-                                                            @click="selectModeFromShellMenu(mode.key)"
-                                                        >
-                                                            <span class="home-v6-cmd-mode-option-icon" aria-hidden="true">
-                                                                <i :class="mode.icon_class || 'fa-regular fa-circle'"></i>
-                                                            </span>
-                                                            <span class="home-v6-cmd-mode-option-label" x-text="mode.label"></span>
-                                                            <i
-                                                                class="fa-solid fa-check home-v6-cmd-mode-option-check"
-                                                                x-cloak
-                                                                x-show="activeModeKey === mode.key"
-                                                                aria-hidden="true"
-                                                            ></i>
-                                                        </button>
-                                                    </template>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
                             </div>
 
                             <button
@@ -198,6 +138,21 @@
                                     class="home-v6-cmd-starter-chip"
                                     @click="runActiveAiStarter(item)"
                                     x-text="item.label"
+                                ></button>
+                            </template>
+                        </div>
+
+                        <div class="home-v6-svc-nav" role="tablist" aria-label="AI 교무비서 서비스">
+                            <template x-for="mode in availableShellModes()" :key="'svc-nav-' + mode.key">
+                                <button
+                                    class="home-v6-svc-nav-chip"
+                                    :class="{ 'is-active': activeModeKey === mode.key }"
+                                    type="button"
+                                    role="tab"
+                                    :aria-selected="activeModeKey === mode.key ? 'true' : 'false'"
+                                    :aria-label="mode.label"
+                                    @click="selectModeFromShellMenu(mode.key)"
+                                    x-text="mode.label"
                                 ></button>
                             </template>
                         </div>
@@ -703,6 +658,50 @@
                     <p class="home-v6-agent-field-error" x-cloak x-show="humanChatErrorText" x-text="humanChatErrorText"></p>
                 </div>
             </section>
+
+            <div class="home-v6-chat-history" x-cloak x-show="chatHistory.length > 0 && activeRendererKey !== 'human-chat'">
+                <template x-for="item in chatHistory" :key="item.id">
+                    <div class="home-v6-chat-history-pair">
+                        <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
+                            <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
+                                <template x-if="item.userBubble.kind === 'text'">
+                                    <p class="home-v6-agent-chat-text" x-text="item.userBubble.text"></p>
+                                </template>
+                                <template x-if="item.userBubble.kind !== 'text'">
+                                    <div class="home-v6-agent-ai-file-pill">
+                                        <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                                            <i class="fa-solid fa-paperclip"></i>
+                                        </span>
+                                        <span x-text="item.userBubble.text"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="home-v6-agent-chat-row">
+                            <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
+                                <i class="fa-solid fa-robot"></i>
+                            </div>
+                            <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
+                                <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
+                                    <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
+                                    <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
+                                </div>
+                                <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
+                                    <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
+                                </template>
+                                <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
+                                <div class="home-v6-agent-ai-action-row" x-cloak x-show="item.aiResult.openHref">
+                                    <a class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
+                                       :href="item.aiResult.openHref"
+                                       x-text="item.aiResult.openLabel"
+                                       target="_blank"
+                                       rel="noopener"></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
 
             <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiHasVisibleConversation()">
                 <div class="home-v6-agent-ai-thread">
