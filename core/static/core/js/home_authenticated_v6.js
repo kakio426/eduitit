@@ -1345,6 +1345,7 @@
                     this.messageSaveCommitResult = context.messageSaveCommitResult;
                     this.teacherLawLastQuestion = context.teacherLawLastQuestion;
                     this.teacherLawFollowupContext = context.teacherLawFollowupContext;
+                    this.agentModeStateMap[modeKey] = this.normalizeModeState(context);
                 }
                 if (entry.id) {
                     this.activeChatHistoryEntryId = entry.id;
@@ -1501,14 +1502,9 @@
                     return result.actions.slice(0, 3);
                 }
                 var modeKey = trimLine(entry.modeKey || '');
-                var active = this.isActiveChatHistoryItem(entry);
-                var lines = Array.isArray(result.lines) ? result.lines.filter(function (line) {
-                    return Boolean(trimLine(line));
-                }) : [];
                 var actions = [];
                 var openHref = trimLine(result.openHref || '');
                 var openLabel = trimLine(result.openLabel || '');
-                var self = this;
                 var pushAction = function (action) {
                     var next = action && typeof action === 'object' ? action : {};
                     if (!trimLine(next.kind || '') || !trimLine(next.label || '')) {
@@ -1535,102 +1531,11 @@
                     return actions.slice(0, 3);
                 }
 
-                if (modeKey === 'notice') {
-                    if (lines.length) {
-                        pushAction({ kind: 'copy', label: '복사' });
-                    }
-                    if (active) {
-                        (this.noticeRefinementActions() || []).some(function (action) {
-                            if (trimLine(action && action.label) === '부드럽게') {
-                                pushAction({
-                                    kind: 'notice-refine',
-                                    label: '부드럽게',
-                                    instruction: trimLine(action.instruction || ''),
-                                });
-                                return true;
-                            }
-                            return false;
-                        });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '알림장 열기', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'schedule') {
-                    if (active && this.scheduleHasExecution()) {
-                        pushAction({ kind: 'execute', label: '저장', busyLabel: '저장 중' });
-                        pushAction({ kind: 'schedule-toggle', label: this.scheduleEditorOpen ? '접기' : '시간 바꾸기' });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '캘린더 열기', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'teacher-law') {
-                    if (lines.length) {
-                        pushAction({ kind: 'copy', label: '복사' });
-                    }
-                    if (active && this.teacherLawHasExecution() && !this.teacherLawNeedsSetup()) {
-                        pushAction({ kind: 'execute', label: '기록', busyLabel: '기록 중' });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '법률 가이드', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'reservation') {
-                    if (active && this.reservationHasExecution()) {
-                        pushAction({ kind: 'execute', label: '예약', busyLabel: '예약 중' });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '예약 화면', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'quickdrop') {
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '전송함 보기', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'tts') {
-                    if (result.actionKind === 'tts-read' || lines.length) {
-                        pushAction({ kind: 'tts-read', label: result.actionLabel || self.ttsReadLabel() || '바로 읽기' });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || 'TTS 열기', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (modeKey === 'message-save') {
-                    if (active && this.messageSaveStage === 'saved') {
-                        pushAction({ kind: 'message-extract', label: '일정 찾기' });
-                    } else if (active && this.messageSaveStage === 'extracted') {
-                        pushAction({ kind: 'message-commit', label: '캘린더 저장' });
-                    }
-                    if (lines.length) {
-                        pushAction({ kind: 'copy', label: '복사' });
-                    }
-                    if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '보관함', href: openHref });
-                    }
-                    return actions.slice(0, 3);
-                }
-
-                if (lines.length) {
-                    pushAction({ kind: 'copy', label: '복사' });
-                }
-                if (openHref) {
-                    pushAction({ kind: 'link', label: openLabel || '열기', href: openHref });
-                }
-                return actions.slice(0, 3);
+                return this.buildChatHistoryActionSnapshots(
+                    modeKey,
+                    result,
+                    entry.actionContext || result.actionContext || null
+                );
             },
 
             copyChatHistoryResult: async function (item) {
@@ -1679,11 +1584,11 @@
                     return;
                 }
                 if (next.kind === 'message-extract') {
-                    this.extractSavedMessageCapture();
+                    this.extractSavedMessageCapture(item, next);
                     return;
                 }
                 if (next.kind === 'message-commit') {
-                    this.commitMessageSaveCandidate();
+                    this.commitMessageSaveCandidate(item, next);
                 }
             },
 
@@ -2045,6 +1950,9 @@
                             actionLabel: '',
                             actions: [],
                         },
+                        actionContext: this.buildChatHistoryActionContext({
+                            workspaceInput: '',
+                        }),
                         pending: true,
                         failed: false,
                     };
@@ -2161,30 +2069,36 @@
                         ? finalizeOptions.actions.slice(0, 3)
                         : this.buildChatHistoryActionSnapshots(modeKey, result, contextSnapshot);
                     this.chatHistory[idx].aiResult = result;
+                    this.chatHistory[idx].actionContext = this.normalizeModeState(contextSnapshot);
                     this.chatHistory[idx].modeKey = modeKey || this.chatHistory[idx].modeKey;
                     if (finalizeOptions.modeLabel) {
                         this.chatHistory[idx].modeLabel = trimLine(finalizeOptions.modeLabel);
                     }
                     this.chatHistory[idx].pending = false;
                     this.chatHistory[idx].failed = false;
-                    this.activeChatHistoryEntryId = entryId;
+                    if (finalizeOptions.activate !== false) {
+                        this.activeChatHistoryEntryId = entryId;
+                    }
                     this.scrollChatHistoryToBottom();
                 } catch (e) {
                     /* 히스토리 확정 실패는 본 기능을 막지 않음 */
                 }
             },
 
-            abortChatHistoryEntry: function (entryId, message) {
+            abortChatHistoryEntry: function (entryId, message, options) {
                 if (!entryId) {
                     return;
                 }
                 try {
+                    var settings = options && typeof options === 'object' ? options : {};
                     for (var i = this.chatHistory.length - 1; i >= 0; i--) {
                         if (this.chatHistory[i].id === entryId) {
                             this.chatHistory[i].pending = false;
                             this.chatHistory[i].failed = true;
                             this.chatHistory[i].aiResult.lines = [trimLine(message) || '응답을 불러오지 못했습니다.'];
-                            this.activeChatHistoryEntryId = entryId;
+                            if (settings.activate !== false) {
+                                this.activeChatHistoryEntryId = entryId;
+                            }
                             break;
                         }
                     }
@@ -4971,9 +4885,17 @@
                 }
                 var modeKey = trimLine(this.activeModeKey || '');
                 var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(mode.label || this.activeMode.label || '');
+                var historyEntryId = trimLine(this.activeChatHistoryEntryId || '');
+                var executionStartContext;
+                var executionSnapshot;
+                var executionDraftSnapshot;
                 var requestId = this.agentExecuteRequestId + 1;
                 this.agentExecuteRequestId = requestId;
                 this.normalizeExecutionDraft();
+                executionStartContext = this.buildChatHistoryActionContext();
+                executionSnapshot = this.clonePayload(this.agentExecution);
+                executionDraftSnapshot = this.clonePayload(this.agentExecutionDraft);
                 var localFieldErrors = this.validateExecutionDraft();
                 if (Object.keys(localFieldErrors).length) {
                     if (this.modeHasCapability(mode, 'schedule_editor')) {
@@ -5011,38 +4933,77 @@
                     } catch (jsonError) {
                         payload = {};
                     }
-                    if (requestId !== this.agentExecuteRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                    if (requestId !== this.agentExecuteRequestId) {
                         return;
                     }
+                    var activeModeAtResult = trimLine(this.activeModeKey || '');
+                    var activeModeStateAtResult = this.buildChatHistoryActionContext();
                     if (!response.ok || payload.status !== 'ok') {
-                        if (this.modeHasCapability(mode, 'schedule_editor')) {
-                            this.scheduleEditorOpen = true;
+                        var failedContext = this.normalizeModeState(Object.assign({}, executionStartContext, {
+                            agentExecution: executionSnapshot,
+                            agentExecutionDraft: executionDraftSnapshot,
+                            agentExecutionFieldErrors: this.normalizeFieldErrors(payload.field_errors),
+                            scheduleEditorOpen: this.modeHasCapability(mode, 'schedule_editor'),
+                        }));
+                        this.agentModeStateMap[modeKey] = failedContext;
+                        if (activeModeAtResult === modeKey) {
+                            this.restoreModeState(modeKey);
+                            if (this.modeHasCapability(mode, 'schedule_editor')) {
+                                this.scheduleEditorOpen = true;
+                            }
+                            this.setExecutionFieldErrors(payload.field_errors);
+                            this.focusAgentExecutionField(this.firstExecutionErrorField());
+                        } else if (activeModeAtResult) {
+                            this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                            this.restoreModeState(activeModeAtResult);
                         }
-                        this.setExecutionFieldErrors(payload.field_errors);
-                        this.focusAgentExecutionField(this.firstExecutionErrorField());
                         throw new Error(payload.error || '저장하지 못했습니다.');
                     }
-                    this.agentPreviewMeta = {
+                    var executePreviewMeta = {
                         source: 'direct',
                         provider: payload.provider || mode.service_key || '',
                         model: payload.model || '',
                         providerLabel: '',
                     };
-                    this.agentPreview = this.normalizePreview(payload.preview, this.agentPreviewMeta);
+                    var executePreview = this.normalizePreview(payload.preview, executePreviewMeta);
+                    var successContext = this.normalizeModeState(Object.assign({}, executionStartContext, {
+                        workspaceInput: '',
+                        agentPreview: executePreview,
+                        agentPreviewMeta: executePreviewMeta,
+                        agentExecution: null,
+                        agentExecutionDraft: {},
+                        agentExecutionFieldErrors: {},
+                        scheduleEditorOpen: false,
+                    }));
                     if (modeKey === 'teacher-law') {
-                        this.rememberTeacherLawFollowup(payload, this.agentExecutionDraft.question || this.workspaceInput);
-                        this.workspaceInput = '';
-                        this.handleActiveAiComposerInput();
+                        this.rememberTeacherLawFollowup(payload, executionDraftSnapshot.question || executionStartContext.workspaceInput);
+                        successContext.teacherLawLastQuestion = this.teacherLawLastQuestion;
+                        successContext.teacherLawFollowupContext = this.teacherLawFollowupContext;
                     }
-                    this.clearExecution();
+                    this.agentModeStateMap[modeKey] = successContext;
+                    if (activeModeAtResult === modeKey) {
+                        this.restoreModeState(modeKey);
+                        this.handleActiveAiComposerInput();
+                    } else if (activeModeAtResult) {
+                        this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                        this.restoreModeState(activeModeAtResult);
+                    }
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: executePreview,
+                        previewMeta: executePreviewMeta,
+                        context: successContext,
+                        activate: activeModeAtResult === modeKey,
+                    });
                     showFeedback(payload.message || '저장했습니다.', 'success');
                 } catch (error) {
-                    if (requestId !== this.agentExecuteRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                    if (requestId !== this.agentExecuteRequestId) {
                         return;
                     }
                     showFeedback(error && error.message ? error.message : '저장하지 못했습니다.', 'error');
                 } finally {
-                    if (requestId === this.agentExecuteRequestId && modeKey === trimLine(this.activeModeKey || '')) {
+                    if (requestId === this.agentExecuteRequestId) {
                         this.isAgentExecuting = false;
                     }
                 }
@@ -5293,6 +5254,7 @@
                 var sentValue;
                 var historyEntryId = '';
                 var quickdropPreviewMeta;
+                var activeModeAtResult = '';
 
                 if (!queuedFile && !text) {
                     this.quickdropErrorText = '보낼 내용을 넣어 주세요.';
@@ -5406,7 +5368,8 @@
                         confirmHref: this.buildModeContinueHref(mode),
                         confirmLabel: trimLine(mode.after_action_label || mode.confirm_label || '전송함 보기'),
                     }, quickdropPreviewMeta);
-                    if (modeKey === trimLine(this.activeModeKey || '')) {
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    if (modeKey === activeModeAtResult) {
                         this.agentPreviewMeta = quickdropPreviewMeta;
                         this.agentPreview = quickdropPreview;
                     }
@@ -5420,12 +5383,15 @@
                             agentPreviewMeta: quickdropPreviewMeta,
                             workspaceInput: '',
                         }),
+                        activate: modeKey === activeModeAtResult,
                     });
                     showFeedback(sentKind === 'text' ? '글을 보냈어요.' : '파일을 보냈어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.quickdropErrorText = error && error.message ? error.message : '전송하지 못했습니다.';
-                    this.abortChatHistoryEntry(historyEntryId, this.quickdropErrorText);
+                    this.abortChatHistoryEntry(historyEntryId, this.quickdropErrorText, {
+                        activate: modeKey === trimLine(this.activeModeKey || ''),
+                    });
                     showFeedback(this.quickdropErrorText, 'error');
                 } finally {
                     this.isSendingQuickdrop = false;
@@ -5829,6 +5795,7 @@
                 var historyEntryId = '';
                 var messageSavePreview;
                 var messageSavePreviewMeta;
+                var activeModeAtResult = '';
 
                 if (!text) {
                     this.messageSaveErrorText = '저장할 메시지를 먼저 넣어 주세요.';
@@ -5907,7 +5874,8 @@
                         confirmHref: trimLine(payload.messagebox_url || mode.after_action_href || mode.service_href || ''),
                         confirmLabel: trimLine(mode.after_action_label || mode.confirm_label || '보관함'),
                     }, messageSavePreviewMeta);
-                    if (modeKey === trimLine(this.activeModeKey || '')) {
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    if (modeKey === activeModeAtResult) {
                         this.agentPreviewMeta = messageSavePreviewMeta;
                         this.agentPreview = messageSavePreview;
                     }
@@ -5926,13 +5894,16 @@
                             messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
                             messageSaveCommitResult: this.messageSaveCommitResult,
                         }),
+                        activate: modeKey === activeModeAtResult,
                     });
                     showFeedback(payload.message || '메시지를 보관함에 저장했어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.messageSaveSourceText = '';
                     this.messageSaveErrorText = error && error.message ? error.message : '메시지를 저장하지 못했습니다.';
-                    this.abortChatHistoryEntry(historyEntryId, this.messageSaveErrorText);
+                    this.abortChatHistoryEntry(historyEntryId, this.messageSaveErrorText, {
+                        activate: modeKey === trimLine(this.activeModeKey || ''),
+                    });
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
                     this.isSavingMessageSave = false;
@@ -5940,12 +5911,23 @@
                 }
             },
 
-            extractSavedMessageCapture: async function () {
+            extractSavedMessageCapture: async function (historyItem, historyAction) {
+                var entry = historyItem && typeof historyItem === 'object' ? historyItem : {};
+                var action = historyAction && typeof historyAction === 'object' ? historyAction : {};
+                var historyEntryId = trimLine(entry.id || this.activeChatHistoryEntryId || '');
+                var modeKey = trimLine(action.modeKey || entry.modeKey || this.activeModeKey || 'message-save');
+                var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(entry.modeLabel || mode.label || '메시지 저장');
                 var parseSavedUrl = this.messageSaveParseSavedUrl();
                 var csrfToken = getCsrfToken();
                 var response;
                 var payload;
                 var previewLines;
+                var previewMeta;
+                var preview;
+                var contextSnapshot;
+                var activeModeAtResult;
+                var activeModeStateAtResult;
 
                 if (!parseSavedUrl) {
                     this.messageSaveErrorText = '일정을 찾을 메시지를 먼저 저장해 주세요.';
@@ -5976,6 +5958,8 @@
                     if (!response.ok) {
                         throw new Error(payload.detail || payload.error || payload.message || '보관한 메시지에서 일정을 찾지 못했습니다.');
                     }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    activeModeStateAtResult = this.buildChatHistoryActionContext();
                     this.messageSavePayload = this.clonePayload(payload);
                     this.messageSaveStage = 'extracted';
                     this.messageSaveSelectedCandidateId = this.messageSaveResolvedSelectedCandidateId();
@@ -5988,14 +5972,14 @@
                     if (!previewLines.length) {
                         previewLines = this.messageSaveResultLines();
                     }
-                    this.agentPreviewMeta = {
+                    previewMeta = {
                         source: 'direct',
                         provider: 'messagebox',
                         model: '',
                         providerLabel: '메시지 추출',
                     };
-                    this.agentPreview = this.normalizePreview({
-                        badge: this.activeMode.label || '메시지 저장',
+                    preview = this.normalizePreview({
+                        badge: modeLabel || '메시지 저장',
                         title: this.messageSaveCandidateList().length ? '일정 후보' : '일정 확인',
                         summary: '',
                         sections: [
@@ -6005,8 +5989,31 @@
                             },
                         ],
                         note: '',
-                    }, this.agentPreviewMeta);
-                    this.finalizeChatHistoryEntry(this.activeChatHistoryEntryId);
+                    }, previewMeta);
+                    this.agentPreviewMeta = previewMeta;
+                    this.agentPreview = preview;
+                    contextSnapshot = this.buildChatHistoryActionContext({
+                        workspaceInput: '',
+                        agentPreview: preview,
+                        agentPreviewMeta: previewMeta,
+                        messageSavePayload: this.messageSavePayload,
+                        messageSaveStage: this.messageSaveStage,
+                        messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
+                        messageSaveCommitResult: this.messageSaveCommitResult,
+                    });
+                    this.agentModeStateMap[modeKey] = this.normalizeModeState(contextSnapshot);
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: preview,
+                        previewMeta: previewMeta,
+                        context: contextSnapshot,
+                        activate: activeModeAtResult === modeKey,
+                    });
+                    if (activeModeAtResult && activeModeAtResult !== modeKey) {
+                        this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                        this.restoreModeState(activeModeAtResult);
+                    }
                     showFeedback(payload.message || '보관한 메시지에서 일정을 찾았어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
@@ -6018,12 +6025,23 @@
                 }
             },
 
-            commitMessageSaveCandidate: async function () {
+            commitMessageSaveCandidate: async function (historyItem, historyAction) {
+                var entry = historyItem && typeof historyItem === 'object' ? historyItem : {};
+                var action = historyAction && typeof historyAction === 'object' ? historyAction : {};
+                var historyEntryId = trimLine(entry.id || this.activeChatHistoryEntryId || '');
+                var modeKey = trimLine(action.modeKey || entry.modeKey || this.activeModeKey || 'message-save');
+                var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(entry.modeLabel || mode.label || '메시지 저장');
                 var commitUrl = this.messageSaveCommitUrl();
                 var csrfToken = getCsrfToken();
                 var activeCandidate = this.messageSaveActiveCandidate();
                 var response;
                 var payload;
+                var previewMeta;
+                var preview;
+                var contextSnapshot;
+                var activeModeAtResult;
+                var activeModeStateAtResult;
 
                 if (!activeCandidate) {
                     this.messageSaveErrorText = '저장할 일정을 선택해 주세요.';
@@ -6075,16 +6093,18 @@
                     if (!response.ok) {
                         throw new Error(payload.detail || payload.error || payload.message || '캘린더에 저장하지 못했습니다.');
                     }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    activeModeStateAtResult = this.buildChatHistoryActionContext();
                     this.messageSaveCommitResult = this.clonePayload(payload);
                     this.messageSaveStage = 'committed';
-                    this.agentPreviewMeta = {
+                    previewMeta = {
                         source: 'direct',
                         provider: 'messagebox',
                         model: '',
                         providerLabel: '캘린더 저장',
                     };
-                    this.agentPreview = this.normalizePreview({
-                        badge: this.activeMode.label || '메시지 저장',
+                    preview = this.normalizePreview({
+                        badge: modeLabel || '메시지 저장',
                         title: '캘린더 저장 완료',
                         summary: '',
                         sections: [
@@ -6094,8 +6114,33 @@
                             },
                         ],
                         note: '',
-                    }, this.agentPreviewMeta);
-                    this.finalizeChatHistoryEntry(this.activeChatHistoryEntryId);
+                        confirmHref: this.messageSaveOpenHref(),
+                        confirmLabel: this.messageSaveOpenLabel(),
+                    }, previewMeta);
+                    this.agentPreviewMeta = previewMeta;
+                    this.agentPreview = preview;
+                    contextSnapshot = this.buildChatHistoryActionContext({
+                        workspaceInput: '',
+                        agentPreview: preview,
+                        agentPreviewMeta: previewMeta,
+                        messageSavePayload: this.messageSavePayload,
+                        messageSaveStage: this.messageSaveStage,
+                        messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
+                        messageSaveCommitResult: this.messageSaveCommitResult,
+                    });
+                    this.agentModeStateMap[modeKey] = this.normalizeModeState(contextSnapshot);
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: preview,
+                        previewMeta: previewMeta,
+                        context: contextSnapshot,
+                        activate: activeModeAtResult === modeKey,
+                    });
+                    if (activeModeAtResult && activeModeAtResult !== modeKey) {
+                        this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                        this.restoreModeState(activeModeAtResult);
+                    }
                     showFeedback(payload.message || '선택한 일정을 저장했어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
@@ -6850,6 +6895,9 @@
                 var normalizedPreview;
                 var executionFallback = false;
                 var historyEntryId = '';
+                var activeModeAtResult = '';
+                var activeModeStateAtResult = null;
+                var contextSnapshot = null;
                 if (!modeKey) {
                     this.showIdlePreview();
                     return;
@@ -6907,15 +6955,21 @@
                     } catch (jsonError) {
                         payload = {};
                     }
-                    if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                    if (requestId !== this.agentPreviewRequestId) {
                         this.removeChatHistoryEntry(historyEntryId);
                         return;
                     }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    activeModeStateAtResult = this.buildChatHistoryActionContext();
                     if (!response.ok || payload.status !== 'ok') {
                         if (payload && payload.error_code === 'home_agent_quota_exceeded') {
-                            this.isAgentLoading = false;
-                            this.abortChatHistoryEntry(historyEntryId, payload.error || 'AI 사용량을 확인해 주세요.');
-                            this.showHomeAgentLimitModal(payload.quota, payload.error || '');
+                            if (activeModeAtResult === modeKey) {
+                                this.isAgentLoading = false;
+                                this.showHomeAgentLimitModal(payload.quota, payload.error || '');
+                            }
+                            this.abortChatHistoryEntry(historyEntryId, payload.error || 'AI 사용량을 확인해 주세요.', {
+                                activate: activeModeAtResult === modeKey,
+                            });
                             return;
                         }
                         throw new Error(payload.error || 'AI 미리보기를 불러오지 못했습니다.');
@@ -6941,17 +6995,41 @@
                     } else {
                         this.setExecution(payload.execution);
                     }
-                    this.isAgentLoading = false;
-                    this.finalizeChatHistoryEntry(historyEntryId);
+                    contextSnapshot = this.buildChatHistoryActionContext({
+                        workspaceInput: '',
+                        agentPreview: normalizedPreview,
+                        agentPreviewMeta: previewStatus,
+                    });
+                    this.agentModeStateMap[modeKey] = this.normalizeModeState(contextSnapshot);
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: (mode && mode.label) || '',
+                        preview: normalizedPreview,
+                        previewMeta: previewStatus,
+                        context: contextSnapshot,
+                        activate: activeModeAtResult === modeKey,
+                    });
+                    if (activeModeAtResult === modeKey) {
+                        this.isAgentLoading = false;
+                    } else if (activeModeAtResult) {
+                        this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                        this.restoreModeState(activeModeAtResult);
+                    }
                 } catch (error) {
-                    if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                    if (requestId !== this.agentPreviewRequestId) {
                         this.removeChatHistoryEntry(historyEntryId);
                         return;
                     }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    activeModeStateAtResult = this.buildChatHistoryActionContext();
                     if (previewStrategy === 'service' && modeKey !== 'teacher-law') {
-                        this.showIdlePreview();
-                        this.isAgentLoading = false;
-                        this.abortChatHistoryEntry(historyEntryId, error && error.message ? error.message : '');
+                        if (activeModeAtResult === modeKey) {
+                            this.showIdlePreview();
+                            this.isAgentLoading = false;
+                        }
+                        this.abortChatHistoryEntry(historyEntryId, error && error.message ? error.message : '', {
+                            activate: activeModeAtResult === modeKey,
+                        });
                     } else {
                         this.agentPreviewMeta = {
                             source: 'fallback',
@@ -6960,8 +7038,26 @@
                             providerLabel: '규칙형 미리보기',
                         };
                         this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
-                        this.isAgentLoading = false;
-                        this.finalizeChatHistoryEntry(historyEntryId);
+                        contextSnapshot = this.buildChatHistoryActionContext({
+                            workspaceInput: '',
+                            agentPreview: this.agentPreview,
+                            agentPreviewMeta: this.agentPreviewMeta,
+                        });
+                        this.agentModeStateMap[modeKey] = this.normalizeModeState(contextSnapshot);
+                        this.finalizeChatHistoryEntry(historyEntryId, {
+                            modeKey: modeKey,
+                            modeLabel: (mode && mode.label) || '',
+                            preview: this.agentPreview,
+                            previewMeta: this.agentPreviewMeta,
+                            context: contextSnapshot,
+                            activate: activeModeAtResult === modeKey,
+                        });
+                        if (activeModeAtResult === modeKey) {
+                            this.isAgentLoading = false;
+                        } else if (activeModeAtResult) {
+                            this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                            this.restoreModeState(activeModeAtResult);
+                        }
                     }
                     showFeedback(error && error.message ? error.message : 'AI 미리보기를 불러오지 못했습니다.', 'info');
                 } finally {
