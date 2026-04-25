@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ session.title }} — 가이드{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-gray-50">
+    <div class="max-w-3xl mx-auto">
+
+        {# 헤더 #}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div class="min-w-0">
+                {% if not is_public_view %}
+                <a href="{% url 'guide_recorder:session_list' %}"
+                   class="text-xs text-indigo-500 hover:underline mb-1 inline-block">
+                    ← 내 가이드 목록
+                </a>
+                {% endif %}
+                <h1 class="text-xl font-bold text-gray-800 truncate">{{ session.title }}</h1>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    {{ session.step_count }}단계
+                    {% if not is_public_view %}
+                    · {{ session.created_at|date:"Y. m. d" }} 생성
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if can_edit %}
+            {{ share_url|default:""|json_script:"gr-initial-share-url" }}
+            <div class="flex gap-2 flex-shrink-0"
+                 x-data="{ shareUrl: JSON.parse(document.getElementById('gr-initial-share-url').textContent) || '', copied: false, publishing: false }">
+
+                {# 공유 링크 복사 버튼 #}
+                <button
+                    @click.prevent="
+                        publishing = true;
+                        fetch('{% url 'guide_recorder:publish_session' pk=session.pk %}', {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+                        }).then(r => r.json()).then(d => {
+                            publishing = false;
+                            if (d.ok && d.share_url) {
+                                shareUrl = d.share_url;
+                                navigator.clipboard.writeText(d.share_url).then(() => {
+                                    copied = true;
+                                    setTimeout(() => copied = false, 2500);
+                                }).catch(() => { alert('공유 링크: ' + d.share_url); });
+                            } else if (d.ok && !d.share_url) {
+                                shareUrl = '';
+                                alert('공유가 해제되었습니다.');
+                            }
+                        }).catch(() => { publishing = false; alert('오류가 발생했습니다.'); });"
+                    :disabled="publishing"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
+                    :class="shareUrl
+                        ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'">
+                    <template x-if="publishing">
+                        <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+                    </template>
+                    <template x-if="!publishing && copied">
+                        <i class="fa-solid fa-check text-xs"></i>
+                    </template>
+                    <template x-if="!publishing && !copied && shareUrl">
+                        <i class="fa-solid fa-link text-xs"></i>
+                    </template>
+                    <template x-if="!publishing && !copied && !shareUrl">
+                        <i class="fa-solid fa-share-nodes text-xs"></i>
+                    </template>
+                    <span x-text="copied ? '링크 복사됨!' : (shareUrl ? '공유 링크 복사' : '공유 링크 생성')"></span>
+                </button>
+
+                {# 세션 삭제 버튼 #}
+                <button
+                    hx-post="{% url 'guide_recorder:delete_session' pk=session.pk %}"
+                    hx-confirm="이 가이드를 삭제할까요? 되돌릴 수 없습니다."
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                    hx-on::after-request="if(event.detail.successful) window.location.href='{% url 'guide_recorder:session_list' %}'"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                    삭제
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        {# 스텝이 없을 때 #}
+        {% if not steps %}
+        <div class="text-center py-20 text-gray-400">
+            <i class="fa-solid fa-film text-4xl mb-3 block"></i>
+            <p class="text-sm">녹화된 단계가 없습니다.</p>
+        </div>
+        {% endif %}
+
+        {# 타임라인 스텝 목록 #}
+        <div id="gr-steps-container">
+            {% for step in steps %}
+                {% include 'guide_recorder/partials/step_card.html' with step=step can_edit=can_edit %}
+            {% endfor %}
+        </div>
+
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}내 가이드{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-20 px-4 min-h-screen bg-gray-50">
+    <div class="max-w-5xl mx-auto">
+
+        {# 헤더 #}
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">내 가이드</h1>
+                <p class="text-sm text-gray-400 mt-0.5">녹화된 업무 가이드를 관리합니다.</p>
+            </div>
+            <span class="text-xs text-gray-400 bg-white border border-gray-200 rounded-full px-3 py-1">
+                총 {{ sessions.paginator.count }}개
+            </span>
+        </div>
+
+        {% if not sessions.object_list %}
+        {# 비어있을 때 #}
+        <div class="text-center py-24 text-gray-400">
+            <i class="fa-solid fa-circle-play text-5xl mb-4 block text-indigo-200"></i>
+            <p class="text-base font-medium text-gray-500 mb-1">아직 녹화된 가이드가 없습니다</p>
+            <p class="text-sm">화면 우하단의 <strong>가이드 녹화</strong> 버튼을 눌러 시작하세요.</p>
+        </div>
+
+        {% else %}
+
+        {# 데스크톱 테이블 #}
+        <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wide">
+                        <th class="text-left px-5 py-3 font-semibold">제목</th>
+                        <th class="text-center px-4 py-3 font-semibold w-20">단계</th>
+                        <th class="text-center px-4 py-3 font-semibold w-24">공유</th>
+                        <th class="text-right px-5 py-3 font-semibold w-36">생성일</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for session in sessions.object_list %}
+                    <tr class="hover:bg-indigo-50/40 transition-colors group">
+                        <td class="px-5 py-3.5">
+                            <a href="{% url 'guide_recorder:session_detail' pk=session.pk %}"
+                               class="font-medium text-gray-800 hover:text-indigo-600 transition-colors line-clamp-1">
+                                {{ session.title }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="text-gray-600">{{ session.step_count }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            {% if session.is_published %}
+                            <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                                <i class="fa-solid fa-link text-[10px]"></i> 공유됨
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-400">비공개</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3.5 text-right text-gray-400 text-xs">
+                            {{ session.created_at|date:"Y. m. d" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# 모바일 카드 그리드 #}
+        <div class="md:hidden grid grid-cols-1 gap-3">
+            {% for session in sessions.object_list %}
+            <a href="{% url 'guide_recorder:session_detail' pk=session.pk %}"
+               class="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="font-semibold text-gray-800 text-sm line-clamp-2 flex-1">{{ session.title }}</p>
+                    {% if session.is_published %}
+                    <span class="flex-shrink-0 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">공유됨</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                    <span><i class="fa-solid fa-list-ol mr-1"></i>{{ session.step_count }}단계</span>
+                    <span>{{ session.created_at|date:"m. d" }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {# 페이지네이션 #}
+        {% if sessions.has_other_pages %}
+        <div class="flex justify-center gap-1 mt-8">
+            {% if sessions.has_previous %}
+            <a href="?page={{ sessions.previous_page_number }}"
+               class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50">
+                이전
+            </a>
+            {% endif %}
+            {% for num in sessions.paginator.page_range %}
+            {% if sessions.number == num %}
+            <span class="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white font-semibold">{{ num }}</span>
+            {% else %}
+            <a href="?page={{ num }}"
+               class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50">
+               {{ num }}
+            </a>
+            {% endif %}
+            {% endfor %}
+            {% if sessions.has_next %}
+            <a href="?page={{ sessions.next_page_number }}"
+               class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50">
+                다음
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

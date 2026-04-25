@@ -102,6 +102,7 @@ INSTALLED_APPS = [
     'schoolcomm.apps.SchoolcommConfig',
     'quickdrop.apps.QuickdropConfig',
     'ocrdesk.apps.OcrdeskConfig',
+    'guide_recorder.apps.GuideRecorderConfig',
     'textbooks.apps.TextbooksConfig',
     'textbook_ai.apps.TextbookAiConfig',
     'edu_materials.apps.EduMaterialsConfig',
@@ -351,6 +352,9 @@ if TESTING:
 
 # Cloudinary 설정
 print("=" * 80)
+# Base64 스크린샷 업로드 허용 (guide_recorder)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
 print("[CLOUDINARY] Environment variable check")
 print("=" * 80)
 
