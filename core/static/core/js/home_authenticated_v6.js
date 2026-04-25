@@ -1091,6 +1091,22 @@
                 );
             },
 
+            activeChatHistoryUserText: function () {
+                var activeEntryId = trimLine(this.activeChatHistoryEntryId || '');
+                var activeModeKey = trimLine(this.activeModeKey || '');
+                var activeEntry = null;
+                if (!activeEntryId || !Array.isArray(this.chatHistory)) {
+                    return '';
+                }
+                activeEntry = this.chatHistory.find(function (item) {
+                    return item && item.id === activeEntryId;
+                }) || null;
+                if (!activeEntry || trimLine(activeEntry.modeKey || '') !== activeModeKey) {
+                    return '';
+                }
+                return trimLine(activeEntry.userBubble && activeEntry.userBubble.text);
+            },
+
             activeAiNeedsLiveActionPanel: function () {
                 if (!this.activeAiCurrentBubbleInHistory()) {
                     return true;
@@ -1567,6 +1583,8 @@
                             note: '',
                             openHref: '',
                             openLabel: '',
+                            actionKind: '',
+                            actionLabel: '',
                         },
                         pending: true,
                         failed: false,
@@ -1599,10 +1617,13 @@
                         return;
                     }
                     var lines = [];
+                    var userText = trimLine(this.chatHistory[idx].userBubble && this.chatHistory[idx].userBubble.text);
                     try {
                         var srcLines = this.previewResultLines();
                         if (Array.isArray(srcLines)) {
-                            lines = srcLines.slice();
+                            lines = srcLines.slice().filter(function (line) {
+                                return trimLine(line) !== userText;
+                            });
                         }
                     } catch (e) {
                         lines = [];
@@ -1616,6 +1637,8 @@
                     }
                     var openHref = '';
                     var openLabel = '';
+                    var actionKind = '';
+                    var actionLabel = '';
                     try {
                         if (this.activeAiHasOpenLink()) {
                             openHref = this.activeAiOpenHref() || '';
@@ -1625,12 +1648,23 @@
                         openHref = '';
                         openLabel = '';
                     }
+                    try {
+                        if (this.modeHasCapability(this.modeByKey(this.chatHistory[idx].modeKey), 'tts_read')) {
+                            actionKind = 'tts-read';
+                            actionLabel = this.ttsReadLabel();
+                        }
+                    } catch (e) {
+                        actionKind = '';
+                        actionLabel = '';
+                    }
                     this.chatHistory[idx].aiResult = {
                         title: title,
                         lines: lines,
                         note: note,
                         openHref: openHref,
                         openLabel: openLabel,
+                        actionKind: actionKind,
+                        actionLabel: actionLabel,
                     };
                     this.chatHistory[idx].pending = false;
                     this.chatHistory[idx].failed = false;
@@ -1678,11 +1712,13 @@
                 }
             },
 
-            scrollChatHistoryToBottom: function () {
+            scrollWorkspaceDialogueToBottom: function () {
                 try {
                     this.$nextTick(function () {
                         var scroll = function () {
-                            var el = firstVisibleNode('.home-v6-chat-history');
+                            var el = firstVisibleNode('.home-v6-agent-dialogue-stage')
+                                || firstVisibleNode('.home-v6-chat-history')
+                                || firstVisibleNode('.home-v6-agent-ai-thread');
                             if (el) {
                                 el.scrollTop = el.scrollHeight;
                             }
@@ -1700,6 +1736,10 @@
                 } catch (e) {
                     /* ignore */
                 }
+            },
+
+            scrollChatHistoryToBottom: function () {
+                this.scrollWorkspaceDialogueToBottom();
             },
 
             activeAiCanSubmit: function () {
@@ -4529,6 +4569,7 @@
                     model: '',
                     providerLabel: '',
                 };
+                this.scrollWorkspaceDialogueToBottom();
                 this.clearExecution();
                 this.clearMessageSaveState();
                 this.scheduleEditorOpen = false;
@@ -4847,11 +4888,13 @@
                         this.agentPreviewMeta
                     );
                     showFeedback(sentKind === 'text' ? '글을 보냈어요.' : '파일을 보냈어요.', 'success');
+                    this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.quickdropErrorText = error && error.message ? error.message : '전송하지 못했습니다.';
                     showFeedback(this.quickdropErrorText, 'error');
                 } finally {
                     this.isSendingQuickdrop = false;
+                    this.scrollWorkspaceDialogueToBottom();
                 }
             },
 
@@ -4867,7 +4910,7 @@
             },
 
             ttsUserBubbleText: function () {
-                return trimLine(this.workspaceInput);
+                return trimLine(this.workspaceInput) || this.activeChatHistoryUserText();
             },
 
             ttsHasResult: function () {
@@ -4900,11 +4943,21 @@
                 return this.isTtsReading ? '읽는 중' : '바로 읽기';
             },
 
-            playTtsDraft: function () {
-                var text = trimLine(this.workspaceInput);
+            playChatHistoryTts: function (item) {
+                var bubble = item && item.userBubble && typeof item.userBubble === 'object' ? item.userBubble : {};
+                var text = trimLine(bubble.text || '');
+                if (!text) {
+                    showFeedback('읽을 문장이 없습니다.', 'info');
+                    return;
+                }
+                this.speakTtsText(text);
+            },
+
+            speakTtsText: function (text) {
+                var value = trimLine(text);
                 var utterance;
                 var self = this;
-                if (!text) {
+                if (!value) {
                     showFeedback('읽을 문장을 먼저 넣어 주세요.', 'info');
                     this.focusWorkspace();
                     return;
@@ -4913,7 +4966,7 @@
                     showFeedback('이 브라우저에서는 읽어주기를 지원하지 않습니다.', 'error');
                     return;
                 }
-                utterance = new window.SpeechSynthesisUtterance(text);
+                utterance = new window.SpeechSynthesisUtterance(value);
                 utterance.lang = 'ko-KR';
                 utterance.onend = function () {
                     self.isTtsReading = false;
@@ -4931,8 +4984,13 @@
                     model: '',
                     providerLabel: '브라우저 TTS',
                 };
-                this.agentPreview = this.normalizePreview(this.buildTtsPreview(text), this.agentPreviewMeta);
+                this.agentPreview = this.normalizePreview(this.buildTtsPreview(value), this.agentPreviewMeta);
                 showFeedback('지금 읽고 있습니다.', 'success');
+            },
+
+            playTtsDraft: function () {
+                var text = trimLine(this.workspaceInput) || this.ttsUserBubbleText();
+                this.speakTtsText(text);
             },
 
             resetTtsChat: function () {
@@ -5259,6 +5317,7 @@
                 this.messageSaveSelectedCandidateId = '';
                 this.messageSaveCommitResult = {};
                 this.clearExecution();
+                this.scrollWorkspaceDialogueToBottom();
 
                 try {
                     response = await fetch(saveUrl, {
@@ -5301,6 +5360,7 @@
                         note: '',
                     }, this.agentPreviewMeta);
                     showFeedback(payload.message || '메시지를 보관함에 저장했어요.', 'success');
+                    this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.messageSaveSourceText = '';
                     this.workspaceInput = text;
@@ -5308,6 +5368,7 @@
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
                     this.isSavingMessageSave = false;
+                    this.scrollWorkspaceDialogueToBottom();
                 }
             },
 
@@ -5331,6 +5392,7 @@
 
                 this.messageSaveErrorText = '';
                 this.isExtractingMessageSave = true;
+                this.scrollWorkspaceDialogueToBottom();
 
                 try {
                     response = await fetch(parseSavedUrl, {
@@ -5377,11 +5439,13 @@
                         note: '',
                     }, this.agentPreviewMeta);
                     showFeedback(payload.message || '보관한 메시지에서 일정을 찾았어요.', 'success');
+                    this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.messageSaveErrorText = error && error.message ? error.message : '보관한 메시지에서 일정을 찾지 못했습니다.';
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
                     this.isExtractingMessageSave = false;
+                    this.scrollWorkspaceDialogueToBottom();
                 }
             },
 
@@ -5410,6 +5474,7 @@
 
                 this.messageSaveErrorText = '';
                 this.isCommittingMessageSave = true;
+                this.scrollWorkspaceDialogueToBottom();
 
                 try {
                     response = await fetch(commitUrl, {
@@ -5462,11 +5527,13 @@
                         note: '',
                     }, this.agentPreviewMeta);
                     showFeedback(payload.message || '선택한 일정을 저장했어요.', 'success');
+                    this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.messageSaveErrorText = error && error.message ? error.message : '캘린더에 저장하지 못했습니다.';
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
                     this.isCommittingMessageSave = false;
+                    this.scrollWorkspaceDialogueToBottom();
                 }
             },
 
@@ -6142,6 +6209,7 @@
                 this.closeShellModeMenu();
                 this.restoreModeState(nextModeKey);
                 this.scheduleAiComposerResize();
+                this.scrollWorkspaceDialogueToBottom();
             },
 
             useExample: function (text) {
@@ -6229,6 +6297,8 @@
                 }
 
                 if (previewStrategy === 'direct') {
+                    historyEntryId = this.startChatHistoryEntry(text, modeKey, (mode && mode.label) || '');
+                    this.workspaceInput = '';
                     this.clearExecution();
                     this.agentPreviewMeta = {
                         source: 'direct',
@@ -6237,6 +6307,7 @@
                         providerLabel: '',
                     };
                     this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
+                    this.finalizeChatHistoryEntry(historyEntryId);
                     return;
                 }
 

@@ -6917,6 +6917,44 @@ transform: none;
 /* ===========================================================
  * Chat UI — 통합 히스토리 스레드
  * =========================================================== */
+.home-v6-page .home-v6-agent-dialogue-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 1rem;
+    width: min(100%, 84rem);
+    min-height: clamp(19rem, 48vh, 35rem);
+    max-height: min(64vh, 44rem);
+    margin: 0 auto;
+    padding: 1rem 0.2rem 0.4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage > .home-v6-chat-history,
+.home-v6-page .home-v6-agent-dialogue-stage > .home-v6-agent-ai-messenger {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    flex: 0 0 auto;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history {
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+    scrollbar-gutter: auto;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-agent-ai-thread {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+}
+
 .home-v6-chat-history {
     display: flex;
     flex-direction: column;
@@ -6996,6 +7034,12 @@ transform: none;
 }
 
 @media (max-width: 640px) {
+    .home-v6-page .home-v6-agent-dialogue-stage {
+        min-height: clamp(15rem, 48svh, 28rem);
+        max-height: 58svh;
+        padding: 0.8rem 0 0.25rem;
+    }
+
     .home-v6-chat-history {
         min-height: min(52vh, 28rem);
         max-height: 56vh;

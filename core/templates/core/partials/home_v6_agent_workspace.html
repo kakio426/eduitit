@@ -660,66 +660,83 @@
             </section>
 
             <div
-                class="home-v6-chat-history"
+                class="home-v6-agent-dialogue-stage"
+                data-home-v6-agent-dialogue-stage="true"
                 x-cloak
-                x-show="chatHistory.length > 0 && activeRendererKey !== 'human-chat'"
-                role="log"
-                aria-live="polite"
-                aria-relevant="additions"
+                x-show="activeRendererKey !== 'human-chat' && (chatHistory.length > 0 || activeAiMessengerVisible())"
             >
-                <template x-for="item in chatHistory" :key="item.id">
-                    <div class="home-v6-chat-history-pair">
-                        <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
-                            <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
-                                <template x-if="item.userBubble.kind === 'text'">
-                                    <p class="home-v6-agent-chat-text" x-text="item.userBubble.text"></p>
-                                </template>
-                                <template x-if="item.userBubble.kind !== 'text'">
-                                    <div class="home-v6-agent-ai-file-pill">
-                                        <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
-                                            <i class="fa-solid fa-paperclip"></i>
-                                        </span>
-                                        <span x-text="item.userBubble.text"></span>
+                <div
+                    class="home-v6-chat-history"
+                    x-cloak
+                    x-show="chatHistory.length > 0"
+                    role="log"
+                    aria-live="polite"
+                    aria-relevant="additions"
+                >
+                    <template x-for="item in chatHistory" :key="item.id">
+                        <div class="home-v6-chat-history-pair">
+                            <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
+                                <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
+                                    <template x-if="item.userBubble.kind === 'text'">
+                                        <p class="home-v6-agent-chat-text" x-text="item.userBubble.text"></p>
+                                    </template>
+                                    <template x-if="item.userBubble.kind !== 'text'">
+                                        <div class="home-v6-agent-ai-file-pill">
+                                            <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                                                <i class="fa-solid fa-paperclip"></i>
+                                            </span>
+                                            <span x-text="item.userBubble.text"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="home-v6-agent-chat-row">
+                                <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                                <div
+                                    class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant"
+                                    :class="{ 'is-pending': item.pending, 'is-failed': item.failed }"
+                                >
+                                    <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
+                                        <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
+                                        <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
                                     </div>
-                                </template>
-                            </div>
-                        </div>
-                        <div class="home-v6-agent-chat-row">
-                            <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
-                                <i class="fa-solid fa-robot"></i>
-                            </div>
-                            <div
-                                class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant"
-                                :class="{ 'is-pending': item.pending, 'is-failed': item.failed }"
-                            >
-                                <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
-                                    <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
-                                    <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
-                                </div>
-                                <div class="home-v6-agent-chat-loading" x-cloak x-show="item.pending">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                                <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
-                                    <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
-                                </template>
-                                <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
-                                <div class="home-v6-agent-ai-action-row" x-cloak x-show="item.aiResult.openHref">
-                                    <a class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
-                                       :href="item.aiResult.openHref"
-                                       x-text="item.aiResult.openLabel"
-                                       target="_blank"
-                                       rel="noopener"></a>
+                                    <div class="home-v6-agent-chat-loading" x-cloak x-show="item.pending">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
+                                        <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
+                                    </template>
+                                    <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
+                                    <div class="home-v6-agent-ai-action-row" x-cloak x-show="item.aiResult.openHref || item.aiResult.actionKind">
+                                        <button
+                                            type="button"
+                                            class="home-v6-agent-ai-action-chip"
+                                            x-cloak
+                                            x-show="item.aiResult.actionKind === 'tts-read'"
+                                            :disabled="isTtsReading"
+                                            @click="playChatHistoryTts(item)"
+                                            x-text="isTtsReading ? '읽는 중' : (item.aiResult.actionLabel || '바로 읽기')"
+                                        ></button>
+                                        <a class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
+                                           x-cloak
+                                           x-show="item.aiResult.openHref"
+                                           :href="item.aiResult.openHref"
+                                           x-text="item.aiResult.openLabel"
+                                           target="_blank"
+                                           rel="noopener"></a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </template>
-            </div>
+                    </template>
+                </div>
 
-            <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiMessengerVisible()">
-                <div class="home-v6-agent-ai-thread">
+                <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiMessengerVisible()">
+                    <div class="home-v6-agent-ai-thread">
                     <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user" x-cloak x-show="activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()">
                         <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
                             <template x-if="activeAiUserBubbleKind() === 'text'">
@@ -1070,9 +1087,10 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                    </div>
 
-            </section>
+                </section>
+            </div>
 
             <section class="home-v6-agent-notice-chat" x-cloak x-show="activeRendererKey === 'notice'">
                 <div class="home-v6-agent-notice-thread">

@@ -4576,8 +4576,14 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('abortChatHistoryEntry: function (entryId, message) {', script)
         self.assertIn('historyEntryId = this.startChatHistoryEntry(text, modeKey, (mode && mode.label) || \'\');', script)
         self.assertIn('this.workspaceInput = \'\';', script)
+        self.assertIn('return trimLine(line) !== userText;', script)
+        self.assertIn('activeChatHistoryUserText: function () {', script)
+        self.assertIn('return trimLine(this.workspaceInput) || this.activeChatHistoryUserText();', script)
+        self.assertIn("actionKind = 'tts-read';", script)
+        self.assertIn('playChatHistoryTts: function (item) {', script)
         self.assertIn('activeAiCurrentBubbleInHistory: function () {', script)
         self.assertIn('activeAiMessengerVisible: function () {', script)
+        self.assertNotIn("this.aiMessengerIsFlow('one-shot') && this.activeAiFlowVariant() === 'tts'", script)
         self.assertNotIn('pushToChatHistory: function () {', script)
         self.assertNotIn('this.pushToChatHistory();', script)
 
@@ -4593,12 +4599,22 @@ class HomeV6ViewTest(TestCase):
         ).read_text(encoding='utf-8')
 
         self.assertIn('role="log"', template)
+        self.assertIn('data-home-v6-agent-dialogue-stage="true"', template)
         self.assertIn('activeAiMessengerVisible()', template)
         self.assertIn('activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()', template)
+        self.assertIn('.home-v6-page .home-v6-agent-dialogue-stage {', css)
+        self.assertIn('justify-content: flex-end;', css)
         self.assertIn('.home-v6-chat-history::before {', css)
         self.assertIn('.home-v6-chat-history > .home-v6-chat-history-pair:first-child {', css)
         self.assertIn('margin-top: auto;', css)
         self.assertIn('overflow-y: auto;', css)
+
+    def test_v6_js_scrolls_unified_agent_dialogue_stage(self):
+        script = _read_home_v6_js()
+
+        self.assertIn('scrollWorkspaceDialogueToBottom: function () {', script)
+        self.assertIn("firstVisibleNode('.home-v6-agent-dialogue-stage')", script)
+        self.assertIn('this.scrollWorkspaceDialogueToBottom();', script)
 
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
