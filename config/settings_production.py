@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     'fairy_games.apps.FairyGamesConfig',
     'reflex_game.apps.ReflexGameConfig',
     'math_games.apps.MathGamesConfig',
+    'mancala.apps.MancalaConfig',
     'ppobgi.apps.PpobgiConfig',
     'studentmbti.apps.StudentmbtiConfig',
     'collect.apps.CollectConfig',

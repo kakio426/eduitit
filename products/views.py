@@ -335,6 +335,12 @@ def _student_games_catalog():
             "href": reverse("reflex_game:main"),
         },
         {
+            "emoji": "🏺",
+            "title": "만칼라",
+            "description": "씨앗을 나누며 셈과 전략을 함께 익히는 3D 보드 게임입니다.",
+            "href": reverse("mancala:main"),
+        },
+        {
             "emoji": "🎲",
             "title": "교실 윷놀이",
             "description": "큰 화면에서 팀별로 윷을 던져 말판을 완주하는 협력 게임입니다.",

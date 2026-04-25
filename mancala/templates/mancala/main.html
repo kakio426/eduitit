@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}만칼라 - Eduitit{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'mancala/css/main.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<main class="service-shell mancala-page" data-mancala-root data-state-url="{% url 'mancala:api_state' %}" data-move-url="{% url 'mancala:api_move' %}">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" data-csrf-token>
+    <section class="mancala-stage" aria-label="만칼라 3D 게임">
+        <header class="mancala-toolbar">
+            <div class="mancala-title-wrap">
+                <p class="mancala-kicker">셈 놀이</p>
+                <h1>만칼라</h1>
+            </div>
+            <p class="mancala-status" data-mancala-status aria-live="polite">내 차례</p>
+            <div class="mancala-actions" aria-label="게임 조작">
+                <button type="button" class="mancala-icon-button" data-new-game title="새 판" aria-label="새 판">
+                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                    <span>새 판</span>
+                </button>
+                <button type="button" class="mancala-icon-button" data-undo title="되돌리기" aria-label="되돌리기">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    <span>되돌리기</span>
+                </button>
+                <button type="button" class="mancala-icon-button is-active" data-ai-toggle aria-pressed="true" title="AI 대전" aria-label="AI 대전">
+                    <i class="fa-solid fa-robot" aria-hidden="true"></i>
+                    <span>AI 대전</span>
+                </button>
+                <button type="button" class="mancala-icon-button mancala-icon-button--soft" data-guide-open title="도움" aria-label="규칙과 문화">
+                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                    <span>도움</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="mancala-scorebar" aria-label="점수">
+            <div class="mancala-score mancala-score--ai">
+                <span>AI</span>
+                <strong data-score-player1>0</strong>
+            </div>
+            <div class="mancala-turn-chip" data-turn-chip>내 차례</div>
+            <div class="mancala-score mancala-score--me">
+                <span>나</span>
+                <strong data-score-player0>0</strong>
+            </div>
+        </div>
+
+        <div class="mancala-board-shell">
+            <canvas id="mancalaBoard" data-mancala-canvas aria-label="3D 만칼라 보드"></canvas>
+            <div class="mancala-loading" data-mancala-loading>준비 중</div>
+        </div>
+
+        <p class="mancala-culture">아프리카와 중동에서 오래 즐긴 셈 놀이</p>
+    </section>
+
+    <div class="mancala-modal" data-guide-modal hidden role="dialog" aria-modal="true" aria-labelledby="mancala-guide-title">
+        <button type="button" class="mancala-modal-backdrop" data-guide-close aria-label="닫기"></button>
+        <section class="mancala-modal-panel" role="document">
+            <button type="button" class="mancala-modal-close" data-guide-close data-guide-close-primary aria-label="닫기">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <div class="mancala-modal-seeds" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="mancala-modal-header">
+                <span class="mancala-guide-badge">Kalah</span>
+                <h2 id="mancala-guide-title">만칼라 한눈에</h2>
+                <p>씨앗을 나누며 다음 수를 생각하는 셈 놀이</p>
+            </div>
+            <div class="mancala-guide-grid">
+                <article>
+                    <span>씨앗</span>
+                    <strong>나누기</strong>
+                    <p>고른 칸의 씨앗을 내 저장소 방향으로 하나씩 놓습니다.</p>
+                </article>
+                <article>
+                    <span>추가</span>
+                    <strong>한 번 더</strong>
+                    <p>마지막 씨앗이 내 저장소에 들어가면 다시 둡니다.</p>
+                </article>
+                <article>
+                    <span>전략</span>
+                    <strong>가져오기</strong>
+                    <p>빈 내 칸에 끝나면 맞은편 씨앗을 가져옵니다.</p>
+                </article>
+            </div>
+            <p class="mancala-guide-culture">
+                <i class="fa-solid fa-earth-africa" aria-hidden="true"></i>
+                아프리카와 중동에서 오래 즐긴 셈 놀이
+            </p>
+            <button type="button" class="mancala-guide-play" data-guide-close>바로 두기</button>
+        </section>
+    </div>
+</main>
+
+{{ initial_payload|json_script:"mancala-initial-payload" }}
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{% static 'mancala/js/main.js' %}"></script>
+{% endblock %}

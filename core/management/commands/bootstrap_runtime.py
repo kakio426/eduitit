@@ -33,6 +33,7 @@ class Command(BaseCommand):
             ("ensure_fairy_games", lambda: call_command("ensure_fairy_games")),
             ("ensure_reflex_game", lambda: call_command("ensure_reflex_game")),
             ("ensure_math_games", lambda: call_command("ensure_math_games")),
+            ("ensure_mancala", lambda: call_command("ensure_mancala")),
             ("ensure_ppobgi", lambda: call_command("ensure_ppobgi")),
             ("ensure_happy_seed", lambda: call_command("ensure_happy_seed")),
             ("ensure_seed_quiz", lambda: call_command("ensure_seed_quiz")),

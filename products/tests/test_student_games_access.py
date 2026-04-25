@@ -148,6 +148,7 @@ class StudentGamesAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "지금 바로 되는 게임만 모았습니다.")
         self.assertContains(response, "리버시")
+        self.assertContains(response, "만칼라")
         self.assertContains(response, "교실 윷놀이")
 
         games = response.context["games"]
@@ -156,10 +157,12 @@ class StudentGamesAccessTests(TestCase):
         self.assertIn("장기", titles)
         self.assertIn("리버시", titles)
         self.assertIn("탭 순발력 챌린지", titles)
+        self.assertIn("만칼라", titles)
         self.assertIn("교실 윷놀이", titles)
         href_map = {game["title"]: game["href"] for game in games}
         self.assertEqual(href_map["리버시"], reverse("fairy_games:play_reversi"))
         self.assertEqual(href_map["동물 장기"], reverse("fairy_games:play_dobutsu"))
+        self.assertEqual(href_map["만칼라"], reverse("mancala:main"))
 
         for game in games:
             route_response = self.student_client.get(game["href"])

@@ -13,6 +13,7 @@ class GameServiceMenuTests(TestCase):
             "ensure_janggi",
             "ensure_fairy_games",
             "ensure_reflex_game",
+            "ensure_mancala",
         ):
             call_command(command_name)
 
@@ -26,6 +27,7 @@ class GameServiceMenuTests(TestCase):
         self.assertIn("동물 장기", titles)
         self.assertIn("리버시", titles)
         self.assertIn("탭 순발력 챌린지", titles)
+        self.assertIn("만칼라", titles)
 
     def test_game_product_detail_launches_point_to_real_routes(self):
         expected_routes = {
@@ -34,6 +36,7 @@ class GameServiceMenuTests(TestCase):
             "동물 장기": "fairy_games:play_dobutsu",
             "리버시": "fairy_games:play_reversi",
             "탭 순발력 챌린지": "reflex_game:main",
+            "만칼라": "mancala:main",
         }
 
         for title, route_name in expected_routes.items():
