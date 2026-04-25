@@ -8,7 +8,7 @@
     .edu-materials-run-shell {
         background: #020617;
     }
-    .edu-materials-home-return {
+    .edu-materials-share-board-return {
         top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
     }
 </style>
@@ -17,12 +17,12 @@
 {% block content %}
 <section class="edu-materials-run-shell relative min-h-screen">
     <a
-        href="{% url 'home' %}"
-        class="edu-materials-home-return fixed left-3 z-30 inline-flex items-center rounded-full border border-slate-900/10 bg-white/85 px-3 py-1.5 text-xs font-black text-slate-800 shadow-lg shadow-slate-900/10 backdrop-blur transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
-        aria-label="에듀잇티 홈으로 돌아가기"
-        data-student-home-link
+        href="{% url 'edu_materials:share_board' material.id %}"
+        class="edu-materials-share-board-return fixed left-3 z-30 inline-flex items-center rounded-full border border-slate-900/10 bg-white/85 px-3 py-1.5 text-xs font-black text-slate-800 shadow-lg shadow-slate-900/10 backdrop-blur transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        aria-label="자료 배포 화면으로 돌아가기"
+        data-student-share-board-link
     >
-        &larr; Eduitit
+        &larr; 배포 화면
     </a>
     {% include 'edu_materials/includes/material_iframe.html' with material=material material_render_url=material_render_url frame_src=material_frame_src frame_mode='runtime' frame_title=material.title hide_frame_header=True frame_shell_classes='h-[100dvh] w-full bg-slate-950' frame_stage_classes='h-[100dvh] w-full bg-white' iframe_classes='block h-full w-full bg-white' %}
 </section>
