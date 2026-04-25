@@ -774,6 +774,7 @@
             teacherLawLastQuestion: '',
             teacherLawFollowupContext: {},
             chatHistory: [],
+            activeChatHistoryEntryId: '',
             isSavingMessageSave: false,
             isExtractingMessageSave: false,
             isCommittingMessageSave: false,
@@ -1071,6 +1072,49 @@
                     );
                 }
                 return Boolean(this.activeAiLoading() || this.agentExecution || this.previewResultLines().length);
+            },
+
+            activeAiCurrentBubbleInHistory: function () {
+                var activeEntryId = trimLine(this.activeChatHistoryEntryId || '');
+                var activeModeKey = trimLine(this.activeModeKey || '');
+                var activeEntry = null;
+                if (activeEntryId && Array.isArray(this.chatHistory)) {
+                    activeEntry = this.chatHistory.find(function (item) {
+                        return item && item.id === activeEntryId;
+                    }) || null;
+                }
+                return Boolean(
+                    activeEntry
+                    && trimLine(activeEntry.modeKey || '') === activeModeKey
+                    && !this.aiMessengerIsFlow('direct-send')
+                    && !this.aiMessengerIsFlow('pipeline')
+                );
+            },
+
+            activeAiNeedsLiveActionPanel: function () {
+                if (!this.activeAiCurrentBubbleInHistory()) {
+                    return true;
+                }
+                if (!this.aiMessengerIsFlow('guided')) {
+                    return false;
+                }
+                if (this.isAgentExecuting) {
+                    return true;
+                }
+                if (this.activeAiExecutionVariant() === 'schedule') {
+                    return this.scheduleHasExecution();
+                }
+                if (this.activeAiExecutionVariant() === 'reservation') {
+                    return this.reservationHasExecution();
+                }
+                if (this.activeAiExecutionVariant() === 'teacher-law') {
+                    return this.teacherLawHasExecution();
+                }
+                return Boolean(this.agentExecution);
+            },
+
+            activeAiMessengerVisible: function () {
+                return Boolean(this.activeAiHasVisibleConversation() && this.activeAiNeedsLiveActionPanel());
             },
 
             activeAiShouldShowAssistantBubble: function () {
@@ -1499,14 +1543,59 @@
                 }
                 this.stopWorkspaceVoiceInput();
                 this.chatHistory = [];
+                this.activeChatHistoryEntryId = '';
                 this.resetActiveAiChat();
             },
 
-            pushToChatHistory: function () {
+            startChatHistoryEntry: function (userText, modeKey, modeLabel) {
                 try {
-                    var userKind = this.activeAiUserBubbleKind();
-                    var userText = this.activeAiUserBubbleText();
-                    if (!userText) {
+                    var text = trimLine(userText);
+                    if (!text) {
+                        return '';
+                    }
+                    var entry = {
+                        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+                        modeKey: modeKey || this.activeModeKey,
+                        modeLabel: modeLabel || ((this.activeMode && this.activeMode.label) || ''),
+                        userBubble: {
+                            kind: 'text',
+                            text: text,
+                        },
+                        aiResult: {
+                            title: '',
+                            lines: [],
+                            note: '',
+                            openHref: '',
+                            openLabel: '',
+                        },
+                        pending: true,
+                        failed: false,
+                    };
+                    this.chatHistory.push(entry);
+                    if (this.chatHistory.length > 50) {
+                        this.chatHistory = this.chatHistory.slice(-50);
+                    }
+                    this.activeChatHistoryEntryId = entry.id;
+                    this.scrollChatHistoryToBottom();
+                    return entry.id;
+                } catch (e) {
+                    return '';
+                }
+            },
+
+            finalizeChatHistoryEntry: function (entryId) {
+                if (!entryId) {
+                    return;
+                }
+                try {
+                    var idx = -1;
+                    for (var i = this.chatHistory.length - 1; i >= 0; i--) {
+                        if (this.chatHistory[i].id === entryId) {
+                            idx = i;
+                            break;
+                        }
+                    }
+                    if (idx < 0) {
                         return;
                     }
                     var lines = [];
@@ -1522,6 +1611,9 @@
                     try { title = this.activeAiAssistantTitle() || ''; } catch (e) { title = ''; }
                     var note = '';
                     try { note = this.activeAiPreviewNote() || ''; } catch (e) { note = ''; }
+                    if (!note) {
+                        try { note = trimLine(this.agentPreview && this.agentPreview.note); } catch (e) { note = ''; }
+                    }
                     var openHref = '';
                     var openLabel = '';
                     try {
@@ -1533,32 +1625,80 @@
                         openHref = '';
                         openLabel = '';
                     }
-                    if (!lines.length && !title && !note && !openHref) {
-                        return;
-                    }
-                    var modeLabel = '';
-                    try { modeLabel = (this.activeMode && this.activeMode.label) || ''; } catch (e) { modeLabel = ''; }
-                    this.chatHistory.push({
-                        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
-                        modeKey: this.activeModeKey,
-                        modeLabel: modeLabel,
-                        userBubble: {
-                            kind: userKind || 'text',
-                            text: userText,
-                        },
-                        aiResult: {
-                            title: title,
-                            lines: lines,
-                            note: note,
-                            openHref: openHref,
-                            openLabel: openLabel,
-                        },
-                    });
-                    if (this.chatHistory.length > 50) {
-                        this.chatHistory = this.chatHistory.slice(-50);
-                    }
+                    this.chatHistory[idx].aiResult = {
+                        title: title,
+                        lines: lines,
+                        note: note,
+                        openHref: openHref,
+                        openLabel: openLabel,
+                    };
+                    this.chatHistory[idx].pending = false;
+                    this.chatHistory[idx].failed = false;
+                    this.activeChatHistoryEntryId = entryId;
+                    this.scrollChatHistoryToBottom();
                 } catch (e) {
-                    /* 히스토리 push 실패해도 본 기능에는 영향 없음 */
+                    /* 히스토리 확정 실패는 본 기능을 막지 않음 */
+                }
+            },
+
+            abortChatHistoryEntry: function (entryId, message) {
+                if (!entryId) {
+                    return;
+                }
+                try {
+                    for (var i = this.chatHistory.length - 1; i >= 0; i--) {
+                        if (this.chatHistory[i].id === entryId) {
+                            this.chatHistory[i].pending = false;
+                            this.chatHistory[i].failed = true;
+                            this.chatHistory[i].aiResult.lines = [trimLine(message) || '응답을 불러오지 못했습니다.'];
+                            this.activeChatHistoryEntryId = entryId;
+                            break;
+                        }
+                    }
+                    this.scrollChatHistoryToBottom();
+                } catch (e) {
+                    /* 히스토리 실패 표시는 본 기능을 막지 않음 */
+                }
+            },
+
+            removeChatHistoryEntry: function (entryId) {
+                if (!entryId) {
+                    return;
+                }
+                try {
+                    this.chatHistory = this.chatHistory.filter(function (item) {
+                        return item && item.id !== entryId;
+                    });
+                    if (this.activeChatHistoryEntryId === entryId) {
+                        this.activeChatHistoryEntryId = '';
+                    }
+                    this.scrollChatHistoryToBottom();
+                } catch (e) {
+                    /* ignore */
+                }
+            },
+
+            scrollChatHistoryToBottom: function () {
+                try {
+                    this.$nextTick(function () {
+                        var scroll = function () {
+                            var el = firstVisibleNode('.home-v6-chat-history');
+                            if (el) {
+                                el.scrollTop = el.scrollHeight;
+                            }
+                        };
+                        scroll();
+                        if (typeof window.requestAnimationFrame === 'function') {
+                            window.requestAnimationFrame(function () {
+                                scroll();
+                                window.requestAnimationFrame(scroll);
+                            });
+                        }
+                        window.setTimeout(scroll, 0);
+                        window.setTimeout(scroll, 80);
+                    });
+                } catch (e) {
+                    /* ignore */
                 }
             },
 
@@ -6071,6 +6211,7 @@
                 var previewStatus;
                 var normalizedPreview;
                 var executionFallback = false;
+                var historyEntryId = '';
                 if (!modeKey) {
                     this.showIdlePreview();
                     return;
@@ -6101,7 +6242,8 @@
 
                 var runtime = workspaceConfig.agent_runtime || {};
                 var csrfToken = getCsrfToken();
-                this.pushToChatHistory();
+                historyEntryId = this.startChatHistoryEntry(text, modeKey, (mode && mode.label) || '');
+                this.workspaceInput = '';
                 requestId = this.agentPreviewRequestId + 1;
                 this.agentPreviewRequestId = requestId;
                 this.isAgentLoading = true;
@@ -6125,10 +6267,13 @@
                         payload = {};
                     }
                     if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        this.removeChatHistoryEntry(historyEntryId);
                         return;
                     }
                     if (!response.ok || payload.status !== 'ok') {
                         if (payload && payload.error_code === 'home_agent_quota_exceeded') {
+                            this.isAgentLoading = false;
+                            this.abortChatHistoryEntry(historyEntryId, payload.error || 'AI 사용량을 확인해 주세요.');
                             this.showHomeAgentLimitModal(payload.quota, payload.error || '');
                             return;
                         }
@@ -6155,12 +6300,17 @@
                     } else {
                         this.setExecution(payload.execution);
                     }
+                    this.isAgentLoading = false;
+                    this.finalizeChatHistoryEntry(historyEntryId);
                 } catch (error) {
                     if (requestId !== this.agentPreviewRequestId || modeKey !== trimLine(this.activeModeKey || '')) {
+                        this.removeChatHistoryEntry(historyEntryId);
                         return;
                     }
                     if (previewStrategy === 'service' && modeKey !== 'teacher-law') {
                         this.showIdlePreview();
+                        this.isAgentLoading = false;
+                        this.abortChatHistoryEntry(historyEntryId, error && error.message ? error.message : '');
                     } else {
                         this.agentPreviewMeta = {
                             source: 'fallback',
@@ -6169,6 +6319,8 @@
                             providerLabel: '규칙형 미리보기',
                         };
                         this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
+                        this.isAgentLoading = false;
+                        this.finalizeChatHistoryEntry(historyEntryId);
                     }
                     showFeedback(error && error.message ? error.message : 'AI 미리보기를 불러오지 못했습니다.', 'info');
                 } finally {

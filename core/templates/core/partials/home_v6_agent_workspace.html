@@ -659,7 +659,14 @@
                 </div>
             </section>
 
-            <div class="home-v6-chat-history" x-cloak x-show="chatHistory.length > 0 && activeRendererKey !== 'human-chat'">
+            <div
+                class="home-v6-chat-history"
+                x-cloak
+                x-show="chatHistory.length > 0 && activeRendererKey !== 'human-chat'"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions"
+            >
                 <template x-for="item in chatHistory" :key="item.id">
                     <div class="home-v6-chat-history-pair">
                         <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
@@ -681,10 +688,18 @@
                             <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
                                 <i class="fa-solid fa-robot"></i>
                             </div>
-                            <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
+                            <div
+                                class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant"
+                                :class="{ 'is-pending': item.pending, 'is-failed': item.failed }"
+                            >
                                 <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
                                     <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
                                     <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
+                                </div>
+                                <div class="home-v6-agent-chat-loading" x-cloak x-show="item.pending">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
                                 </div>
                                 <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
                                     <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
@@ -703,9 +718,9 @@
                 </template>
             </div>
 
-            <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiHasVisibleConversation()">
+            <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiMessengerVisible()">
                 <div class="home-v6-agent-ai-thread">
-                    <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user" x-cloak x-show="activeAiUserBubbleKind()">
+                    <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user" x-cloak x-show="activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()">
                         <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
                             <template x-if="activeAiUserBubbleKind() === 'text'">
                                 <p class="home-v6-agent-chat-text" x-text="activeAiUserBubbleText()"></p>
@@ -727,15 +742,15 @@
                                 <p class="home-v6-agent-ai-bubble-title" x-text="activeAiAssistantTitle()"></p>
                             </div>
 
-                            <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="activeAiPreviewNote()" x-text="activeAiPreviewNote()"></p>
+                            <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="!activeAiCurrentBubbleInHistory() && activeAiPreviewNote()" x-text="activeAiPreviewNote()"></p>
 
-                            <div class="home-v6-agent-chat-loading" x-cloak x-show="activeAiLoading()">
+                            <div class="home-v6-agent-chat-loading" x-cloak x-show="!activeAiCurrentBubbleInHistory() && activeAiLoading()">
                                 <span></span>
                                 <span></span>
                                 <span></span>
                             </div>
 
-                            <div class="home-v6-agent-ai-body" x-cloak x-show="!aiMessengerIsFlow('pipeline') && !aiMessengerIsFlow('direct-send') && previewResultLines().length && !(activeAiExecutionVariant() === 'schedule' && scheduleHasExecution()) && !(activeAiExecutionVariant() === 'reservation' && reservationHasExecution())">
+                            <div class="home-v6-agent-ai-body" x-cloak x-show="!activeAiCurrentBubbleInHistory() && !aiMessengerIsFlow('pipeline') && !aiMessengerIsFlow('direct-send') && previewResultLines().length && !(activeAiExecutionVariant() === 'schedule' && scheduleHasExecution()) && !(activeAiExecutionVariant() === 'reservation' && reservationHasExecution())">
                                 <template x-for="(line, index) in previewResultLines()" :key="'ai-preview-' + activeModeKey + '-' + index + '-' + line">
                                     <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
                                 </template>

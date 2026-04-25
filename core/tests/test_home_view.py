@@ -4568,6 +4568,38 @@ class HomeV6ViewTest(TestCase):
             script,
         )
 
+    def test_v6_js_records_agent_chat_after_submit_without_duplicate_live_bubble(self):
+        script = _read_home_v6_js()
+
+        self.assertIn('startChatHistoryEntry: function (userText, modeKey, modeLabel) {', script)
+        self.assertIn('finalizeChatHistoryEntry: function (entryId) {', script)
+        self.assertIn('abortChatHistoryEntry: function (entryId, message) {', script)
+        self.assertIn('historyEntryId = this.startChatHistoryEntry(text, modeKey, (mode && mode.label) || \'\');', script)
+        self.assertIn('this.workspaceInput = \'\';', script)
+        self.assertIn('activeAiCurrentBubbleInHistory: function () {', script)
+        self.assertIn('activeAiMessengerVisible: function () {', script)
+        self.assertNotIn('pushToChatHistory: function () {', script)
+        self.assertNotIn('this.pushToChatHistory();', script)
+
+    def test_v6_agent_chat_history_uses_bottom_aligned_single_transcript(self):
+        css = _read_home_v6_css_bundle()
+        template = (
+            Path(settings.BASE_DIR)
+            / 'core'
+            / 'templates'
+            / 'core'
+            / 'partials'
+            / 'home_v6_agent_workspace.html'
+        ).read_text(encoding='utf-8')
+
+        self.assertIn('role="log"', template)
+        self.assertIn('activeAiMessengerVisible()', template)
+        self.assertIn('activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()', template)
+        self.assertIn('.home-v6-chat-history::before {', css)
+        self.assertIn('.home-v6-chat-history > .home-v6-chat-history-pair:first-child {', css)
+        self.assertIn('margin-top: auto;', css)
+        self.assertIn('overflow-y: auto;', css)
+
     @override_settings(HOME_LAYOUT_VERSION='v2', HOME_V2_ENABLED=True)
     def test_authenticated_home_uses_canonical_v6_even_when_env_requests_v2(self):
         user = self._login('v6canonical')
