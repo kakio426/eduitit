@@ -11,7 +11,7 @@
     width: min(1180px, 100%);
     margin: 0 auto;
     display: grid;
-    grid-template-rows: auto auto minmax(360px, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(340px, 1fr) auto;
     gap: clamp(0.75rem, 1.8vw, 1.1rem);
 }
 
@@ -161,10 +161,53 @@
     font-weight: 900;
 }
 
+.mancala-goal-strip {
+    min-height: 3.2rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.72rem 0.95rem;
+    border: 1px solid rgba(61, 101, 64, 0.22);
+    border-radius: 0.5rem;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(238, 247, 232, 0.88)),
+        radial-gradient(circle at 92% 22%, rgba(244, 206, 98, 0.26), transparent 14rem);
+    box-shadow: 0 10px 24px rgba(56, 41, 25, 0.08);
+}
+
+.mancala-goal-strip span,
+.mancala-goal-strip strong {
+    min-width: 0;
+    font-weight: 900;
+}
+
+.mancala-goal-strip span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.52rem;
+    color: #27492e;
+    font-size: clamp(0.95rem, 2vw, 1.08rem);
+}
+
+.mancala-goal-strip i {
+    color: #5a3d00;
+}
+
+.mancala-goal-strip strong {
+    justify-self: end;
+    padding: 0.38rem 0.68rem;
+    border-radius: 999px;
+    background: rgba(47, 125, 68, 0.1);
+    color: #2f7d44;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
 .mancala-board-shell {
     position: relative;
     overflow: hidden;
-    min-height: clamp(360px, 62vh, 650px);
+    min-height: clamp(340px, 58vh, 620px);
     border: 1px solid rgba(72, 51, 31, 0.18);
     border-radius: 0.5rem;
     background: linear-gradient(180deg, #c99b5d 0%, #86512f 100%);
@@ -192,6 +235,79 @@
 
 .mancala-loading.is-hidden {
     display: none;
+}
+
+.mancala-tutor-burst {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    z-index: 4;
+    min-height: 3.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f4ce62, #fff2b7);
+    color: #2c2118;
+    font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+    font-weight: 900;
+    box-shadow: 0 18px 42px rgba(90, 61, 0, 0.26);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.mancala-tutor-burst[hidden] {
+    display: none;
+}
+
+.mancala-tutor-burst.is-visible {
+    animation: mancalaTutorPop 780ms ease-out both;
+}
+
+.mancala-board-guides {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mancala-board-guide {
+    position: absolute;
+    min-height: 1.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.34rem 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.56);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.76);
+    color: #2c2118;
+    font-size: 0.82rem;
+    font-weight: 900;
+    box-shadow: 0 8px 18px rgba(45, 32, 19, 0.14);
+    backdrop-filter: blur(8px);
+}
+
+.mancala-board-guide--ai {
+    top: 0.75rem;
+    left: 50%;
+    color: #673ab7;
+    transform: translateX(-50%);
+}
+
+.mancala-board-guide--me {
+    bottom: 0.75rem;
+    left: 50%;
+    color: #2f7d44;
+    transform: translateX(-50%);
+}
+
+.mancala-board-guide--store {
+    top: 50%;
+    right: 0.75rem;
+    color: #5a3d00;
+    transform: translateY(-50%);
 }
 
 .mancala-culture {
@@ -328,6 +444,23 @@
     font-weight: 800;
 }
 
+.mancala-guide-goal {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1rem;
+    padding: 0.82rem 0.95rem;
+    border: 1px solid rgba(61, 101, 64, 0.16);
+    border-radius: 0.5rem;
+    background: rgba(238, 247, 232, 0.8);
+    color: #27492e;
+    font-weight: 900;
+}
+
+.mancala-guide-goal i {
+    color: #2f7d44;
+}
+
 .mancala-guide-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -416,6 +549,25 @@
     }
 }
 
+@keyframes mancalaTutorPop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.82);
+    }
+    18% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+    }
+    78% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.94);
+    }
+}
+
 @media (max-width: 820px) {
     .mancala-toolbar {
         grid-template-columns: 1fr;
@@ -445,8 +597,21 @@
         width: 100%;
     }
 
+    .mancala-goal-strip {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .mancala-goal-strip strong {
+        justify-self: start;
+    }
+
     .mancala-board-shell {
-        min-height: min(66vh, 500px);
+        min-height: clamp(320px, 40vh, 380px);
+    }
+
+    .mancala-board-guide--store {
+        display: none;
     }
 
     .mancala-guide-grid {

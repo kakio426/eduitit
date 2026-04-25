@@ -17,7 +17,14 @@ class MancalaViewTests(TestCase):
         self.assertContains(response, 'data-guide-open', html=False)
         self.assertContains(response, 'data-guide-modal', html=False)
         self.assertContains(response, 'aria-modal="true"', html=False)
-        self.assertContains(response, "만칼라 한눈에")
+        self.assertContains(response, 'data-play-hint', html=False)
+        self.assertContains(response, 'data-tutor-burst', html=False)
+        self.assertContains(response, "딱 이것만")
+        self.assertContains(response, "오른쪽 큰 칸에 많이 모으기")
+        self.assertContains(response, "추천 칸을 눌러 보세요")
+        self.assertContains(response, "반짝이는 추천 칸")
+        self.assertContains(response, "빛나는 칸")
+        self.assertContains(response, "내 저장소")
         self.assertContains(response, "아프리카와 중동에서 오래 즐긴 셈 놀이")
 
     def test_student_games_mode_sets_hide_navbar_context(self):

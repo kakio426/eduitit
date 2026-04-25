@@ -7,6 +7,8 @@ if (root) {
     const loading = root.querySelector("[data-mancala-loading]");
     const statusEl = root.querySelector("[data-mancala-status]");
     const turnChip = root.querySelector("[data-turn-chip]");
+    const playHint = root.querySelector("[data-play-hint]");
+    const tutorBurst = root.querySelector("[data-tutor-burst]");
     const scorePlayer0 = root.querySelector("[data-score-player0]");
     const scorePlayer1 = root.querySelector("[data-score-player1]");
     const newButton = root.querySelector("[data-new-game]");
@@ -35,12 +37,13 @@ if (root) {
     };
     let guideReturnFocus = null;
     let statusResetTimer = null;
+    let burstTimer = null;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf7f1df);
 
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(0, 6.2, 7.8);
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    camera.position.set(0, 6.4, 8.3);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -53,6 +56,7 @@ if (root) {
     const pointer = new THREE.Vector2();
     const seedGroup = new THREE.Group();
     const labelGroup = new THREE.Group();
+    const coachGroup = new THREE.Group();
     const pitMeshes = [];
     const movingSeeds = new THREE.Group();
 
@@ -64,6 +68,7 @@ if (root) {
 
     scene.add(seedGroup);
     scene.add(labelGroup);
+    scene.add(coachGroup);
     scene.add(movingSeeds);
     setupLights();
     createBoard();
@@ -71,6 +76,7 @@ if (root) {
     renderSeeds(state.board);
     renderLabels(state.board);
     syncUi();
+    restoreGuidance();
     resize();
     loading?.classList.add("is-hidden");
     renderer.setAnimationLoop(render);
@@ -80,7 +86,8 @@ if (root) {
     canvas.addEventListener("pointerleave", () => {
         state.hoveredAction = null;
         if (!state.busy) {
-            clearHighlights();
+            restoreGuidance();
+            setHint(hintText());
         }
     });
     canvas.addEventListener("pointerdown", onPointerDown);
@@ -93,11 +100,11 @@ if (root) {
 
     function buildPitSpecs() {
         const specs = [
-            { boardIndex: 0, action: null, player: 1, x: -6.35, z: 0, radius: 0.82, isStore: true },
-            { boardIndex: 7, action: null, player: 0, x: 6.35, z: 0, radius: 0.82, isStore: true },
+            { boardIndex: 0, action: null, player: 1, x: -5.55, z: 0, radius: 0.78, isStore: true },
+            { boardIndex: 7, action: null, player: 0, x: 5.55, z: 0, radius: 0.78, isStore: true },
         ];
         for (let index = 0; index < 6; index += 1) {
-            const x = -4.2 + index * 1.68;
+            const x = -3.55 + index * 1.42;
             specs.push({ boardIndex: index + 1, action: index + 1, player: 0, x, z: 1.32, radius: 0.56, isStore: false });
             const opponentIndex = 13 - index;
             specs.push({ boardIndex: opponentIndex, action: opponentIndex, player: 1, x, z: -1.32, radius: 0.56, isStore: false });
@@ -126,7 +133,7 @@ if (root) {
             roughness: 0.66,
             metalness: 0.02,
         });
-        const board = new THREE.Mesh(new THREE.BoxGeometry(14.4, 0.52, 4.8), boardMaterial);
+        const board = new THREE.Mesh(new THREE.BoxGeometry(12.6, 0.52, 4.8), boardMaterial);
         board.position.set(0, -0.26, 0);
         board.receiveShadow = true;
         board.castShadow = true;
@@ -134,10 +141,10 @@ if (root) {
 
         const rimMaterial = new THREE.MeshStandardMaterial({ color: 0x6f3d22, roughness: 0.72 });
         [
-            { x: 0, z: -2.56, sx: 14.8, sz: 0.22 },
-            { x: 0, z: 2.56, sx: 14.8, sz: 0.22 },
-            { x: -7.34, z: 0, sx: 0.22, sz: 4.8 },
-            { x: 7.34, z: 0, sx: 0.22, sz: 4.8 },
+            { x: 0, z: -2.56, sx: 13, sz: 0.22 },
+            { x: 0, z: 2.56, sx: 13, sz: 0.22 },
+            { x: -6.42, z: 0, sx: 0.22, sz: 4.8 },
+            { x: 6.42, z: 0, sx: 0.22, sz: 4.8 },
         ].forEach((part) => {
             const rim = new THREE.Mesh(new THREE.BoxGeometry(part.sx, 0.22, part.sz), rimMaterial);
             rim.position.set(part.x, 0.02, part.z);
@@ -189,8 +196,10 @@ if (root) {
         state.hoveredAction = action;
         if (isLegalAction(action)) {
             highlightAction(action);
+            setHint(previewHint(action));
         } else {
-            clearHighlights();
+            restoreGuidance();
+            setHint(hintText());
         }
     }
 
@@ -204,6 +213,7 @@ if (root) {
             return;
         }
         highlightAction(action);
+        setHint(previewHint(action));
         window.setTimeout(() => submitMove(action), 180);
     }
 
@@ -256,6 +266,7 @@ if (root) {
 
             for (const move of payload.moves) {
                 await animateMove(move);
+                await showMoveResult(move);
             }
             applyGameState(payload.state, payload.history);
             state.snapshots.push({ history: payload.history.slice(), gameState: payload.state });
@@ -277,7 +288,7 @@ if (root) {
         state.history = history.slice();
         renderSeeds(state.board);
         renderLabels(state.board);
-        clearHighlights();
+        restoreGuidance();
     }
 
     async function animateMove(move) {
@@ -409,14 +420,15 @@ if (root) {
         return seedIndex % 3 === 0 ? seedMaterials.lavender : seedMaterials.deep;
     }
 
-    function highlightAction(action) {
-        clearHighlights();
+    function highlightAction(action, options = {}) {
+        paintBaseHighlights();
+        renderCoachMarker(options.recommended ? action : null);
         const player = state.currentPlayer;
         const path = buildSowPath(state.board, action, player);
         const originPit = pitsByAction.get(action);
         if (originPit) {
-            originPit.ring.material.color.set(0x673ab7);
-            originPit.ring.material.emissive.set(0x2b154f);
+            originPit.ring.material.color.set(options.recommended ? 0xf4ce62 : 0x673ab7);
+            originPit.ring.material.emissive.set(options.recommended ? 0x5a3d00 : 0x2b154f);
         }
         new Set(path).forEach((boardIndex) => {
             const pit = pitsByBoardIndex.get(boardIndex);
@@ -428,11 +440,85 @@ if (root) {
         });
     }
 
-    function clearHighlights() {
+    function restoreGuidance() {
+        const recommendedAction = findRecommendedAction();
+        if (recommendedAction) {
+            highlightAction(recommendedAction, { recommended: true });
+            return;
+        }
+        paintBaseHighlights();
+        renderCoachMarker(null);
+    }
+
+    function paintBaseHighlights() {
         pitSpecs.forEach((pit) => {
-            pit.ring.material.color.set(0xbe8a52);
-            pit.ring.material.emissive.set(0x000000);
+            pit.ring.scale.set(1, 1, 1);
+            if (isLegalAction(pit.action)) {
+                pit.ring.material.color.set(0x3d6540);
+                pit.ring.material.emissive.set(0x102510);
+            } else {
+                pit.ring.material.color.set(0xbe8a52);
+                pit.ring.material.emissive.set(0x000000);
+            }
         });
+    }
+
+    function renderCoachMarker(action) {
+        coachGroup.clear();
+        const pit = pitsByAction.get(action);
+        if (!pit) {
+            return;
+        }
+        const marker = createCoachSprite("추천");
+        marker.position.set(pit.x, 1.16, pit.z + 0.16);
+        coachGroup.add(marker);
+    }
+
+    function createCoachSprite(text) {
+        const labelCanvas = document.createElement("canvas");
+        labelCanvas.width = 192;
+        labelCanvas.height = 96;
+        const context = labelCanvas.getContext("2d");
+        context.shadowColor = "rgba(90, 61, 0, 0.26)";
+        context.shadowBlur = 14;
+        context.fillStyle = "#f4ce62";
+        roundRect(context, 32, 18, 128, 50, 24);
+        context.fill();
+        context.shadowBlur = 0;
+        context.fillStyle = "#2c2118";
+        context.font = "900 30px sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(text, 96, 43);
+
+        const texture = new THREE.CanvasTexture(labelCanvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(0.82, 0.41, 1);
+        return sprite;
+    }
+
+    function findRecommendedAction() {
+        if (state.terminal || state.busy || state.currentPlayer !== 0) {
+            return null;
+        }
+        return state.legalActions.find((action) => {
+            const path = buildSowPath(state.board, action, state.currentPlayer);
+            return path[path.length - 1] === 7;
+        }) ?? null;
+    }
+
+    function previewHint(action) {
+        const path = buildSowPath(state.board, action, state.currentPlayer);
+        const last = path[path.length - 1];
+        if (last === ownStoreIndex(state.currentPlayer)) {
+            return state.currentPlayer === 0 ? "오른쪽 큰 칸까지 갑니다" : "저장소까지 갑니다";
+        }
+        if (last !== undefined && isOwnPit(last, state.currentPlayer) && (state.board[last] || 0) === 0) {
+            return "빈 칸에 끝나면 가져오기";
+        }
+        return "씨앗 길을 보세요";
     }
 
     function buildSowPath(board, action, player) {
@@ -457,6 +543,7 @@ if (root) {
         state.snapshots = [{ history: [], gameState: initialPayload.state }];
         applyGameState(initialPayload.state, []);
         syncUi();
+        restoreGuidance();
     }
 
     function undoMove() {
@@ -467,6 +554,7 @@ if (root) {
         const snapshot = state.snapshots[state.snapshots.length - 1];
         applyGameState(snapshot.gameState, snapshot.history);
         syncUi();
+        restoreGuidance();
     }
 
     function toggleAiMode() {
@@ -517,6 +605,7 @@ if (root) {
                 button.disabled = isBusy;
             }
         });
+        setHint(isBusy ? busyHint(label) : hintText());
     }
 
     function syncUi() {
@@ -526,6 +615,7 @@ if (root) {
         aiToggle?.classList.toggle("is-active", state.aiMode);
         aiToggle?.setAttribute("aria-pressed", state.aiMode ? "true" : "false");
         setStatus(statusText());
+        setHint(hintText());
     }
 
     function statusText() {
@@ -544,6 +634,29 @@ if (root) {
     function setStatus(text) {
         statusEl.textContent = text;
         turnChip.textContent = text;
+    }
+
+    function hintText() {
+        if (state.terminal) {
+            return "새 판으로 다시 시작";
+        }
+        if (state.currentPlayer === 0) {
+            return findRecommendedAction() ? "추천 칸을 눌러 보세요" : "초록 칸을 누르세요";
+        }
+        return state.aiMode ? "AI가 두는 중" : "상대 줄 차례";
+    }
+
+    function busyHint(label) {
+        if (label === "AI 생각") {
+            return "씨앗 길을 보세요";
+        }
+        return "씨앗 이동 중";
+    }
+
+    function setHint(text) {
+        if (playHint) {
+            playHint.textContent = text;
+        }
     }
 
     function setTemporaryStatus(text) {
@@ -571,18 +684,115 @@ if (root) {
         }));
     }
 
+    async function showMoveResult(move) {
+        const result = moveResult(move);
+        if (!result) {
+            return;
+        }
+        showTutorBurst(result.text);
+        setStatus(result.text);
+        setHint(result.hint);
+        await wait(620);
+    }
+
+    function moveResult(move) {
+        const player = move.before.current_player;
+        const last = move.path[move.path.length - 1];
+        const store = ownStoreIndex(player);
+        const isPlayerMove = player === 0;
+
+        if (last === store && move.after.current_player === player && !move.after.terminal) {
+            return {
+                text: isPlayerMove ? "한 번 더!" : "AI 한 번 더",
+                hint: isPlayerMove ? "한 번 더 둘 수 있어요" : "AI가 이어서 둡니다",
+            };
+        }
+
+        if (last !== undefined && isOwnPit(last, player)) {
+            const opposite = 14 - last;
+            const storeGain = (move.after.board[store] || 0) - (move.before.board[store] || 0);
+            const captured = (move.before.board[last] || 0) === 0
+                && (move.before.board[opposite] || 0) > 0
+                && (move.after.board[opposite] || 0) === 0
+                && storeGain > 1;
+            if (captured) {
+                return {
+                    text: isPlayerMove ? "가져오기!" : "AI 가져오기",
+                    hint: isPlayerMove ? "맞은편 씨앗을 가져왔어요" : "AI가 씨앗을 가져갔어요",
+                };
+            }
+        }
+
+        const gain = (move.after.board[store] || 0) - (move.before.board[store] || 0);
+        if (gain > 0) {
+            return {
+                text: isPlayerMove ? `내 저장소 +${gain}` : `AI 저장소 +${gain}`,
+                hint: isPlayerMove ? "오른쪽 큰 칸에 들어갔어요" : "AI 저장소에 들어갔어요",
+            };
+        }
+        return null;
+    }
+
+    function ownStoreIndex(player) {
+        return player === 0 ? 7 : 0;
+    }
+
+    function isOwnPit(boardIndex, player) {
+        return player === 0
+            ? boardIndex >= 1 && boardIndex <= 6
+            : boardIndex >= 8 && boardIndex <= 13;
+    }
+
+    function showTutorBurst(text) {
+        if (!tutorBurst) {
+            return;
+        }
+        if (burstTimer) {
+            window.clearTimeout(burstTimer);
+        }
+        tutorBurst.textContent = text;
+        tutorBurst.hidden = false;
+        tutorBurst.classList.remove("is-visible");
+        void tutorBurst.offsetWidth;
+        tutorBurst.classList.add("is-visible");
+        burstTimer = window.setTimeout(() => {
+            tutorBurst.hidden = true;
+            tutorBurst.classList.remove("is-visible");
+            burstTimer = null;
+        }, 780);
+    }
+
+    function wait(duration) {
+        return new Promise((resolve) => {
+            window.setTimeout(resolve, duration);
+        });
+    }
+
     function resize() {
         const rect = canvas.getBoundingClientRect();
         const width = Math.max(320, rect.width);
         const height = Math.max(320, rect.height);
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
+        const narrow = width < 760 || width / height < 1.08;
+        camera.fov = narrow ? 50 : 40;
+        camera.position.set(0, narrow ? 7.45 : 6.4, narrow ? 10.4 : 8.3);
+        camera.lookAt(0, 0, 0);
         camera.updateProjectionMatrix();
     }
 
     function render() {
         seedGroup.children.forEach((seed, index) => {
             seed.rotation.y += 0.0015 + (index % 3) * 0.0004;
+        });
+        const recommendedAction = findRecommendedAction();
+        pitSpecs.forEach((pit) => {
+            if (pit.action === recommendedAction) {
+                const pulse = 1 + Math.sin(performance.now() * 0.007) * 0.08;
+                pit.ring.scale.set(pulse, pulse, pulse);
+            } else if (pit.ring.scale.x !== 1) {
+                pit.ring.scale.set(1, 1, 1);
+            }
         });
         renderer.render(scene, camera);
     }
