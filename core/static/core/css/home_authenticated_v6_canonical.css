@@ -7463,3 +7463,564 @@ transform: none;
         padding: 0 0.72rem;
     }
 }
+
+/* ===========================================================
+ * AI 교무비서 — reference chat design skin
+ * Source: /Users/yubyeongju/Downloads/AI_ _standalone_.html
+ * =========================================================== */
+.home-v6-page [data-home-v6-agent-workspace="true"] {
+    --home-v6-ai-ref-bg: #f0eeff;
+    --home-v6-ai-ref-panel: #faf8ff;
+    --home-v6-ai-ref-surface: #ffffff;
+    --home-v6-ai-ref-soft: #f5f2ff;
+    --home-v6-ai-ref-chip: #f0ecff;
+    --home-v6-ai-ref-line: #ede8ff;
+    --home-v6-ai-ref-line-strong: #ddd5f9;
+    --home-v6-ai-ref-purple: #6C4FD4;
+    --home-v6-ai-ref-purple-2: #7c5fe6;
+    --home-v6-ai-ref-purple-3: #9b7ff0;
+    --home-v6-ai-ref-ink: #2d2055;
+    --home-v6-ai-ref-ink-strong: #1e1248;
+    --home-v6-ai-ref-muted: #9b84d4;
+}
+
+.home-v6-page .home-v6-agent-card {
+    border: 1px solid var(--home-v6-ai-ref-line);
+    border-radius: 1.25rem;
+    background-color: var(--home-v6-ai-ref-panel) !important;
+    background-image: none !important;
+    box-shadow: 0 0 40px rgba(108, 79, 212, 0.08);
+    overflow: hidden;
+}
+
+.home-v6-page .home-v6-agent-main {
+    gap: 0;
+    min-height: clamp(34rem, 62vh, 48rem);
+    background: var(--home-v6-ai-ref-panel);
+}
+
+.home-v6-page .home-v6-agent-main-head--single-shell {
+    background: var(--home-v6-ai-ref-surface);
+    border-bottom: 1px solid var(--home-v6-ai-ref-line);
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-cmd-stage {
+    width: 100%;
+}
+
+.home-v6-page .home-v6-cmd-hero--single-shell {
+    display: grid;
+    gap: 0;
+    padding: 0 1.5rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--home-v6-ai-ref-surface);
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-cmd-shell-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 0 0.75rem;
+    margin: 0;
+}
+
+.home-v6-page .home-v6-cmd-shell-title-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.home-v6-page .home-v6-agent-shell-avatar,
+.home-v6-chat-history-ai-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--home-v6-ai-ref-purple-2), var(--home-v6-ai-ref-purple-3));
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(108, 79, 212, 0.3);
+}
+
+.home-v6-page .home-v6-agent-shell-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+}
+
+.home-v6-page .home-v6-cmd-shell-copy {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.home-v6-page .home-v6-cmd-shell-title {
+    margin: 0;
+    color: var(--home-v6-ai-ref-ink-strong);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.2;
+}
+
+.home-v6-page .home-v6-cmd-shell-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    min-width: 0;
+    color: var(--home-v6-ai-ref-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.home-v6-page .home-v6-cmd-shell-status-dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: #6ddbab;
+    flex: 0 0 auto;
+}
+
+.home-v6-page .home-v6-cmd-shell-badge {
+    min-height: 1.75rem;
+    padding: 0.32rem 0.88rem;
+    border: 1px solid var(--home-v6-ai-ref-line-strong);
+    border-radius: 999px;
+    background: var(--home-v6-ai-ref-soft);
+    color: var(--home-v6-ai-ref-purple-2);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.home-v6-svc-nav {
+    display: flex;
+    gap: 0.38rem;
+    padding: 0 0 0.88rem;
+    margin: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.home-v6-svc-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.home-v6-svc-nav-chip {
+    min-height: 2rem;
+    padding: 0.38rem 0.95rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--home-v6-ai-ref-chip);
+    color: #7c6aaa;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.home-v6-svc-nav-chip:hover,
+.home-v6-svc-nav-chip:focus-visible {
+    background: #e9e1ff;
+    color: var(--home-v6-ai-ref-purple);
+}
+
+.home-v6-svc-nav-chip.is-active {
+    border: 0;
+    background: var(--home-v6-ai-ref-purple);
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(108, 79, 212, 0.27);
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: clamp(22rem, 46vh, 36rem);
+    max-height: none;
+    padding: 1.25rem 0 0.75rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--home-v6-ai-ref-panel);
+    box-shadow: none;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history {
+    min-height: 100%;
+    gap: 0;
+    padding: 0;
+}
+
+.home-v6-chat-history-pair {
+    gap: 0;
+    margin-bottom: 0.88rem;
+}
+
+.home-v6-chat-history-pair .home-v6-agent-chat-row,
+.home-v6-page .home-v6-chat-empty .home-v6-agent-chat-row {
+    align-items: flex-end;
+    gap: 0.62rem;
+    padding: 0 1.25rem;
+}
+
+.home-v6-chat-history-pair .home-v6-agent-chat-row--user {
+    justify-content: flex-end;
+}
+
+.home-v6-page .home-v6-agent-chat-row--assistant {
+    justify-content: flex-start;
+}
+
+.home-v6-chat-history-ai-dot {
+    width: 2.125rem;
+    height: 2.125rem;
+    font-size: 0.8rem;
+    margin: 0 0 0.1rem;
+}
+
+.home-v6-chat-history-user-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.125rem;
+    height: 2.125rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e8e0ff, #d4c9f9);
+    color: var(--home-v6-ai-ref-purple);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.home-v6-chat-history-ai-stack {
+    display: grid;
+    justify-items: start;
+    gap: 0.25rem;
+    max-width: min(64%, 44rem);
+    min-width: 0;
+}
+
+.home-v6-chat-history-ai-label {
+    padding-left: 0.12rem;
+    color: #8b7cc8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
+.home-v6-page .home-v6-agent-ai-bubble {
+    width: auto;
+    max-width: min(64%, 44rem);
+    padding: 0.68rem 1rem;
+    border: 0;
+    border-radius: 0.25rem 1.125rem 1.125rem;
+    background: var(--home-v6-ai-ref-surface);
+    color: var(--home-v6-ai-ref-ink);
+    box-shadow: 0 2px 12px rgba(108, 79, 212, 0.08);
+}
+
+.home-v6-chat-history-ai-stack .home-v6-agent-ai-bubble {
+    max-width: 100%;
+}
+
+.home-v6-page .home-v6-agent-ai-bubble--user {
+    max-width: min(64%, 42rem);
+    border: 0;
+    border-radius: 1.125rem 0.25rem 1.125rem 1.125rem;
+    background: var(--home-v6-ai-ref-purple);
+    color: #ffffff;
+    box-shadow: 0 2px 12px rgba(108, 79, 212, 0.33);
+}
+
+.home-v6-page .home-v6-agent-ai-bubble--assistant.is-pending {
+    min-width: 4.5rem;
+}
+
+.home-v6-page .home-v6-agent-ai-bubble--assistant.is-failed {
+    background: #fff7f7;
+    box-shadow: 0 2px 12px rgba(248, 113, 113, 0.16);
+}
+
+.home-v6-page .home-v6-agent-ai-bubble-head {
+    gap: 0.38rem;
+    margin-bottom: 0.32rem;
+}
+
+.home-v6-page .home-v6-agent-ai-bubble-title {
+    color: var(--home-v6-ai-ref-ink);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.home-v6-page .home-v6-agent-chat-text,
+.home-v6-page .home-v6-agent-chat-draft-line,
+.home-v6-page .home-v6-agent-ai-bubble-note {
+    color: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.home-v6-page .home-v6-agent-ai-bubble--user .home-v6-agent-chat-text {
+    color: #ffffff;
+    font-weight: 650;
+}
+
+.home-v6-chat-history-mode-badge {
+    margin-left: 0;
+    padding: 0.12rem 0.46rem;
+    border: 1px solid #d9cef7;
+    border-radius: 999px;
+    background: #f0eaff;
+    color: var(--home-v6-ai-ref-purple);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.home-v6-chat-date-separator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.62rem 1.5rem;
+    margin: 0.25rem 0 0.5rem;
+    color: #a898d0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.home-v6-chat-date-separator::before,
+.home-v6-chat-date-separator::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: #e4dcf7;
+}
+
+.home-v6-page .home-v6-agent-ai-action-row,
+.home-v6-page .home-v6-cmd-starter-list--chat {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+    margin-top: 0.5rem;
+}
+
+.home-v6-page .home-v6-agent-ai-action-chip,
+.home-v6-page .home-v6-cmd-starter-chip,
+.home-v6-page .home-v6-agent-ai-clear {
+    min-height: 1.9rem;
+    padding: 0.32rem 0.78rem;
+    border: 1px solid #d9cef7;
+    border-radius: 999px;
+    background: #f0eaff;
+    color: var(--home-v6-ai-ref-purple);
+    font-size: 0.76rem;
+    font-weight: 650;
+    letter-spacing: 0;
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-agent-ai-action-chip:hover,
+.home-v6-page .home-v6-agent-ai-action-chip:focus-visible,
+.home-v6-page .home-v6-cmd-starter-chip:hover,
+.home-v6-page .home-v6-cmd-starter-chip:focus-visible,
+.home-v6-page .home-v6-agent-ai-clear:hover,
+.home-v6-page .home-v6-agent-ai-clear:focus-visible {
+    border-color: #cabcf5;
+    background: #e4d9ff;
+    color: var(--home-v6-ai-ref-purple);
+}
+
+.home-v6-page .home-v6-agent-composer-dock {
+    width: 100%;
+    gap: 0.55rem;
+    padding: 0.88rem 1rem;
+    border-top: 1px solid var(--home-v6-ai-ref-line);
+    background: var(--home-v6-ai-ref-surface);
+}
+
+.home-v6-page .home-v6-agent-ai-queued--shell {
+    padding: 0;
+}
+
+.home-v6-page .home-v6-cmd-bar--workspace {
+    width: 100%;
+    min-height: 3.75rem;
+    gap: 0.62rem;
+    padding: 0.5rem 0.6rem 0.5rem 1rem;
+    border: 1.5px solid #e2dbf9;
+    border-radius: 1.625rem;
+    background: var(--home-v6-ai-ref-soft);
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-cmd-bar--workspace:focus-within {
+    border-color: var(--home-v6-ai-ref-purple);
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-cmd-bar-search {
+    display: none;
+}
+
+.home-v6-page .home-v6-cmd-bar-input--textarea {
+    min-height: 2.15rem;
+    max-height: 6.25rem;
+    padding: 0.42rem 0;
+    color: var(--home-v6-ai-ref-ink);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.home-v6-page .home-v6-cmd-bar-input--textarea::placeholder {
+    color: #a898d0;
+}
+
+.home-v6-page .home-v6-cmd-bar-trailing {
+    gap: 0.25rem;
+}
+
+.home-v6-page .home-v6-cmd-bar-tool {
+    width: 1.9rem;
+    min-width: 1.9rem;
+    height: 1.9rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #a898d0;
+    box-shadow: none;
+}
+
+.home-v6-page .home-v6-cmd-bar-tool:hover,
+.home-v6-page .home-v6-cmd-bar-tool:focus-visible,
+.home-v6-page .home-v6-cmd-bar-tool.is-active {
+    background: transparent;
+    color: var(--home-v6-ai-ref-purple);
+    transform: none;
+}
+
+.home-v6-page .home-v6-cmd-bar-submit {
+    position: relative;
+    width: 2.875rem;
+    min-width: 2.875rem;
+    height: 2.875rem;
+    min-height: 2.875rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--home-v6-ai-ref-purple), var(--home-v6-ai-ref-purple-3));
+    color: transparent;
+    font-size: 0;
+    box-shadow: 0 4px 14px rgba(108, 79, 212, 0.33);
+}
+
+.home-v6-page .home-v6-cmd-bar-submit::before {
+    content: "\f1d8";
+    font-family: "Font Awesome 6 Free";
+    font-size: 1rem;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.home-v6-page .home-v6-cmd-bar-submit:hover,
+.home-v6-page .home-v6-cmd-bar-submit:focus-visible {
+    background: linear-gradient(135deg, var(--home-v6-ai-ref-purple-2), var(--home-v6-ai-ref-purple-3));
+    box-shadow: 0 5px 16px rgba(108, 79, 212, 0.4);
+}
+
+.home-v6-page .home-v6-cmd-bar-submit:disabled {
+    background: #e2dbf9;
+    color: transparent;
+    box-shadow: none;
+    cursor: default;
+}
+
+.home-v6-page .home-v6-cmd-bar-submit:disabled::before {
+    color: #c0b8e0;
+}
+
+@media (max-width: 767px) {
+    .home-v6-page .home-v6-agent-card {
+        border-radius: 1rem;
+    }
+
+    .home-v6-page .home-v6-agent-main {
+        min-height: min(78svh, 42rem);
+    }
+
+    .home-v6-page .home-v6-cmd-hero--single-shell {
+        padding: 0 0.9rem;
+    }
+
+    .home-v6-page .home-v6-cmd-shell-head {
+        align-items: center;
+        padding: 0.85rem 0 0.65rem;
+    }
+
+    .home-v6-page .home-v6-cmd-shell-badge {
+        display: none;
+    }
+
+    .home-v6-svc-nav {
+        padding-bottom: 0.75rem;
+    }
+
+    .home-v6-page .home-v6-agent-dialogue-stage {
+        min-height: min(54svh, 31rem);
+        padding-top: 0.9rem;
+    }
+
+    .home-v6-chat-history-pair .home-v6-agent-chat-row,
+    .home-v6-page .home-v6-chat-empty .home-v6-agent-chat-row {
+        padding: 0 0.9rem;
+    }
+
+    .home-v6-chat-date-separator {
+        padding: 0.5rem 1rem;
+    }
+
+    .home-v6-chat-history-ai-stack,
+    .home-v6-page .home-v6-agent-ai-bubble,
+    .home-v6-page .home-v6-agent-ai-bubble--user,
+    .home-v6-page .home-v6-agent-ai-bubble--result {
+        max-width: 82%;
+    }
+
+    .home-v6-page .home-v6-agent-composer-dock {
+        padding: 0.72rem 0.75rem;
+    }
+
+    .home-v6-page .home-v6-cmd-bar--workspace {
+        min-height: 3.45rem;
+        padding: 0.42rem 0.5rem 0.42rem 0.82rem;
+    }
+
+    .home-v6-page .home-v6-cmd-bar-tool {
+        width: 1.75rem;
+        min-width: 1.75rem;
+        height: 1.75rem;
+    }
+
+    .home-v6-page .home-v6-cmd-bar-submit {
+        width: 2.55rem;
+        min-width: 2.55rem;
+        height: 2.55rem;
+        min-height: 2.55rem;
+    }
+}

@@ -10,11 +10,20 @@
                     <div class="home-v6-cmd-stage-backdrop" aria-hidden="true"></div>
                     <div class="home-v6-cmd-hero home-v6-cmd-hero--single-shell">
                         <div class="home-v6-cmd-shell-head">
-                            <p class="home-v6-cmd-shell-title">AI 교무비서</p>
+                            <div class="home-v6-cmd-shell-title-group">
+                                <span class="home-v6-agent-shell-avatar" aria-hidden="true">
+                                    <i class="fa-solid fa-robot"></i>
+                                </span>
+                                <span class="home-v6-cmd-shell-copy">
+                                    <p class="home-v6-cmd-shell-title">AI 교무비서</p>
+                                    <span class="home-v6-cmd-shell-status" x-cloak x-show="workspaceShellHint()">
+                                        <span class="home-v6-cmd-shell-status-dot" aria-hidden="true"></span>
+                                        <span x-text="workspaceShellHint()"></span>
+                                    </span>
+                                </span>
+                            </div>
                             <span class="home-v6-cmd-shell-badge" x-cloak x-show="workspaceShellBadge()" x-text="workspaceShellBadge()"></span>
                         </div>
-
-                        <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>
 
                         <div class="home-v6-svc-nav" role="tablist" aria-label="AI 교무비서 서비스">
                             <template x-for="mode in availableShellModes()" :key="'svc-nav-' + mode.key">
@@ -547,6 +556,9 @@
                     aria-live="polite"
                     aria-relevant="additions"
                 >
+                    <div class="home-v6-chat-date-separator" aria-hidden="true">
+                        <span>오늘</span>
+                    </div>
                     <template x-for="item in chatHistory" :key="item.id">
                         <div class="home-v6-chat-history-pair">
                             <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
@@ -563,74 +575,78 @@
                                         </div>
                                     </template>
                                 </div>
+                                <div class="home-v6-chat-history-user-dot" aria-hidden="true">나</div>
                             </div>
-                            <div class="home-v6-agent-chat-row">
+                            <div class="home-v6-agent-chat-row home-v6-agent-chat-row--assistant">
                                 <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
                                     <i class="fa-solid fa-robot"></i>
                                 </div>
-                                <div
-                                    class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant"
-                                    :class="{ 'is-pending': item.pending, 'is-failed': item.failed }"
-                                >
-                                    <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
-                                        <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
-                                        <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
-                                    </div>
-                                    <div class="home-v6-agent-chat-loading" x-cloak x-show="item.pending">
-                                        <span></span>
-                                        <span></span>
-                                        <span></span>
-                                    </div>
-                                    <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
-                                        <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
-                                    </template>
-                                    <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
-                                    <div class="home-v6-agent-ai-action-row" x-cloak x-show="chatHistoryActionList(item).length">
-                                        <template x-for="action in chatHistoryActionList(item)" :key="item.id + '-action-' + action.kind + '-' + action.label">
-                                            <span class="home-v6-agent-ai-action-inline">
-                                                <button
-                                                    type="button"
-                                                    class="home-v6-agent-ai-action-chip"
-                                                    x-cloak
-                                                    x-show="action.kind !== 'link'"
-                                                    :disabled="chatHistoryActionDisabled(action)"
-                                                    @click="runChatHistoryAction(item, action)"
-                                                    x-text="chatHistoryActionLabel(action)"
-                                                ></button>
-                                                <a
-                                                    class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
-                                                    x-cloak
-                                                    x-show="action.kind === 'link'"
-                                                    :href="action.href"
-                                                    x-text="action.label"
-                                                    target="_blank"
-                                                    rel="noopener"
-                                                ></a>
-                                            </span>
+                                <div class="home-v6-chat-history-ai-stack">
+                                    <div class="home-v6-chat-history-ai-label">AI 교무비서</div>
+                                    <div
+                                        class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant"
+                                        :class="{ 'is-pending': item.pending, 'is-failed': item.failed }"
+                                    >
+                                        <div class="home-v6-agent-ai-bubble-head" x-cloak x-show="item.aiResult.title || item.modeLabel">
+                                            <p class="home-v6-agent-ai-bubble-title" x-cloak x-show="item.aiResult.title" x-text="item.aiResult.title"></p>
+                                            <span class="home-v6-chat-history-mode-badge" x-cloak x-show="item.modeLabel" x-text="item.modeLabel"></span>
+                                        </div>
+                                        <div class="home-v6-agent-chat-loading" x-cloak x-show="item.pending">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                        <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
+                                            <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
                                         </template>
-                                    </div>
-                                    <div class="home-v6-agent-ai-mini-editor home-v6-agent-ai-mini-editor--history" x-cloak x-show="canShowChatHistoryScheduleEditor(item)">
-                                        <label class="home-v6-agent-field">
-                                            <span class="home-v6-agent-field-label">제목</span>
-                                            <input type="text" class="home-v6-agent-form-input" data-home-v6-agent-field="title" x-model="agentExecutionDraft.title" @input="clearExecutionFieldError('title')">
-                                            <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('title')" x-text="executionFieldError('title')"></p>
-                                        </label>
-                                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                                        <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
+                                        <div class="home-v6-agent-ai-action-row" x-cloak x-show="chatHistoryActionList(item).length">
+                                            <template x-for="action in chatHistoryActionList(item)" :key="item.id + '-action-' + action.kind + '-' + action.label">
+                                                <span class="home-v6-agent-ai-action-inline">
+                                                    <button
+                                                        type="button"
+                                                        class="home-v6-agent-ai-action-chip"
+                                                        x-cloak
+                                                        x-show="action.kind !== 'link'"
+                                                        :disabled="chatHistoryActionDisabled(action)"
+                                                        @click="runChatHistoryAction(item, action)"
+                                                        x-text="chatHistoryActionLabel(action)"
+                                                    ></button>
+                                                    <a
+                                                        class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
+                                                        x-cloak
+                                                        x-show="action.kind === 'link'"
+                                                        :href="action.href"
+                                                        x-text="action.label"
+                                                        target="_blank"
+                                                        rel="noopener"
+                                                    ></a>
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <div class="home-v6-agent-ai-mini-editor home-v6-agent-ai-mini-editor--history" x-cloak x-show="canShowChatHistoryScheduleEditor(item)">
                                             <label class="home-v6-agent-field">
-                                                <span class="home-v6-agent-field-label">시작</span>
-                                                <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="start_time" x-model="agentExecutionDraft.start_time" @input="clearExecutionFieldError('start_time')">
-                                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('start_time')" x-text="executionFieldError('start_time')"></p>
+                                                <span class="home-v6-agent-field-label">제목</span>
+                                                <input type="text" class="home-v6-agent-form-input" data-home-v6-agent-field="title" x-model="agentExecutionDraft.title" @input="clearExecutionFieldError('title')">
+                                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('title')" x-text="executionFieldError('title')"></p>
                                             </label>
-                                            <label class="home-v6-agent-field">
-                                                <span class="home-v6-agent-field-label">종료</span>
-                                                <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="end_time" x-model="agentExecutionDraft.end_time" @input="clearExecutionFieldError('end_time')">
-                                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('end_time')" x-text="executionFieldError('end_time')"></p>
+                                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                                                <label class="home-v6-agent-field">
+                                                    <span class="home-v6-agent-field-label">시작</span>
+                                                    <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="start_time" x-model="agentExecutionDraft.start_time" @input="clearExecutionFieldError('start_time')">
+                                                    <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('start_time')" x-text="executionFieldError('start_time')"></p>
+                                                </label>
+                                                <label class="home-v6-agent-field">
+                                                    <span class="home-v6-agent-field-label">종료</span>
+                                                    <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="end_time" x-model="agentExecutionDraft.end_time" @input="clearExecutionFieldError('end_time')">
+                                                    <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('end_time')" x-text="executionFieldError('end_time')"></p>
+                                                </label>
+                                            </div>
+                                            <label class="home-v6-agent-checkbox home-v6-agent-checkbox--compact">
+                                                <input type="checkbox" data-home-v6-agent-field="is_all_day" :checked="Boolean(agentExecutionDraft.is_all_day)" @change="agentExecutionDraft.is_all_day = $event.target.checked">
+                                                <span>하루 종일</span>
                                             </label>
                                         </div>
-                                        <label class="home-v6-agent-checkbox home-v6-agent-checkbox--compact">
-                                            <input type="checkbox" data-home-v6-agent-field="is_all_day" :checked="Boolean(agentExecutionDraft.is_all_day)" @change="agentExecutionDraft.is_all_day = $event.target.checked">
-                                            <span>하루 종일</span>
-                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -639,24 +655,30 @@
                 </div>
 
                 <div class="home-v6-chat-empty" x-cloak x-show="chatHistory.length === 0">
-                    <div class="home-v6-agent-chat-row">
+                    <div class="home-v6-chat-date-separator" aria-hidden="true">
+                        <span>오늘</span>
+                    </div>
+                    <div class="home-v6-agent-chat-row home-v6-agent-chat-row--assistant">
                         <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
                             <i class="fa-solid fa-robot"></i>
                         </div>
-                        <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
-                            <div class="home-v6-agent-ai-bubble-head">
-                                <p class="home-v6-agent-ai-bubble-title" x-text="workspaceShellServiceLabel()"></p>
-                            </div>
-                            <p class="home-v6-agent-chat-draft-line" x-text="workspaceShellPlaceholder()"></p>
-                            <div class="home-v6-cmd-starter-list home-v6-cmd-starter-list--chat" x-cloak x-show="activeAiHasStarterChips()">
-                                <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
-                                    <button
-                                        type="button"
-                                        class="home-v6-cmd-starter-chip"
-                                        @click="runActiveAiStarter(item)"
-                                        x-text="item.label"
-                                    ></button>
-                                </template>
+                        <div class="home-v6-chat-history-ai-stack">
+                            <div class="home-v6-chat-history-ai-label">AI 교무비서</div>
+                            <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
+                                <div class="home-v6-agent-ai-bubble-head">
+                                    <p class="home-v6-agent-ai-bubble-title" x-text="workspaceShellServiceLabel()"></p>
+                                </div>
+                                <p class="home-v6-agent-chat-draft-line" x-text="workspaceShellPlaceholder()"></p>
+                                <div class="home-v6-cmd-starter-list home-v6-cmd-starter-list--chat" x-cloak x-show="activeAiHasStarterChips()">
+                                    <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
+                                        <button
+                                            type="button"
+                                            class="home-v6-cmd-starter-chip"
+                                            @click="runActiveAiStarter(item)"
+                                            x-text="item.label"
+                                        ></button>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>

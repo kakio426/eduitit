@@ -4613,6 +4613,10 @@ class HomeV6ViewTest(TestCase):
 
         self.assertIn('role="log"', template)
         self.assertIn('data-home-v6-agent-dialogue-stage="true"', template)
+        self.assertIn('home-v6-agent-shell-avatar', template)
+        self.assertIn('home-v6-chat-date-separator', template)
+        self.assertIn('home-v6-chat-history-user-dot', template)
+        self.assertIn('home-v6-chat-history-ai-label', template)
         self.assertNotIn('home-v6-agent-ai-messenger', template)
         self.assertNotIn('activeAiMessengerVisible()', template)
         self.assertNotIn('activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()', template)
@@ -4629,6 +4633,11 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('.home-v6-page .home-v6-cmd-bar--workspace {\n    width: 100%;\n    max-width: none;', css)
         self.assertIn('.home-v6-chat-history-pair {\n    gap: 0.45rem;\n    width: 100%;', css)
         self.assertIn('.home-v6-chat-history-pair .home-v6-agent-chat-row {\n    width: 100%;\n    align-self: stretch;', css)
+        self.assertIn('AI 교무비서 — reference chat design skin', css)
+        self.assertIn('--home-v6-ai-ref-purple: #6C4FD4;', css)
+        self.assertIn('background-color: var(--home-v6-ai-ref-panel) !important;', css)
+        self.assertIn('border-radius: 1.625rem;', css)
+        self.assertIn('content: "\\f1d8";', css)
 
     def test_v6_js_scrolls_unified_agent_dialogue_stage(self):
         script = _read_home_v6_js()
