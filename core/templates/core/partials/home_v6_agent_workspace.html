@@ -9,138 +9,12 @@
                 <div class="home-v6-cmd-stage">
                     <div class="home-v6-cmd-stage-backdrop" aria-hidden="true"></div>
                     <div class="home-v6-cmd-hero home-v6-cmd-hero--single-shell">
-                        <div class="home-v6-agent-ai-queued home-v6-agent-ai-queued--shell" x-cloak x-show="activeAiQueuedFileName()">
-                            <span class="home-v6-agent-ai-file-pill">
-                                <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
-                                    <i class="fa-solid fa-paperclip"></i>
-                                </span>
-                                <span x-text="activeAiQueuedFileName()"></span>
-                            </span>
-                            <button type="button" class="home-v6-agent-ai-clear" @click="clearActiveAiQueuedFile()">지우기</button>
-                        </div>
-
                         <div class="home-v6-cmd-shell-head">
                             <p class="home-v6-cmd-shell-title">AI 교무비서</p>
                             <span class="home-v6-cmd-shell-badge" x-cloak x-show="workspaceShellBadge()" x-text="workspaceShellBadge()"></span>
                         </div>
 
-                        <div
-                            class="home-v6-cmd-bar home-v6-cmd-bar--workspace"
-                            :class="{ 'is-drag-active': activeAiDragActive() }"
-                            @paste="handleActiveAiComposerPaste($event)"
-                            @dragenter="handleActiveAiComposerDragEnter($event)"
-                            @dragover="handleActiveAiComposerDragOver($event)"
-                            @dragleave="handleActiveAiComposerDragLeave($event)"
-                            @drop="handleActiveAiComposerDrop($event)"
-                        >
-                            <span class="home-v6-cmd-bar-accent" aria-hidden="true"></span>
-                            <i class="home-v6-cmd-bar-search fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-
-                            <div class="home-v6-agent-ai-drop-hint" x-cloak x-show="activeAiDragActive()">
-                                <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
-                                <span>여기에 놓기</span>
-                            </div>
-
-                            <textarea
-                                class="home-v6-cmd-bar-input home-v6-cmd-bar-input--textarea"
-                                data-home-v6-agent-input="true"
-                                data-home-v6-ai-composer-textarea="true"
-                                data-home-v7-workspace-input="true"
-                                :data-home-v6-agent-field="activeAiExecutionVariant() === 'teacher-law' ? 'question' : null"
-                                rows="1"
-                                :placeholder="workspaceShellPlaceholder()"
-                                x-model="workspaceInput"
-                                @input="handleActiveAiComposerInput()"
-                                @keydown="handleWorkspaceShellKeydown($event)"
-                                aria-label="AI 교무비서 입력"
-                            ></textarea>
-
-                            <div class="home-v6-cmd-bar-trailing">
-                                <button
-                                    class="home-v6-cmd-bar-tool"
-                                    x-cloak
-                                    x-show="workspaceShellShowAttachmentUtility()"
-                                    type="button"
-                                    title="파일 첨부"
-                                    aria-label="파일 첨부"
-                                    @click="openWorkspaceAttachmentPicker()"
-                                >
-                                    <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                                </button>
-
-                                <button
-                                    class="home-v6-cmd-bar-tool"
-                                    x-cloak
-                                    x-show="workspaceShellShowImageUtility()"
-                                    type="button"
-                                    title="사진 첨부"
-                                    aria-label="사진 첨부"
-                                    @click="openWorkspaceImagePicker()"
-                                >
-                                    <i class="fa-regular fa-image" aria-hidden="true"></i>
-                                </button>
-
-                                <button
-                                    class="home-v6-cmd-bar-tool"
-                                    x-cloak
-                                    x-show="workspaceShellShowVoiceUtility()"
-                                    type="button"
-                                    :class="{ 'is-active': isWorkspaceVoiceListening }"
-                                    :title="workspaceShellVoiceLabel()"
-                                    :aria-label="workspaceShellVoiceLabel()"
-                                    @click="toggleWorkspaceVoiceInput()"
-                                >
-                                    <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
-                                </button>
-
-                                <button
-                                    class="home-v6-cmd-bar-tool"
-                                    type="button"
-                                    :class="{ 'is-disabled': !workspaceShellCanReset() }"
-                                    :title="activeAiResetLabel()"
-                                    :aria-label="activeAiResetLabel()"
-                                    :aria-disabled="workspaceShellCanReset() ? 'false' : 'true'"
-                                    @click="startNewWorkspaceChat()"
-                                >
-                                    <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
-                                </button>
-                            </div>
-
-                            <button
-                                class="home-v6-cmd-bar-submit"
-                                type="button"
-                                :disabled="!activeAiCanSubmit()"
-                                @click="submitWorkspaceShell()"
-                                :aria-label="workspaceShellSubmitLabel()"
-                                :title="workspaceShellSubmitLabel()"
-                                x-text="workspaceShellSubmitLabel()"
-                            ></button>
-
-                            <input
-                                id="home-v6-agent-ai-quickdrop-file-input"
-                                type="file"
-                                class="sr-only"
-                                accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                                data-default-accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                                data-home-v6-agent-quickdrop-file-input="true"
-                                @change="queueQuickdropFileFromInput($event)"
-                            >
-                        </div>
-
-                        <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
-
                         <p class="home-v6-cmd-hint" x-cloak x-show="workspaceShellHint()" x-text="workspaceShellHint()"></p>
-
-                        <div class="home-v6-cmd-starter-list" x-cloak x-show="!activeAiHasVisibleConversation() && activeAiHasStarterChips()">
-                            <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
-                                <button
-                                    type="button"
-                                    class="home-v6-cmd-starter-chip"
-                                    @click="runActiveAiStarter(item)"
-                                    x-text="item.label"
-                                ></button>
-                            </template>
-                        </div>
 
                         <div class="home-v6-svc-nav" role="tablist" aria-label="AI 교무비서 서비스">
                             <template x-for="mode in availableShellModes()" :key="'svc-nav-' + mode.key">
@@ -663,7 +537,7 @@
                 class="home-v6-agent-dialogue-stage"
                 data-home-v6-agent-dialogue-stage="true"
                 x-cloak
-                x-show="activeRendererKey !== 'human-chat' && (chatHistory.length > 0 || activeAiMessengerVisible())"
+                x-show="activeRendererKey !== 'human-chat'"
             >
                 <div
                     class="home-v6-chat-history"
@@ -711,23 +585,52 @@
                                         <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
                                     </template>
                                     <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
-                                    <div class="home-v6-agent-ai-action-row" x-cloak x-show="item.aiResult.openHref || item.aiResult.actionKind">
-                                        <button
-                                            type="button"
-                                            class="home-v6-agent-ai-action-chip"
-                                            x-cloak
-                                            x-show="item.aiResult.actionKind === 'tts-read'"
-                                            :disabled="isTtsReading"
-                                            @click="playChatHistoryTts(item)"
-                                            x-text="isTtsReading ? '읽는 중' : (item.aiResult.actionLabel || '바로 읽기')"
-                                        ></button>
-                                        <a class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
-                                           x-cloak
-                                           x-show="item.aiResult.openHref"
-                                           :href="item.aiResult.openHref"
-                                           x-text="item.aiResult.openLabel"
-                                           target="_blank"
-                                           rel="noopener"></a>
+                                    <div class="home-v6-agent-ai-action-row" x-cloak x-show="chatHistoryActionList(item).length">
+                                        <template x-for="action in chatHistoryActionList(item)" :key="item.id + '-action-' + action.kind + '-' + action.label">
+                                            <span class="home-v6-agent-ai-action-inline">
+                                                <button
+                                                    type="button"
+                                                    class="home-v6-agent-ai-action-chip"
+                                                    x-cloak
+                                                    x-show="action.kind !== 'link'"
+                                                    :disabled="chatHistoryActionDisabled(action)"
+                                                    @click="runChatHistoryAction(item, action)"
+                                                    x-text="chatHistoryActionLabel(action)"
+                                                ></button>
+                                                <a
+                                                    class="home-v6-agent-ai-action-chip home-v6-agent-ai-action-chip--link"
+                                                    x-cloak
+                                                    x-show="action.kind === 'link'"
+                                                    :href="action.href"
+                                                    x-text="action.label"
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                ></a>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <div class="home-v6-agent-ai-mini-editor home-v6-agent-ai-mini-editor--history" x-cloak x-show="canShowChatHistoryScheduleEditor(item)">
+                                        <label class="home-v6-agent-field">
+                                            <span class="home-v6-agent-field-label">제목</span>
+                                            <input type="text" class="home-v6-agent-form-input" data-home-v6-agent-field="title" x-model="agentExecutionDraft.title" @input="clearExecutionFieldError('title')">
+                                            <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('title')" x-text="executionFieldError('title')"></p>
+                                        </label>
+                                        <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
+                                            <label class="home-v6-agent-field">
+                                                <span class="home-v6-agent-field-label">시작</span>
+                                                <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="start_time" x-model="agentExecutionDraft.start_time" @input="clearExecutionFieldError('start_time')">
+                                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('start_time')" x-text="executionFieldError('start_time')"></p>
+                                            </label>
+                                            <label class="home-v6-agent-field">
+                                                <span class="home-v6-agent-field-label">종료</span>
+                                                <input type="datetime-local" class="home-v6-agent-form-input" data-home-v6-agent-field="end_time" x-model="agentExecutionDraft.end_time" @input="clearExecutionFieldError('end_time')">
+                                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('end_time')" x-text="executionFieldError('end_time')"></p>
+                                            </label>
+                                        </div>
+                                        <label class="home-v6-agent-checkbox home-v6-agent-checkbox--compact">
+                                            <input type="checkbox" data-home-v6-agent-field="is_all_day" :checked="Boolean(agentExecutionDraft.is_all_day)" @change="agentExecutionDraft.is_all_day = $event.target.checked">
+                                            <span>하루 종일</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -735,7 +638,31 @@
                     </template>
                 </div>
 
-                <section class="home-v6-agent-ai-messenger" x-cloak x-show="activeRendererKey === 'ai-messenger' && activeAiMessengerVisible()">
+                <div class="home-v6-chat-empty" x-cloak x-show="chatHistory.length === 0">
+                    <div class="home-v6-agent-chat-row">
+                        <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--assistant">
+                            <div class="home-v6-agent-ai-bubble-head">
+                                <p class="home-v6-agent-ai-bubble-title" x-text="workspaceShellServiceLabel()"></p>
+                            </div>
+                            <p class="home-v6-agent-chat-draft-line" x-text="workspaceShellPlaceholder()"></p>
+                            <div class="home-v6-cmd-starter-list home-v6-cmd-starter-list--chat" x-cloak x-show="activeAiHasStarterChips()">
+                                <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
+                                    <button
+                                        type="button"
+                                        class="home-v6-cmd-starter-chip"
+                                        @click="runActiveAiStarter(item)"
+                                        x-text="item.label"
+                                    ></button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="home-v6-agent-ai-messenger" x-cloak x-show="false">
                     <div class="home-v6-agent-ai-thread">
                     <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user" x-cloak x-show="activeAiUserBubbleKind() && !activeAiCurrentBubbleInHistory()">
                         <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
@@ -1090,6 +1017,123 @@
                     </div>
 
                 </section>
+            </div>
+
+            <div class="home-v6-agent-composer-dock" x-cloak x-show="activeRendererKey !== 'human-chat'">
+                <div class="home-v6-agent-ai-queued home-v6-agent-ai-queued--shell" x-cloak x-show="activeAiQueuedFileName()">
+                    <span class="home-v6-agent-ai-file-pill">
+                        <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </span>
+                        <span x-text="activeAiQueuedFileName()"></span>
+                    </span>
+                    <button type="button" class="home-v6-agent-ai-clear" @click="clearActiveAiQueuedFile()">지우기</button>
+                </div>
+
+                <div
+                    class="home-v6-cmd-bar home-v6-cmd-bar--workspace"
+                    :class="{ 'is-drag-active': activeAiDragActive() }"
+                    @paste="handleActiveAiComposerPaste($event)"
+                    @dragenter="handleActiveAiComposerDragEnter($event)"
+                    @dragover="handleActiveAiComposerDragOver($event)"
+                    @dragleave="handleActiveAiComposerDragLeave($event)"
+                    @drop="handleActiveAiComposerDrop($event)"
+                >
+                    <span class="home-v6-cmd-bar-accent" aria-hidden="true"></span>
+                    <i class="home-v6-cmd-bar-search fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+
+                    <div class="home-v6-agent-ai-drop-hint" x-cloak x-show="activeAiDragActive()">
+                        <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
+                        <span>여기에 놓기</span>
+                    </div>
+
+                    <textarea
+                        class="home-v6-cmd-bar-input home-v6-cmd-bar-input--textarea"
+                        data-home-v6-agent-input="true"
+                        data-home-v6-ai-composer-textarea="true"
+                        data-home-v7-workspace-input="true"
+                        :data-home-v6-agent-field="activeAiExecutionVariant() === 'teacher-law' ? 'question' : null"
+                        rows="1"
+                        :placeholder="workspaceShellPlaceholder()"
+                        x-model="workspaceInput"
+                        @input="handleActiveAiComposerInput()"
+                        @keydown="handleWorkspaceShellKeydown($event)"
+                        aria-label="AI 교무비서 입력"
+                    ></textarea>
+
+                    <div class="home-v6-cmd-bar-trailing">
+                        <button
+                            class="home-v6-cmd-bar-tool"
+                            x-cloak
+                            x-show="workspaceShellShowAttachmentUtility()"
+                            type="button"
+                            title="파일 첨부"
+                            aria-label="파일 첨부"
+                            @click="openWorkspaceAttachmentPicker()"
+                        >
+                            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                        </button>
+
+                        <button
+                            class="home-v6-cmd-bar-tool"
+                            x-cloak
+                            x-show="workspaceShellShowImageUtility()"
+                            type="button"
+                            title="사진 첨부"
+                            aria-label="사진 첨부"
+                            @click="openWorkspaceImagePicker()"
+                        >
+                            <i class="fa-regular fa-image" aria-hidden="true"></i>
+                        </button>
+
+                        <button
+                            class="home-v6-cmd-bar-tool"
+                            x-cloak
+                            x-show="workspaceShellShowVoiceUtility()"
+                            type="button"
+                            :class="{ 'is-active': isWorkspaceVoiceListening }"
+                            :title="workspaceShellVoiceLabel()"
+                            :aria-label="workspaceShellVoiceLabel()"
+                            @click="toggleWorkspaceVoiceInput()"
+                        >
+                            <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+                        </button>
+
+                        <button
+                            class="home-v6-cmd-bar-tool"
+                            type="button"
+                            :class="{ 'is-disabled': !workspaceShellCanReset() }"
+                            :title="activeAiResetLabel()"
+                            :aria-label="activeAiResetLabel()"
+                            :aria-disabled="workspaceShellCanReset() ? 'false' : 'true'"
+                            @click="startNewWorkspaceChat()"
+                        >
+                            <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <button
+                        class="home-v6-cmd-bar-submit"
+                        type="button"
+                        :disabled="!activeAiCanSubmit()"
+                        @click="submitWorkspaceShell()"
+                        :aria-label="workspaceShellSubmitLabel()"
+                        :title="workspaceShellSubmitLabel()"
+                        x-text="workspaceShellSubmitLabel()"
+                    ></button>
+
+                    <input
+                        id="home-v6-agent-ai-quickdrop-file-input"
+                        type="file"
+                        class="sr-only"
+                        accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                        data-default-accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                        data-home-v6-agent-quickdrop-file-input="true"
+                        @change="queueQuickdropFileFromInput($event)"
+                    >
+                </div>
+
+                <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
             </div>
 
             <section class="home-v6-agent-notice-chat" x-cloak x-show="activeRendererKey === 'notice'">

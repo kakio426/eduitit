@@ -1060,6 +1060,9 @@
             },
 
             activeAiHasVisibleConversation: function () {
+                if (Array.isArray(this.chatHistory) && this.chatHistory.length) {
+                    return true;
+                }
                 if (this.aiMessengerIsFlow('direct-send')) {
                     return Boolean(this.quickdropHasConversation() || this.isSendingQuickdrop);
                 }
@@ -1086,8 +1089,6 @@
                 return Boolean(
                     activeEntry
                     && trimLine(activeEntry.modeKey || '') === activeModeKey
-                    && !this.aiMessengerIsFlow('direct-send')
-                    && !this.aiMessengerIsFlow('pipeline')
                 );
             },
 
@@ -1108,6 +1109,9 @@
             },
 
             activeAiNeedsLiveActionPanel: function () {
+                if (this.activeAiCurrentBubbleInHistory() || (Array.isArray(this.chatHistory) && this.chatHistory.length)) {
+                    return false;
+                }
                 if (!this.activeAiCurrentBubbleInHistory()) {
                     return true;
                 }
@@ -1243,6 +1247,455 @@
                 return Boolean(this.activeMessengerCapabilities().open_link && this.activeAiOpenHref());
             },
 
+            isActiveChatHistoryItem: function (item) {
+                return Boolean(
+                    item
+                    && trimLine(item.id || '') === trimLine(this.activeChatHistoryEntryId || '')
+                    && trimLine(item.modeKey || '') === trimLine(this.activeModeKey || '')
+                );
+            },
+
+            chatHistoryActionLabel: function (action) {
+                var item = action && typeof action === 'object' ? action : {};
+                if (item.kind === 'tts-read' && this.isTtsReading) {
+                    return '읽는 중';
+                }
+                if (item.kind === 'execute' && this.isAgentExecuting) {
+                    return trimLine(item.busyLabel || '처리 중');
+                }
+                if (item.kind === 'message-extract' && this.isExtractingMessageSave) {
+                    return '찾는 중';
+                }
+                if (item.kind === 'message-commit' && this.isCommittingMessageSave) {
+                    return '저장 중';
+                }
+                return trimLine(item.label || '');
+            },
+
+            chatHistoryActionDisabled: function (action) {
+                var item = action && typeof action === 'object' ? action : {};
+                if (item.kind === 'tts-read') {
+                    return Boolean(this.isTtsReading);
+                }
+                if (item.kind === 'execute') {
+                    return Boolean(this.isAgentExecuting || item.disabled);
+                }
+                if (item.kind === 'message-extract') {
+                    return Boolean(this.isExtractingMessageSave || this.isSavingMessageSave);
+                }
+                if (item.kind === 'message-commit') {
+                    return Boolean(this.isCommittingMessageSave || item.disabled);
+                }
+                return Boolean(item.disabled);
+            },
+
+            buildChatHistoryActionContext: function (overrides) {
+                return this.normalizeModeState(Object.assign({
+                    workspaceInput: this.workspaceInput,
+                    agentPreview: this.agentPreview,
+                    agentPreviewMeta: this.agentPreviewMeta,
+                    agentExecution: this.agentExecution,
+                    agentExecutionDraft: this.agentExecutionDraft,
+                    agentExecutionFieldErrors: this.agentExecutionFieldErrors,
+                    noticeBaseInput: this.noticeBaseInput,
+                    noticeRefinementLabel: this.noticeRefinementLabel,
+                    scheduleEditorOpen: this.scheduleEditorOpen,
+                    messageSaveSourceText: this.messageSaveSourceText,
+                    messageSavePayload: this.messageSavePayload,
+                    messageSaveStage: this.messageSaveStage,
+                    messageSaveErrorText: this.messageSaveErrorText,
+                    messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
+                    messageSaveCommitResult: this.messageSaveCommitResult,
+                    teacherLawLastQuestion: this.teacherLawLastQuestion,
+                    teacherLawFollowupContext: this.teacherLawFollowupContext,
+                }, overrides || {}));
+            },
+
+            applyChatHistoryActionContext: function (item, action) {
+                var entry = item && typeof item === 'object' ? item : {};
+                var next = action && typeof action === 'object' ? action : {};
+                var modeKey = trimLine(next.modeKey || entry.modeKey || '');
+                var context = next.context && typeof next.context === 'object'
+                    ? this.normalizeModeState(next.context)
+                    : null;
+                if (!modeKey) {
+                    return;
+                }
+                if (trimLine(this.activeModeKey || '') !== modeKey) {
+                    this.captureModeState(this.activeModeKey);
+                    this.activeModeKey = modeKey;
+                    this.activeRailKey = 'service:' + modeKey;
+                    this.restoreModeState(modeKey);
+                }
+                if (context) {
+                    this.workspaceInput = context.workspaceInput;
+                    this.agentPreview = context.agentPreview;
+                    this.agentPreviewMeta = context.agentPreviewMeta;
+                    this.agentExecution = context.agentExecution;
+                    this.agentExecutionDraft = context.agentExecutionDraft;
+                    this.agentExecutionFieldErrors = context.agentExecutionFieldErrors;
+                    this.noticeBaseInput = context.noticeBaseInput;
+                    this.noticeRefinementLabel = context.noticeRefinementLabel;
+                    this.scheduleEditorOpen = context.scheduleEditorOpen;
+                    this.messageSaveSourceText = context.messageSaveSourceText;
+                    this.messageSavePayload = context.messageSavePayload;
+                    this.messageSaveStage = context.messageSaveStage;
+                    this.messageSaveErrorText = context.messageSaveErrorText;
+                    this.messageSaveSelectedCandidateId = context.messageSaveSelectedCandidateId;
+                    this.messageSaveCommitResult = context.messageSaveCommitResult;
+                    this.teacherLawLastQuestion = context.teacherLawLastQuestion;
+                    this.teacherLawFollowupContext = context.teacherLawFollowupContext;
+                }
+                if (entry.id) {
+                    this.activeChatHistoryEntryId = entry.id;
+                }
+            },
+
+            buildChatHistoryActionSnapshots: function (modeKey, result, context) {
+                var activeModeKey = trimLine(modeKey || this.activeModeKey || '');
+                var snapshot = context && typeof context === 'object'
+                    ? this.normalizeModeState(context)
+                    : this.buildChatHistoryActionContext();
+                var payload = result && typeof result === 'object' ? result : {};
+                var lines = Array.isArray(payload.lines) ? payload.lines.filter(function (line) {
+                    return Boolean(trimLine(line));
+                }) : [];
+                var openHref = trimLine(payload.openHref || '');
+                var openLabel = trimLine(payload.openLabel || '');
+                var actions = [];
+                var self = this;
+                var pushAction = function (action) {
+                    var next = action && typeof action === 'object' ? action : {};
+                    if (!trimLine(next.kind || '') || !trimLine(next.label || '')) {
+                        return;
+                    }
+                    if (next.kind === 'link' && !trimLine(next.href || '')) {
+                        return;
+                    }
+                    if (actions.some(function (existing) {
+                        return trimLine(existing.kind || '') === trimLine(next.kind || '')
+                            && trimLine(existing.label || '') === trimLine(next.label || '');
+                    })) {
+                        return;
+                    }
+                    actions.push(Object.assign({
+                        modeKey: activeModeKey,
+                        context: snapshot,
+                    }, next));
+                };
+                var execution = snapshot.agentExecution && typeof snapshot.agentExecution === 'object'
+                    ? snapshot.agentExecution
+                    : null;
+                var draft = snapshot.agentExecutionDraft && typeof snapshot.agentExecutionDraft === 'object'
+                    ? snapshot.agentExecutionDraft
+                    : {};
+                var preview = snapshot.agentPreview && typeof snapshot.agentPreview === 'object'
+                    ? snapshot.agentPreview
+                    : {};
+
+                if (activeModeKey === 'notice') {
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    (this.modeByKey(activeModeKey).refinement_actions || []).some(function (action) {
+                        if (trimLine(action && action.label) === '부드럽게') {
+                            pushAction({
+                                kind: 'notice-refine',
+                                label: '부드럽게',
+                                instruction: trimLine(action.instruction || ''),
+                            });
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '알림장 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'schedule') {
+                    if (execution && execution.kind === 'schedule' && trimLine(draft.start_time || '')) {
+                        pushAction({ kind: 'execute', label: '저장', busyLabel: '저장 중' });
+                        pushAction({ kind: 'schedule-toggle', label: '시간 바꾸기' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '캘린더 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'teacher-law') {
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    if (execution && execution.kind === 'teacher-law') {
+                        var needsSetup = trimLine(preview.title || '') === '추가 확인'
+                            || !trimLine(draft.incident_type || '')
+                            || !trimLine(draft.legal_goal || '');
+                        if (!needsSetup) {
+                            pushAction({ kind: 'execute', label: '기록', busyLabel: '기록 중' });
+                        }
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '법률 가이드', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'reservation') {
+                    if (execution && execution.kind === 'reservation') {
+                        pushAction({ kind: 'execute', label: '예약', busyLabel: '예약 중' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '예약 화면', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'quickdrop') {
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '전송함 보기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'tts') {
+                    if (payload.actionKind === 'tts-read' || lines.length) {
+                        pushAction({ kind: 'tts-read', label: payload.actionLabel || self.ttsReadLabel() || '바로 읽기' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || 'TTS 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (activeModeKey === 'message-save') {
+                    if (snapshot.messageSaveStage === 'saved') {
+                        pushAction({ kind: 'message-extract', label: '일정 찾기' });
+                    } else if (snapshot.messageSaveStage === 'extracted') {
+                        pushAction({ kind: 'message-commit', label: '캘린더 저장' });
+                    }
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '보관함', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (lines.length) {
+                    pushAction({ kind: 'copy', label: '복사' });
+                }
+                if (openHref) {
+                    pushAction({ kind: 'link', label: openLabel || '열기', href: openHref });
+                }
+                return actions.slice(0, 3);
+            },
+
+            chatHistoryActionList: function (item) {
+                var entry = item && typeof item === 'object' ? item : {};
+                var result = entry.aiResult && typeof entry.aiResult === 'object' ? entry.aiResult : {};
+                if (Array.isArray(result.actions) && result.actions.length) {
+                    return result.actions.slice(0, 3);
+                }
+                var modeKey = trimLine(entry.modeKey || '');
+                var active = this.isActiveChatHistoryItem(entry);
+                var lines = Array.isArray(result.lines) ? result.lines.filter(function (line) {
+                    return Boolean(trimLine(line));
+                }) : [];
+                var actions = [];
+                var openHref = trimLine(result.openHref || '');
+                var openLabel = trimLine(result.openLabel || '');
+                var self = this;
+                var pushAction = function (action) {
+                    var next = action && typeof action === 'object' ? action : {};
+                    if (!trimLine(next.kind || '') || !trimLine(next.label || '')) {
+                        return;
+                    }
+                    if (next.kind === 'link' && !trimLine(next.href || '')) {
+                        return;
+                    }
+                    if (actions.some(function (existing) {
+                        return trimLine(existing.kind || '') === trimLine(next.kind || '')
+                            && trimLine(existing.label || '') === trimLine(next.label || '');
+                    })) {
+                        return;
+                    }
+                    actions.push(next);
+                };
+                if (!entry || entry.pending) {
+                    return [];
+                }
+                if (entry.failed) {
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'notice') {
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    if (active) {
+                        (this.noticeRefinementActions() || []).some(function (action) {
+                            if (trimLine(action && action.label) === '부드럽게') {
+                                pushAction({
+                                    kind: 'notice-refine',
+                                    label: '부드럽게',
+                                    instruction: trimLine(action.instruction || ''),
+                                });
+                                return true;
+                            }
+                            return false;
+                        });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '알림장 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'schedule') {
+                    if (active && this.scheduleHasExecution()) {
+                        pushAction({ kind: 'execute', label: '저장', busyLabel: '저장 중' });
+                        pushAction({ kind: 'schedule-toggle', label: this.scheduleEditorOpen ? '접기' : '시간 바꾸기' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '캘린더 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'teacher-law') {
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    if (active && this.teacherLawHasExecution() && !this.teacherLawNeedsSetup()) {
+                        pushAction({ kind: 'execute', label: '기록', busyLabel: '기록 중' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '법률 가이드', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'reservation') {
+                    if (active && this.reservationHasExecution()) {
+                        pushAction({ kind: 'execute', label: '예약', busyLabel: '예약 중' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '예약 화면', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'quickdrop') {
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '전송함 보기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'tts') {
+                    if (result.actionKind === 'tts-read' || lines.length) {
+                        pushAction({ kind: 'tts-read', label: result.actionLabel || self.ttsReadLabel() || '바로 읽기' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || 'TTS 열기', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (modeKey === 'message-save') {
+                    if (active && this.messageSaveStage === 'saved') {
+                        pushAction({ kind: 'message-extract', label: '일정 찾기' });
+                    } else if (active && this.messageSaveStage === 'extracted') {
+                        pushAction({ kind: 'message-commit', label: '캘린더 저장' });
+                    }
+                    if (lines.length) {
+                        pushAction({ kind: 'copy', label: '복사' });
+                    }
+                    if (openHref) {
+                        pushAction({ kind: 'link', label: openLabel || '보관함', href: openHref });
+                    }
+                    return actions.slice(0, 3);
+                }
+
+                if (lines.length) {
+                    pushAction({ kind: 'copy', label: '복사' });
+                }
+                if (openHref) {
+                    pushAction({ kind: 'link', label: openLabel || '열기', href: openHref });
+                }
+                return actions.slice(0, 3);
+            },
+
+            copyChatHistoryResult: async function (item) {
+                var result = item && item.aiResult && typeof item.aiResult === 'object' ? item.aiResult : {};
+                var lines = Array.isArray(result.lines) ? result.lines.filter(function (line) {
+                    return Boolean(trimLine(line));
+                }) : [];
+                var text = trimLine(lines.join('\n'));
+                if (!text) {
+                    showFeedback('복사할 내용이 없습니다.', 'info');
+                    return;
+                }
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showFeedback('복사했습니다.', 'success');
+                } catch (error) {
+                    showFeedback('복사하지 못했습니다.', 'error');
+                }
+            },
+
+            runChatHistoryAction: function (item, action) {
+                var next = action && typeof action === 'object' ? action : {};
+                if (!next.kind || this.chatHistoryActionDisabled(next)) {
+                    return;
+                }
+                if (next.kind === 'copy') {
+                    this.copyChatHistoryResult(item);
+                    return;
+                }
+                this.applyChatHistoryActionContext(item, next);
+                if (next.kind === 'notice-refine') {
+                    this.rerunNoticeRefinement(next.label, next.instruction);
+                    return;
+                }
+                if (next.kind === 'execute') {
+                    this.executeAgentService();
+                    return;
+                }
+                if (next.kind === 'schedule-toggle') {
+                    this.toggleScheduleEditor();
+                    this.scrollChatHistoryToBottom();
+                    return;
+                }
+                if (next.kind === 'tts-read') {
+                    this.playChatHistoryTts(item);
+                    return;
+                }
+                if (next.kind === 'message-extract') {
+                    this.extractSavedMessageCapture();
+                    return;
+                }
+                if (next.kind === 'message-commit') {
+                    this.commitMessageSaveCandidate();
+                }
+            },
+
+            canShowChatHistoryScheduleEditor: function (item) {
+                return Boolean(
+                    this.isActiveChatHistoryItem(item)
+                    && trimLine(item && item.modeKey || '') === 'schedule'
+                    && this.scheduleHasExecution()
+                    && this.scheduleEditorOpen
+                );
+            },
+
             activeAiResetLabel: function () {
                 return trimLine(this.activeMessengerUi().reset_label || '새로 쓰기');
             },
@@ -1353,7 +1806,12 @@
             },
 
             workspaceShellCanReset: function () {
-                return Boolean(this.activeAiHasVisibleConversation() || trimLine(this.workspaceInput) || this.activeAiQueuedFileName());
+                return Boolean(
+                    this.activeAiHasVisibleConversation()
+                    || (Array.isArray(this.chatHistory) && this.chatHistory.length)
+                    || trimLine(this.workspaceInput)
+                    || this.activeAiQueuedFileName()
+                );
             },
 
             workspaceShellSupportsVoiceInput: function () {
@@ -1585,6 +2043,7 @@
                             openLabel: '',
                             actionKind: '',
                             actionLabel: '',
+                            actions: [],
                         },
                         pending: true,
                         failed: false,
@@ -1601,11 +2060,12 @@
                 }
             },
 
-            finalizeChatHistoryEntry: function (entryId) {
+            finalizeChatHistoryEntry: function (entryId, options) {
                 if (!entryId) {
                     return;
                 }
                 try {
+                    var finalizeOptions = options && typeof options === 'object' ? options : {};
                     var idx = -1;
                     for (var i = this.chatHistory.length - 1; i >= 0; i--) {
                         if (this.chatHistory[i].id === entryId) {
@@ -1617,9 +2077,20 @@
                         return;
                     }
                     var lines = [];
+                    var modeKey = trimLine(finalizeOptions.modeKey || this.chatHistory[idx].modeKey || this.activeModeKey || '');
+                    var mode = this.modeByKey(modeKey);
+                    var sourcePreview = finalizeOptions.preview && typeof finalizeOptions.preview === 'object'
+                        ? finalizeOptions.preview
+                        : this.agentPreview;
+                    var contextSnapshot = finalizeOptions.context && typeof finalizeOptions.context === 'object'
+                        ? finalizeOptions.context
+                        : this.buildChatHistoryActionContext({
+                            agentPreview: sourcePreview,
+                            agentPreviewMeta: finalizeOptions.previewMeta || this.agentPreviewMeta,
+                        });
                     var userText = trimLine(this.chatHistory[idx].userBubble && this.chatHistory[idx].userBubble.text);
                     try {
-                        var srcLines = this.previewResultLines();
+                        var srcLines = this.previewResultLinesFromPreview(sourcePreview).slice(0, Number(mode.preview_line_limit || 8));
                         if (Array.isArray(srcLines)) {
                             lines = srcLines.slice().filter(function (line) {
                                 return trimLine(line) !== userText;
@@ -1629,27 +2100,46 @@
                         lines = [];
                     }
                     var title = '';
-                    try { title = this.activeAiAssistantTitle() || ''; } catch (e) { title = ''; }
+                    try { title = trimLine(sourcePreview && sourcePreview.title); } catch (e) { title = ''; }
+                    if (!title) {
+                        try { title = this.activeAiAssistantTitle() || ''; } catch (e) { title = ''; }
+                    }
                     var note = '';
-                    try { note = this.activeAiPreviewNote() || ''; } catch (e) { note = ''; }
+                    if (typeof finalizeOptions.note === 'string') {
+                        note = trimLine(finalizeOptions.note);
+                    } else {
+                        try { note = this.activeAiPreviewNote() || ''; } catch (e) { note = ''; }
+                    }
                     if (!note) {
-                        try { note = trimLine(this.agentPreview && this.agentPreview.note); } catch (e) { note = ''; }
+                        try { note = trimLine(sourcePreview && sourcePreview.note); } catch (e) { note = ''; }
                     }
                     var openHref = '';
                     var openLabel = '';
                     var actionKind = '';
                     var actionLabel = '';
-                    try {
-                        if (this.activeAiHasOpenLink()) {
-                            openHref = this.activeAiOpenHref() || '';
-                            openLabel = this.activeAiOpenLabel() || '';
+                    if (typeof finalizeOptions.openHref === 'string') {
+                        openHref = trimLine(finalizeOptions.openHref);
+                        openLabel = trimLine(finalizeOptions.openLabel || '');
+                    } else {
+                        try {
+                            openHref = trimLine(sourcePreview && sourcePreview.confirmHref);
+                            openLabel = trimLine(sourcePreview && sourcePreview.confirmLabel);
+                        } catch (e) {
+                            openHref = '';
+                            openLabel = '';
                         }
-                    } catch (e) {
-                        openHref = '';
-                        openLabel = '';
                     }
                     try {
-                        if (this.modeHasCapability(this.modeByKey(this.chatHistory[idx].modeKey), 'tts_read')) {
+                        if (modeKey === trimLine(this.activeModeKey || '') && this.activeAiHasOpenLink()) {
+                            openHref = openHref || this.activeAiOpenHref() || '';
+                            openLabel = openLabel || this.activeAiOpenLabel() || '';
+                        }
+                    } catch (e) {
+                        openHref = openHref || '';
+                        openLabel = openLabel || '';
+                    }
+                    try {
+                        if (this.modeHasCapability(mode, 'tts_read')) {
                             actionKind = 'tts-read';
                             actionLabel = this.ttsReadLabel();
                         }
@@ -1657,7 +2147,7 @@
                         actionKind = '';
                         actionLabel = '';
                     }
-                    this.chatHistory[idx].aiResult = {
+                    var result = {
                         title: title,
                         lines: lines,
                         note: note,
@@ -1665,7 +2155,16 @@
                         openLabel: openLabel,
                         actionKind: actionKind,
                         actionLabel: actionLabel,
+                        actions: [],
                     };
+                    result.actions = Array.isArray(finalizeOptions.actions)
+                        ? finalizeOptions.actions.slice(0, 3)
+                        : this.buildChatHistoryActionSnapshots(modeKey, result, contextSnapshot);
+                    this.chatHistory[idx].aiResult = result;
+                    this.chatHistory[idx].modeKey = modeKey || this.chatHistory[idx].modeKey;
+                    if (finalizeOptions.modeLabel) {
+                        this.chatHistory[idx].modeLabel = trimLine(finalizeOptions.modeLabel);
+                    }
                     this.chatHistory[idx].pending = false;
                     this.chatHistory[idx].failed = false;
                     this.activeChatHistoryEntryId = entryId;
@@ -4781,14 +5280,19 @@
                 var queuedFile = this.quickdropQueuedFile;
                 var queuedFileName = this.quickdropQueuedFileName();
                 var text = trimLine(this.workspaceInput);
+                var modeKey = trimLine(this.activeModeKey || '');
+                var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(mode.label || this.activeMode.label || '바로전송');
                 var csrfToken = getCsrfToken();
-                var sendTextUrl = trimLine(this.activeMode.direct_url || '');
-                var sendFileUrl = trimLine(this.activeMode.send_file_url || '');
+                var sendTextUrl = trimLine(mode.direct_url || '');
+                var sendFileUrl = trimLine(mode.send_file_url || '');
                 var response;
                 var payload;
                 var session;
                 var sentKind;
                 var sentValue;
+                var historyEntryId = '';
+                var quickdropPreviewMeta;
 
                 if (!queuedFile && !text) {
                     this.quickdropErrorText = '보낼 내용을 넣어 주세요.';
@@ -4818,6 +5322,14 @@
                 }
 
                 this.quickdropErrorText = '';
+                historyEntryId = this.startChatHistoryEntry(
+                    text || queuedFileName || '파일 전송',
+                    modeKey,
+                    modeLabel
+                );
+                if (text) {
+                    this.workspaceInput = '';
+                }
                 this.isSendingQuickdrop = true;
                 this.clearExecution();
                 this.agentPreview = this.buildIdlePreview();
@@ -4877,20 +5389,43 @@
                         this.clearQuickdropQueuedFile();
                     }
 
-                    this.agentPreviewMeta = {
+                    quickdropPreviewMeta = {
                         source: 'direct',
                         provider: 'quickdrop',
                         model: '',
                         providerLabel: '즉시 전송',
                     };
-                    this.agentPreview = this.normalizePreview(
-                        this.buildQuickdropSentPreview(sentKind, sentValue),
-                        this.agentPreviewMeta
-                    );
+                    var quickdropPreview = this.normalizePreview({
+                        badge: modeLabel || '바로전송',
+                        title: sentKind === 'text'
+                            ? '글 전송 완료'
+                            : (sentKind === 'image' ? '사진 전송 완료' : '파일 전송 완료'),
+                        summary: '',
+                        sections: [],
+                        note: '전송함에서 확인',
+                        confirmHref: this.buildModeContinueHref(mode),
+                        confirmLabel: trimLine(mode.after_action_label || mode.confirm_label || '전송함 보기'),
+                    }, quickdropPreviewMeta);
+                    if (modeKey === trimLine(this.activeModeKey || '')) {
+                        this.agentPreviewMeta = quickdropPreviewMeta;
+                        this.agentPreview = quickdropPreview;
+                    }
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: quickdropPreview,
+                        previewMeta: quickdropPreviewMeta,
+                        context: this.buildChatHistoryActionContext({
+                            agentPreview: quickdropPreview,
+                            agentPreviewMeta: quickdropPreviewMeta,
+                            workspaceInput: '',
+                        }),
+                    });
                     showFeedback(sentKind === 'text' ? '글을 보냈어요.' : '파일을 보냈어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.quickdropErrorText = error && error.message ? error.message : '전송하지 못했습니다.';
+                    this.abortChatHistoryEntry(historyEntryId, this.quickdropErrorText);
                     showFeedback(this.quickdropErrorText, 'error');
                 } finally {
                     this.isSendingQuickdrop = false;
@@ -5285,9 +5820,15 @@
             saveMessageCaptureChat: async function () {
                 var text = trimLine(this.workspaceInput);
                 var csrfToken = getCsrfToken();
-                var saveUrl = trimLine(this.activeMode.direct_url || '');
+                var modeKey = trimLine(this.activeModeKey || '');
+                var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(mode.label || this.activeMode.label || '메시지 저장');
+                var saveUrl = trimLine(mode.direct_url || '');
                 var response;
                 var payload;
+                var historyEntryId = '';
+                var messageSavePreview;
+                var messageSavePreviewMeta;
 
                 if (!text) {
                     this.messageSaveErrorText = '저장할 메시지를 먼저 넣어 주세요.';
@@ -5307,6 +5848,11 @@
                 }
 
                 this.messageSaveErrorText = '';
+                historyEntryId = this.startChatHistoryEntry(
+                    text,
+                    modeKey,
+                    modeLabel
+                );
                 this.isSavingMessageSave = true;
                 this.isExtractingMessageSave = false;
                 this.isCommittingMessageSave = false;
@@ -5341,14 +5887,14 @@
                     }
                     this.messageSavePayload = this.clonePayload(payload);
                     this.messageSaveStage = 'saved';
-                    this.agentPreviewMeta = {
+                    messageSavePreviewMeta = {
                         source: 'direct',
                         provider: 'messagebox',
                         model: '',
                         providerLabel: '메시지 보관',
                     };
-                    this.agentPreview = this.normalizePreview({
-                        badge: this.activeMode.label || '메시지 저장',
+                    messageSavePreview = this.normalizePreview({
+                        badge: modeLabel || '메시지 저장',
                         title: '보관 완료',
                         summary: '',
                         sections: [
@@ -5358,13 +5904,35 @@
                             },
                         ],
                         note: '',
-                    }, this.agentPreviewMeta);
+                        confirmHref: trimLine(payload.messagebox_url || mode.after_action_href || mode.service_href || ''),
+                        confirmLabel: trimLine(mode.after_action_label || mode.confirm_label || '보관함'),
+                    }, messageSavePreviewMeta);
+                    if (modeKey === trimLine(this.activeModeKey || '')) {
+                        this.agentPreviewMeta = messageSavePreviewMeta;
+                        this.agentPreview = messageSavePreview;
+                    }
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: messageSavePreview,
+                        previewMeta: messageSavePreviewMeta,
+                        context: this.buildChatHistoryActionContext({
+                            workspaceInput: '',
+                            agentPreview: messageSavePreview,
+                            agentPreviewMeta: messageSavePreviewMeta,
+                            messageSaveSourceText: text,
+                            messageSavePayload: this.messageSavePayload,
+                            messageSaveStage: this.messageSaveStage,
+                            messageSaveSelectedCandidateId: this.messageSaveSelectedCandidateId,
+                            messageSaveCommitResult: this.messageSaveCommitResult,
+                        }),
+                    });
                     showFeedback(payload.message || '메시지를 보관함에 저장했어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
                     this.messageSaveSourceText = '';
-                    this.workspaceInput = text;
                     this.messageSaveErrorText = error && error.message ? error.message : '메시지를 저장하지 못했습니다.';
+                    this.abortChatHistoryEntry(historyEntryId, this.messageSaveErrorText);
                     showFeedback(this.messageSaveErrorText, 'error');
                 } finally {
                     this.isSavingMessageSave = false;
@@ -5438,6 +6006,7 @@
                         ],
                         note: '',
                     }, this.agentPreviewMeta);
+                    this.finalizeChatHistoryEntry(this.activeChatHistoryEntryId);
                     showFeedback(payload.message || '보관한 메시지에서 일정을 찾았어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
@@ -5526,6 +6095,7 @@
                         ],
                         note: '',
                     }, this.agentPreviewMeta);
+                    this.finalizeChatHistoryEntry(this.activeChatHistoryEntryId);
                     showFeedback(payload.message || '선택한 일정을 저장했어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
