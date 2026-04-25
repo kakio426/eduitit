@@ -24,29 +24,47 @@
 
 {% block content %}
 <main class="auth-shell-page auth-shell-page--login-spectrum auth-shell-main">
+    <div class="auth-login-bg" aria-hidden="true"></div>
+    <div class="auth-login-blob auth-login-blob--one" aria-hidden="true"></div>
+    <div class="auth-login-blob auth-login-blob--two" aria-hidden="true"></div>
+    <div class="auth-login-blob auth-login-blob--three" aria-hidden="true"></div>
+    <div class="auth-login-dots" aria-hidden="true"></div>
     <div class="auth-shell-wrap auth-shell-wrap--login">
         <div class="auth-login-layout">
             <aside class="auth-login-panel" aria-label="에듀잇티 소개">
                 <p class="auth-login-panel-kicker">FOR TEACHERS</p>
-                <h2 class="auth-login-panel-title">교육에만<br>집중할 수 있도록</h2>
+                <h2 class="auth-login-panel-title">교육에만<br><em>집중</em>할 수 있도록</h2>
                 <ul class="auth-login-list">
                     <li>
-                        <span class="auth-login-dot auth-login-dot--cyan"></span>
-                        <span>
+                        <span class="auth-login-feature-icon auth-login-feature-icon--purple" aria-hidden="true">
+                            <svg viewBox="0 0 18 18" fill="none" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 4.5h12M3 9h8M3 13.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            </svg>
+                        </span>
+                        <span class="auth-login-feature-text">
                             <strong>업무 부담 절감</strong>
                             <em>반복적인 행정 업무를 자동화합니다</em>
                         </span>
                     </li>
                     <li>
-                        <span class="auth-login-dot auth-login-dot--yellow"></span>
-                        <span>
+                        <span class="auth-login-feature-icon auth-login-feature-icon--teal" aria-hidden="true">
+                            <svg viewBox="0 0 18 18" fill="none" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
+                                <path d="M6 7h6M6 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                            </svg>
+                        </span>
+                        <span class="auth-login-feature-text">
                             <strong>스마트한 교실 관리</strong>
                             <em>학생 활동을 한눈에 파악하고 관리합니다</em>
                         </span>
                     </li>
                     <li>
-                        <span class="auth-login-dot auth-login-dot--pink"></span>
-                        <span>
+                        <span class="auth-login-feature-icon auth-login-feature-icon--amber" aria-hidden="true">
+                            <svg viewBox="0 0 18 18" fill="none" focusable="false" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 2L11 7H16L12 10.5L13.5 15.5L9 12.5L4.5 15.5L6 10.5L2 7H7L9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                            </svg>
+                        </span>
+                        <span class="auth-login-feature-text">
                             <strong>교육 활동 지원</strong>
                             <em>더 풍부하고 즐거운 수업을 만들어드립니다</em>
                         </span>
@@ -59,9 +77,9 @@
                     <a href="/" class="auth-shell-brand">
                         <span class="auth-shell-brand-icon">
                             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18.4 10.45C18.18 7.96 16.1 6 13.56 6C11.9 6 10.44 6.83 9.56 8.1C9.1 7.92 8.62 7.83 8.1 7.83C5.84 7.83 4 9.67 4 11.93C4 12.08 4.01 12.23 4.03 12.38C2.82 12.9 2 14.08 2 15.43C2 17.25 3.48 18.72 5.3 18.72H17.9C20.16 18.72 22 16.89 22 14.63C22 12.52 20.41 10.79 18.4 10.45Z" fill="currentColor" opacity="0.95" />
-                                <path d="M14.25 15.55L11.7 18.1H10.2V16.6L12.75 14.05L14.25 15.55Z" fill="currentColor" />
-                                <path d="M15.1 14.7L13.6 13.2L14.42 12.38C14.72 12.08 15.2 12.08 15.5 12.38L15.92 12.8C16.22 13.1 16.22 13.58 15.92 13.88L15.1 14.7Z" fill="currentColor" />
+                                <path d="M18.5 10.5C18.5 8.01 16.49 6 14 6C12.73 6 11.58 6.52 10.76 7.36C10.26 7.14 9.7 7 9.1 7C6.83 7 5 8.83 5 11.1C5 11.18 5 11.26 5.01 11.34C3.83 11.77 3 12.89 3 14.2C3 15.88 4.37 17.25 6.05 17.25H17.5C19.43 17.25 21 15.68 21 13.75C21 12.05 19.77 10.65 18.15 10.37C18.38 10.53 18.5 10.5 18.5 10.5Z" fill="white" opacity="0.9" />
+                                <path d="M14 13L11 16H10V15L13 12L14 13Z" fill="#6940f2" />
+                                <path d="M14.7 12.3L13.7 11.3L14.5 10.5L15.5 11.5L14.7 12.3Z" fill="#e0b72c" />
                             </svg>
                         </span>
                         <span class="auth-shell-brand-text">
@@ -73,7 +91,8 @@
                     <p class="auth-shell-summary">카카오 또는 네이버 계정으로<br>바로 시작하세요.</p>
                 </div>
 
-                <div class="auth-shell-divider auth-shell-divider--login"><span>소셜 계정으로 로그인</span></div>
+                <div class="auth-shell-divider auth-shell-divider--login" aria-hidden="true"></div>
+                <p class="auth-shell-login-label">소셜 계정으로 로그인</p>
 
                 <div class="auth-shell-stack">
                     <a href="{% provider_login_url 'kakao' %}"

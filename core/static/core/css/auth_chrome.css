@@ -982,147 +982,243 @@ body {
     }
 }
 
-/* Login entry: keeps the reference's glass-card shape while staying sparse for teachers. */
+/* Login entry: bright reference composition with the original login behavior intact. */
 .auth-shell-page--login-spectrum {
-    --auth-login-950: #191735;
-    --auth-login-900: #252354;
-    --auth-login-800: #383276;
-    --auth-login-700: #5143a3;
-    --auth-shell-focus-ring: 0 0 0 3px rgba(115, 214, 200, 0.2);
-    --auth-shell-focus-border: rgba(115, 214, 200, 0.48);
+    --auth-login-950: #1a1730;
+    --auth-login-900: #2d2250;
+    --auth-login-800: #45337a;
+    --auth-login-700: #6047d7;
+    --auth-login-600: #7957f3;
+    --auth-login-300: #c9bef8;
+    --auth-login-200: #ded7f2;
+    --auth-login-100: #f0ecfb;
+    --auth-login-muted: #6f6b82;
+    --auth-shell-focus-ring: 0 0 0 3px rgba(121, 87, 243, 0.16);
+    --auth-shell-focus-border: rgba(121, 87, 243, 0.32);
+    min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
-    background:
-        linear-gradient(135deg, #211a46 0%, #193857 50%, #173a36 100%);
+    background: #f5f4f9;
+    color: var(--auth-login-950);
 }
 
-.auth-shell-page--login-spectrum::before {
-    inset: 0;
-    width: auto;
-    height: auto;
-    border-radius: 0;
-    filter: none;
-    opacity: 0.2;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
-    background-size: 48px 48px;
-}
-
+.auth-shell-page--login-spectrum::before,
 .auth-shell-page--login-spectrum::after {
     display: none;
 }
 
+.auth-login-bg,
+.auth-login-blob,
+.auth-login-dots {
+    position: absolute;
+    pointer-events: none;
+}
+
+.auth-login-bg {
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 60% 50% at 80% 0%, rgba(222, 208, 251, 0.86) 0%, rgba(222, 208, 251, 0) 60%),
+        radial-gradient(ellipse 50% 40% at 10% 100%, rgba(199, 238, 231, 0.76) 0%, rgba(199, 238, 231, 0) 55%),
+        #f5f4f9;
+}
+
+.auth-login-blob {
+    z-index: 0;
+    border-radius: 999px;
+    filter: blur(60px);
+}
+
+.auth-login-blob--one {
+    top: -10rem;
+    right: -6.25rem;
+    width: 30rem;
+    height: 30rem;
+    background: #dcccfb;
+    opacity: 0.6;
+}
+
+.auth-login-blob--two {
+    bottom: -5rem;
+    left: -3.75rem;
+    width: 20rem;
+    height: 20rem;
+    background: #ccefe8;
+    opacity: 0.5;
+}
+
+.auth-login-blob--three {
+    top: 50%;
+    left: 38%;
+    width: 12.5rem;
+    height: 12.5rem;
+    background: #f3e7bf;
+    opacity: 0.42;
+}
+
+.auth-login-dots {
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(circle, rgba(105, 75, 202, 0.11) 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+    opacity: 0.58;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
+}
+
 .auth-shell-wrap--login {
+    position: relative;
+    z-index: 1;
     min-height: calc(100vh - 3rem);
 }
 
 .auth-login-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem);
+    grid-template-columns: minmax(16rem, 1fr) minmax(22rem, 26.25rem);
     align-items: center;
-    gap: clamp(3rem, 8vw, 6.5rem);
+    gap: clamp(2rem, 6vw, 5rem);
     width: min(100%, 74rem);
 }
 
 .auth-login-panel {
-    color: #ffffff;
+    max-width: 28rem;
+    color: var(--auth-login-950);
+    animation: authLoginPanelIn 0.8s 0.12s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes authLoginPanelIn {
+    from {
+        opacity: 0;
+        transform: translateX(-1.5rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .auth-login-panel-kicker {
-    margin: 0 0 1.5rem;
-    color: rgba(255, 255, 255, 0.48);
+    margin: 0 0 1.125rem;
+    color: #765cf1;
     font-size: 0.9rem;
     font-weight: 800;
-    letter-spacing: 0.14em;
+    letter-spacing: 0;
+    text-transform: uppercase;
 }
 
 .auth-login-panel-title {
     margin: 0;
-    color: rgba(255, 255, 255, 0.96);
+    color: #11121a;
     font-family: var(--font-display);
-    font-size: clamp(3rem, 5vw, 4.55rem);
+    font-size: 3.2rem;
     font-weight: 900;
     line-height: 1.18;
     letter-spacing: 0;
     word-break: keep-all;
 }
 
+.auth-login-panel-title em {
+    color: var(--auth-login-600);
+    font-style: normal;
+}
+
 .auth-login-list {
     display: grid;
-    gap: 1.5rem;
-    margin: 3rem 0 0;
+    gap: 1.125rem;
+    margin: 2rem 0 0;
     padding: 0;
     list-style: none;
 }
 
 .auth-login-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    min-width: 0;
+}
+
+.auth-login-feature-icon {
     display: grid;
-    grid-template-columns: 0.7rem minmax(0, 1fr);
-    gap: 1.2rem;
-    align-items: start;
+    place-items: center;
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.625rem;
+}
+
+.auth-login-feature-icon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+.auth-login-feature-icon--purple {
+    background: #eee9fb;
+    color: #6e47cf;
+}
+
+.auth-login-feature-icon--teal {
+    background: #e5f4f2;
+    color: #298b89;
+}
+
+.auth-login-feature-icon--amber {
+    background: #f6efd9;
+    color: #a66e10;
+}
+
+.auth-login-feature-text {
+    min-width: 0;
 }
 
 .auth-login-list strong {
     display: block;
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 1.15rem;
+    color: #272538;
+    font-size: 0.96rem;
     font-weight: 850;
     letter-spacing: 0;
 }
 
 .auth-login-list em {
     display: block;
-    margin-top: 0.45rem;
-    color: rgba(255, 255, 255, 0.48);
-    font-size: 0.98rem;
+    margin-top: 0.25rem;
+    color: #6f6b82;
+    font-size: 0.88rem;
     font-style: normal;
-    font-weight: 700;
-    line-height: 1.5;
+    font-weight: 600;
+    line-height: 1.45;
     letter-spacing: 0;
 }
 
-.auth-login-dot {
-    width: 0.58rem;
-    height: 0.58rem;
-    margin-top: 0.45rem;
-    border-radius: 999px;
-    flex: 0 0 auto;
-}
-
-.auth-login-dot--cyan {
-    background: #1bd8e7;
-    box-shadow: 0 0 0 0.35rem rgba(27, 216, 231, 0.12);
-}
-
-.auth-login-dot--yellow {
-    background: #ffc531;
-    box-shadow: 0 0 0 0.35rem rgba(255, 197, 49, 0.12);
-}
-
-.auth-login-dot--pink {
-    background: #e37bea;
-    box-shadow: 0 0 0 0.35rem rgba(227, 123, 234, 0.12);
-}
-
 .auth-shell-card--login-spectrum {
-    max-width: 27rem;
-    border-color: rgba(255, 255, 255, 0.18);
+    max-width: 26.25rem;
+    border: 1px solid #e2daf2;
     border-radius: 1.75rem;
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    background: #ffffff;
+    color: var(--auth-login-950);
+    padding: 3rem 2.5rem 2.25rem;
     box-shadow:
-        0 30px 70px rgba(6, 10, 24, 0.38),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(28px) saturate(1.25);
-    -webkit-backdrop-filter: blur(28px) saturate(1.25);
+        0 2px 0 rgba(112, 79, 204, 0.12),
+        0 16px 48px rgba(75, 54, 140, 0.1),
+        0 4px 16px rgba(0, 0, 0, 0.06);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    animation: authLoginCardIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes authLoginCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(1.5rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .auth-shell-card--login-spectrum::before {
-    inset: 0;
-    height: auto;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 42%);
+    display: none;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-header {
@@ -1130,14 +1226,18 @@ body {
 }
 
 .auth-shell-card--login-spectrum .auth-shell-brand {
-    gap: 0.58rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
     min-height: 0;
+    margin-bottom: 2rem;
     padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
-    color: #ffffff;
+    color: var(--auth-login-950);
     letter-spacing: 0;
+    text-decoration: none;
     text-transform: none;
 }
 
@@ -1148,166 +1248,185 @@ body {
 .auth-shell-card--login-spectrum .auth-shell-brand-icon {
     width: 2.75rem;
     height: 2.75rem;
-    border-radius: 0.9rem;
-    background: linear-gradient(135deg, #9a72ff 0%, #4f73f5 100%);
+    border-radius: 0.875rem;
+    background: linear-gradient(135deg, #8f63f6 0%, #4f43f5 100%);
     color: #ffffff;
-    box-shadow:
-        0 14px 26px rgba(58, 74, 215, 0.24),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 14px rgba(93, 63, 198, 0.28);
 }
 
 .auth-shell-card--login-spectrum .auth-shell-brand-icon svg {
-    width: 1.55rem;
-    height: 1.55rem;
+    width: 1.5rem;
+    height: 1.5rem;
 }
 
 .auth-shell-brand-text {
     display: flex;
     flex-direction: column;
-    gap: 0.12rem;
+    gap: 0.08rem;
     line-height: 1.05;
 }
 
 .auth-shell-brand-ko {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.78rem;
+    color: #7b7291;
+    font-size: 0.82rem;
     font-weight: 750;
     letter-spacing: 0;
 }
 
 .auth-shell-brand-en {
-    color: rgba(255, 255, 255, 0.96);
-    font-size: 1rem;
+    color: #11121a;
+    font-size: 1.05rem;
     font-weight: 900;
     letter-spacing: 0;
 }
 
-.auth-shell-card--login-spectrum .auth-shell-kicker {
-    display: block;
-    min-height: 0;
-    margin: 2rem 0 0;
-    padding: 0;
-    border-radius: 0;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.54);
-    font-size: 0.82rem;
-    letter-spacing: 0;
-    text-transform: none;
-}
-
 .auth-shell-card--login-spectrum .auth-shell-title {
-    margin-top: 0.55rem;
-    color: #ffffff;
-    font-size: 2rem;
-    line-height: 1.24;
+    margin-top: 0;
+    color: #11121a;
+    font-size: 1.95rem;
+    font-weight: 900;
+    line-height: 1.26;
     letter-spacing: 0;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-summary {
     margin: 0.7rem 0 0;
     max-width: none;
-    color: rgba(255, 255, 255, 0.66);
+    color: #666278;
     font-size: 0.95rem;
     font-weight: 650;
     line-height: 1.6;
     letter-spacing: 0;
 }
 
-.auth-shell-card--login-spectrum .auth-shell-notice,
-.auth-shell-card--login-spectrum .auth-shell-muted-panel {
-    border-color: rgba(255, 255, 255, 0.17);
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: none;
-}
-
-.auth-shell-card--login-spectrum .auth-shell-notice::before,
-.auth-shell-card--login-spectrum .auth-shell-muted-panel::before {
-    display: none;
-}
-
-.auth-shell-card--login-spectrum .auth-shell-notice-title,
-.auth-shell-card--login-spectrum .auth-shell-muted-panel-title {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.auth-shell-card--login-spectrum .auth-shell-notice-copy,
-.auth-shell-card--login-spectrum .auth-shell-muted-panel-copy {
-    color: rgba(255, 255, 255, 0.68);
-}
-
 .auth-shell-divider--login {
-    margin: 1.35rem 0 0.95rem;
+    display: block;
+    height: 1px;
+    margin: 1.75rem 0 0;
+    background: #ebe6f4;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-divider {
-    color: rgba(255, 255, 255, 0.48);
+    gap: 0;
+    color: transparent;
     letter-spacing: 0;
-}
-
-.auth-shell-card--login-spectrum .auth-shell-divider span {
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-divider::before,
 .auth-shell-card--login-spectrum .auth-shell-divider::after {
-    background: rgba(255, 255, 255, 0.14);
+    display: none;
+}
+
+.auth-shell-login-label {
+    margin: 1.25rem 0 0.875rem;
+    color: #827990;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-stack {
-    gap: 0.72rem;
+    gap: 0.625rem;
     margin-top: 0;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-provider {
-    min-height: 3.55rem;
-    border-radius: 0.95rem;
-    font-size: 0.98rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.9rem 1.25rem;
+    border: 0;
+    border-radius: 0.875rem;
+    font-size: 0.96rem;
+    font-weight: 800;
     letter-spacing: 0;
+    text-decoration: none;
+    transition:
+        transform 140ms ease,
+        box-shadow 140ms ease,
+        filter 140ms ease;
 }
 
 .auth-shell-card--login-spectrum .tracking-tight {
     letter-spacing: 0;
 }
 
+.auth-shell-card--login-spectrum .auth-shell-provider:hover,
+.auth-shell-card--login-spectrum .auth-shell-provider:focus-visible {
+    color: inherit;
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+.auth-shell-card--login-spectrum .auth-shell-provider:active {
+    transform: translateY(0);
+}
+
 .auth-shell-page--login-spectrum .auth-shell-provider--kakao {
-    border-color: rgba(254, 229, 0, 0.68);
     background: #fee500;
-    color: #2f1a1a;
-    box-shadow: 0 14px 26px rgba(254, 229, 0, 0.18);
+    color: #191600;
+    box-shadow:
+        0 2px 0 #d4bd00,
+        0 4px 16px rgba(230, 190, 24, 0.25);
+}
+
+.auth-shell-page--login-spectrum .auth-shell-provider--kakao:hover,
+.auth-shell-page--login-spectrum .auth-shell-provider--kakao:focus-visible {
+    color: #191600;
+    box-shadow:
+        var(--auth-shell-focus-ring),
+        0 2px 0 #d4bd00,
+        0 8px 24px rgba(230, 190, 24, 0.36);
 }
 
 .auth-shell-page--login-spectrum .auth-shell-provider--naver {
-    border-color: rgba(3, 199, 90, 0.42);
     background: #03c75a;
     color: #ffffff;
-    box-shadow: 0 14px 26px rgba(3, 199, 90, 0.18);
+    box-shadow:
+        0 2px 0 #02a04a,
+        0 4px 16px rgba(3, 166, 91, 0.22);
+}
+
+.auth-shell-page--login-spectrum .auth-shell-provider--naver:hover,
+.auth-shell-page--login-spectrum .auth-shell-provider--naver:focus-visible {
+    color: #ffffff;
+    box-shadow:
+        var(--auth-shell-focus-ring),
+        0 2px 0 #02a04a,
+        0 8px 24px rgba(3, 166, 91, 0.34);
 }
 
 .auth-shell-card--login-spectrum .auth-shell-links,
 .auth-shell-card--login-spectrum .auth-shell-footer,
 .auth-shell-card--login-spectrum .auth-shell-help {
-    color: rgba(255, 255, 255, 0.48);
+    color: #827990;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-links--standalone {
-    margin-top: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 1.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-link {
-    color: rgba(255, 255, 255, 0.62);
-    text-decoration-color: rgba(255, 255, 255, 0.2);
+    color: #827990;
+    text-decoration: none;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-link:hover {
-    color: #ffffff;
-    text-decoration-color: rgba(255, 255, 255, 0.5);
+    color: var(--auth-login-800);
+    text-decoration: none;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-label {
-    color: rgba(255, 255, 255, 0.78);
+    color: var(--auth-login-900);
 }
 
 .auth-shell-card--login-spectrum .auth-shell-form input[type="text"],
@@ -1317,86 +1436,75 @@ body {
 .auth-shell-card--login-spectrum .auth-shell-form select,
 .auth-shell-card--login-spectrum .auth-shell-form textarea,
 .auth-shell-card--login-spectrum .auth-shell-input {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.94);
-    color: #101828;
+    border-color: rgba(121, 87, 243, 0.18);
+    background: #ffffff;
+    color: var(--auth-login-950);
 }
 
 .auth-shell-card--login-spectrum .auth-shell-form input::placeholder,
 .auth-shell-card--login-spectrum .auth-shell-form textarea::placeholder,
 .auth-shell-card--login-spectrum .auth-shell-input::placeholder {
-    color: #667085;
+    color: #8e879e;
 }
 
 .auth-shell-card--login-spectrum .auth-shell-submit {
-    background: linear-gradient(135deg, #17132f 0%, #3c337e 100%);
+    background: linear-gradient(135deg, var(--auth-login-900) 0%, var(--auth-login-600) 100%);
     box-shadow:
-        0 14px 28px rgba(7, 9, 22, 0.24),
+        0 14px 28px rgba(83, 63, 177, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 899px) {
     .auth-login-layout {
         grid-template-columns: minmax(0, 1fr);
-        gap: 2rem;
-        width: min(100%, 32rem);
-    }
-
-    .auth-login-panel {
-        max-width: 30rem;
-    }
-
-    .auth-login-panel-title {
-        font-size: 2.55rem;
-    }
-
-    .auth-login-list {
-        gap: 1rem;
-        margin-top: 1.7rem;
-    }
-
-    .auth-login-list strong {
-        font-size: 1rem;
-    }
-
-    .auth-login-list em {
-        margin-top: 0.25rem;
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 640px) {
-    .auth-shell-page--login-spectrum::before {
-        background-size: 40px 40px;
-        opacity: 0.16;
-    }
-
-    .auth-shell-card--login-spectrum {
-        border-radius: 1.4rem;
-        padding: 1.25rem;
-    }
-
-    .auth-shell-card--login-spectrum .auth-shell-brand-icon {
-        width: 2.45rem;
-        height: 2.45rem;
-    }
-
-    .auth-shell-card--login-spectrum .auth-shell-brand-icon svg {
-        width: 1.38rem;
-        height: 1.38rem;
-    }
-
-    .auth-shell-card--login-spectrum .auth-shell-title {
-        font-size: 1.85rem;
-    }
-}
-
-@media (max-width: 560px) {
-    .auth-login-layout {
-        width: min(100%, 28rem);
+        width: min(100%, 26.25rem);
     }
 
     .auth-login-panel {
         display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .auth-shell-main {
+        padding:
+            max(env(safe-area-inset-top), 1rem)
+            1rem
+            max(env(safe-area-inset-bottom), 1rem);
+    }
+
+    .auth-login-dots {
+        opacity: 0.34;
+    }
+
+    .auth-shell-wrap--login {
+        min-height: calc(100vh - 2rem);
+    }
+
+    .auth-shell-card--login-spectrum {
+        border-radius: 1.45rem;
+        padding: 2rem 1.4rem 1.5rem;
+    }
+
+    .auth-shell-card--login-spectrum .auth-shell-brand {
+        margin-bottom: 1.55rem;
+    }
+
+    .auth-shell-card--login-spectrum .auth-shell-brand-icon {
+        width: 2.55rem;
+        height: 2.55rem;
+    }
+
+    .auth-shell-card--login-spectrum .auth-shell-brand-icon svg {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
+
+    .auth-shell-card--login-spectrum .auth-shell-title {
+        font-size: 1.78rem;
+    }
+
+    .auth-shell-card--login-spectrum .auth-shell-provider {
+        min-height: 3.15rem;
     }
 }
