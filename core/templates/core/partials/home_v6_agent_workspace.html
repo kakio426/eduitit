@@ -1127,32 +1127,6 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-notice-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--notice"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--notice">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isAgentLoading"
-                            @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '생성 중' : (activeMode.submit_label || '보기')"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="noticeHasConversation()"
-                            @click="resetNoticeChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
             </section>
 
             <section class="home-v6-agent-schedule-chat" x-cloak x-show="activeRendererKey === 'schedule'">
@@ -1308,32 +1282,6 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-schedule-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--schedule"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--schedule">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isAgentLoading"
-                            @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '생성 중' : (activeMode.submit_label || '보기')"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="scheduleHasConversation()"
-                            @click="resetScheduleChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
             </section>
 
             <section class="home-v6-agent-law-chat" x-cloak x-show="activeRendererKey === 'teacher-law'">
@@ -1495,35 +1443,7 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-law-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--law"
-                        data-home-v6-agent-input="true"
-                        data-home-v6-agent-field="question"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @input="clearExecutionFieldError('question')"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('question')" x-text="executionFieldError('question')"></p>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--law">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isAgentLoading"
-                            @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '생성 중' : (activeMode.submit_label || '보기')"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="teacherLawHasConversation()"
-                            @click="resetTeacherLawChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
+                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('question')" x-text="executionFieldError('question')"></p>
             </section>
 
             <section class="home-v6-agent-reservation-chat" x-cloak x-show="activeRendererKey === 'reservation'">
@@ -1815,32 +1735,6 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-reservation-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--reservation"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--reservation">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isAgentLoading"
-                            @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '생성 중' : (activeMode.submit_label || '보기')"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="reservationHasConversation()"
-                            @click="resetReservationChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
             </section>
 
             <section class="home-v6-agent-tts-chat" x-cloak x-show="activeRendererKey === 'tts'">
@@ -1904,31 +1798,6 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-tts-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--tts"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--tts">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            @click="runAgentPreview()"
-                            x-text="activeMode.submit_label || '보기'"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="ttsHasConversation()"
-                            @click="resetTtsChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
             </section>
 
             <section class="home-v6-agent-quickdrop-chat" x-cloak x-show="activeRendererKey === 'quickdrop'">
@@ -2000,84 +1869,17 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-quickdrop-composer">
-                    <div
-                        class="home-v6-agent-quickdrop-compose-shell"
-                        :class="{ 'is-drag-active': isQuickdropDragActive }"
-                        @paste="captureQuickdropWorkspacePaste($event)"
-                        @dragenter="handleQuickdropDragEnter($event)"
-                        @dragover="handleQuickdropDragOver($event)"
-                        @dragleave="handleQuickdropDragLeave($event)"
-                        @drop="handleQuickdropDrop($event)"
-                    >
-                        <label
-                            class="home-v6-agent-quickdrop-attach"
-                            for="home-v6-agent-quickdrop-file-input"
-                            aria-label="첨부"
-                        >
-                            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
-                            <span>첨부</span>
-                        </label>
+                <p class="home-v6-agent-field-error" x-cloak x-show="quickdropErrorText" x-text="quickdropErrorText"></p>
 
-                        <div class="home-v6-agent-quickdrop-compose-body">
-                            <div class="home-v6-agent-quickdrop-drop-hint" x-cloak x-show="isQuickdropDragActive">
-                                <i class="fa-solid fa-arrow-down-to-bracket" aria-hidden="true"></i>
-                                <span>여기에 놓기</span>
-                            </div>
-                            <textarea
-                                class="home-v6-agent-input home-v6-agent-input--quickdrop"
-                                data-home-v6-agent-input="true"
-                                data-home-v7-workspace-input="true"
-                                :placeholder="activeMode.placeholder || ''"
-                                x-model="workspaceInput"
-                                @keydown="handleWorkspaceComposerKeydown($event, 'quickdrop')"
-                            ></textarea>
-
-                            <div class="home-v6-agent-quickdrop-selected-file" x-cloak x-show="quickdropQueuedFileName()">
-                                <div class="home-v6-agent-quickdrop-selected-file-copy">
-                                    <span class="home-v6-agent-quickdrop-selected-file-icon" aria-hidden="true">
-                                        <i class="fa-solid fa-paperclip"></i>
-                                    </span>
-                                    <p class="home-v6-agent-quickdrop-selected-file-name" x-text="quickdropQueuedFileName()"></p>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="home-v6-agent-quickdrop-clear"
-                                    @click="clearQuickdropQueuedFile()"
-                                >지우기</button>
-                            </div>
-
-                            <input
-                                id="home-v6-agent-quickdrop-file-input"
-                                x-ref="quickdropFileInput"
-                                type="file"
-                                class="sr-only"
-                                accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                                data-home-v6-agent-quickdrop-file-input="true"
-                                @change="queueQuickdropFileFromInput($event)"
-                            >
-                        </div>
-                    </div>
-
-                    <p class="home-v6-agent-field-error" x-cloak x-show="quickdropErrorText" x-text="quickdropErrorText"></p>
-
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--quickdrop">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isSendingQuickdrop"
-                            @click="sendQuickdropChat()"
-                            x-text="quickdropSubmitLabel()"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="quickdropHasConversation()"
-                            @click="resetQuickdropChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
+                <input
+                    id="home-v6-agent-quickdrop-file-input"
+                    x-ref="quickdropFileInput"
+                    type="file"
+                    class="sr-only"
+                    accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                    data-home-v6-agent-quickdrop-file-input="true"
+                    @change="queueQuickdropFileFromInput($event)"
+                >
             </section>
 
             <section class="home-v6-agent-message-save-chat" x-cloak x-show="activeRendererKey === 'message-save'">
@@ -2219,334 +2021,9 @@
                     </div>
                 </div>
 
-                <div class="home-v6-agent-message-save-composer">
-                    <textarea
-                        class="home-v6-agent-input home-v6-agent-input--message-save"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @input="handleMessageSaveInputChange()"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'message-save')"
-                    ></textarea>
-                    <p class="home-v6-agent-field-error" x-cloak x-show="messageSaveErrorText" x-text="messageSaveErrorText"></p>
-                    <div class="home-v6-agent-action-row home-v6-agent-action-row--message-save">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isSavingMessageSave || isExtractingMessageSave || isCommittingMessageSave || !messageSaveCanSave()"
-                            @click="saveMessageCaptureChat()"
-                            x-text="isSavingMessageSave ? '저장 중' : '저장'"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="messageSaveHasConversation()"
-                            @click="resetMessageSaveChat()"
-                        >새로 쓰기</button>
-                    </div>
-                </div>
+                <p class="home-v6-agent-field-error" x-cloak x-show="messageSaveErrorText" x-text="messageSaveErrorText"></p>
             </section>
 
-            <div class="home-v6-agent-grid" x-cloak x-show="!['ai-messenger', 'human-chat'].includes(activeRendererKey)">
-                <section class="home-v6-agent-console" data-home-v6-agent-console="true">
-                    <p class="home-v6-agent-section-label">입력</p>
-                    <textarea
-                        class="home-v6-agent-input"
-                        data-home-v6-agent-input="true"
-                        data-home-v7-workspace-input="true"
-                        :placeholder="activeMode.placeholder || ''"
-                        x-model="workspaceInput"
-                        @keydown="handleWorkspaceComposerKeydown($event, 'preview')"
-                    ></textarea>
-                    <div class="home-v6-agent-action-row">
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-submit"
-                            :disabled="isAgentLoading"
-                            @click="runAgentPreview()"
-                            x-text="isAgentLoading ? '생성 중' : (activeMode.submit_label || '보기')"
-                        ></button>
-                        <button
-                            type="button"
-                            class="home-v6-inline-secondary-action home-v6-agent-action"
-                            x-cloak
-                            x-show="activeMode.action_label"
-                            @click="executeModeAction()"
-                            x-text="activeMode.action_label || ''"
-                        ></button>
-                    </div>
-                </section>
-
-                <section class="home-v6-agent-preview" data-home-v6-agent-preview="true">
-                    <p class="home-v6-agent-section-label">결과</p>
-                    <div class="home-v6-agent-preview-lines" x-show="previewResultLines().length">
-                        <template x-for="(line, index) in previewResultLines()" :key="activeModeKey + '-' + index + '-' + line">
-                            <p class="home-v6-agent-preview-line" x-text="line"></p>
-                        </template>
-                    </div>
-                    <div
-                        class="home-v6-agent-preview-empty"
-                        aria-hidden="true"
-                        x-cloak
-                        x-show="!previewResultLines().length && !agentExecution"
-                    ></div>
-
-                    <div class="home-v6-agent-execution-warning-list" x-cloak x-show="agentExecution && (agentExecution.warnings || []).length">
-                        <template x-for="warning in (agentExecution ? agentExecution.warnings : [])" :key="warning">
-                            <p class="home-v6-agent-execution-warning" x-text="warning"></p>
-                        </template>
-                    </div>
-
-                    <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'schedule'">
-                        <div class="home-v6-agent-form-grid">
-                            <label class="home-v6-agent-field" x-cloak x-show="agentExecution && (agentExecution.choices || []).length > 1">
-                                <span class="home-v6-agent-field-label">일정</span>
-                                <select
-                                    class="home-v6-agent-form-input"
-                                    :value="agentExecutionDraft.choice_id || ''"
-                                    @change="selectScheduleExecutionChoice($event.target.value)"
-                                >
-                                    <template x-for="choice in (agentExecution ? agentExecution.choices : [])" :key="choice.id">
-                                        <option :value="choice.id" x-text="choice.label"></option>
-                                    </template>
-                                </select>
-                            </label>
-
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">이름</span>
-                                <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.title">
-                            </label>
-
-                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">시작</span>
-                                    <input type="datetime-local" class="home-v6-agent-form-input" x-model="agentExecutionDraft.start_time">
-                                </label>
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">종료</span>
-                                    <input type="datetime-local" class="home-v6-agent-form-input" x-model="agentExecutionDraft.end_time">
-                                </label>
-                            </div>
-
-                            <label class="home-v6-agent-checkbox">
-                                <input
-                                    type="checkbox"
-                                    :checked="Boolean(agentExecutionDraft.is_all_day)"
-                                    @change="agentExecutionDraft.is_all_day = $event.target.checked"
-                                >
-                                <span>하루 종일</span>
-                            </label>
-
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">메모</span>
-                                <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.note"></textarea>
-                            </label>
-                        </div>
-
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
-                            :disabled="isAgentExecuting"
-                            @click="executeAgentService()"
-                            x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
-                        ></button>
-                    </div>
-
-                    <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'reservation'">
-                        <div class="home-v6-agent-form-grid">
-                            <label class="home-v6-agent-field" x-cloak x-show="reservationSchoolOptions().length > 1">
-                                <span class="home-v6-agent-field-label">예약판</span>
-                                <select
-                                    class="home-v6-agent-form-input"
-                                    x-model="agentExecutionDraft.school_slug"
-                                    @change="normalizeExecutionDraft()"
-                                >
-                                    <template x-for="school in reservationSchoolOptions()" :key="school.slug">
-                                        <option :value="school.slug" x-text="school.name"></option>
-                                    </template>
-                                </select>
-                            </label>
-
-                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">날짜</span>
-                                    <input type="date" class="home-v6-agent-form-input" x-model="agentExecutionDraft.date">
-                                </label>
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">교시</span>
-                                    <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.period">
-                                        <option value="">선택</option>
-                                        <template x-for="period in reservationPeriodOptions()" :key="period.id">
-                                            <option :value="period.id" x-text="period.displayLabel || period.label"></option>
-                                        </template>
-                                    </select>
-                                </label>
-                            </div>
-
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">장소</span>
-                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.room_id">
-                                    <option value="">선택</option>
-                                    <template x-for="room in reservationRoomOptions()" :key="room.id">
-                                        <option :value="room.id" x-text="room.name"></option>
-                                    </template>
-                                </select>
-                            </label>
-
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">대상</span>
-                                <select class="home-v6-agent-form-input" x-model="agentExecutionDraft.owner_type" @change="normalizeExecutionDraft()">
-                                    <option value="class">학급</option>
-                                    <option value="custom">기타</option>
-                                </select>
-                            </label>
-
-                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split" x-cloak x-show="agentExecutionDraft.owner_type === 'class'">
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">학년</span>
-                                    <input type="number" min="1" class="home-v6-agent-form-input" x-model="agentExecutionDraft.grade">
-                                </label>
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">반</span>
-                                    <input type="number" min="1" class="home-v6-agent-form-input" x-model="agentExecutionDraft.class_no">
-                                </label>
-                            </div>
-
-                            <label class="home-v6-agent-field" x-cloak x-show="agentExecutionDraft.owner_type === 'custom'">
-                                <span class="home-v6-agent-field-label">이용 대상</span>
-                                <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.target_label" placeholder="예) 동아리, 방송부">
-                            </label>
-
-                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">이름</span>
-                                    <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.name">
-                                </label>
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">수정 코드</span>
-                                    <input type="text" maxlength="4" inputmode="numeric" class="home-v6-agent-form-input" x-model="agentExecutionDraft.edit_code">
-                                </label>
-                            </div>
-
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">메모</span>
-                                <textarea class="home-v6-agent-form-textarea" x-model="agentExecutionDraft.memo"></textarea>
-                            </label>
-                        </div>
-
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
-                            :disabled="isAgentExecuting"
-                            @click="executeAgentService()"
-                            x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
-                        ></button>
-                    </div>
-
-                    <div class="home-v6-agent-execution" x-cloak x-show="agentExecution && agentExecution.kind === 'teacher-law'">
-                        <div class="home-v6-agent-form-grid">
-                            <label class="home-v6-agent-field">
-                                <span class="home-v6-agent-field-label">질문</span>
-                                <textarea
-                                    class="home-v6-agent-form-textarea"
-                                    :class="{ 'home-v6-agent-form-input--error': executionFieldError('question') }"
-                                    data-home-v6-agent-field="question"
-                                    x-model="agentExecutionDraft.question"
-                                    @input="clearExecutionFieldError('question')"
-                                ></textarea>
-                                <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('question')" x-text="executionFieldError('question')"></span>
-                            </label>
-
-                            <div class="home-v6-agent-form-grid home-v6-agent-form-grid--split">
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">사건 유형</span>
-                                    <select
-                                        class="home-v6-agent-form-input"
-                                        :class="{ 'home-v6-agent-form-input--error': executionFieldError('incident_type') }"
-                                        data-home-v6-agent-field="incident_type"
-                                        x-model="agentExecutionDraft.incident_type"
-                                        @change="normalizeExecutionDraft(); clearExecutionFieldError('incident_type'); clearExecutionFieldError('scene'); clearExecutionFieldError('counterpart')"
-                                    >
-                                        <option value="">선택</option>
-                                        <template x-for="item in teacherLawIncidentOptions()" :key="item.value">
-                                            <option :value="item.value" x-text="item.label"></option>
-                                        </template>
-                                    </select>
-                                    <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('incident_type')" x-text="executionFieldError('incident_type')"></span>
-                                </label>
-                                <label class="home-v6-agent-field">
-                                    <span class="home-v6-agent-field-label">궁금한 것</span>
-                                    <select
-                                        class="home-v6-agent-form-input"
-                                        :class="{ 'home-v6-agent-form-input--error': executionFieldError('legal_goal') }"
-                                        data-home-v6-agent-field="legal_goal"
-                                        x-model="agentExecutionDraft.legal_goal"
-                                        @change="clearExecutionFieldError('legal_goal')"
-                                    >
-                                        <option value="">선택</option>
-                                        <template x-for="item in teacherLawGoalOptions()" :key="item.value">
-                                            <option :value="item.value" x-text="item.label"></option>
-                                        </template>
-                                    </select>
-                                    <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('legal_goal')" x-text="executionFieldError('legal_goal')"></span>
-                                </label>
-                            </div>
-
-                            <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsScene()">
-                                <span class="home-v6-agent-field-label">장면</span>
-                                <select
-                                    class="home-v6-agent-form-input"
-                                    :class="{ 'home-v6-agent-form-input--error': executionFieldError('scene') }"
-                                    data-home-v6-agent-field="scene"
-                                    x-model="agentExecutionDraft.scene"
-                                    @change="clearExecutionFieldError('scene')"
-                                >
-                                    <option value="">선택</option>
-                                    <template x-for="item in teacherLawSceneOptions()" :key="item.value">
-                                        <option :value="item.value" x-text="item.label"></option>
-                                    </template>
-                                </select>
-                                <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('scene')" x-text="executionFieldError('scene')"></span>
-                            </label>
-
-                            <label class="home-v6-agent-field" x-cloak x-show="teacherLawNeedsCounterpart()">
-                                <span class="home-v6-agent-field-label">상대</span>
-                                <select
-                                    class="home-v6-agent-form-input"
-                                    :class="{ 'home-v6-agent-form-input--error': executionFieldError('counterpart') }"
-                                    data-home-v6-agent-field="counterpart"
-                                    x-model="agentExecutionDraft.counterpart"
-                                    @change="clearExecutionFieldError('counterpart')"
-                                >
-                                    <option value="">선택</option>
-                                    <template x-for="item in teacherLawCounterpartOptions()" :key="item.value">
-                                        <option :value="item.value" x-text="item.label"></option>
-                                    </template>
-                                </select>
-                                <span class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('counterpart')" x-text="executionFieldError('counterpart')"></span>
-                            </label>
-                        </div>
-
-                        <button
-                            type="button"
-                            class="home-v6-empty-primary-action home-v6-agent-confirm-submit"
-                            :disabled="isAgentExecuting"
-                            @click="executeAgentService()"
-                            x-text="isAgentExecuting ? '저장 중' : ((agentExecution && agentExecution.submitLabel) || '저장')"
-                        ></button>
-                    </div>
-
-                    <div class="home-v6-agent-preview-foot" x-cloak x-show="!agentExecution && agentPreview.confirmHref && agentPreview.confirmLabel">
-                        <a
-                            class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-open-link"
-                            :href="agentPreview.confirmHref"
-                            x-text="agentPreview.confirmLabel"
-                        ></a>
-                    </div>
-                </section>
-            </div>
         </div>
     </div>
 </section>
