@@ -1954,11 +1954,16 @@
             startChatHistoryEntry: function (userText, modeKey, modeLabel) {
                 try {
                     var text = trimLine(userText);
+                    var dateMeta;
                     if (!text) {
                         return '';
                     }
+                    dateMeta = this.buildChatHistoryDateMeta();
                     var entry = {
                         id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+                        createdAt: dateMeta.createdAt,
+                        dateKey: dateMeta.dateKey,
+                        dateLabel: dateMeta.dateLabel,
                         modeKey: modeKey || this.activeModeKey,
                         modeLabel: modeLabel || ((this.activeMode && this.activeMode.label) || ''),
                         userBubble: {
@@ -1974,6 +1979,7 @@
                             actionKind: '',
                             actionLabel: '',
                             actions: [],
+                            cards: [],
                         },
                         actionContext: this.buildChatHistoryActionContext({
                             workspaceInput: '',
@@ -1991,6 +1997,207 @@
                 } catch (e) {
                     return '';
                 }
+            },
+
+            padChatHistoryDatePart: function (value) {
+                return String(value).padStart(2, '0');
+            },
+
+            chatHistoryDateKeyFromDate: function (date) {
+                var source = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+                return [
+                    source.getFullYear(),
+                    this.padChatHistoryDatePart(source.getMonth() + 1),
+                    this.padChatHistoryDatePart(source.getDate()),
+                ].join('-');
+            },
+
+            buildChatHistoryDateMeta: function (dateValue) {
+                var source = dateValue ? new Date(dateValue) : new Date();
+                var today = new Date();
+                var sourceMidnight;
+                var todayMidnight;
+                var diffDays;
+                if (Number.isNaN(source.getTime())) {
+                    source = new Date();
+                }
+                sourceMidnight = new Date(source.getFullYear(), source.getMonth(), source.getDate());
+                todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                diffDays = Math.round((sourceMidnight.getTime() - todayMidnight.getTime()) / 86400000);
+                return {
+                    createdAt: source.toISOString(),
+                    dateKey: this.chatHistoryDateKeyFromDate(source),
+                    dateLabel: diffDays === 0
+                        ? '오늘'
+                        : (diffDays === -1 ? '어제' : ((source.getMonth() + 1) + '월 ' + source.getDate() + '일')),
+                };
+            },
+
+            chatHistoryDateKey: function (item) {
+                var entry = item && typeof item === 'object' ? item : {};
+                if (trimLine(entry.dateKey || '')) {
+                    return trimLine(entry.dateKey);
+                }
+                return this.buildChatHistoryDateMeta(entry.createdAt).dateKey;
+            },
+
+            chatHistoryDateLabel: function (item) {
+                var entry = item && typeof item === 'object' ? item : {};
+                if (trimLine(entry.dateLabel || '')) {
+                    return trimLine(entry.dateLabel);
+                }
+                return this.buildChatHistoryDateMeta(entry.createdAt).dateLabel;
+            },
+
+            shouldShowChatDateDivider: function (item, index) {
+                var idx = Number(index || 0);
+                var prev;
+                if (idx <= 0) {
+                    return true;
+                }
+                if (!Array.isArray(this.chatHistory) || !this.chatHistory[idx - 1]) {
+                    return true;
+                }
+                prev = this.chatHistory[idx - 1];
+                return this.chatHistoryDateKey(item) !== this.chatHistoryDateKey(prev);
+            },
+
+            formatChatHistoryDateTimeDate: function (value) {
+                var parsed = this.parseDateTimeLocalParts(value);
+                return parsed ? (parsed.month + '월 ' + parsed.day + '일 ' + parsed.weekday + '요일') : '';
+            },
+
+            formatChatHistoryDateTimeTime: function (startValue, endValue, isAllDay) {
+                var start = this.parseDateTimeLocalParts(startValue);
+                var end = this.parseDateTimeLocalParts(endValue);
+                if (isAllDay) {
+                    return '하루 종일';
+                }
+                if (!start) {
+                    return '';
+                }
+                return end ? (start.time + ' - ' + end.time) : start.time;
+            },
+
+            formatChatHistoryDateOnly: function (value) {
+                var text = trimLine(value);
+                var match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+                var date;
+                if (!match) {
+                    return '';
+                }
+                date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+                if (Number.isNaN(date.getTime())) {
+                    return '';
+                }
+                return Number(match[2]) + '월 ' + Number(match[3]) + '일 ' + weekdays[date.getDay()] + '요일';
+            },
+
+            buildChatHistoryResultCards: function (modeKey, context, preview) {
+                var activeModeKey = trimLine(modeKey || '');
+                var snapshot = context && typeof context === 'object' ? this.normalizeModeState(context) : this.buildChatHistoryActionContext();
+                var execution = snapshot.agentExecution && typeof snapshot.agentExecution === 'object' ? snapshot.agentExecution : null;
+                var draft = snapshot.agentExecutionDraft && typeof snapshot.agentExecutionDraft === 'object' ? snapshot.agentExecutionDraft : {};
+                var previewPayload = preview && typeof preview === 'object' ? preview : {};
+                var cards = [];
+                var pushRow = function (rows, label, value) {
+                    var nextValue = trimLine(value);
+                    if (!nextValue) {
+                        return;
+                    }
+                    rows.push({
+                        label: trimLine(label),
+                        value: nextValue,
+                    });
+                };
+                var rows;
+                var choice;
+                var school;
+                var room;
+                var period;
+                if (activeModeKey === 'schedule' && execution && execution.kind === 'schedule' && trimLine(draft.start_time || '')) {
+                    rows = [];
+                    choice = Array.isArray(execution.choices)
+                        ? execution.choices.find(function (item) {
+                            return String(item && item.id || '') === String(draft.choice_id || '');
+                        })
+                        : null;
+                    pushRow(rows, '날짜', this.formatChatHistoryDateTimeDate(draft.start_time));
+                    pushRow(rows, '시간', this.formatChatHistoryDateTimeTime(draft.start_time, draft.end_time, Boolean(draft.is_all_day)));
+                    pushRow(rows, '후보', choice ? choice.label : '');
+                    pushRow(rows, '요약', previewPayload.summary);
+                    cards.push({
+                        type: 'schedule-summary',
+                        title: trimLine(draft.title || execution.title || previewPayload.title || '일정 후보'),
+                        rows: rows.slice(0, 4),
+                        warnings: Array.isArray(execution.warnings) ? execution.warnings.map(trimLine).filter(Boolean).slice(0, 3) : [],
+                    });
+                }
+                if (activeModeKey === 'reservation' && execution && execution.kind === 'reservation') {
+                    rows = [];
+                    school = Array.isArray(execution.schoolOptions)
+                        ? execution.schoolOptions.find(function (item) {
+                            return trimLine(item && item.slug) === trimLine(draft.school_slug || '');
+                        }) || execution.schoolOptions[0]
+                        : null;
+                    room = school && Array.isArray(school.rooms)
+                        ? school.rooms.find(function (item) {
+                            return String(item && item.id || '') === String(draft.room_id || '');
+                        })
+                        : null;
+                    period = school && Array.isArray(school.periods)
+                        ? school.periods.find(function (item) {
+                            return String(item && item.id || '') === String(draft.period || '');
+                        })
+                        : null;
+                    pushRow(rows, '예약판', school ? school.name : '');
+                    pushRow(rows, '날짜', this.formatChatHistoryDateOnly(draft.date));
+                    pushRow(rows, '시간', period ? (period.displayLabel || period.label) : '');
+                    pushRow(rows, '장소', room ? room.name : '');
+                    pushRow(rows, '대상', this.reservationPartyLabelFromDraft(draft));
+                    cards.push({
+                        type: 'reservation-summary',
+                        title: trimLine(execution.title || previewPayload.title || '예약 제안'),
+                        rows: rows.slice(0, 5),
+                        warnings: Array.isArray(execution.warnings) ? execution.warnings.map(trimLine).filter(Boolean).slice(0, 3) : [],
+                    });
+                }
+                return cards.filter(function (card) {
+                    return card && trimLine(card.title) && (Array.isArray(card.rows) && card.rows.length || Array.isArray(card.warnings) && card.warnings.length);
+                }).slice(0, 2);
+            },
+
+            reservationPartyLabelFromDraft: function (draft) {
+                var payload = draft && typeof draft === 'object' ? draft : {};
+                var ownerType = trimLine(payload.owner_type || '') === 'custom' ? 'custom' : 'class';
+                var name = trimLine(payload.name);
+                var grade;
+                var classNo;
+                var party;
+                if (ownerType === 'class') {
+                    grade = trimLine(payload.grade);
+                    classNo = trimLine(payload.class_no);
+                    party = [grade ? grade + '학년' : '', classNo ? classNo + '반' : ''].filter(Boolean).join(' ');
+                    return [party, name].filter(Boolean).join(' ').trim();
+                }
+                return [trimLine(payload.target_label), name].filter(Boolean).join(' ').trim();
+            },
+
+            chatHistoryResultCards: function (item) {
+                var result = item && item.aiResult && typeof item.aiResult === 'object' ? item.aiResult : {};
+                return Array.isArray(result.cards) ? result.cards : [];
+            },
+
+            chatHistoryVisibleLines: function (item) {
+                var result = item && item.aiResult && typeof item.aiResult === 'object' ? item.aiResult : {};
+                var cards = this.chatHistoryResultCards(item);
+                if (cards.some(function (card) {
+                    return card && (card.type === 'schedule-summary' || card.type === 'reservation-summary');
+                })) {
+                    return [];
+                }
+                return Array.isArray(result.lines) ? result.lines : [];
             },
 
             finalizeChatHistoryEntry: function (entryId, options) {
@@ -2089,7 +2296,14 @@
                         actionKind: actionKind,
                         actionLabel: actionLabel,
                         actions: [],
+                        cards: [],
                     };
+                    result.cards = Array.isArray(finalizeOptions.cards)
+                        ? finalizeOptions.cards.slice(0, 2)
+                        : this.buildChatHistoryResultCards(modeKey, contextSnapshot, sourcePreview);
+                    if (!result.cards.length && this.chatHistory[idx].aiResult && Array.isArray(this.chatHistory[idx].aiResult.cards)) {
+                        result.cards = this.chatHistory[idx].aiResult.cards.slice(0, 2);
+                    }
                     result.actions = Array.isArray(finalizeOptions.actions)
                         ? finalizeOptions.actions.slice(0, 3)
                         : this.buildChatHistoryActionSnapshots(modeKey, result, contextSnapshot);

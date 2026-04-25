@@ -556,11 +556,11 @@
                     aria-live="polite"
                     aria-relevant="additions"
                 >
-                    <div class="home-v6-chat-date-separator" aria-hidden="true">
-                        <span>오늘</span>
-                    </div>
-                    <template x-for="item in chatHistory" :key="item.id">
+                    <template x-for="(item, index) in chatHistory" :key="item.id">
                         <div class="home-v6-chat-history-pair">
+                            <div class="home-v6-chat-date-separator" x-cloak x-show="shouldShowChatDateDivider(item, index)" aria-hidden="true">
+                                <span x-text="chatHistoryDateLabel(item)"></span>
+                            </div>
                             <div class="home-v6-agent-chat-row home-v6-agent-chat-row--user">
                                 <div class="home-v6-agent-ai-bubble home-v6-agent-ai-bubble--user">
                                     <template x-if="item.userBubble.kind === 'text'">
@@ -596,7 +596,30 @@
                                             <span></span>
                                             <span></span>
                                         </div>
-                                        <template x-for="(line, idx) in item.aiResult.lines" :key="item.id + '-line-' + idx">
+                                        <template x-for="(card, cardIdx) in chatHistoryResultCards(item)" :key="item.id + '-card-' + cardIdx + '-' + card.type">
+                                            <div class="home-v6-chat-summary-card" :class="'home-v6-chat-summary-card--' + card.type">
+                                                <div class="home-v6-chat-summary-card-head">
+                                                    <span class="home-v6-chat-summary-card-icon" aria-hidden="true">
+                                                        <i class="fa-solid" :class="card.type === 'reservation-summary' ? 'fa-door-open' : 'fa-calendar-check'"></i>
+                                                    </span>
+                                                    <p class="home-v6-chat-summary-card-title" x-text="card.title"></p>
+                                                </div>
+                                                <dl class="home-v6-chat-summary-card-rows">
+                                                    <template x-for="(row, rowIdx) in card.rows" :key="item.id + '-card-' + cardIdx + '-row-' + rowIdx">
+                                                        <div class="home-v6-chat-summary-card-row">
+                                                            <dt x-text="row.label"></dt>
+                                                            <dd x-text="row.value"></dd>
+                                                        </div>
+                                                    </template>
+                                                </dl>
+                                                <div class="home-v6-chat-summary-card-warnings" x-cloak x-show="card.warnings && card.warnings.length">
+                                                    <template x-for="(warning, warningIdx) in card.warnings" :key="item.id + '-card-' + cardIdx + '-warning-' + warningIdx">
+                                                        <p x-text="warning"></p>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-for="(line, idx) in chatHistoryVisibleLines(item)" :key="item.id + '-line-' + idx">
                                             <p class="home-v6-agent-chat-draft-line" x-text="line"></p>
                                         </template>
                                         <p class="home-v6-agent-ai-bubble-note" x-cloak x-show="item.aiResult.note" x-text="item.aiResult.note"></p>
