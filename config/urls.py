@@ -75,6 +75,7 @@ urlpatterns = [
     path('schoolcomm/', include('schoolcomm.urls', namespace='schoolcomm')),
     path('quickdrop/', include('quickdrop.urls', namespace='quickdrop')),
     path('ocrdesk/', include('ocrdesk.urls', namespace='ocrdesk')),
+    path('guide-recorder/', include('guide_recorder.urls', namespace='guide_recorder')),
     path('parentcomm/', include('parentcomm.urls', namespace='parentcomm')),
     path('docviewer/', include('docviewer.urls', namespace='docviewer')),
     path('pdf/', include('pdfhub.urls', namespace='pdfhub')),

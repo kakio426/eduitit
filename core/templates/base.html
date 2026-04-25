@@ -673,6 +673,10 @@
                 }
             });
         </script>
+        {% if guide_recorder_enabled %}
+        <script>window.__GUIDE_RECORDER_ENABLED = true;</script>
+        <script defer src="{% static 'guide_recorder/js/recorder.js' %}"></script>
+        {% endif %}
         {% block extra_js %}{% endblock %}
     </div><!-- #app-root -->
 

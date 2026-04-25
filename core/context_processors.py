@@ -118,6 +118,15 @@ def site_config(request):
         except Exception:
             pinned_notice_expanded = False
 
+    _user = getattr(request, 'user', None)
+    _guide_recorder_enabled = bool(
+        _user
+        and getattr(_user, 'is_authenticated', False)
+        and getattr(_user, 'is_superuser', False)
+        and not getattr(request, 'is_htmx', False)
+        and not request.path.startswith('/guide-recorder/')
+    )
+
     if _path_matches_prefixes(request, SITE_CONFIG_DISABLED_PREFIXES):
         return {
             'banner_text': '',
@@ -126,6 +135,7 @@ def site_config(request):
             'banner_link': '',
             'pinned_notice_expanded': pinned_notice_expanded,
             'notebook_manual_url': '',
+            'guide_recorder_enabled': _guide_recorder_enabled,
         }
 
     try:
@@ -140,6 +150,7 @@ def site_config(request):
             'banner_link': config.banner_link,
             'pinned_notice_expanded': pinned_notice_expanded,
             'notebook_manual_url': getattr(config, 'notebook_manual_url', ''),
+            'guide_recorder_enabled': _guide_recorder_enabled,
         }
     except Exception:
         return {
@@ -149,6 +160,7 @@ def site_config(request):
             'banner_link': '',
             'pinned_notice_expanded': pinned_notice_expanded,
             'notebook_manual_url': '',
+            'guide_recorder_enabled': _guide_recorder_enabled,
         }
 
 

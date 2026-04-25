@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     'schoolcomm.apps.SchoolcommConfig',
     'quickdrop.apps.QuickdropConfig',
     'ocrdesk.apps.OcrdeskConfig',
+    'guide_recorder.apps.GuideRecorderConfig',
     'textbooks.apps.TextbooksConfig',
     'textbook_ai.apps.TextbookAiConfig',
     'edu_materials.apps.EduMaterialsConfig',
