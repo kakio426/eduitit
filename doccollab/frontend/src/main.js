@@ -3,6 +3,7 @@ import wasmUrl from "@rhwp/core/rhwp_bg.wasm?url";
 
 
 const form = document.querySelector("[data-doccollab-upload-form='true']");
+const documentForm = document.querySelector("[data-doccollab-document-form='true']");
 const worksheetForm = document.querySelector("[data-doccollab-worksheet-form='true']");
 
 if (form) {
@@ -107,6 +108,93 @@ if (form) {
   }
 }
 
+if (documentForm) {
+  const promptInput = documentForm.querySelector("textarea[name='prompt']");
+  const submitButton = documentForm.querySelector("[data-doccollab-document-button='true']");
+  const statusEl = document.getElementById("doccollab-document-status");
+  let submitLocked = false;
+
+  promptInput?.addEventListener("input", () => {
+    if (!statusEl) {
+      return;
+    }
+    const length = String(promptInput.value || "").trim().length;
+    if (!length) {
+      statusEl.textContent = "생성 가능";
+      statusEl.dataset.state = "default";
+      return;
+    }
+    if (length < 20) {
+      statusEl.textContent = `${length}/20`;
+      statusEl.dataset.state = "default";
+      return;
+    }
+    statusEl.textContent = "생성 가능";
+    statusEl.dataset.state = "default";
+  });
+
+  documentForm.addEventListener("submit", async (event) => {
+    if (submitLocked) {
+      event.preventDefault();
+      return;
+    }
+    if (submitButton?.disabled) {
+      return;
+    }
+    const prompt = String(promptInput?.value || "").trim();
+    if (prompt.length < 20) {
+      event.preventDefault();
+      setDocumentStatus("20자 이상", true);
+      return;
+    }
+    event.preventDefault();
+    submitLocked = true;
+    submitButton?.setAttribute("aria-busy", "true");
+    submitButton?.setAttribute("disabled", "disabled");
+    setDocumentStatus("생성 중");
+
+    try {
+      const response = await fetch(documentForm.action, {
+        method: "POST",
+        body: new FormData(documentForm),
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const payload = await parseJsonResponse(response);
+      if (!response.ok) {
+        const error = new Error(payload.message || "다시 시도");
+        error.status = response.status;
+        throw error;
+      }
+      if (payload.room_url) {
+        window.location.assign(payload.room_url);
+        return;
+      }
+      throw new Error("다시 시도");
+    } catch (error) {
+      submitLocked = false;
+      const message = error instanceof Error ? error.message : "다시 시도";
+      setDocumentStatus(error?.status === 429 ? "오늘 한도" : "다시 시도", true);
+      if (error?.status !== 429) {
+        submitButton?.removeAttribute("disabled");
+      }
+      submitButton?.removeAttribute("aria-busy");
+      window.alert(message);
+    }
+  });
+
+  function setDocumentStatus(message, isError = false) {
+    if (!statusEl) {
+      return;
+    }
+    statusEl.textContent = message;
+    statusEl.dataset.state = isError ? "error" : "default";
+  }
+}
+
 if (worksheetForm) {
   const topicInput = worksheetForm.querySelector("input[name='topic']");
   const submitButton = worksheetForm.querySelector("[data-doccollab-worksheet-button='true']");
@@ -150,6 +238,18 @@ if (worksheetForm) {
   });
 }
 
+
+async function parseJsonResponse(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return {};
+  }
+}
 
 function isDesktopChrome() {
   const ua = String(window.navigator.userAgent || "").toLowerCase();

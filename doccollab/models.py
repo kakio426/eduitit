@@ -99,6 +99,7 @@ class DocRoom(models.Model):
     class OriginKind(models.TextChoices):
         UPLOAD = "upload", "업로드"
         GENERATED_WORKSHEET = "generated_worksheet", "학습지 생성"
+        AI_DRAFT = "ai_draft", "AI 초안"
 
     class SourceFormat(models.TextChoices):
         HWP = "hwp", "HWP"
@@ -196,6 +197,49 @@ class DocWorksheet(models.Model):
         ordering = ["-updated_at", "-created_at"]
         indexes = [
             models.Index(fields=["bootstrap_status", "is_library_published"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.room.title
+
+
+class DocGeneratedDraft(models.Model):
+    class DocumentType(models.TextChoices):
+        NOTICE = "notice", "안내문"
+        HOME_LETTER = "home_letter", "가정통신문"
+        PLAN = "plan", "계획안"
+        MINUTES = "minutes", "회의록"
+        REPORT = "report", "보고서"
+        FREEFORM = "freeform", "자유 문서"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "대기"
+        BUILDING = "building", "생성 중"
+        READY = "ready", "준비 완료"
+        FAILED = "failed", "실패"
+
+    room = models.OneToOneField(
+        DocRoom,
+        on_delete=models.CASCADE,
+        related_name="generated_draft",
+    )
+    document_type = models.CharField(max_length=30, choices=DocumentType.choices, default=DocumentType.FREEFORM)
+    request_text = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    content_json = models.JSONField(default=dict, blank=True)
+    summary_text = models.CharField(max_length=200, blank=True, default="")
+    error_message = models.CharField(max_length=200, blank=True, default="")
+    provider = models.CharField(max_length=40, blank=True, default="deepseek")
+    prompt_version = models.CharField(max_length=40, blank=True, default="")
+    latest_page_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+        indexes = [
+            models.Index(fields=["status", "document_type"]),
             models.Index(fields=["created_at"]),
         ]
 

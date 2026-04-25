@@ -21,7 +21,17 @@ from .assistant_service import (
     serialize_analysis,
     serialize_question,
 )
-from .models import DocMembership, DocRevision, DocRoom, DocWorksheet
+from .doc_generation_llm import DocumentGenerationLlmError
+from .doc_generation_service import (
+    create_generated_document_room,
+    document_daily_limit_message,
+    document_daily_limit_per_user,
+    document_daily_limit_used,
+    release_document_daily_limit,
+    reserve_document_daily_limit,
+)
+from .doc_hwp_builder import DocumentBuildError
+from .models import DocGeneratedDraft, DocMembership, DocRevision, DocRoom, DocWorksheet
 from .services import (
     accessible_rooms_queryset,
     assert_editor_membership,
@@ -250,6 +260,8 @@ def _build_dashboard_context(request):
     public_worksheets = public_worksheet_queryset()[:8]
     worksheet_creation_enabled = True
     worksheet_creation_reason = "생성 가능 · 편집은 데스크톱 Chrome"
+    document_daily_used = document_daily_limit_used(request.user.id)
+    document_daily_limit = document_daily_limit_per_user()
     return {
         "service_title": "잇티한글",
         "my_rooms": my_rooms,
@@ -267,6 +279,13 @@ def _build_dashboard_context(request):
         "worksheet_daily_limit": worksheet_daily_limit_per_user(),
         "worksheet_creation_enabled": worksheet_creation_enabled,
         "worksheet_creation_reason": worksheet_creation_reason,
+        "document_daily_used": document_daily_used,
+        "document_daily_limit": document_daily_limit,
+        "document_generation_enabled": document_daily_limit > document_daily_used,
+        "document_type_choices": [
+            {"value": value, "label": label}
+            for value, label in DocGeneratedDraft.DocumentType.choices
+        ],
     }
 
 
@@ -310,6 +329,80 @@ def create_room(request):
         messages.error(request, "문서를 여는 중 오류가 발생했습니다. 다시 시도해 주세요.")
         return redirect("doccollab:main")
     messages.success(request, "편집 화면을 열었습니다.")
+    return redirect("doccollab:room_detail", room_id=room.id)
+
+
+@login_required
+@require_POST
+def generate_document(request):
+    if not reserve_document_daily_limit(request.user.id):
+        message_text = document_daily_limit_message()
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=429)
+        messages.error(request, message_text)
+        return redirect("doccollab:main")
+
+    payload = _request_payload(request)
+    document_type = payload.get("document_type")
+    prompt = payload.get("prompt")
+    try:
+        room, _draft, revision = create_generated_document_room(
+            user=request.user,
+            document_type=document_type,
+            prompt=prompt,
+        )
+    except ValidationError as exc:
+        release_document_daily_limit(request.user.id)
+        if _is_json_request(request):
+            return JsonResponse({"message": _validation_message(exc)}, status=400)
+        messages.error(request, _validation_message(exc))
+        return redirect("doccollab:main")
+    except DocumentGenerationLlmError as exc:
+        release_document_daily_limit(request.user.id)
+        logger.warning(
+            "doccollab generate_document llm failed user=%s error=%s",
+            getattr(request.user, "id", None),
+            exc,
+        )
+        message_text = "문서 초안을 만드는 중 잠시 멈췄습니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=503)
+        messages.error(request, message_text)
+        return redirect("doccollab:main")
+    except DocumentBuildError as exc:
+        release_document_daily_limit(request.user.id)
+        logger.warning(
+            "doccollab generate_document builder failed user=%s error=%s",
+            getattr(request.user, "id", None),
+            exc,
+        )
+        message_text = "HWP 저장본을 만드는 중 잠시 멈췄습니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=503)
+        messages.error(request, message_text)
+        return redirect("doccollab:main")
+    except Exception:
+        release_document_daily_limit(request.user.id)
+        logger.exception("doccollab generate_document failed user=%s", getattr(request.user, "id", None))
+        message_text = "문서 초안을 만드는 중 오류가 발생했습니다."
+        if _is_json_request(request):
+            return JsonResponse({"message": message_text}, status=500)
+        messages.error(request, message_text)
+        return redirect("doccollab:main")
+
+    daily_used = document_daily_limit_used(request.user.id)
+    if _is_json_request(request):
+        return JsonResponse(
+            {
+                "room_id": str(room.id),
+                "room_url": reverse("doccollab:room_detail", kwargs={"room_id": room.id}),
+                "revision_id": str(revision.id),
+                "download_url": reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}),
+                "daily_used": daily_used,
+                "daily_limit": document_daily_limit_per_user(),
+            }
+        )
+    messages.success(request, "문서를 만들었습니다.")
     return redirect("doccollab:room_detail", room_id=room.id)
 
 
@@ -450,6 +543,7 @@ def generate_worksheet_file(request):
 def room_detail(request, room_id):
     room, membership = _load_room_or_404(request, room_id, allow_public_library=True)
     worksheet = getattr(room, "worksheet", None)
+    generated_draft = getattr(room, "generated_draft", None)
     public_library_view = bool(
         worksheet
         and membership is None
@@ -505,6 +599,7 @@ def room_detail(request, room_id):
     context = {
         "room": room,
         "worksheet": worksheet,
+        "generated_draft": generated_draft,
         "membership": membership,
         "revisions": revisions,
         "edit_history": edit_history,
@@ -522,6 +617,7 @@ def room_detail(request, room_id):
         "share_copy": access_context["share_copy"],
         "access_label": access_context["access_label"],
         "is_generated_worksheet": room.origin_kind == DocRoom.OriginKind.GENERATED_WORKSHEET,
+        "is_generated_draft": room.origin_kind == DocRoom.OriginKind.AI_DRAFT,
         "public_library_view": public_library_view,
         "source_download_url": source_download_url,
         "fallback_download_url": fallback_download_url,

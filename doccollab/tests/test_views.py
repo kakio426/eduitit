@@ -14,6 +14,7 @@ from doccollab.models import (
     DocAnalysis,
     DocAssistantQuestion,
     DocEditEvent,
+    DocGeneratedDraft,
     DocMembership,
     DocRevision,
     DocRoom,
@@ -23,6 +24,9 @@ from doccollab.models import (
     room_source_upload_to,
 )
 from doccollab.assistant_service import MAX_DOCUMENT_BYTES, MAX_QUESTIONS_PER_ANALYSIS
+from doccollab.doc_generation_llm import DocumentGenerationLlmError
+from doccollab.doc_generation_service import document_daily_limit_used
+from doccollab.doc_hwp_builder import DocumentBuildError
 from doccollab.services import (
     accessible_rooms_queryset,
     append_room_collab_update,
@@ -177,6 +181,34 @@ class DoccollabViewTests(TestCase):
             "hwp_bytes": b"worksheet-hwp",
             "page_count": 1,
             "used_profile": "comfortable" if not short else "tight",
+            "file_name": f"{title}.hwp",
+        }
+
+    def _document_payload(self, *, title="체험학습 안내문", summary="5월 체험학습 안내"):
+        return {
+            "title": title,
+            "subtitle": "학부모 안내",
+            "meta_lines": ["대상: 3학년", "일시: 2026.05.10"],
+            "body_blocks": [
+                {
+                    "heading": "안내",
+                    "paragraphs": ["5월 체험학습 운영 내용을 안내드립니다."],
+                    "bullets": ["편한 복장", "개인 물통"],
+                },
+                {
+                    "heading": "협조",
+                    "paragraphs": ["참가 신청서를 기한 내 제출해 주세요."],
+                    "bullets": [],
+                },
+            ],
+            "closing": "감사합니다.",
+            "summary_text": summary,
+        }
+
+    def _document_build_result(self, *, title="체험학습 안내문"):
+        return {
+            "hwp_bytes": b"generated-hwp",
+            "page_count": 1,
             "file_name": f"{title}.hwp",
         }
 
@@ -377,6 +409,9 @@ class DoccollabViewTests(TestCase):
         self.assertContains(response, "최근 수정한 문서")
         self.assertContains(response, "공유받은 문서")
         self.assertContains(response, "파일 열기")
+        self.assertContains(response, "AI 문서")
+        self.assertContains(response, "초안 만들기")
+        self.assertContains(response, "만들기")
         self.assertContains(response, "선택 후 바로 열림")
         self.assertNotContains(response, "학습지 만들기")
         self.assertContains(response, reverse("doccollab:remove_room", kwargs={"room_id": own_room.id}))
@@ -759,6 +794,200 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["editing_supported"])
         self.assertContains(response, "휴대폰에서는 보기만 가능합니다.")
+
+    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_generate_document_creates_ai_draft_room_and_first_get_200(self, mock_generate, mock_build):
+        mock_generate.return_value = self._document_payload()
+        mock_build.return_value = self._document_build_result()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.NOTICE,
+                "prompt": "5월 체험학습 안내문을 학부모에게 보낼 수 있게 작성해 주세요.",
+            },
+            follow=True,
+            HTTP_USER_AGENT=self.CHROME_UA,
+        )
+
+        room = DocRoom.objects.get(origin_kind=DocRoom.OriginKind.AI_DRAFT)
+        draft = room.generated_draft
+        revision = room.revisions.get()
+        download = self.client.get(reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["room"].id, room.id)
+        self.assertEqual(response.context["generated_draft"].id, draft.id)
+        self.assertEqual(draft.status, DocGeneratedDraft.Status.READY)
+        self.assertEqual(draft.document_type, DocGeneratedDraft.DocumentType.NOTICE)
+        self.assertEqual(draft.summary_text, "5월 체험학습 안내")
+        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
+        self.assertEqual(response.context["room_payload"]["notes"], "AI가 만든 HWP 초안을 바로 엽니다.")
+        self.assertEqual(response.context["room_payload"]["sourceFileUrl"], "")
+        self.assertEqual(download.status_code, 200)
+        self.assertIn(".hwp", download.headers["Content-Disposition"])
+
+    @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=2)
+    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_generate_document_json_returns_revision_metadata(self, mock_generate, mock_build):
+        mock_generate.return_value = self._document_payload()
+        mock_build.return_value = self._document_build_result()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.HOME_LETTER,
+                "prompt": "학부모에게 보내는 체험학습 안내 가정통신문 초안을 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        payload = response.json()
+        room = DocRoom.objects.get(id=payload["room_id"])
+        revision = room.revisions.get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(payload["revision_id"], str(revision.id))
+        self.assertEqual(payload["room_url"], reverse("doccollab:room_detail", kwargs={"room_id": room.id}))
+        self.assertEqual(
+            payload["download_url"],
+            reverse("doccollab:download_revision", kwargs={"room_id": room.id, "revision_id": revision.id}),
+        )
+        self.assertEqual(payload["daily_used"], 1)
+        self.assertEqual(payload["daily_limit"], 2)
+
+    @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
+    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_invalid_generate_document_request_releases_daily_limit(self, mock_generate, mock_build):
+        mock_generate.return_value = self._document_payload()
+        mock_build.return_value = self._document_build_result()
+        self.client.force_login(self.owner)
+
+        invalid = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.NOTICE,
+                "prompt": "짧음",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        valid = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.NOTICE,
+                "prompt": "5월 체험학습 안내문을 학부모에게 보낼 수 있게 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.json()["message"], "요청 내용을 20자 이상 적어 주세요.")
+        self.assertEqual(valid.status_code, 200)
+        self.assertEqual(document_daily_limit_used(self.owner.id), 1)
+
+    @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_generate_document_llm_error_returns_503_and_releases_limit(self, mock_generate):
+        mock_generate.side_effect = [
+            DocumentGenerationLlmError("llm failed"),
+            self._document_payload(),
+        ]
+        self.client.force_login(self.owner)
+
+        failed = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.NOTICE,
+                "prompt": "5월 체험학습 안내문을 학부모에게 보낼 수 있게 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        with mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes", return_value=self._document_build_result()):
+            succeeded = self.client.post(
+                reverse("doccollab:generate_document"),
+                {
+                    "document_type": DocGeneratedDraft.DocumentType.REPORT,
+                    "prompt": "체험학습 운영 결과 보고서를 학교 내부 보고용으로 작성해 주세요.",
+                },
+                HTTP_ACCEPT="application/json",
+            )
+
+        failed_draft = DocGeneratedDraft.objects.get(status=DocGeneratedDraft.Status.FAILED)
+        failed_draft.room.refresh_from_db()
+        self.assertEqual(failed.status_code, 503)
+        self.assertEqual(succeeded.status_code, 200)
+        self.assertEqual(failed.json()["message"], "문서 초안을 만드는 중 잠시 멈췄습니다.")
+        self.assertEqual(failed_draft.room.status, DocRoom.Status.ARCHIVED)
+        self.assertEqual(document_daily_limit_used(self.owner.id), 1)
+
+    @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
+    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_generate_document_builder_error_returns_503_and_records_failed_draft(self, mock_generate, mock_build):
+        mock_generate.return_value = self._document_payload()
+        mock_build.side_effect = [
+            DocumentBuildError("builder failed"),
+            self._document_build_result(),
+        ]
+        self.client.force_login(self.owner)
+
+        failed = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.PLAN,
+                "prompt": "5월 체험학습 운영 계획안을 학교 내부 결재용으로 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        succeeded = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.MINUTES,
+                "prompt": "체험학습 사전 협의 회의록을 교사용 기록으로 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        failed_draft = DocGeneratedDraft.objects.get(status=DocGeneratedDraft.Status.FAILED)
+        failed_draft.room.refresh_from_db()
+        self.assertEqual(failed.status_code, 503)
+        self.assertEqual(failed.json()["message"], "HWP 저장본을 만드는 중 잠시 멈췄습니다.")
+        self.assertEqual(failed_draft.room.status, DocRoom.Status.ARCHIVED)
+        self.assertEqual(succeeded.status_code, 200)
+        self.assertEqual(document_daily_limit_used(self.owner.id), 1)
+
+    @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
+    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.generate_document_content")
+    def test_generate_document_returns_429_on_second_request(self, mock_generate, mock_build):
+        mock_generate.return_value = self._document_payload()
+        mock_build.return_value = self._document_build_result()
+        self.client.force_login(self.owner)
+
+        first = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.NOTICE,
+                "prompt": "5월 체험학습 안내문을 학부모에게 보낼 수 있게 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+        blocked = self.client.post(
+            reverse("doccollab:generate_document"),
+            {
+                "document_type": DocGeneratedDraft.DocumentType.REPORT,
+                "prompt": "체험학습 운영 결과 보고서를 학교 내부 보고용으로 작성해 주세요.",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(blocked.status_code, 429)
+        self.assertEqual(blocked.json()["message"], "오늘 문서 1개를 모두 사용했습니다.")
 
     @mock.patch("doccollab.worksheet_service.generate_single_page_worksheet")
     def test_generate_worksheet_creates_generated_room_and_first_get_200(self, mock_generate):

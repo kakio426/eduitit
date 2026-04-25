@@ -205,6 +205,67 @@
     color: #0f172a;
 }
 
+.doccollab-field textarea {
+    min-height: 8.5rem;
+    resize: vertical;
+}
+
+.doccollab-choice-field {
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.doccollab-choice-field legend {
+    margin-bottom: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #334155;
+}
+
+.doccollab-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.doccollab-choice {
+    position: relative;
+    display: block;
+}
+
+.doccollab-choice input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+}
+
+.doccollab-choice span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.45rem;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: #fff;
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 900;
+    text-align: center;
+    cursor: pointer;
+}
+
+.doccollab-choice input:checked + span {
+    border-color: rgba(15, 118, 110, 0.42);
+    background: #ecfdf5;
+    color: #0f766e;
+}
+
+.doccollab-choice input:focus-visible + span {
+    outline: 3px solid rgba(14, 165, 233, 0.22);
+    outline-offset: 2px;
+}
+
 .doccollab-primary,
 .doccollab-secondary {
     display: inline-flex;
@@ -794,6 +855,10 @@
 
     .doccollab-chip-row {
         justify-content: flex-start;
+    }
+
+    .doccollab-choice-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .doccollab-room-heading {

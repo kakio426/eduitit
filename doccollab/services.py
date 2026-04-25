@@ -742,6 +742,7 @@ def broadcast_room_event(room, message_type, payload):
 
 def room_payload_for_template(*, room, membership, request, editing_supported):
     worksheet = getattr(room, "worksheet", None)
+    generated_draft = getattr(room, "generated_draft", None)
     is_public_library_view = bool(
         worksheet
         and membership is None
@@ -765,6 +766,8 @@ def room_payload_for_template(*, room, membership, request, editing_supported):
     notes = f"원본 {source_format_label}는 그대로 두고, 저장본은 HWP로 남깁니다."
     if worksheet is not None:
         notes = "서버에서 만든 한 장 학습지를 바로 엽니다."
+    elif generated_draft is not None or room.origin_kind == DocRoom.OriginKind.AI_DRAFT:
+        notes = "AI가 만든 HWP 초안을 바로 엽니다."
     return {
         "roomId": str(room.id),
         "title": room.title,

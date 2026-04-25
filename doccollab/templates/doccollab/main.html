@@ -29,7 +29,38 @@
         </div>
         {% endif %}
 
-        <section class="doccollab-action-grid doccollab-action-grid--single">
+        <section class="doccollab-action-grid">
+            <article class="doccollab-card">
+                <div class="doccollab-card-head">
+                    <div>
+                        <p class="doccollab-label">AI 문서</p>
+                        <h2 class="doccollab-card-title">초안 만들기</h2>
+                    </div>
+                </div>
+                <form method="post" action="{% url 'doccollab:generate_document' %}" class="doccollab-form" data-doccollab-document-form="true">
+                    {% csrf_token %}
+                    <fieldset class="doccollab-choice-field">
+                        <legend>문서 종류</legend>
+                        <div class="doccollab-choice-grid">
+                            {% for choice in document_type_choices %}
+                            <label class="doccollab-choice">
+                                <input type="radio" name="document_type" value="{{ choice.value }}" {% if forloop.first %}checked{% endif %}>
+                                <span>{{ choice.label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <label class="doccollab-field">
+                        <span>요청 내용</span>
+                        <textarea name="prompt" rows="5" maxlength="2000" placeholder="예: 5월 체험학습 안내문" required></textarea>
+                    </label>
+                    <button type="submit" class="doccollab-primary" data-doccollab-document-button="true" {% if not document_generation_enabled %}disabled{% endif %}>만들기</button>
+                    <p id="doccollab-document-status" class="doccollab-footnote doccollab-upload-status">
+                        {% if document_generation_enabled %}생성 가능 {{ document_daily_used }}/{{ document_daily_limit }}{% else %}오늘 한도{% endif %}
+                    </p>
+                </form>
+            </article>
+
             <article class="doccollab-card">
                 <div class="doccollab-card-head">
                     <div>

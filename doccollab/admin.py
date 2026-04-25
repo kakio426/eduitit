@@ -4,6 +4,7 @@ from .models import (
     DocAnalysis,
     DocAssistantQuestion,
     DocEditEvent,
+    DocGeneratedDraft,
     DocMembership,
     DocPresence,
     DocRevision,
@@ -39,6 +40,13 @@ class DocRevisionAdmin(admin.ModelAdmin):
     list_display = ("room", "revision_number", "export_format", "is_published", "created_at")
     list_filter = ("export_format", "is_published")
     search_fields = ("room__title", "original_name")
+
+
+@admin.register(DocGeneratedDraft)
+class DocGeneratedDraftAdmin(admin.ModelAdmin):
+    list_display = ("room", "document_type", "status", "provider", "latest_page_count", "updated_at")
+    list_filter = ("document_type", "status", "provider")
+    search_fields = ("room__title", "request_text", "summary_text", "error_message")
 
 
 @admin.register(DocAnalysis)
