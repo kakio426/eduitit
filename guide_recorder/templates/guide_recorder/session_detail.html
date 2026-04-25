@@ -26,8 +26,9 @@
             </div>
 
             {% if can_edit %}
+            {{ share_url|default:""|json_script:"gr-initial-share-url" }}
             <div class="flex gap-2 flex-shrink-0"
-                 x-data="{ shareUrl: '{{ share_url|default:'' }}', copied: false, publishing: false }">
+                 x-data="{ shareUrl: JSON.parse(document.getElementById('gr-initial-share-url').textContent) || '', copied: false, publishing: false }">
 
                 {# 공유 링크 복사 버튼 #}
                 <button

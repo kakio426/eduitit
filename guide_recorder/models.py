@@ -25,7 +25,7 @@ class GuideSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=False)
-    share_token = models.CharField(max_length=64, unique=True, blank=True, default='')
+    share_token = models.CharField(max_length=64, unique=True, blank=True, null=True, default=None)
     step_count = models.PositiveIntegerField(default=0)
 
     class Meta:

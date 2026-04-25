@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 import time
 import uuid
 from datetime import datetime
@@ -10,13 +11,16 @@ from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import F as models_F
-from django.http import Http404, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from PIL import Image
 
 from .models import GuideSession, GuideStep
 from .services import image_annotator
+
+logger = logging.getLogger(__name__)
 
 
 # ── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -44,11 +48,20 @@ def _auto_description(metadata: dict) -> str:
     return '해당 영역을 클릭하세요'
 
 
+def _build_share_url(request, session):
+    """공유 토큰이 있을 때만 절대 URL 반환."""
+    if not session.share_token:
+        return None
+    return request.build_absolute_uri(
+        reverse('guide_recorder:share', kwargs={'token': session.share_token})
+    )
+
+
 # ── 페이지 뷰 ─────────────────────────────────────────────────────────────────
 
 @login_required
 def session_list_view(request):
-    qs = GuideSession.objects.filter(created_by=request.user).select_related('created_by')
+    qs = GuideSession.objects.filter(created_by=request.user)
     paginator = Paginator(qs, 20)
     page = paginator.get_page(request.GET.get('page'))
     return render(request, 'guide_recorder/session_list.html', {
@@ -59,26 +72,20 @@ def session_list_view(request):
 
 @login_required
 def session_detail_view(request, pk):
-    session = get_object_or_404(GuideSession, pk=pk)
-    if session.created_by != request.user:
-        raise Http404
+    # ownership을 단일 쿼리로 검증 — 세션 존재 여부 노출 방지
+    session = get_object_or_404(GuideSession, pk=pk, created_by=request.user)
     steps = session.steps.all()
-    share_url = request.build_absolute_uri(
-        f'/guide-recorder/share/{session.share_token}/'
-    ) if session.share_token else None
     return render(request, 'guide_recorder/session_detail.html', {
         'page_title': session.title,
         'session': session,
         'steps': steps,
         'can_edit': True,
-        'share_url': share_url,
+        'share_url': _build_share_url(request, session),
     })
 
 
 def share_view(request, token):
     """비공개 링크 뷰어 — 로그인 불필요."""
-    if not token:
-        raise Http404
     session = get_object_or_404(GuideSession, share_token=token, is_published=True)
     steps = session.steps.all()
     return render(request, 'guide_recorder/session_detail.html', {
@@ -108,9 +115,7 @@ def publish_session_view(request, pk):
     if session.is_published and not session.share_token:
         session.share_token = uuid.uuid4().hex
     session.save(update_fields=['is_published', 'share_token'])
-    share_url = request.build_absolute_uri(
-        f'/guide-recorder/share/{session.share_token}/'
-    ) if session.is_published else None
+    share_url = _build_share_url(request, session) if session.is_published else None
     return JsonResponse({'ok': True, 'is_published': session.is_published, 'share_url': share_url})
 
 
@@ -180,30 +185,36 @@ def api_add_step(request, pk):
     norm_x = max(0.0, min(1.0, norm_x))
     norm_y = max(0.0, min(1.0, norm_y))
 
-    # 어노테이션 + JPEG 변환
+    # 어노테이션 + JPEG 변환 — 트랜잭션 바깥에서 수행 (Cloudinary 업로드 포함)
     try:
         annotated = image_annotator.annotate(pil_img, norm_x, norm_y, metadata)
         jpeg_bytes = image_annotator.to_jpeg_bytes(annotated)
-    except Exception as e:
-        return JsonResponse({'ok': False, 'error': f'annotation_failed: {e}'}, status=500)
+    except Exception:
+        logger.exception('[guide_recorder] annotate 실패 session=%s', pk)
+        return JsonResponse({'ok': False, 'error': '이미지 처리에 실패했습니다. 다시 시도해 주세요.'}, status=500)
 
     description = _auto_description(metadata)
+    filename = f'step_tmp_{int(time.time())}.jpg'
+    django_file = ContentFile(jpeg_bytes, name=filename)
 
-    # order 충돌 방지: select_for_update 트랜잭션
+    # ① 파일을 먼저 스토리지에 업로드 (트랜잭션 바깥)
+    step_placeholder = GuideStep(session=session, order=0)
+    step_placeholder.screenshot.save(filename, django_file, save=False)
+    saved_name = step_placeholder.screenshot.name  # 업로드된 경로 확보
+
+    # ② order 할당 + DB 저장만 트랜잭션 안에서
     with transaction.atomic():
         locked = GuideSession.objects.select_for_update().get(pk=session.pk)
         order = locked.step_count + 1
-        step = GuideStep(
+        step = GuideStep.objects.create(
             session=locked,
             order=order,
             description=description,
             click_x=norm_x,
             click_y=norm_y,
             element_metadata=metadata,
+            screenshot=saved_name,
         )
-        filename = f'step_{order}_{int(time.time())}.jpg'
-        step.screenshot.save(filename, ContentFile(jpeg_bytes), save=False)
-        step.save()
         locked.step_count = order
         locked.save(update_fields=['step_count'])
 
@@ -217,7 +228,7 @@ def api_finish_session(request, pk):
     if err:
         return err
     session = get_object_or_404(GuideSession, pk=pk, created_by=request.user)
-    redirect_url = f'/guide-recorder/session/{session.pk}/'
+    redirect_url = reverse('guide_recorder:session_detail', kwargs={'pk': session.pk})
     return JsonResponse({'ok': True, 'redirect_url': redirect_url})
 
 
