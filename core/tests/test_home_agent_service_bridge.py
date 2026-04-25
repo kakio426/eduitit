@@ -101,6 +101,52 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
         self.assertEqual(len(result["execution"]["draft"]["context_turns"]), 2)
         self.assertEqual(result["execution"]["draft"]["context_question"], "게시 중단 요청은 누가 해야 하나요?")
 
+    @patch(
+        "teacher_law.services.answer_legal_question",
+        return_value={
+            "status": "ok",
+            "payload": {
+                "summary": "쉬는시간 사고로 보고 당시 위치와 조치 기록을 먼저 정리하세요.",
+                "action_items": [],
+            },
+            "profile": {
+                "incident_type": "school_safety",
+                "legal_goal": "teacher_liability",
+                "scene_value": "break_time",
+            },
+        },
+    )
+    def test_teacher_law_short_scene_followup_completes_pending_draft(self, mock_answer_legal_question):
+        result = generate_service_preview(
+            request=self._request(),
+            mode_key="teacher-law",
+            mode_spec={"badge": "교사 법률", "default_title": "법률 검토 메모"},
+            text="쉬는시간",
+            context={
+                "teacher_law_followup": {
+                    "summary": "수업 중인지, 쉬는시간인지, 체험학습인지 먼저 골라 주세요.",
+                    "draft": {
+                        "question": "학생이 다쳤는데 그때 교사실에 가 있었습니다. 제 책임이 있나요?",
+                        "incident_type": "school_safety",
+                        "legal_goal": "teacher_liability",
+                        "scene": "",
+                        "counterpart": "",
+                    },
+                }
+            },
+        )
+
+        called_kwargs = mock_answer_legal_question.call_args.kwargs
+        self.assertEqual(called_kwargs["scene"], "break_time")
+        self.assertEqual(called_kwargs["incident_type"], "school_safety")
+        self.assertEqual(called_kwargs["legal_goal"], "teacher_liability")
+        self.assertIn("이전 대화", called_kwargs["question"])
+        self.assertIn("학생이 다쳤는데 그때 교사실에 가 있었습니다.", called_kwargs["question"])
+        self.assertIn("추가 질문: 쉬는시간", called_kwargs["question"])
+        self.assertEqual(result["preview"]["title"], "법률 답변")
+        self.assertEqual(result["execution"]["draft"]["question"], "학생이 다쳤는데 그때 교사실에 가 있었습니다. 제 책임이 있나요?")
+        self.assertEqual(result["execution"]["draft"]["scene"], "break_time")
+
     def test_schedule_mode_uses_classcalendar_parser_candidates(self):
         result = generate_service_preview(
             request=self._request(),

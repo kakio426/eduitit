@@ -67,11 +67,13 @@ class QueryNormalizerTests(SimpleTestCase):
         self.assertEqual(profile["incident_type"], "school_safety")
         self.assertIn("학생", profile["actors"])
         self.assertIn("쉬는시간", profile["scene"])
+        self.assertEqual(profile["scene_value"], "break_time")
         self.assertIn("법적 책임", profile["legal_issues"])
         self.assertIn("학교안전사고 예방 및 보상에 관한 법률", profile["hint_queries"])
         self.assertIn("민법", profile["hint_queries"])
         self.assertEqual(profile["legal_goal"], "teacher_liability")
         self.assertIn("안전사고·책임 교사 책임이 있는지", profile["candidate_queries"])
+        self.assertNotIn("scene", profile["missing_facts"])
 
     def test_build_query_profile_prefers_structured_input_over_free_text_only_guess(self):
         profile = build_query_profile(

@@ -213,19 +213,127 @@ def _teacher_law_context_turns_from_payload(context: dict | None) -> list[dict]:
     )
 
 
+def _teacher_law_followup_payload(context: dict | None) -> dict:
+    payload = context if isinstance(context, dict) else {}
+    followup = payload.get("teacher_law_followup")
+    return followup if isinstance(followup, dict) else {}
+
+
+def _normalize_teacher_law_draft(value) -> dict:
+    source = value if isinstance(value, dict) else {}
+    return {
+        "question": _compact_text(source.get("question")),
+        "incident_type": _compact_text(source.get("incident_type")),
+        "legal_goal": _compact_text(source.get("legal_goal")),
+        "scene": _compact_text(source.get("scene")),
+        "counterpart": _compact_text(source.get("counterpart")),
+    }
+
+
+def _match_teacher_law_option_value(text: str, options: list[dict]) -> str:
+    normalized_text = _normalize_match_text(text)
+    if not normalized_text:
+        return ""
+    for option in options or []:
+        value = _compact_text(option.get("value"))
+        label = _compact_text(option.get("label"))
+        normalized_value = _normalize_match_text(value)
+        normalized_label = _normalize_match_text(label)
+        if normalized_text == normalized_value or normalized_text == normalized_label:
+            return value
+        if normalized_label and normalized_label in normalized_text:
+            return value
+    return ""
+
+
+def _teacher_law_incident_requirement(incident_type: str, incident_options: list[dict]) -> str:
+    normalized_incident = _compact_text(incident_type)
+    for option in incident_options or []:
+        if _compact_text(option.get("value")) == normalized_incident:
+            return _compact_text(option.get("requires"))
+    return ""
+
+
+def _merge_teacher_law_followup_draft(*, text: str, draft: dict, input_options: dict) -> tuple[dict, list[str]]:
+    merged = dict(draft or {})
+    matched_fields = []
+    incident_options = input_options.get("incident_options") or []
+    goal_options = input_options.get("legal_goal_options") or []
+    scene_options = input_options.get("scene_options") or []
+    counterpart_options = input_options.get("counterpart_options") or []
+
+    if not merged.get("incident_type"):
+        value = _match_teacher_law_option_value(text, incident_options)
+        if value:
+            merged["incident_type"] = value
+            matched_fields.append("incident_type")
+    if not merged.get("legal_goal"):
+        value = _match_teacher_law_option_value(text, goal_options)
+        if value:
+            merged["legal_goal"] = value
+            matched_fields.append("legal_goal")
+
+    requirement = _teacher_law_incident_requirement(merged.get("incident_type", ""), incident_options)
+    if requirement == "scene" and not merged.get("scene"):
+        value = _match_teacher_law_option_value(text, scene_options)
+        if value:
+            merged["scene"] = value
+            matched_fields.append("scene")
+    if requirement == "counterpart" and not merged.get("counterpart"):
+        value = _match_teacher_law_option_value(text, counterpart_options)
+        if value:
+            merged["counterpart"] = value
+            matched_fields.append("counterpart")
+
+    return merged, matched_fields
+
+
 def _generate_teacher_law_preview(*, mode_spec: dict, text: str, context: dict | None = None) -> dict:
     from teacher_law.services import answer_legal_question
     from teacher_law.services.chat import TeacherLawDisabledError
     from teacher_law.services.law_api import LawApiConfigError
     from teacher_law.services.llm_client import LlmClientError
+    from teacher_law.services.query_normalizer import get_input_options
 
+    followup = _teacher_law_followup_payload(context)
     context_turns = _teacher_law_context_turns_from_payload(context)
+    context_draft = _normalize_teacher_law_draft(followup.get("draft"))
+    input_options = get_input_options() or {}
+    merged_draft, matched_fields = _merge_teacher_law_followup_draft(
+        text=text,
+        draft=context_draft,
+        input_options=input_options,
+    )
+    answer_context_turns = context_turns
+    execution_question = text
+    if matched_fields and context_draft.get("question"):
+        execution_question = context_draft["question"]
+        draft_turn = {
+            "question": context_draft["question"],
+            "summary": _compact_text(followup.get("summary")),
+        }
+        existing_questions = {_compact_text(turn.get("question")) for turn in context_turns}
+        answer_context_turns = context_turns
+        if draft_turn["question"] not in existing_questions:
+            answer_context_turns = [*context_turns, draft_turn][-3:]
     answer_question = _build_teacher_law_context_question(
         question=text,
-        context_turns=context_turns,
+        context_turns=answer_context_turns,
     )
+    answer_kwargs = {}
+    if matched_fields:
+        answer_kwargs = {
+            key: value
+            for key, value in {
+                "incident_type": merged_draft.get("incident_type"),
+                "legal_goal": merged_draft.get("legal_goal"),
+                "scene": merged_draft.get("scene"),
+                "counterpart": merged_draft.get("counterpart"),
+            }.items()
+            if value
+        }
     try:
-        result = answer_legal_question(question=answer_question)
+        result = answer_legal_question(question=answer_question, **answer_kwargs)
     except (TeacherLawDisabledError, LawApiConfigError, LlmClientError) as exc:
         raise HomeAgentServiceUnavailable(str(exc)) from exc
 
@@ -261,7 +369,7 @@ def _generate_teacher_law_preview(*, mode_spec: dict, text: str, context: dict |
         ),
         execution=_build_teacher_law_execution(
             result=result,
-            question=text,
+            question=execution_question,
             context_turns=context_turns,
         ),
     )

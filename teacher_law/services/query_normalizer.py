@@ -85,6 +85,7 @@ SCENE_OPTIONS = [
     {"value": "outside_classroom", "label": "교실 밖"},
 ]
 SCENE_MAP = {item["value"]: item for item in SCENE_OPTIONS}
+SCENE_LABEL_TO_VALUE = {item["label"]: item["value"] for item in SCENE_OPTIONS}
 SCENE_KEYWORDS = {
     "수업 중": ("수업", "조회", "종례", "체육시간"),
     "쉬는시간": ("쉬는시간", "휴식시간", "점심시간"),
@@ -422,6 +423,16 @@ def detect_scene(question: str) -> list[str]:
         if _has_any_keyword(normalized, keywords):
             scenes.append(label)
     return scenes
+
+
+def detect_scene_value(question: str) -> str:
+    detected_values = [
+        SCENE_LABEL_TO_VALUE[label]
+        for label in detect_scene(question)
+        if label in SCENE_LABEL_TO_VALUE
+    ]
+    unique_values = _unique_items(detected_values)
+    return unique_values[0] if len(unique_values) == 1 else ""
 
 
 def detect_legal_issues(question: str) -> list[str]:
@@ -794,6 +805,8 @@ def build_query_profile(
     goal_key = compact_text(legal_goal)
     scene_key = compact_text(scene)
     counterpart_key = compact_text(counterpart)
+    if scene_key not in SCENE_MAP:
+        scene_key = detect_scene_value(normalized_question)
 
     if incident_key not in INCIDENT_MAP:
         incident_key = detect_incident_type(
