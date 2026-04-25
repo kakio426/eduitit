@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from .models import DocMembership, DocRevision, DocRoom, DocWorkspace, DocWorksheet
 from .services import publish_revision, save_room_revision
-from .worksheet_hwp_builder import WORKSHEET_LAYOUT_PROFILES, WorksheetBuildError, build_worksheet_hwp_bytes
+from .worksheet_hwp_builder import WORKSHEET_LAYOUT_PROFILES, WorksheetBuildError, build_worksheet_hwpx_bytes
 from .worksheet_llm import WORKSHEET_PROMPT_VERSION, generate_worksheet_content
 
 
@@ -120,14 +120,14 @@ def generate_single_page_worksheet(*, topic):
     while True:
         last_result = None
         for layout_profile in WORKSHEET_LAYOUT_PROFILES:
-            last_result = build_worksheet_hwp_bytes(content=payload, layout_profile=layout_profile)
+            last_result = build_worksheet_hwpx_bytes(content=payload, layout_profile=layout_profile)
             if max(int(last_result.get("page_count") or 0), 0) <= 1:
                 return {
                     "content": payload,
-                    "hwp_bytes": last_result["hwp_bytes"],
+                    "hwpx_bytes": last_result["hwpx_bytes"],
                     "page_count": 1,
                     "used_profile": layout_profile,
-                    "file_name": last_result.get("file_name") or worksheet_hwp_file_name(payload.get("title") or normalized_topic),
+                    "file_name": last_result.get("file_name") or worksheet_hwpx_file_name(payload.get("title") or normalized_topic),
                 }
         if attempted_short:
             final_page_count = max(int((last_result or {}).get("page_count") or 0), 0)
@@ -138,10 +138,14 @@ def generate_single_page_worksheet(*, topic):
         payload = generate_worksheet_content(topic=normalized_topic, force_short=True)
 
 
-def worksheet_hwp_file_name(title):
+def worksheet_hwpx_file_name(title):
     stem = re.sub(r"[\s]+", " ", str(title or "").strip()).strip()
     stem = re.sub(r'[\\/:*?"<>|]+', " ", stem).strip()[:80] or "worksheet"
-    return f"{stem}.hwp"
+    return f"{stem}.hwpx"
+
+
+def worksheet_hwp_file_name(title):
+    return worksheet_hwpx_file_name(title)
 
 
 @transaction.atomic
@@ -172,7 +176,7 @@ def create_generated_worksheet_room(*, user, topic):
         created_by=user,
         origin_kind=DocRoom.OriginKind.GENERATED_WORKSHEET,
         source_name="",
-        source_format=DocRoom.SourceFormat.HWP,
+        source_format=DocRoom.SourceFormat.HWPX,
         source_sha256="",
         last_activity_at=timezone.now(),
     )
@@ -180,10 +184,10 @@ def create_generated_worksheet_room(*, user, topic):
         room=room,
         user=user,
         uploaded_file=ContentFile(
-            generated["hwp_bytes"],
-            name=generated.get("file_name") or worksheet_hwp_file_name(room_title),
+            generated["hwpx_bytes"],
+            name=generated.get("file_name") or worksheet_hwpx_file_name(room_title),
         ),
-        export_format=DocRevision.ExportFormat.HWP_EXPORT,
+        export_format=DocRevision.ExportFormat.HWPX_EXPORT,
         note="학습지 초안 생성",
     )
     worksheet = DocWorksheet.objects.create(
@@ -243,16 +247,16 @@ def clone_published_worksheet(*, worksheet, user):
         created_by=user,
         origin_kind=DocRoom.OriginKind.GENERATED_WORKSHEET,
         source_name="",
-        source_format=DocRoom.SourceFormat.HWP,
+        source_format=DocRoom.SourceFormat.HWPX,
         source_sha256="",
         last_activity_at=timezone.now(),
     )
-    upload = ContentFile(raw_bytes, name=published_revision.original_name or worksheet_hwp_file_name(clone_title))
+    upload = ContentFile(raw_bytes, name=published_revision.original_name or worksheet_hwpx_file_name(clone_title))
     revision = save_room_revision(
         room=room,
         user=user,
         uploaded_file=upload,
-        export_format=DocRevision.ExportFormat.HWP_EXPORT,
+        export_format=DocRevision.ExportFormat.HWPX_EXPORT,
         note="공개 학습지 가져오기",
     )
     cloned = DocWorksheet.objects.create(

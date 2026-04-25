@@ -376,7 +376,7 @@ def generate_document(request):
             getattr(request.user, "id", None),
             exc,
         )
-        message_text = "HWP 저장본을 만드는 중 잠시 멈췄습니다."
+        message_text = "HWPX 저장본을 만드는 중 잠시 멈췄습니다."
         if _is_json_request(request):
             return JsonResponse({"message": message_text}, status=503)
         messages.error(request, message_text)
@@ -444,7 +444,7 @@ def generate_worksheet(request):
             getattr(request.user, "id", None),
             exc,
         )
-        message_text = "학습지 HWP를 만드는 중 잠시 멈췄어요. 다시 시도해 주세요."
+        message_text = "학습지 HWPX를 만드는 중 잠시 멈췄어요. 다시 시도해 주세요."
         if _is_json_request(request):
             return JsonResponse({"message": message_text}, status=503)
         messages.error(request, message_text)
@@ -512,7 +512,7 @@ def generate_worksheet_file(request):
             getattr(request.user, "id", None),
             exc,
         )
-        message_text = "학습지 HWP를 만드는 중 잠시 멈췄어요. 다시 시도해 주세요."
+        message_text = "학습지 HWPX를 만드는 중 잠시 멈췄어요. 다시 시도해 주세요."
         if _is_json_request(request):
             return JsonResponse({"message": message_text}, status=503)
         messages.error(request, message_text)
@@ -520,17 +520,17 @@ def generate_worksheet_file(request):
     except Exception:
         release_worksheet_daily_limit(request.user.id)
         logger.exception("doccollab generate_worksheet_file failed user=%s", getattr(request.user, "id", None))
-        message_text = "학습지 HWP를 만드는 중 오류가 발생했습니다. 다시 시도해 주세요."
+        message_text = "학습지 HWPX를 만드는 중 오류가 발생했습니다. 다시 시도해 주세요."
         if _is_json_request(request):
             return JsonResponse({"message": message_text}, status=500)
         messages.error(request, message_text)
         return redirect("doccollab:main")
 
     response = FileResponse(
-        BytesIO(generated["hwp_bytes"]),
+        BytesIO(generated["hwpx_bytes"]),
         as_attachment=True,
-        filename=str(generated.get("file_name") or "worksheet.hwp"),
-        content_type="application/x-hwp",
+        filename=str(generated.get("file_name") or "worksheet.hwpx"),
+        content_type="application/vnd.hancom.hwpx",
     )
     response["X-Worksheet-Daily-Used"] = str(worksheet_daily_limit_used(request.user.id))
     response["X-Worksheet-Daily-Limit"] = str(worksheet_daily_limit_per_user())
@@ -710,7 +710,7 @@ def save_revision(request, room_id):
             room=room,
             user=request.user,
             uploaded_file=uploaded_file,
-            export_format=DocRevision.ExportFormat.HWP_EXPORT,
+            export_format=DocRevision.ExportFormat.HWPX_EXPORT,
             note=note,
         )
         if snapshot_json:

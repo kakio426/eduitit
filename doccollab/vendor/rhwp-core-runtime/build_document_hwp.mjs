@@ -64,7 +64,7 @@ globalThis.measureTextWidth = (_font, text) => {
 async function main() {
   const [, , inputPath, outputPath] = process.argv;
   if (!inputPath || !outputPath) {
-    throw new Error("usage: node build_document_hwp.mjs <input.json> <output.hwp>");
+    throw new Error("usage: node build_document_hwp.mjs <input.json> <output.hwpx>");
   }
 
   const runtimeDir = path.dirname(new URL(import.meta.url).pathname);
@@ -81,8 +81,9 @@ async function main() {
   applyDocumentStyles(doc);
 
   const pageCount = Math.max(Number(doc.pageCount() || 0), 0);
-  const fileName = ensureHwpFileName(request.title || "document");
-  fs.writeFileSync(outputPath, Buffer.from(doc.exportHwp(fileName)));
+  const fileName = ensureHwpxFileName(request.title || "document");
+  doc.setFileName?.(fileName);
+  fs.writeFileSync(outputPath, Buffer.from(doc.exportHwpx()));
   process.stdout.write(`${JSON.stringify({ pageCount, fileName })}\n`);
 }
 
@@ -111,13 +112,13 @@ function estimateCharWidth(char) {
 }
 
 
-function ensureHwpFileName(value) {
+function ensureHwpxFileName(value) {
   const stem = String(value || "document")
     .replace(/[\\/:*?"<>|]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 80) || "document";
-  return stem.toLowerCase().endsWith(".hwp") ? stem : `${stem}.hwp`;
+  return stem.toLowerCase().endsWith(".hwpx") ? stem : `${stem.replace(/\.[^.]+$/u, "")}.hwpx`;
 }
 
 

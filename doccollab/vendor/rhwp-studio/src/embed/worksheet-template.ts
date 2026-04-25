@@ -41,7 +41,7 @@ export function fillWorksheetTemplate(
   replaceToken(wasm, '[[QUIZ_1]]', quizText((quizItems[0] || null)));
   replaceToken(wasm, '[[QUIZ_2]]', quizText((quizItems[1] || null)));
   const fileTitle = normalizeText(content.title) || 'worksheet';
-  wasm.fileName = `${fileTitle}.hwp`;
+  wasm.fileName = `${fileTitle}.hwpx`;
   const pageCount = wasm.pageCount;
   return {
     pageCount,

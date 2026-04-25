@@ -19,10 +19,12 @@
                 <span class="doccollab-chip">{{ access_label }}</span>
                 {% if is_generated_worksheet %}
                 <span class="doccollab-chip">학습지</span>
+                {% elif is_generated_draft %}
+                <span class="doccollab-chip">AI 문서</span>
                 {% else %}
                 <span class="doccollab-chip">원본 {{ room.get_source_format_display }}</span>
                 {% endif %}
-                <span class="doccollab-chip">저장 HWP</span>
+                <span class="doccollab-chip">저장 HWPX</span>
             </div>
         </header>
 
@@ -144,7 +146,7 @@
                     <div><span>내 권한</span><strong>{{ membership.get_role_display|default:"보기" }}</strong></div>
                     <div><span>브라우저</span><strong>{% if editing_supported %}Chrome 편집{% else %}보기만{% endif %}</strong></div>
                     <div><span>원본</span><strong>{% if is_generated_worksheet %}없음{% else %}{{ room.get_source_format_display }}{% endif %}</strong></div>
-                    <div><span>저장</span><strong>저장본 HWP</strong></div>
+                    <div><span>저장</span><strong>저장본 HWPX</strong></div>
                 </div>
 
                 {% if assistant_enabled %}

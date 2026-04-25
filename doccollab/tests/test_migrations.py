@@ -5,9 +5,6 @@ from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 from django.utils import timezone
 
-from doccollab.models import DocRoom
-
-
 User = get_user_model()
 
 
@@ -62,7 +59,9 @@ class DoccollabMigrationTests(TransactionTestCase):
     def test_source_format_backfills_to_hwpx_for_existing_rooms(self):
         self.executor.loader.build_graph()
         self.executor.migrate([self.migrate_to])
+        migrated_apps = self.executor.loader.project_state([self.migrate_to]).apps
+        room_model = migrated_apps.get_model("doccollab", "DocRoom")
 
-        room = DocRoom.objects.get(pk=self.legacy_room_id)
+        room = room_model.objects.get(pk=self.legacy_room_id)
 
-        self.assertEqual(room.source_format, DocRoom.SourceFormat.HWPX)
+        self.assertEqual(room.source_format, "hwpx")

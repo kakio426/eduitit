@@ -73,7 +73,7 @@ def detect_source_format(file_name):
 def file_format_for_revision(revision):
     if revision is None:
         return ""
-    if revision.export_format == DocRevision.ExportFormat.SOURCE_HWPX:
+    if revision.export_format in {DocRevision.ExportFormat.SOURCE_HWPX, DocRevision.ExportFormat.HWPX_EXPORT}:
         return DocRoom.SourceFormat.HWPX
     return DocRoom.SourceFormat.HWP
 
@@ -618,7 +618,9 @@ def save_room_revision(*, room, user, uploaded_file, export_format, note=""):
         if export_format != expected_export_format:
             raise ValidationError("원본 포맷이 올바르지 않습니다.")
     else:
-        file_name = str(getattr(uploaded_file, "name", "") or "").strip() or f"{room.title}.hwp"
+        is_hwpx_export = export_format == DocRevision.ExportFormat.HWPX_EXPORT
+        expected_extension = ".hwpx" if is_hwpx_export else ".hwp"
+        file_name = str(getattr(uploaded_file, "name", "") or "").strip() or f"{room.title}{expected_extension}"
         raw_bytes = uploaded_file.read()
         try:
             uploaded_file.seek(0)
@@ -626,8 +628,8 @@ def save_room_revision(*, room, user, uploaded_file, export_format, note=""):
             pass
         if not raw_bytes:
             raise ValidationError("저장할 파일이 비어 있습니다.")
-        if not file_name.lower().endswith(".hwp"):
-            file_name = f"{Path(file_name).stem or room.title}.hwp"
+        if not file_name.lower().endswith(expected_extension):
+            file_name = f"{Path(file_name).stem or room.title}{expected_extension}"
     revision = DocRevision.objects.create(
         room=room,
         revision_number=_next_revision_number(room),
@@ -763,11 +765,11 @@ def room_payload_for_template(*, room, membership, request, editing_supported):
         initial_file_url = ""
     source_file_url = reverse("doccollab:download_source", kwargs={"room_id": room.id}) if room.source_file else ""
     editing_enabled = getattr(membership, "role", "") in {DocMembership.Role.OWNER, DocMembership.Role.EDITOR}
-    notes = f"원본 {source_format_label}는 그대로 두고, 저장본은 HWP로 남깁니다."
+    notes = f"원본 {source_format_label}는 그대로 두고, 저장본은 HWPX로 남깁니다."
     if worksheet is not None:
-        notes = "서버에서 만든 한 장 학습지를 바로 엽니다."
+        notes = "서버에서 만든 HWPX 학습지를 바로 엽니다."
     elif generated_draft is not None or room.origin_kind == DocRoom.OriginKind.AI_DRAFT:
-        notes = "AI가 만든 HWP 초안을 바로 엽니다."
+        notes = "AI가 만든 HWPX 초안을 바로 엽니다."
     return {
         "roomId": str(room.id),
         "title": room.title,
@@ -789,8 +791,8 @@ def room_payload_for_template(*, room, membership, request, editing_supported):
         "sourceFormatLabel": source_format_label,
         "currentRevisionFormat": current_revision_format,
         "currentRevisionFormatLabel": display_source_format(current_revision_format),
-        "saveFormat": DocRoom.SourceFormat.HWP,
-        "saveFormatLabel": display_source_format(DocRoom.SourceFormat.HWP),
+        "saveFormat": DocRoom.SourceFormat.HWPX,
+        "saveFormatLabel": display_source_format(DocRoom.SourceFormat.HWPX),
         "supportedUploadFormats": list(SUPPORTED_UPLOAD_FORMATS.values()),
         "collabState": collab_state,
         "notes": notes,

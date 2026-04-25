@@ -108,6 +108,15 @@ class RhwpStudioEmbed {
     };
   }
 
+  async exportHwpx() {
+    const result = await this.request("exportHwpx", {}, 90000);
+    return {
+      bytes: Uint8Array.from(result?.data || []),
+      fileName: result?.fileName || "document.hwpx",
+      pageCount: Number(result?.pageCount || 0),
+    };
+  }
+
   async fillWorksheetTemplate(content, layoutProfile) {
     return this.request(
       "fillWorksheetTemplate",
@@ -495,11 +504,12 @@ class DoccollabRoom {
     this.setStatus("저장 중");
 
     try {
-      const exported = await this.editor.exportHwp();
+      const wantsHwpx = this.payload.saveFormat === "hwpx";
+      const exported = wantsHwpx ? await this.editor.exportHwpx() : await this.editor.exportHwp();
       this.lastKnownPageCount = Number(exported.pageCount || this.lastKnownPageCount || 0);
-      const fileName = ensureHwpFileName(exported.fileName || this.initialFileName() || this.payload.title);
+      const fileName = ensureExportFileName(exported.fileName || this.initialFileName() || this.payload.title, this.payload.saveFormat);
       const formData = new FormData();
-      formData.append("export_file", new File([exported.bytes], fileName, { type: "application/x-hwp" }));
+      formData.append("export_file", new File([exported.bytes], fileName, { type: wantsHwpx ? "application/vnd.hancom.hwpx" : "application/x-hwp" }));
       formData.append("note", "온라인 편집 저장");
       formData.append("snapshot_json", JSON.stringify(this.buildSnapshotPayload()));
 
@@ -1319,12 +1329,13 @@ function buildWebSocketUrl(path) {
   return `${protocol}//${window.location.host}${path}`;
 }
 
-function ensureHwpFileName(name) {
+function ensureExportFileName(name, format = "hwp") {
   const trimmed = String(name || "document").trim() || "document";
-  if (trimmed.toLowerCase().endsWith(".hwp")) {
+  const extension = format === "hwpx" ? ".hwpx" : ".hwp";
+  if (trimmed.toLowerCase().endsWith(extension)) {
     return trimmed;
   }
-  return `${trimmed.replace(/\.[^.]+$/u, "")}.hwp`;
+  return `${trimmed.replace(/\.[^.]+$/u, "")}${extension}`;
 }
 
 function readCsrfToken(initialToken) {

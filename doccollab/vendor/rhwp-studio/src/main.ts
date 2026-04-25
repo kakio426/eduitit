@@ -667,6 +667,14 @@ window.addEventListener('message', async (e) => {
           pageCount: wasm.pageCount,
         });
         break;
+      case 'exportHwpx':
+        await initializePromise;
+        reply({
+          data: Array.from(wasm.exportHwpx()),
+          fileName: wasm.fileName.replace(/\.[^.]+$/u, '') + '.hwpx',
+          pageCount: wasm.pageCount,
+        });
+        break;
       case 'fillWorksheetTemplate':
         await initializePromise;
         reply(

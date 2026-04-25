@@ -334,6 +334,7 @@ class DocRevision(models.Model):
         SOURCE_HWP = "source_hwp", "원본 HWP"
         SOURCE_HWPX = "source_hwpx", "원본 HWPX"
         HWP_EXPORT = "hwp_export", "협업 저장본 HWP"
+        HWPX_EXPORT = "hwpx_export", "협업 저장본 HWPX"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(
@@ -345,7 +346,7 @@ class DocRevision(models.Model):
     file = models.FileField(upload_to=revision_upload_to, storage=get_raw_storage, max_length=500)
     original_name = models.CharField(max_length=255)
     file_sha256 = models.CharField(max_length=64)
-    export_format = models.CharField(max_length=20, choices=ExportFormat.choices, default=ExportFormat.HWP_EXPORT)
+    export_format = models.CharField(max_length=20, choices=ExportFormat.choices, default=ExportFormat.HWPX_EXPORT)
     note = models.CharField(max_length=200, blank=True, default="")
     is_published = models.BooleanField(default=False)
     created_by = models.ForeignKey(
@@ -377,6 +378,8 @@ class DocRevision(models.Model):
             return "원본 HWP"
         if self.export_format == self.ExportFormat.SOURCE_HWPX:
             return "원본 HWPX"
+        if self.export_format == self.ExportFormat.HWPX_EXPORT:
+            return "저장본 HWPX"
         return "저장본 HWP"
 
     def __str__(self):

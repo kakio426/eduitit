@@ -178,10 +178,10 @@ class DoccollabViewTests(TestCase):
     def _worksheet_generation_result(self, *, title="물의 순환 학습지", summary="구름과 비를 따라가요.", short=False):
         return {
             "content": self._worksheet_payload(title=title, summary=summary, short=short),
-            "hwp_bytes": b"worksheet-hwp",
+            "hwpx_bytes": b"worksheet-hwpx",
             "page_count": 1,
             "used_profile": "comfortable" if not short else "tight",
-            "file_name": f"{title}.hwp",
+            "file_name": f"{title}.hwpx",
         }
 
     def _document_payload(self, *, title="체험학습 안내문", summary="5월 체험학습 안내"):
@@ -207,9 +207,9 @@ class DoccollabViewTests(TestCase):
 
     def _document_build_result(self, *, title="체험학습 안내문"):
         return {
-            "hwp_bytes": b"generated-hwp",
+            "hwpx_bytes": b"generated-hwpx",
             "page_count": 1,
-            "file_name": f"{title}.hwp",
+            "file_name": f"{title}.hwpx",
         }
 
     def _create_generated_room(self, *, user=None, title="물의 순환 학습지", topic="물의 순환", ready=False, published=False):
@@ -228,7 +228,7 @@ class DoccollabViewTests(TestCase):
             created_by=owner,
             origin_kind=DocRoom.OriginKind.GENERATED_WORKSHEET,
             source_name="",
-            source_format=DocRoom.SourceFormat.HWP,
+            source_format=DocRoom.SourceFormat.HWPX,
             source_sha256="",
         )
         worksheet = DocWorksheet.objects.create(
@@ -246,8 +246,8 @@ class DoccollabViewTests(TestCase):
             revision = save_room_revision(
                 room=room,
                 user=owner,
-                uploaded_file=hwp_upload(f"{title}.hwp", content=b"worksheet-hwp"),
-                export_format=DocRevision.ExportFormat.HWP_EXPORT,
+                uploaded_file=hwpx_upload(f"{title}.hwpx", content=b"worksheet-hwpx"),
+                export_format=DocRevision.ExportFormat.HWPX_EXPORT,
                 note="학습지 초안 생성",
             )
             worksheet.bootstrap_status = DocWorksheet.BootstrapStatus.READY
@@ -505,7 +505,7 @@ class DoccollabViewTests(TestCase):
             reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
             {
                 "note": "문서 저장",
-                "export_file": hwp_upload("save-test.hwp"),
+                "export_file": hwpx_upload("save-test.hwpx"),
             },
         )
 
@@ -515,7 +515,7 @@ class DoccollabViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(download_response.status_code, 200)
-        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
+        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWPX_EXPORT)
         self.assertEqual(payload["edit_events"][0]["summary"], f"저장본 저장 · r{revision.revision_number}")
         self.assertEqual(
             payload["revision"]["download_url"],
@@ -542,7 +542,7 @@ class DoccollabViewTests(TestCase):
                 reverse("doccollab:save_revision", kwargs={"room_id": room.id}),
                 {
                     "note": "문서 저장",
-                    "export_file": hwp_upload("save-error.hwp"),
+                    "export_file": hwpx_upload("save-error.hwpx"),
                 },
             )
 
@@ -568,12 +568,12 @@ class DoccollabViewTests(TestCase):
             revision = save_room_revision(
                 room=room,
                 user=self.owner,
-                uploaded_file=hwp_upload("cache-fail.hwp"),
-                export_format=DocRevision.ExportFormat.HWP_EXPORT,
+                uploaded_file=hwpx_upload("cache-fail.hwpx"),
+                export_format=DocRevision.ExportFormat.HWPX_EXPORT,
                 note="문서 저장",
             )
 
-        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
+        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWPX_EXPORT)
 
     def test_room_payload_reports_source_and_save_formats(self):
         room, _revision = self._create_room(self.owner, "HWP 문서", "school-form.hwp")
@@ -588,7 +588,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(payload["sourceFormat"], "hwp")
         self.assertEqual(payload["sourceName"], "school-form.hwp")
         self.assertEqual(payload["currentRevisionFormat"], "hwp")
-        self.assertEqual(payload["saveFormat"], "hwp")
+        self.assertEqual(payload["saveFormat"], "hwpx")
         self.assertTrue(payload["editingSupported"])
         self.assertTrue(payload["studioUrl"].endswith("/static/doccollab/rhwp-studio/index.html"))
         self.assertEqual(payload["supportedUploadFormats"], ["hwp", "hwpx"])
@@ -795,7 +795,7 @@ class DoccollabViewTests(TestCase):
         self.assertFalse(response.context["editing_supported"])
         self.assertContains(response, "휴대폰에서는 보기만 가능합니다.")
 
-    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes")
     @mock.patch("doccollab.doc_generation_service.generate_document_content")
     def test_generate_document_creates_ai_draft_room_and_first_get_200(self, mock_generate, mock_build):
         mock_generate.return_value = self._document_payload()
@@ -823,14 +823,14 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(draft.status, DocGeneratedDraft.Status.READY)
         self.assertEqual(draft.document_type, DocGeneratedDraft.DocumentType.NOTICE)
         self.assertEqual(draft.summary_text, "5월 체험학습 안내")
-        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWP_EXPORT)
-        self.assertEqual(response.context["room_payload"]["notes"], "AI가 만든 HWP 초안을 바로 엽니다.")
+        self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWPX_EXPORT)
+        self.assertEqual(response.context["room_payload"]["notes"], "AI가 만든 HWPX 초안을 바로 엽니다.")
         self.assertEqual(response.context["room_payload"]["sourceFileUrl"], "")
         self.assertEqual(download.status_code, 200)
-        self.assertIn(".hwp", download.headers["Content-Disposition"])
+        self.assertIn(".hwpx", download.headers["Content-Disposition"])
 
     @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=2)
-    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes")
     @mock.patch("doccollab.doc_generation_service.generate_document_content")
     def test_generate_document_json_returns_revision_metadata(self, mock_generate, mock_build):
         mock_generate.return_value = self._document_payload()
@@ -860,7 +860,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(payload["daily_limit"], 2)
 
     @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
-    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes")
     @mock.patch("doccollab.doc_generation_service.generate_document_content")
     def test_invalid_generate_document_request_releases_daily_limit(self, mock_generate, mock_build):
         mock_generate.return_value = self._document_payload()
@@ -906,7 +906,7 @@ class DoccollabViewTests(TestCase):
             },
             HTTP_ACCEPT="application/json",
         )
-        with mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes", return_value=self._document_build_result()):
+        with mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes", return_value=self._document_build_result()):
             succeeded = self.client.post(
                 reverse("doccollab:generate_document"),
                 {
@@ -925,7 +925,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(document_daily_limit_used(self.owner.id), 1)
 
     @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
-    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes")
     @mock.patch("doccollab.doc_generation_service.generate_document_content")
     def test_generate_document_builder_error_returns_503_and_records_failed_draft(self, mock_generate, mock_build):
         mock_generate.return_value = self._document_payload()
@@ -955,13 +955,13 @@ class DoccollabViewTests(TestCase):
         failed_draft = DocGeneratedDraft.objects.get(status=DocGeneratedDraft.Status.FAILED)
         failed_draft.room.refresh_from_db()
         self.assertEqual(failed.status_code, 503)
-        self.assertEqual(failed.json()["message"], "HWP 저장본을 만드는 중 잠시 멈췄습니다.")
+        self.assertEqual(failed.json()["message"], "HWPX 저장본을 만드는 중 잠시 멈췄습니다.")
         self.assertEqual(failed_draft.room.status, DocRoom.Status.ARCHIVED)
         self.assertEqual(succeeded.status_code, 200)
         self.assertEqual(document_daily_limit_used(self.owner.id), 1)
 
     @override_settings(DOCCOLLAB_DOCUMENT_DAILY_LIMIT=1)
-    @mock.patch("doccollab.doc_generation_service.build_document_hwp_bytes")
+    @mock.patch("doccollab.doc_generation_service.build_document_hwpx_bytes")
     @mock.patch("doccollab.doc_generation_service.generate_document_content")
     def test_generate_document_returns_429_on_second_request(self, mock_generate, mock_build):
         mock_generate.return_value = self._document_payload()
@@ -1112,7 +1112,7 @@ class DoccollabViewTests(TestCase):
 
     @override_settings(DOCCOLLAB_WORKSHEET_DAILY_LIMIT=1)
     @mock.patch("doccollab.views.generate_single_page_worksheet")
-    def test_generate_worksheet_file_returns_hwp_download(self, mock_generate):
+    def test_generate_worksheet_file_returns_hwpx_download(self, mock_generate):
         mock_generate.return_value = self._worksheet_generation_result()
         self.client.force_login(self.owner)
 
@@ -1124,8 +1124,8 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("attachment;", response.headers["Content-Disposition"])
         self.assertIn("filename*=", response.headers["Content-Disposition"])
-        self.assertIn(".hwp", response.headers["Content-Disposition"])
-        self.assertEqual(response.headers["Content-Type"], "application/x-hwp")
+        self.assertIn(".hwpx", response.headers["Content-Disposition"])
+        self.assertEqual(response.headers["Content-Type"], "application/vnd.hancom.hwpx")
         self.assertEqual(response.headers["X-Worksheet-Daily-Used"], "1")
         self.assertEqual(response.headers["X-Worksheet-Daily-Limit"], "1")
         self.assertEqual(response.headers["X-Worksheet-Layout-Profile"], "comfortable")
@@ -1144,7 +1144,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(response.json()["message"], "학습 주제를 먼저 입력해 주세요.")
         self.assertEqual(worksheet_daily_limit_used(self.owner.id), 0)
 
-    @mock.patch("doccollab.worksheet_service.build_worksheet_hwp_bytes")
+    @mock.patch("doccollab.worksheet_service.build_worksheet_hwpx_bytes")
     @mock.patch("doccollab.worksheet_service.generate_worksheet_content")
     def test_generate_single_page_worksheet_retries_short_content_after_all_profiles(self, mock_generate, mock_build):
         mock_generate.side_effect = [
@@ -1152,17 +1152,17 @@ class DoccollabViewTests(TestCase):
             self._worksheet_payload(summary="짧은 버전", short=True),
         ]
         mock_build.side_effect = [
-            {"layout_profile": "comfortable", "page_count": 2, "file_name": "comfortable.hwp", "hwp_bytes": b"a"},
-            {"layout_profile": "compact", "page_count": 2, "file_name": "compact.hwp", "hwp_bytes": b"b"},
-            {"layout_profile": "tight", "page_count": 2, "file_name": "tight.hwp", "hwp_bytes": b"c"},
-            {"layout_profile": "comfortable", "page_count": 1, "file_name": "short.hwp", "hwp_bytes": b"d"},
+            {"layout_profile": "comfortable", "page_count": 2, "file_name": "comfortable.hwpx", "hwpx_bytes": b"a"},
+            {"layout_profile": "compact", "page_count": 2, "file_name": "compact.hwpx", "hwpx_bytes": b"b"},
+            {"layout_profile": "tight", "page_count": 2, "file_name": "tight.hwpx", "hwpx_bytes": b"c"},
+            {"layout_profile": "comfortable", "page_count": 1, "file_name": "short.hwpx", "hwpx_bytes": b"d"},
         ]
 
         result = generate_single_page_worksheet(topic="물의 순환")
 
         self.assertEqual(result["page_count"], 1)
         self.assertEqual(result["used_profile"], "comfortable")
-        self.assertEqual(result["hwp_bytes"], b"d")
+        self.assertEqual(result["hwpx_bytes"], b"d")
         self.assertEqual(
             [call.kwargs["layout_profile"] for call in mock_build.call_args_list],
             ["comfortable", "compact", "tight", "comfortable"],

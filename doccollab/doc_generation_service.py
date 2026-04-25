@@ -14,7 +14,7 @@ from .doc_generation_llm import (
     MIN_PROMPT_CHARS,
     generate_document_content,
 )
-from .doc_hwp_builder import build_document_hwp_bytes, document_hwp_file_name
+from .doc_hwp_builder import build_document_hwpx_bytes, document_hwpx_file_name
 from .models import DocGeneratedDraft, DocMembership, DocRevision, DocRoom, DocWorkspace
 from .services import save_room_revision
 
@@ -109,7 +109,7 @@ def create_generated_document_room(*, user, document_type, prompt):
     room, draft = _create_draft_shell(user=user, document_type=normalized_type, prompt=normalized_prompt)
     try:
         payload = generate_document_content(document_type=normalized_type, prompt=normalized_prompt)
-        generated = build_document_hwp_bytes(content=payload)
+        generated = build_document_hwpx_bytes(content=payload)
         revision = _complete_generated_document(
             user=user,
             room=room,
@@ -146,7 +146,7 @@ def _create_draft_shell(*, user, document_type, prompt):
         created_by=user,
         origin_kind=DocRoom.OriginKind.AI_DRAFT,
         source_name="",
-        source_format=DocRoom.SourceFormat.HWP,
+        source_format=DocRoom.SourceFormat.HWPX,
         source_sha256="",
         last_activity_at=timezone.now(),
     )
@@ -176,10 +176,10 @@ def _complete_generated_document(*, user, room, draft, payload, generated):
         room=room,
         user=user,
         uploaded_file=ContentFile(
-            generated["hwp_bytes"],
-            name=generated.get("file_name") or document_hwp_file_name(room_title),
+            generated["hwpx_bytes"],
+            name=generated.get("file_name") or document_hwpx_file_name(room_title),
         ),
-        export_format=DocRevision.ExportFormat.HWP_EXPORT,
+        export_format=DocRevision.ExportFormat.HWPX_EXPORT,
         note="AI 문서 초안 생성",
     )
     draft.status = DocGeneratedDraft.Status.READY

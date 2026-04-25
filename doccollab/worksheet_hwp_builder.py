@@ -19,7 +19,7 @@ class WorksheetBuildError(Exception):
     """Raised when the server-side rhwp builder cannot produce a worksheet."""
 
 
-def build_worksheet_hwp_bytes(*, content, layout_profile):
+def build_worksheet_hwpx_bytes(*, content, layout_profile):
     normalized_profile = str(layout_profile or "").strip()
     if normalized_profile not in WORKSHEET_LAYOUT_PROFILES:
         raise ValidationError("지원하지 않는 학습지 레이아웃입니다.")
@@ -39,7 +39,7 @@ def build_worksheet_hwp_bytes(*, content, layout_profile):
 
     with tempfile.TemporaryDirectory(prefix="doccollab-worksheet-") as tmpdir:
         input_path = Path(tmpdir) / "worksheet-input.json"
-        output_path = Path(tmpdir) / "worksheet-output.hwp"
+        output_path = Path(tmpdir) / "worksheet-output.hwpx"
         input_path.write_text(json.dumps(request_payload, ensure_ascii=False), encoding="utf-8")
 
         try:
@@ -57,7 +57,7 @@ def build_worksheet_hwp_bytes(*, content, layout_profile):
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise WorksheetBuildError("학습지 HWP를 만드는 시간이 너무 오래 걸렸습니다.") from exc
+            raise WorksheetBuildError("학습지 HWPX를 만드는 시간이 너무 오래 걸렸습니다.") from exc
         except OSError as exc:
             raise WorksheetBuildError("서버에서 rhwp 생성기를 실행하지 못했습니다.") from exc
 
@@ -65,18 +65,22 @@ def build_worksheet_hwp_bytes(*, content, layout_profile):
         stderr_text = str(completed.stderr or "").strip()
         if completed.returncode != 0:
             error_message = stderr_text or (stdout_lines[-1] if stdout_lines else "")
-            raise WorksheetBuildError(error_message or "학습지 HWP를 만들지 못했습니다.")
+            raise WorksheetBuildError(error_message or "학습지 HWPX를 만들지 못했습니다.")
         if not output_path.exists():
-            raise WorksheetBuildError("학습지 HWP 파일이 만들어지지 않았습니다.")
+            raise WorksheetBuildError("학습지 HWPX 파일이 만들어지지 않았습니다.")
 
         try:
             metadata = json.loads(stdout_lines[-1]) if stdout_lines else {}
         except json.JSONDecodeError as exc:
-            raise WorksheetBuildError("학습지 HWP 결과를 해석하지 못했습니다.") from exc
+            raise WorksheetBuildError("학습지 HWPX 결과를 해석하지 못했습니다.") from exc
 
         return {
             "layout_profile": normalized_profile,
             "page_count": max(int(metadata.get("pageCount") or 0), 0),
-            "file_name": str(metadata.get("fileName") or "worksheet.hwp").strip() or "worksheet.hwp",
-            "hwp_bytes": output_path.read_bytes(),
+            "file_name": str(metadata.get("fileName") or "worksheet.hwpx").strip() or "worksheet.hwpx",
+            "hwpx_bytes": output_path.read_bytes(),
         }
+
+
+def build_worksheet_hwp_bytes(*, content, layout_profile):
+    return build_worksheet_hwpx_bytes(content=content, layout_profile=layout_profile)

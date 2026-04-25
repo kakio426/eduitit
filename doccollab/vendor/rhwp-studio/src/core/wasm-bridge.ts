@@ -102,6 +102,11 @@ export class WasmBridge {
     return this.doc.exportHwp();
   }
 
+  exportHwpx(): Uint8Array {
+    if (!this.doc) throw new Error('문서가 로드되지 않았습니다');
+    return this.doc.exportHwpx();
+  }
+
   get pageCount(): number {
     return this.doc?.pageCount() ?? 0;
   }
