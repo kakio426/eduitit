@@ -49,14 +49,9 @@
             hx-encoding="multipart/form-data"
             class="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm mb-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
             {% csrf_token %}
-            <div class="flex items-start gap-3">
-                {% include 'core/partials/teacher_buddy_avatar.html' with avatar_context=teacher_buddy_current_avatar size_class='h-14 w-14' extra_class='teacher-buddy-avatar--compose teacher-buddy-avatar--sns' %}
-                <div class="flex-1 min-w-0">
-                    <textarea name="content"
-                        class="w-full resize-none outline-none focus:ring-2 focus:ring-purple-300 rounded text-sm placeholder-slate-400 bg-transparent font-medium transition-colors"
-                        rows="2" placeholder="선생님들과 나누고 싶은 이야기가 있나요?">{{ sns_compose_prefill }}</textarea>
-                </div>
-            </div>
+            <textarea name="content"
+                class="block min-h-24 w-full resize-none rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-200 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                rows="2" placeholder="무슨 일이 있었나요?">{{ sns_compose_prefill }}</textarea>
 
             <div id="mobile-image-preview-container" class="hidden mt-3 relative">
                 <img id="mobile-image-preview" src="" alt="미리보기"
