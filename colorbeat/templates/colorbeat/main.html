@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}알록달록 비트메이커 | Eduitit{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'colorbeat/css/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<main id="cb-app" class="cb-root service-shell--compact" data-storage-key="colorbeat_pattern_v1">
+    <header class="cb-topbar">
+        <div class="cb-brand">
+            <span class="cb-mark" aria-hidden="true">♪</span>
+            <div>
+                <h1>알록달록 비트메이커</h1>
+                <p id="cb-status" role="status" aria-live="polite">준비</p>
+            </div>
+        </div>
+
+        <div class="cb-actions" aria-label="비트메이커 조작">
+            <button id="cb-play" type="button" class="cb-button cb-button-primary">재생</button>
+            <button id="cb-random" type="button" class="cb-button">랜덤</button>
+            <button id="cb-clear" type="button" class="cb-button">지우기</button>
+            <button id="cb-fullscreen" type="button" class="cb-button">전체</button>
+        </div>
+    </header>
+
+    <section class="cb-control-band" aria-label="템포와 소리">
+        <label class="cb-tempo" for="cb-tempo">
+            <span>템포</span>
+            <input id="cb-tempo" type="range" min="70" max="150" step="5" value="110">
+            <output id="cb-tempo-value" for="cb-tempo">110</output>
+        </label>
+
+        <div class="cb-sound-set" role="group" aria-label="소리">
+            <button type="button" class="cb-chip is-active" data-kit="drum">드럼</button>
+            <button type="button" class="cb-chip" data-kit="sparkle">반짝</button>
+            <button type="button" class="cb-chip" data-kit="space">우주</button>
+        </div>
+    </section>
+
+    <section class="cb-board" aria-label="비트 그리드">
+        <div class="cb-step-labels" aria-hidden="true">
+            <span></span>
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+            <span>4</span>
+            <span>5</span>
+            <span>6</span>
+            <span>7</span>
+            <span>8</span>
+        </div>
+
+        <div id="cb-grid" class="cb-grid" role="grid" aria-label="4개 소리와 8박자 그리드"></div>
+    </section>
+
+    <section class="cb-bottom">
+        <button id="cb-code-toggle" type="button" class="cb-button">코드</button>
+        <pre id="cb-code" class="cb-code" hidden>[[0,0,0,0,0,0,0,0]]</pre>
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'colorbeat/vendor/tone/Tone.js' %}"></script>
+<script src="{% static 'colorbeat/js/main.js' %}"></script>
+{% endblock %}

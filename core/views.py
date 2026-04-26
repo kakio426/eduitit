@@ -884,6 +884,7 @@ PRODUCT_CONTEXT_CHIP_OVERRIDES = {
     "fairy_games:play_breakthrough": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "fairy_games:play_reversi": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "reflex_game:main": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
+    "colorbeat:main": ["음악 활동", "모둠·전체", "교실 화면", "5분 안팎"],
     "yut_game": ["수업 중 활동", "모둠·전체", "교실 화면", "5분 안팎"],
 }
 

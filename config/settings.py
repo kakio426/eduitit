@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'janggi.apps.JanggiConfig',
     'fairy_games.apps.FairyGamesConfig',
     'reflex_game.apps.ReflexGameConfig',
+    'colorbeat.apps.ColorbeatConfig',
     'math_games.apps.MathGamesConfig',
     'mancala.apps.MancalaConfig',
     'ppobgi.apps.PpobgiConfig',

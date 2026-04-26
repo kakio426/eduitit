@@ -36,6 +36,7 @@ CLASS_ACTIVITY_ROUTE_NAMES = {
     "fairy_games:play_breakthrough",
     "fairy_games:play_reversi",
     "reflex_game:main",
+    "colorbeat:main",
     "yut_game",
 }
 
@@ -132,6 +133,7 @@ HOME_SECTION_BY_ROUTE = {
     "fairy_games:play_breakthrough": "class_activity",
     "fairy_games:play_reversi": "class_activity",
     "reflex_game:main": "class_activity",
+    "colorbeat:main": "class_activity",
     "yut_game": "class_activity",
     "studentmbti:landing": "refresh",
     "studentmbti:start": "refresh",
@@ -259,6 +261,7 @@ HOME_ICON_CLASS_BY_ROUTE = {
     "janggi:index": "fa-solid fa-chess-rook",
     "janggi:play": "fa-solid fa-chess-rook",
     "reflex_game:main": "fa-solid fa-bolt",
+    "colorbeat:main": "fa-solid fa-music",
     "yut_game": "fa-solid fa-dice-four",
     "teacher_law:main": "fa-solid fa-scale-balanced",
     "ssambti:main": "fa-solid fa-id-badge",

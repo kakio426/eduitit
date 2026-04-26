@@ -32,6 +32,7 @@ class Command(BaseCommand):
             ("ensure_janggi", lambda: call_command("ensure_janggi")),
             ("ensure_fairy_games", lambda: call_command("ensure_fairy_games")),
             ("ensure_reflex_game", lambda: call_command("ensure_reflex_game")),
+            ("ensure_colorbeat", lambda: call_command("ensure_colorbeat")),
             ("ensure_math_games", lambda: call_command("ensure_math_games")),
             ("ensure_mancala", lambda: call_command("ensure_mancala")),
             ("ensure_ppobgi", lambda: call_command("ensure_ppobgi")),
