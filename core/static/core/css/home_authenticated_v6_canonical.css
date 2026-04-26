@@ -8111,3 +8111,40 @@ transform: none;
         min-height: 2.55rem;
     }
 }
+
+.home-v6-page .home-v6-mobile-agent-section,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-representative-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 1099px) {
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-card {
+        padding: 0.72rem;
+        border-radius: var(--home-v6-radius-panel);
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
+        min-height: 0;
+        gap: 0.62rem;
+        padding: 0;
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-cmd-hero--single-shell {
+        padding: 0 0.82rem;
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-composer-dock {
+        padding: 0.65rem 0.7rem 0.7rem;
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-card.is-shell-empty .home-v6-agent-dialogue-stage {
+        display: none !important;
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
+        min-height: min(38svh, 22rem);
+        max-height: min(52svh, 32rem);
+    }
+}

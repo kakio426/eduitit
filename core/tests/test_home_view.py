@@ -3614,7 +3614,7 @@ class HomeV5ViewTest(TestCase):
         self.assertIsNotNone(sns_mobile_match)
         self.assertIn('hidden', workbench_mobile_match.group(0))
         self.assertNotIn('hidden', calendar_mobile_match.group(0))
-        self.assertIn('hidden', agent_mobile_match.group(0))
+        self.assertNotIn('hidden', agent_mobile_match.group(0))
         self.assertNotIn('hidden', quickdrop_mobile_match.group(0))
         self.assertIn('hidden', sns_mobile_match.group(0))
         self.assertNotIn('data-home-v4-public-shell="true"', content)

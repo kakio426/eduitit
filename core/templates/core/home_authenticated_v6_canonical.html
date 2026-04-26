@@ -205,10 +205,8 @@
                         {% include 'core/partials/home_v6_calendar_panel.html' %}
                         {% endif %}
                     </section>
-                    <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true" {% if home_user_mode == 'authenticated' %}hidden aria-hidden="true"{% endif %}>
-                        {% if home_user_mode != 'authenticated' %}
+                    <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
                         {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
-                        {% endif %}
                     </section>
                     {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
