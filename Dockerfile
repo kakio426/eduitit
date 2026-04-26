@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender1 \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt
