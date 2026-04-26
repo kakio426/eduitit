@@ -998,6 +998,10 @@
             runActiveAiStarter: function (item) {
                 var payload = item && typeof item === 'object' ? item : {};
                 var text = trimLine(payload.text || '');
+                if (trimLine(payload.action) === 'daily_notice_recommendation') {
+                    this.runDailyNoticeRecommendation(payload);
+                    return;
+                }
                 if (this.aiMessengerIsFlow('direct-send')) {
                     this.runQuickdropExample(payload);
                     return;
@@ -7205,6 +7209,134 @@
 
             noticeQuickExamples: function () {
                 return this.activeModeStarterItems();
+            },
+
+            runDailyNoticeRecommendation: async function (item) {
+                var payload = item && typeof item === 'object' ? item : {};
+                var endpoint = trimLine(payload.endpoint || '');
+                var modeKey = trimLine(this.activeModeKey || 'notice');
+                var mode = this.modeByKey(modeKey);
+                var modeLabel = trimLine(mode.label || '알림장');
+                var csrfToken = getCsrfToken();
+                var requestId;
+                var historyEntryId = '';
+                var activeModeAtResult = '';
+                var activeModeStateAtResult = null;
+                var resultText = '';
+                var recommendation = {};
+                var previewStatus;
+                var normalizedPreview;
+                var contextSnapshot;
+
+                if (!endpoint) {
+                    showFeedback('오늘 추천 경로를 찾지 못했습니다.', 'error');
+                    return;
+                }
+                if (!csrfToken) {
+                    showFeedback('보안 토큰을 확인할 수 없습니다.', 'error');
+                    return;
+                }
+
+                this.noticeBaseInput = '오늘 추천';
+                this.noticeRefinementLabel = '';
+                this.workspaceInput = '';
+                requestId = this.agentPreviewRequestId + 1;
+                this.agentPreviewRequestId = requestId;
+                historyEntryId = this.startChatHistoryEntry('오늘 추천', modeKey, modeLabel);
+                this.isAgentLoading = true;
+                this.scrollWorkspaceDialogueToBottom();
+
+                try {
+                    var response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    var responsePayload = await response.json().catch(function () {
+                        return {};
+                    });
+                    if (requestId !== this.agentPreviewRequestId) {
+                        this.removeChatHistoryEntry(historyEntryId);
+                        return;
+                    }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    activeModeStateAtResult = this.buildChatHistoryActionContext();
+                    if (responsePayload.status === 'retry') {
+                        throw new Error(responsePayload.message || '오늘 추천을 준비하고 있습니다.');
+                    }
+                    if (!response.ok || responsePayload.status !== 'ok') {
+                        throw new Error(responsePayload.error || responsePayload.message || '오늘 추천을 불러오지 못했습니다.');
+                    }
+                    recommendation = responsePayload.recommendation && typeof responsePayload.recommendation === 'object'
+                        ? responsePayload.recommendation
+                        : {};
+                    resultText = trimLine(responsePayload.result_text || recommendation.result_text || '');
+                    if (!resultText) {
+                        throw new Error('오늘 추천 문장이 비어 있습니다.');
+                    }
+                    previewStatus = {
+                        source: 'direct',
+                        provider: 'noticegen',
+                        model: 'daily-recommendation',
+                        providerLabel: '오늘 추천',
+                    };
+                    normalizedPreview = this.normalizePreview({
+                        badge: '알림장',
+                        title: '오늘 추천',
+                        summary: '',
+                        sections: [
+                            {
+                                title: '결과',
+                                items: [resultText],
+                            },
+                        ],
+                        note: trimLine(recommendation.context_label || responsePayload.context_label || ''),
+                    }, previewStatus);
+                    this.agentPreview = normalizedPreview;
+                    this.agentPreviewMeta = previewStatus;
+                    this.clearExecution();
+                    contextSnapshot = this.buildChatHistoryActionContext({
+                        workspaceInput: '',
+                        agentPreview: normalizedPreview,
+                        agentPreviewMeta: previewStatus,
+                    });
+                    this.agentModeStateMap[modeKey] = this.normalizeModeState(contextSnapshot);
+                    this.finalizeChatHistoryEntry(historyEntryId, {
+                        modeKey: modeKey,
+                        modeLabel: modeLabel,
+                        preview: normalizedPreview,
+                        previewMeta: previewStatus,
+                        context: contextSnapshot,
+                        activate: activeModeAtResult === modeKey,
+                    });
+                    if (activeModeAtResult === modeKey) {
+                        this.isAgentLoading = false;
+                    } else if (activeModeAtResult) {
+                        this.agentModeStateMap[activeModeAtResult] = this.normalizeModeState(activeModeStateAtResult);
+                        this.restoreModeState(activeModeAtResult);
+                    }
+                    showFeedback(responsePayload.message || '오늘 추천을 불러왔습니다.', 'success');
+                } catch (error) {
+                    if (requestId !== this.agentPreviewRequestId) {
+                        this.removeChatHistoryEntry(historyEntryId);
+                        return;
+                    }
+                    activeModeAtResult = trimLine(this.activeModeKey || '');
+                    if (activeModeAtResult === modeKey) {
+                        this.showIdlePreview();
+                        this.isAgentLoading = false;
+                    }
+                    this.abortChatHistoryEntry(historyEntryId, error && error.message ? error.message : '오늘 추천을 불러오지 못했습니다.', {
+                        activate: activeModeAtResult === modeKey,
+                    });
+                    showFeedback(error && error.message ? error.message : '오늘 추천을 불러오지 못했습니다.', 'error');
+                } finally {
+                    if (requestId === this.agentPreviewRequestId && modeKey === trimLine(this.activeModeKey || '')) {
+                        this.isAgentLoading = false;
+                    }
+                }
             },
 
             runNoticeExample: function (text) {

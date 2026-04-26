@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import NoticeGenerationAttempt, NoticeGenerationCache
+from .models import DailyNoticeRecommendation, NoticeGenerationAttempt, NoticeGenerationCache
 
 
 @admin.register(NoticeGenerationCache)
@@ -35,3 +35,17 @@ class NoticeGenerationAttemptAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "session_key", "error_code", "key_hash")
     readonly_fields = ("created_at",)
 
+
+@admin.register(DailyNoticeRecommendation)
+class DailyNoticeRecommendationAdmin(admin.ModelAdmin):
+    list_display = (
+        "recommendation_date",
+        "topic_key",
+        "context_label",
+        "status",
+        "served_count",
+        "last_served_at",
+    )
+    list_filter = ("status", "topic_key", "recommendation_date")
+    search_fields = ("topic_key", "context_label", "result_text", "error_code")
+    readonly_fields = ("created_at", "updated_at", "last_served_at")

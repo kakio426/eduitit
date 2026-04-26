@@ -106,3 +106,38 @@ class NoticeGenerationAttempt(models.Model):
         principal = self.user.username if self.user_id else f"guest:{self.session_key}"
         return f"{principal} / {self.status}"
 
+
+class DailyNoticeRecommendation(models.Model):
+    STATUS_GENERATING = "generating"
+    STATUS_READY = "ready"
+    STATUS_FALLBACK = "fallback"
+
+    STATUS_CHOICES = [
+        (STATUS_GENERATING, "Generating"),
+        (STATUS_READY, "Ready"),
+        (STATUS_FALLBACK, "Fallback"),
+    ]
+
+    recommendation_date = models.DateField(unique=True, db_index=True)
+    topic_key = models.CharField(max_length=64, db_index=True)
+    context_label = models.CharField(max_length=120, blank=True)
+    source_context = models.JSONField(default=dict, blank=True)
+    result_text = models.TextField(blank=True)
+    content_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_GENERATING, db_index=True)
+    error_code = models.CharField(max_length=64, blank=True)
+    served_count = models.PositiveIntegerField(default=0)
+    last_served_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-recommendation_date"]
+        indexes = [
+            models.Index(fields=["recommendation_date", "status"]),
+            models.Index(fields=["topic_key", "recommendation_date"]),
+            models.Index(fields=["content_hash", "recommendation_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.recommendation_date} / {self.topic_key}"

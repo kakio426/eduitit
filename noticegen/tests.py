@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -6,7 +7,12 @@ from django.urls import reverse
 
 from core.models import UserProfile
 
-from .models import NoticeGenerationAttempt, NoticeGenerationCache
+from .daily_recommendations import (
+    build_daily_recommendation_context,
+    build_daily_safety_topic_catalog,
+    get_or_create_daily_recommendation,
+)
+from .models import DailyNoticeRecommendation, NoticeGenerationAttempt, NoticeGenerationCache
 from .prompts import (
     LENGTH_LONG,
     LENGTH_MEDIUM,
@@ -617,3 +623,137 @@ class NoticeGenViewTests(TestCase):
         self.assertContains(response, "체험학습 준비물 안내")
         self.assertEqual(response.context["initial_target"], "parent")
         self.assertEqual(response.context["initial_topic"], "notice")
+
+
+class DailyNoticeRecommendationTests(TestCase):
+    art_tools_text = (
+        "오늘 학급에서는 미술도구를 사용할 때 가위와 풀, 색칠도구를 안전하게 쓰는 약속을 함께 확인했습니다. "
+        "하교 후에도 가정에서 준비물을 정리하며 날카로운 도구를 장난처럼 쓰지 않도록 살펴봐 주시기 바랍니다."
+    )
+    dust_break_text = (
+        "오늘 학급에서는 미세먼지가 많은 날 실외활동과 개인위생을 조절하는 안전수칙을 함께 확인했습니다. "
+        "하교 후에도 가정에서 손 씻기와 옷 털기를 한 번 더 살펴봐 주시기 바랍니다."
+    )
+    dust_dismissal_text = (
+        "오늘 학급에서는 하교 전 미세먼지가 많은 날 실외활동을 줄이고 개인위생을 챙기는 방법을 확인했습니다. "
+        "가정에서도 손 씻기와 외출 뒤 옷 정리를 함께 살펴봐 주시기 바랍니다."
+    )
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="daily-teacher",
+            password="pw123456",
+            email="daily@example.com",
+        )
+        profile = UserProfile.objects.get(user=self.user)
+        profile.nickname = "담임"
+        profile.save(update_fields=["nickname"])
+
+    def _post_daily_recommendation(self):
+        return self.client.post(
+            reverse("noticegen:daily_recommendation"),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_topic_catalog_has_no_duplicate_keys_for_365_days(self):
+        catalog = build_daily_safety_topic_catalog()
+        keys = [item["key"] for item in catalog[:365]]
+
+        self.assertEqual(len(keys), 365)
+        self.assertEqual(len(set(keys)), 365)
+
+    def test_holiday_eve_context_prioritizes_special_public_holiday(self):
+        context = build_daily_recommendation_context(date(2026, 5, 4))
+
+        self.assertEqual(context["holiday_eve"], "어린이날")
+        self.assertIn("어린이날 전날", context["context_label"])
+
+    def test_substitute_holiday_eve_context_prioritizes_substitute_public_holiday(self):
+        context = build_daily_recommendation_context(date(2026, 3, 1))
+
+        self.assertEqual(context["holiday_eve"], "삼일절 대체공휴일")
+        self.assertIn("삼일절 대체공휴일 전날", context["context_label"])
+
+    @patch("noticegen.daily_recommendations.timezone.localdate", return_value=date(2026, 6, 10))
+    @patch("noticegen.daily_recommendations._call_daily_recommendation_llm")
+    def test_endpoint_generates_once_per_date_and_serves_same_text(self, mock_call, _mock_today):
+        mock_call.return_value = self.art_tools_text
+        self.client.force_login(self.user)
+
+        first_response = self._post_daily_recommendation()
+        second_response = self._post_daily_recommendation()
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+        first_payload = first_response.json()
+        second_payload = second_response.json()
+        self.assertEqual(first_payload["result_text"], self.art_tools_text)
+        self.assertEqual(second_payload["result_text"], self.art_tools_text)
+        self.assertEqual(first_payload["recommendation"]["date"], "2026-06-10")
+        self.assertEqual(mock_call.call_count, 1)
+        recommendation = DailyNoticeRecommendation.objects.get(recommendation_date=date(2026, 6, 10))
+        self.assertEqual(recommendation.served_count, 2)
+
+    @patch("noticegen.daily_recommendations._call_daily_recommendation_llm")
+    def test_adjacent_dates_use_different_topic_keys(self, mock_call):
+        mock_call.side_effect = [
+            self.dust_break_text,
+            self.dust_dismissal_text,
+        ]
+
+        first, _created, _generating = get_or_create_daily_recommendation(date(2026, 4, 26))
+        second, _created, _generating = get_or_create_daily_recommendation(date(2026, 4, 27))
+
+        self.assertNotEqual(first.topic_key, second.topic_key)
+
+    @patch("noticegen.daily_recommendations.timezone.localdate", return_value=date(2026, 6, 10))
+    @patch("noticegen.daily_recommendations._call_daily_recommendation_llm")
+    def test_topic_mismatch_retries_before_saving_official_recommendation(self, mock_call, _mock_today):
+        mock_call.side_effect = [
+            (
+                "오늘 학급에서는 비 오는 날 우산 시야와 젖은 바닥 미끄럼 안전수칙을 함께 확인했습니다. "
+                "하교 후에도 뛰지 않고 주변을 살피며, 가정에서도 우산과 여벌 양말을 챙겨 주시기 바랍니다."
+            ),
+            self.art_tools_text,
+        ]
+        self.client.force_login(self.user)
+
+        response = self._post_daily_recommendation()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["result_text"], self.art_tools_text)
+        self.assertEqual(mock_call.call_count, 2)
+        recommendation = DailyNoticeRecommendation.objects.get(recommendation_date=date(2026, 6, 10))
+        self.assertEqual(recommendation.status, DailyNoticeRecommendation.STATUS_READY)
+
+    @patch("noticegen.daily_recommendations.timezone.localdate", return_value=date(2026, 3, 6))
+    @patch("noticegen.daily_recommendations._call_daily_recommendation_llm")
+    def test_political_output_falls_back_without_500(self, mock_call, _mock_today):
+        mock_call.return_value = "오늘은 선거와 정당 이야기를 중심으로 안전을 확인했습니다."
+        self.client.force_login(self.user)
+
+        response = self._post_daily_recommendation()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "ok")
+        self.assertNotIn("선거", payload["result_text"])
+        recommendation = DailyNoticeRecommendation.objects.get(recommendation_date=date(2026, 3, 6))
+        self.assertEqual(recommendation.status, DailyNoticeRecommendation.STATUS_FALLBACK)
+        self.assertIn("POLITICAL_OUTPUT", recommendation.error_code)
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch("noticegen.daily_recommendations.timezone.localdate", return_value=date(2026, 3, 7))
+    @patch("noticegen.daily_recommendations._call_daily_recommendation_llm", side_effect=TimeoutError("timeout"))
+    def test_llm_failure_returns_fallback_json(self, _mock_call, _mock_today):
+        self.client.force_login(self.user)
+
+        response = self._post_daily_recommendation()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "ok")
+        self.assertIn("오늘 학급에서는", payload["result_text"])
+        recommendation = DailyNoticeRecommendation.objects.get(recommendation_date=date(2026, 3, 7))
+        self.assertEqual(recommendation.status, DailyNoticeRecommendation.STATUS_FALLBACK)

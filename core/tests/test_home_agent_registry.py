@@ -1,7 +1,8 @@
-from datetime import date
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.test import RequestFactory, TestCase
 
 from core.home_agent_registry import (
@@ -96,16 +97,21 @@ class HomeAgentRegistryTests(TestCase):
         self.assertIn('scene_options', ui_options)
         self.assertIn('counterpart_options', ui_options)
 
-    @patch("core.home_agent_registry._home_agent_today", return_value=date(2026, 6, 5))
-    def test_notice_provider_includes_date_based_today_recommendation(self, _mock_today):
+    def test_notice_provider_includes_server_daily_recommendation_action(self):
         definition = get_home_agent_service_definition('notice')
 
         starter_items = resolve_home_agent_starter_items(definition, request=self._request())
 
         self.assertTrue(starter_items)
         self.assertEqual(starter_items[0]["label"], "오늘 추천")
-        self.assertIn("우산", starter_items[0]["text"])
-        self.assertIn("주말 전에 개인 물건도 살펴봐 주세요.", starter_items[0]["text"])
+        self.assertEqual(starter_items[0]["action"], "daily_notice_recommendation")
+        self.assertEqual(starter_items[0]["endpoint"], "/noticegen/daily-recommendation/")
+
+    def test_notice_daily_recommendation_js_has_failure_feedback(self):
+        script_path = Path(settings.BASE_DIR) / 'core/static/core/js/home_authenticated_v6.js'
+        script = script_path.read_text(encoding='utf-8')
+
+        self.assertIn('오늘 추천을 불러오지 못했습니다.', script)
 
     def test_conversation_actions_are_resolved_from_registry_contract(self):
         shared_actions = resolve_home_agent_conversation_actions('shared')

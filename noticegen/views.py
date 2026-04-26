@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.core import is_ratelimited
+from django.http import JsonResponse
 from django.db.models import F
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -18,6 +19,10 @@ from openai import OpenAI
 from core.seo import build_noticegen_page_seo
 from products.models import Product
 
+from .daily_recommendations import (
+    get_or_create_daily_recommendation,
+    serialize_daily_recommendation,
+)
 from .models import (
     NoticeGenerationAttempt,
     NoticeGenerationCache,
@@ -1066,6 +1071,33 @@ def generate_notice(request):
 def generate_notice_mini(request):
     status, payload = _generate_notice_payload(request)
     return _render_mini_result(request, payload, status=status)
+
+
+@login_required
+@require_POST
+def daily_recommendation(request):
+    recommendation, _created, generating = get_or_create_daily_recommendation()
+    if generating:
+        return JsonResponse(
+            {
+                "status": "retry",
+                "message": "오늘 추천을 준비하고 있습니다. 잠시 후 다시 눌러 주세요.",
+            },
+            status=202,
+        )
+
+    payload = serialize_daily_recommendation(recommendation)
+    return JsonResponse(
+        {
+            "status": "ok",
+            "recommendation": payload,
+            "result_text": payload["result_text"],
+            "topic_key": payload["topic_key"],
+            "context_label": payload["context_label"],
+            "source": payload["source"],
+            "message": "오늘 추천을 불러왔습니다.",
+        }
+    )
 
 
 @login_required
