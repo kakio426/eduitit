@@ -230,6 +230,113 @@ def _normalize_teacher_law_draft(value) -> dict:
     }
 
 
+def _teacher_law_citation_label(citation: dict) -> str:
+    source = citation if isinstance(citation, dict) else {}
+    title = _compact_text(source.get("title") or source.get("law_name"))
+    reference = _compact_text(source.get("reference_label") or source.get("article_label") or source.get("case_number"))
+    if title and reference and reference in title:
+        return title
+    if title and reference:
+        return f"{title} {reference}"
+    return title or reference
+
+
+def _teacher_law_basis_line(payload: dict) -> str:
+    citations = [item for item in payload.get("citations") or [] if isinstance(item, dict)]
+    law_labels = [
+        _teacher_law_citation_label(citation)
+        for citation in citations
+        if citation.get("source_type") != "case" and _teacher_law_citation_label(citation)
+    ]
+    if not law_labels:
+        return ""
+    return f"법령 근거 · {', '.join(law_labels[:2])}"
+
+
+def _teacher_law_case_line(payload: dict) -> str:
+    representative_case = payload.get("representative_case")
+    if isinstance(representative_case, dict):
+        case_label = _teacher_law_citation_label(representative_case)
+        confidence = _compact_text(payload.get("representative_case_confidence")).lower()
+        confidence_label = {
+            "high": "높음",
+            "medium": "보통",
+            "low": "낮음",
+        }.get(confidence)
+        if case_label and confidence_label:
+            return f"판례 참고 · {case_label} (연관성 {confidence_label})"
+        if case_label:
+            return f"판례 참고 · {case_label}"
+
+    citations = [item for item in payload.get("citations") or [] if isinstance(item, dict)]
+    case_label = next(
+        (
+            _teacher_law_citation_label(citation)
+            for citation in citations
+            if citation.get("source_type") == "case" and _teacher_law_citation_label(citation)
+        ),
+        "",
+    )
+    if case_label:
+        return f"판례 참고 · {case_label}"
+
+    precedent_note = _compact_text(payload.get("precedent_note"))
+    if precedent_note:
+        return f"판례 참고 · {precedent_note}"
+    return ""
+
+
+def _build_teacher_law_preview(*, mode_spec: dict, title: str, payload: dict, fallback_items: list[str] | None = None) -> dict:
+    data = payload if isinstance(payload, dict) else {}
+    items = []
+
+    def add_line(value: str) -> None:
+        line = _compact_text(value)
+        if line and line not in items:
+            items.append(line)
+
+    add_line(data.get("summary"))
+    if data.get("clarify_needed"):
+        for question in data.get("clarify_questions") or []:
+            question_text = _compact_text(question)
+            if question_text:
+                add_line(f"확인 · {question_text}")
+    else:
+        reasoning_summary = _compact_text(data.get("reasoning_summary"))
+        if reasoning_summary:
+            add_line(f"판단 기준 · {reasoning_summary}")
+
+    for action in data.get("action_items") or []:
+        action_text = _compact_text(action)
+        if action_text:
+            add_line(f"다음 조치 · {action_text}")
+
+    add_line(_teacher_law_basis_line(data))
+    add_line(_teacher_law_case_line(data))
+    if not data.get("clarify_needed"):
+        disclaimer = _compact_text(data.get("disclaimer"))
+        if disclaimer:
+            add_line(f"주의 · {disclaimer}")
+
+    if not items:
+        for fallback in fallback_items or []:
+            add_line(fallback)
+
+    cleaned_items = items[:10] or ["질문과 바로 맞는 답변을 아직 만들지 못했습니다."]
+    return {
+        "badge": mode_spec.get("badge") or "",
+        "title": title,
+        "summary": cleaned_items[0] if cleaned_items else "",
+        "sections": [
+            {
+                "title": "결과",
+                "items": cleaned_items,
+            }
+        ],
+        "note": mode_spec.get("default_note") or "",
+    }
+
+
 def _match_teacher_law_option_value(text: str, options: list[dict]) -> str:
     normalized_text = _normalize_match_text(text)
     if not normalized_text:
@@ -338,34 +445,13 @@ def _generate_teacher_law_preview(*, mode_spec: dict, text: str, context: dict |
         raise HomeAgentServiceUnavailable(str(exc)) from exc
 
     payload = result.get("payload") or {}
-    items = []
-    summary = _compact_text(payload.get("summary"))
-    if summary:
-        items.append(summary)
-    items.extend(
-        _compact_text(question)
-        for question in payload.get("clarify_questions") or []
-        if _compact_text(question)
-    )
-    items.extend(
-        _compact_text(action)
-        for action in payload.get("action_items") or []
-        if _compact_text(action)
-    )
-    if not items and _compact_text(payload.get("reasoning_summary")):
-        items.append(_compact_text(payload.get("reasoning_summary")))
-
-    representative_case = payload.get("representative_case") if isinstance(payload.get("representative_case"), dict) else None
-    representative_title = _compact_text((representative_case or {}).get("title") or (representative_case or {}).get("law_name"))
-    if representative_title and len(items) < 4:
-        items.append(f"대표 판례 · {representative_title}")
 
     return _build_service_response(
         provider="teacher_law",
-        preview=_build_preview(
+        preview=_build_teacher_law_preview(
             mode_spec=mode_spec,
             title="법률 답변" if not payload.get("clarify_needed") else "추가 확인",
-            items=items or ["질문과 바로 맞는 답변을 아직 만들지 못했습니다."],
+            payload=payload,
         ),
         execution=_build_teacher_law_execution(
             result=result,
@@ -714,26 +800,16 @@ def _execute_teacher_law_action(*, request, mode_spec: dict, data: dict) -> dict
         )
 
     assistant_message = response_payload.get("assistant_message") if isinstance(response_payload.get("assistant_message"), dict) else {}
-    items = []
-    summary = _compact_text(assistant_message.get("summary"))
-    if summary:
-        items.append(summary)
-    items.extend(
-        _compact_text(item)
-        for item in assistant_message.get("action_items") or []
-        if _compact_text(item)
-    )
-    if not items:
-        body = _compact_text(assistant_message.get("body"))
-        if body:
-            items.append(body)
+    body = _compact_text(assistant_message.get("body"))
+    fallback_items = [body] if body else ["법률 대화에 저장했습니다."]
 
     return _build_service_response(
         provider="teacher_law",
-        preview=_build_preview(
+        preview=_build_teacher_law_preview(
             mode_spec=mode_spec,
             title="법률 답변",
-            items=items or ["법률 대화에 저장했습니다."],
+            payload=assistant_message,
+            fallback_items=fallback_items or ["법률 대화에 저장했습니다."],
         ),
         message="법률 대화에 남겼습니다.",
     )

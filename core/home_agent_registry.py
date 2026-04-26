@@ -220,7 +220,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         },
         ui={
             "empty_prompt": "어떤 상황인가요?",
-            "preview_line_limit": 8,
+            "preview_line_limit": 10,
         },
         links={
             "service_href": {"source": "tool", "key": "teacher-law", "field": "href"},
@@ -237,7 +237,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "instruction": (
                 "교사가 상황을 정리하고 다음 대응 순서를 잡을 수 있게 도와주세요. "
                 "사실관계, 기록 보존, 관리자 공유 지점을 먼저 제시하고 단정적인 법률 판단은 피하세요. "
-                "첫 번째 sections.items에는 바로 체크할 행동만 짧게 넣고 해설은 쓰지 마세요."
+                "첫 번째 sections.items에는 요약, 판단 기준, 대응, 법령 근거, 판례 참고를 교사가 바로 확인할 수 있게 넣으세요."
             ),
         },
         starter_provider_key="teacher-law",

@@ -34,10 +34,29 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
             "status": "ok",
             "payload": {
                 "summary": "기록을 먼저 남기고 관리자와 공유하세요.",
+                "reasoning_summary": "반복 항의는 교육활동 침해와 업무 방해 가능성을 함께 보되, 통화 기록과 학교 보고 절차가 먼저입니다.",
                 "action_items": [
                     "통화 내용과 시간을 남기세요.",
                     "학교 관리자에게 바로 공유하세요.",
                 ],
+                "citations": [
+                    {
+                        "source_type": "law",
+                        "law_name": "교원의 지위 향상 및 교육활동 보호를 위한 특별법",
+                        "reference_label": "제15조",
+                    },
+                    {
+                        "source_type": "case",
+                        "title": "대법원 2024다12345",
+                        "case_number": "2024다12345",
+                    },
+                ],
+                "representative_case": {
+                    "title": "대법원 2024다12345",
+                    "case_number": "2024다12345",
+                },
+                "representative_case_confidence": "medium",
+                "disclaimer": "일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.",
             },
         },
     )
@@ -51,8 +70,17 @@ class HomeAgentServiceBridgeTests(SimpleTestCase):
 
         self.assertEqual(result["provider"], "teacher_law")
         self.assertEqual(result["preview"]["title"], "법률 답변")
-        self.assertIn("기록을 먼저 남기고 관리자와 공유하세요.", result["preview"]["sections"][0]["items"])
-        self.assertIn("통화 내용과 시간을 남기세요.", result["preview"]["sections"][0]["items"])
+        items = result["preview"]["sections"][0]["items"]
+        self.assertGreater(len(items), 4)
+        self.assertIn("기록을 먼저 남기고 관리자와 공유하세요.", items)
+        self.assertIn(
+            "판단 기준 · 반복 항의는 교육활동 침해와 업무 방해 가능성을 함께 보되, 통화 기록과 학교 보고 절차가 먼저입니다.",
+            items,
+        )
+        self.assertIn("다음 조치 · 통화 내용과 시간을 남기세요.", items)
+        self.assertIn("법령 근거 · 교원의 지위 향상 및 교육활동 보호를 위한 특별법 제15조", items)
+        self.assertIn("판례 참고 · 대법원 2024다12345 (연관성 보통)", items)
+        self.assertIn("주의 · 일반적 법령 정보 안내이며 개별 사건의 법률 자문은 아닙니다.", items)
         self.assertEqual(result["execution"]["kind"], "teacher-law")
         self.assertTrue(result["execution"]["incident_options"])
 

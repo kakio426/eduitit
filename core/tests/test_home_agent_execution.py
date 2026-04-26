@@ -133,8 +133,26 @@ class HomeAgentExecutionTests(TestCase):
             },
             "payload": {
                 "summary": "제공 범위와 보관 기록을 먼저 확인해야 합니다.",
+                "reasoning_summary": "영상 제공은 개인정보와 학생 초상 관련 동의 범위를 함께 확인해야 하므로 학교 절차가 먼저입니다.",
                 "action_items": ["학교 관리자와 먼저 공유합니다."],
-                "citations": [],
+                "citations": [
+                    {
+                        "source_type": "law",
+                        "law_name": "개인정보 보호법",
+                        "reference_label": "제15조",
+                        "article_label": "제15조",
+                    },
+                    {
+                        "source_type": "case",
+                        "law_name": "대법원 2024다12345",
+                        "case_number": "2024다12345",
+                    },
+                ],
+                "representative_case": {
+                    "title": "대법원 2024다12345",
+                    "case_number": "2024다12345",
+                },
+                "representative_case_confidence": "high",
                 "risk_level": "medium",
                 "needs_human_help": False,
                 "disclaimer": "일반 정보 안내입니다.",
@@ -173,9 +191,28 @@ class HomeAgentExecutionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+        preview_items = response.json()["preview"]["sections"][0]["items"]
+        self.assertIn("판단 기준 · 영상 제공은 개인정보와 학생 초상 관련 동의 범위를 함께 확인해야 하므로 학교 절차가 먼저입니다.", preview_items)
+        self.assertIn("법령 근거 · 개인정보 보호법 제15조", preview_items)
+        self.assertIn("판례 참고 · 대법원 2024다12345 (연관성 높음)", preview_items)
         self.assertEqual(LegalChatMessage.objects.count(), 2)
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.USER).count(), 1)
         self.assertEqual(LegalChatMessage.objects.filter(role=LegalChatMessage.Role.ASSISTANT).count(), 1)
+
+        from teacher_law.views import _build_page_context
+
+        page_request = self.factory.get("/teacher-law/")
+        page_request.user = self.user
+        page_request.session = self.client.session
+        page_context = _build_page_context(page_request)
+        self.assertEqual(
+            page_context["latest_pair"]["user_message"]["body"],
+            "학부모가 수업 중 촬영 영상을 요구합니다.",
+        )
+        self.assertEqual(
+            page_context["latest_pair"]["assistant_message"]["summary"],
+            "제공 범위와 보관 기록을 먼저 확인해야 합니다.",
+        )
 
     @patch(
         "teacher_law.views.answer_legal_question",

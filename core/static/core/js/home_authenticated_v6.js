@@ -1267,6 +1267,9 @@
                 if (item.kind === 'execute' && this.isAgentExecuting) {
                     return trimLine(item.busyLabel || '처리 중');
                 }
+                if (item.kind === 'teacher-law-open' && this.isAgentExecuting) {
+                    return trimLine(item.busyLabel || '여는 중');
+                }
                 if (item.kind === 'teacher-law-choice' && this.isAgentLoading) {
                     return trimLine(item.busyLabel || '확인 중');
                 }
@@ -1285,6 +1288,9 @@
                     return Boolean(this.isTtsReading);
                 }
                 if (item.kind === 'execute') {
+                    return Boolean(this.isAgentExecuting || item.disabled);
+                }
+                if (item.kind === 'teacher-law-open') {
                     return Boolean(this.isAgentExecuting || item.disabled);
                 }
                 if (item.kind === 'teacher-law-choice') {
@@ -1454,7 +1460,11 @@
                         }
                     }
                     if (openHref) {
-                        pushAction({ kind: 'link', label: openLabel || '법률 가이드', href: openHref });
+                        if (execution && execution.kind === 'teacher-law' && !needsSetup) {
+                            pushAction({ kind: 'teacher-law-open', label: openLabel || '법률 가이드', busyLabel: '여는 중', href: openHref });
+                        } else {
+                            pushAction({ kind: 'link', label: openLabel || '법률 가이드', href: openHref });
+                        }
                     }
                     return actions.slice(0, 3);
                 }
@@ -1590,6 +1600,10 @@
                 }
                 if (next.kind === 'teacher-law-choice') {
                     this.previewTeacherLawChoice(item, next);
+                    return;
+                }
+                if (next.kind === 'teacher-law-open') {
+                    this.openTeacherLawGuide(next);
                     return;
                 }
                 if (next.kind === 'execute') {
@@ -4545,6 +4559,11 @@
                 var base = this.buildPreviewSkeleton();
                 var payload = preview && typeof preview === 'object' ? preview : {};
                 var sections = Array.isArray(payload.sections) ? payload.sections : [];
+                var previewModeKey = trimLine(meta && meta.modeKey || this.activeModeKey || '');
+                var previewMode = previewModeKey ? this.modeByKey(previewModeKey) : this.activeMode;
+                var sectionItemLimit = previewModeKey === 'teacher-law'
+                    ? Math.max(4, Number(previewMode.preview_line_limit || 10))
+                    : 4;
                 var normalizedSections = sections
                     .map(function (section) {
                         if (!section || typeof section !== 'object') {
@@ -4552,7 +4571,7 @@
                         }
                         var title = trimLine(section.title);
                         var items = Array.isArray(section.items)
-                            ? section.items.map(trimLine).filter(Boolean).slice(0, 4)
+                            ? section.items.map(trimLine).filter(Boolean).slice(0, sectionItemLimit)
                             : [];
                         if (!title || !items.length) {
                             return null;
@@ -5148,10 +5167,11 @@
                 this.agentExecutionDraft.class_no = '';
             },
 
-            executeAgentService: async function () {
+            executeAgentService: async function (options) {
                 if (!this.agentExecution) {
-                    return;
+                    return false;
                 }
+                var settings = options && typeof options === 'object' ? options : {};
                 var modeKey = trimLine(this.activeModeKey || '');
                 var mode = this.modeByKey(modeKey);
                 var modeLabel = trimLine(mode.label || this.activeMode.label || '');
@@ -5173,14 +5193,14 @@
                     this.setExecutionFieldErrors(localFieldErrors);
                     showFeedback(localFieldErrors[this.firstExecutionErrorField()] || '입력을 먼저 확인해 주세요.', 'error');
                     this.focusAgentExecutionField(this.firstExecutionErrorField());
-                    return;
+                    return false;
                 }
                 this.agentExecutionFieldErrors = {};
                 var runtime = workspaceConfig.agent_runtime || {};
                 var csrfToken = getCsrfToken();
                 if (!runtime.execute_url || !csrfToken) {
                     showFeedback('저장 연결 정보가 없습니다.', 'error');
-                    return;
+                    return false;
                 }
                 this.isAgentExecuting = true;
                 try {
@@ -5233,6 +5253,7 @@
                         provider: payload.provider || mode.service_key || '',
                         model: payload.model || '',
                         providerLabel: '',
+                        modeKey: modeKey,
                     };
                     var executePreview = this.normalizePreview(payload.preview, executePreviewMeta);
                     var successContext = this.normalizeModeState(Object.assign({}, executionStartContext, {
@@ -5265,17 +5286,40 @@
                         context: successContext,
                         activate: activeModeAtResult === modeKey,
                     });
-                    showFeedback(payload.message || '저장했습니다.', 'success');
+                    if (!settings.silentSuccess) {
+                        showFeedback(payload.message || '저장했습니다.', 'success');
+                    }
+                    return true;
                 } catch (error) {
                     if (requestId !== this.agentExecuteRequestId) {
-                        return;
+                        return false;
                     }
-                    showFeedback(error && error.message ? error.message : '저장하지 못했습니다.', 'error');
+                    if (!settings.silentError) {
+                        showFeedback(error && error.message ? error.message : '저장하지 못했습니다.', 'error');
+                    }
+                    return false;
                 } finally {
                     if (requestId === this.agentExecuteRequestId) {
                         this.isAgentExecuting = false;
                     }
                 }
+            },
+
+            openTeacherLawGuide: async function (action) {
+                var payload = action && typeof action === 'object' ? action : {};
+                var href = trimLine(payload.href || this.activeAiOpenHref() || this.activeMode.service_href || '');
+                var saved = true;
+                if (!href) {
+                    showFeedback('법률 가이드 화면을 찾지 못했습니다.', 'error');
+                    return;
+                }
+                if (this.agentExecution && this.agentExecution.kind === 'teacher-law') {
+                    saved = await this.executeAgentService({ silentSuccess: true });
+                }
+                if (!saved) {
+                    return;
+                }
+                window.location.href = href;
             },
 
             buildIdlePreview: function () {
@@ -7512,6 +7556,7 @@
                         provider: '',
                         model: '',
                         providerLabel: '',
+                        modeKey: modeKey,
                     };
                     this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
                     this.finalizeChatHistoryEntry(historyEntryId);
@@ -7564,6 +7609,7 @@
                         throw new Error(payload.error || 'AI 미리보기를 불러오지 못했습니다.');
                     }
                     previewStatus = this.previewProviderStatus(payload);
+                    previewStatus.modeKey = modeKey;
                     normalizedPreview = this.normalizePreview(payload.preview, previewStatus);
                     executionFallback = modeKey === 'teacher-law'
                         && !this.normalizeExecution(payload.execution)
@@ -7574,6 +7620,7 @@
                             provider: '',
                             model: '',
                             providerLabel: '규칙형 미리보기',
+                            modeKey: modeKey,
                         };
                         normalizedPreview = this.normalizePreview(this.buildTeacherLawPreview(text), previewStatus);
                     }
@@ -7625,6 +7672,7 @@
                             provider: '',
                             model: '',
                             providerLabel: '규칙형 미리보기',
+                            modeKey: modeKey,
                         };
                         this.agentPreview = this.normalizePreview(this.buildLocalPreview(text), this.agentPreviewMeta);
                         contextSnapshot = this.buildChatHistoryActionContext({
