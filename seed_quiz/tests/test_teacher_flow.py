@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import openpyxl
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -787,6 +788,24 @@ class TeacherFlowTest(TestCase):
         self.client.post(url, {"preset_type": "orthography", "grade": "3"})
         drafts = SQQuizSet.objects.filter(classroom=self.classroom, status="draft")
         self.assertEqual(drafts.count(), 2)
+
+    @override_settings(SEED_QUIZ_DRAFT_AI_DAILY_LIMIT=1, SEED_QUIZ_DRAFT_AI_BURST_LIMIT=10)
+    @patch("seed_quiz.services.generation._call_ai")
+    def test_generate_blocks_after_daily_limit(self, mock_ai):
+        cache.clear()
+        mock_ai.return_value = VALID_AI_RESPONSE
+        url = reverse(
+            "seed_quiz:htmx_generate",
+            kwargs={"classroom_id": self.classroom.id},
+        )
+
+        first = self.client.post(url, {"preset_type": "orthography", "grade": "3"})
+        second = self.client.post(url, {"preset_type": "orthography", "grade": "3"})
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 429)
+        self.assertEqual(mock_ai.call_count, 1)
+        self.assertContains(second, "오늘 AI 퀴즈 생성 한도", status_code=429)
 
     def test_csv_upload_creates_bank(self):
         csv_text = (

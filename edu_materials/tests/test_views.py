@@ -5,10 +5,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.db import connection
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from edu_materials.classification import EduMaterialClassificationError, apply_auto_metadata, extract_visible_text
@@ -160,6 +161,26 @@ class EduMaterialViewTests(TestCase):
         self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.FAILED)
         self.assertEqual(material.subject, "OTHER")
         self.assertIn("lesson", material.search_text)
+
+    @override_settings(EDU_MATERIALS_AUTO_METADATA_DAILY_LIMIT=0)
+    @patch("edu_materials.classification._call_json_response")
+    def test_create_material_skips_auto_classification_after_limit(self, mock_call_json_response):
+        cache.clear()
+        response = self.client.post(
+            reverse("edu_materials:create"),
+            {
+                "title": "분류 제한 자료",
+                "input_mode": "paste",
+                "html_content": "<html><body><p>lesson</p></body></html>",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        material = EduMaterial.objects.get(title="분류 제한 자료")
+        self.assertEqual(material.metadata_status, EduMaterial.MetadataStatus.PENDING)
+        self.assertContains(response, "오늘 자동 분류 한도")
+        mock_call_json_response.assert_not_called()
 
     def test_non_html_file_is_rejected(self):
         upload = SimpleUploadedFile("volcano.txt", b"plain text", content_type="text/plain")
@@ -1100,6 +1121,25 @@ class EduMaterialBackfillCommandTests(TestCase):
 
         processed_ids = {call.args[0].id for call in mock_apply_auto_metadata.call_args_list}
         self.assertEqual(processed_ids, {first.id, second.id})
+
+    @patch("edu_materials.management.commands.backfill_edu_material_metadata.apply_auto_metadata")
+    def test_backfill_defaults_to_100_rows(self, mock_apply_auto_metadata):
+        EduMaterial.objects.bulk_create(
+            [
+                EduMaterial(
+                    teacher=self.user,
+                    title=f"대기 자료 {index}",
+                    html_content="<html><body>pending</body></html>",
+                    metadata_status=EduMaterial.MetadataStatus.PENDING,
+                )
+                for index in range(101)
+            ]
+        )
+
+        out = StringIO()
+        call_command("backfill_edu_material_metadata", stdout=out)
+
+        self.assertEqual(mock_apply_auto_metadata.call_count, 100)
 
 
 class EduMaterialMigrationHelperTests(TestCase):

@@ -13,7 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from happy_seed.models import HSClassroom, HSStudent
 from seed_quiz.models import SQGamePlayer, SQGameQuestion, SQGameRoom
-from seed_quiz.services.game_ai import build_multiple_choices
+from seed_quiz.services.game_ai import build_fallback_multiple_choices, build_multiple_choices
 from seed_quiz.services.game_core import (
     advance_phase,
     all_connected_players_done,
@@ -34,6 +34,7 @@ from seed_quiz.services.game_core import (
     submit_question,
     touch_player,
 )
+from seed_quiz.services.limits import game_choice_limit_exceeded
 from seed_quiz.services.validator import normalize_and_check
 from seed_quiz.topics import DEFAULT_TOPIC
 
@@ -75,7 +76,7 @@ def _session_player(request):
     if not room_id or not player_id:
         return None
     player = (
-        SQGamePlayer.objects.select_related("game__classroom", "student")
+        SQGamePlayer.objects.select_related("game__classroom__teacher", "game__created_by", "student")
         .filter(id=player_id, game_id=room_id)
         .first()
     )
@@ -646,12 +647,20 @@ def htmx_student_game_generate_choices(request):
         return _render_choice_builder(request, error_message=answer_error)
     if not question_text or not answer_text:
         return _render_choice_builder(request, error_message="문제와 정답을 먼저 적어 주세요.")
-    choices, correct_index, fallback_used = build_multiple_choices(
-        question=question_text,
-        correct_answer=answer_text,
-        topic=room.topic,
-        grade=room.grade,
-    )
+    if game_choice_limit_exceeded(player):
+        choices, correct_index, fallback_used = build_fallback_multiple_choices(
+            question=question_text,
+            correct_answer=answer_text,
+            topic=room.topic,
+            grade=room.grade,
+        )
+    else:
+        choices, correct_index, fallback_used = build_multiple_choices(
+            question=question_text,
+            correct_answer=answer_text,
+            topic=room.topic,
+            grade=room.grade,
+        )
     return _render_choice_builder(
         request,
         choices=choices,
@@ -710,12 +719,20 @@ def htmx_student_game_submit_question(request):
             return _render_student_create(request, player, error_message="정답을 적어 주세요.", form_state=form_state)
         raw_choices = [(request.POST.get(f"choice_{idx}") or "").strip() for idx in range(4)]
         if not all(raw_choices):
-            raw_choices, correct_index, used_fallback = build_multiple_choices(
-                question=question_text,
-                correct_answer=answer_text,
-                topic=room.topic,
-                grade=room.grade,
-            )
+            if game_choice_limit_exceeded(player):
+                raw_choices, correct_index, used_fallback = build_fallback_multiple_choices(
+                    question=question_text,
+                    correct_answer=answer_text,
+                    topic=room.topic,
+                    grade=room.grade,
+                )
+            else:
+                raw_choices, correct_index, used_fallback = build_multiple_choices(
+                    question=question_text,
+                    correct_answer=answer_text,
+                    topic=room.topic,
+                    grade=room.grade,
+                )
             form_state["choice_fallback"] = used_fallback
         else:
             try:

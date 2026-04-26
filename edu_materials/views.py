@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from .ai_limits import auto_metadata_limit_exceeded
 from .classification import apply_auto_metadata, apply_manual_metadata, collect_popular_tags, parse_tags_input
 from .models import EduMaterial
 from .runtime import build_runtime_data_url, build_runtime_html
@@ -216,6 +217,9 @@ def _build_filter_context(request, *, active_tab):
 
 
 def _apply_auto_metadata_with_feedback(request, material):
+    if auto_metadata_limit_exceeded(request.user, material=material):
+        messages.warning(request, "오늘 자동 분류 한도를 모두 사용했습니다. 직접 분류를 저장해 주세요.")
+        return None
     metadata = apply_auto_metadata(material, save=True)
     if metadata is None:
         messages.warning(request, "자료는 저장했지만 자동 분류는 잠시 실패했습니다. 직접 분류를 수정할 수 있습니다.")

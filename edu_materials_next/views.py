@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from edu_materials.models import EduMaterial
+from edu_materials.ai_limits import auto_metadata_limit_exceeded
 
 from .classification import (
     apply_auto_metadata,
@@ -86,6 +87,9 @@ def _build_query_string(request, *, exclude=()):
 
 
 def _apply_auto_metadata_with_feedback(request, material):
+    if auto_metadata_limit_exceeded(request.user, material=material):
+        messages.warning(request, "오늘 자동 분류 한도를 모두 사용했습니다. 제목과 요약만 확인해 주세요.")
+        return None
     metadata = apply_auto_metadata(material, save=True)
     if metadata is None:
         messages.warning(request, "자료는 저장했지만 분류는 잠시 비워 두었습니다. 제목과 요약만 확인하고 바로 써도 됩니다.")

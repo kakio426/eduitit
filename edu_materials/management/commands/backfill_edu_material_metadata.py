@@ -16,13 +16,18 @@ class Command(BaseCommand):
         parser.add_argument(
             "--limit",
             type=int,
-            default=0,
-            help="처리할 최대 자료 수 (0이면 전체).",
+            default=100,
+            help="처리할 최대 자료 수.",
+        )
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            help="전체 자료를 처리합니다.",
         )
 
     def handle(self, *args, **options):
         force = bool(options.get("force"))
-        limit = max(0, int(options.get("limit") or 0))
+        limit = 0 if options.get("all") else max(1, int(options.get("limit") or 100))
 
         queryset = EduMaterial.objects.all().order_by("id")
         if not force:

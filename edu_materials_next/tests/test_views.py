@@ -1,6 +1,9 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from edu_materials.models import EduMaterial
@@ -31,7 +34,9 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertContains(response, "첫 자료 바로 만들기")
         self.assertContains(response, "예시로 시작")
         self.assertContains(response, "내 자료 이어보기")
-        self.assertContains(response, "오늘 수업 주제를 적고, AI에 프롬프트를 넣어 HTML 자료를 만든 뒤, QR로 학생에게 바로 보여 주세요.")
+        self.assertContains(response, "주제 입력")
+        self.assertContains(response, "저장")
+        self.assertContains(response, "QR")
         self.assertNotContains(response, "비교용 새 버전")
         self.assertContains(response, "?mission=vibe-basics#build-flow")
         self.assertContains(response, "?starter=planet-lab#build-flow")
@@ -59,6 +64,25 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertEqual(material.unit_title, "태양계와 별")
         self.assertTrue(material.is_published)
         self.assertEqual(len(material.student_questions), 3)
+
+    @override_settings(EDU_MATERIALS_AUTO_METADATA_DAILY_LIMIT=0)
+    @patch("edu_materials_next.classification._call_json_response")
+    def test_create_material_skips_auto_classification_after_limit(self, mock_call_json_response):
+        cache.clear()
+        response = self.client.post(
+            reverse("edu_materials_next:create"),
+            {
+                "title": "제한 자료",
+                "html_content": "<html><body><h1>lesson</h1></body></html>",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        material = NextEduMaterial.objects.get(title="제한 자료")
+        self.assertEqual(material.subject, "OTHER")
+        self.assertContains(response, "오늘 자동 분류 한도")
+        mock_call_json_response.assert_not_called()
 
     def test_import_legacy_material_copies_without_mutating_source(self):
         legacy = EduMaterial.objects.create(

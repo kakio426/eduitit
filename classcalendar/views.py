@@ -26,6 +26,7 @@ from django.views.decorators.http import require_GET, require_POST
 from korean_lunar_calendar import KoreanLunarCalendar
 
 from core.active_classroom import get_active_classroom_for_request
+from core.ai_usage_limits import consume_ai_usage_limit, user_usage_subject
 from products.models import Product
 
 from .forms import CalendarEventCreateForm, MessageCaptureCommitForm
@@ -1817,7 +1818,7 @@ def _build_message_capture_parse_result(*, user, raw_text, source_hint, uploaded
         raw_text,
         now=timezone.now(),
         has_files=bool(uploaded_files),
-        llm_refiner=refine_message_capture_candidates,
+        llm_refiner=_limited_message_capture_refiner(user),
     )
     item_types_enabled = _is_message_capture_item_types_enabled_for_user(user)
     predicted_item_type = parsed.get("predicted_item_type") or CalendarMessageCapture.ItemType.UNKNOWN
@@ -1877,6 +1878,29 @@ def _build_message_capture_parse_result(*, user, raw_text, source_hint, uploaded
         "initial_extract_payload": initial_extract_payload,
         "parse_payload": parse_payload,
     }
+
+
+def _limited_message_capture_refiner(user):
+    def _refine(**kwargs):
+        if consume_ai_usage_limit(
+            "classcalendar:message_capture_llm:user",
+            user_usage_subject(user),
+            (
+                (600, _int_setting("CLASSCALENDAR_MESSAGE_CAPTURE_LLM_BURST_LIMIT", 5)),
+                (86400, _int_setting("CLASSCALENDAR_MESSAGE_CAPTURE_LLM_DAILY_LIMIT", 15)),
+            ),
+        ):
+            raise RuntimeError("message capture llm limit exceeded")
+        return refine_message_capture_candidates(**kwargs)
+
+    return _refine
+
+
+def _int_setting(name: str, default: int) -> int:
+    try:
+        return max(int(getattr(settings, name, default)), 0)
+    except (TypeError, ValueError):
+        return max(int(default), 0)
 
 
 def _apply_message_capture_parse_result(capture, parse_result):

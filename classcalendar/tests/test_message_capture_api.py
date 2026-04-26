@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import Client, TestCase, override_settings
@@ -323,6 +324,41 @@ class MessageCaptureApiTests(TestCase):
         self.assertEqual(payload["candidates"][0]["title"], "연수물 수정 마감")
         capture = CalendarMessageCapture.objects.get(id=payload["capture_id"])
         self.assertTrue(capture.llm_used)
+
+    @override_settings(CLASSCALENDAR_MESSAGE_CAPTURE_LLM_DAILY_LIMIT=1, CLASSCALENDAR_MESSAGE_CAPTURE_LLM_BURST_LIMIT=10)
+    @patch("classcalendar.views.refine_message_capture_candidates")
+    def test_parse_skips_deepseek_refinement_after_limit(self, mock_refine):
+        cache.clear()
+        mock_refine.return_value = [
+            {
+                "kind": "deadline",
+                "title": "연수물 수정 마감",
+                "summary": "학부모총회 전에 연수물을 수정해 주세요.",
+                "is_recommended": True,
+                "evidence_text": "3월 19일 예정입니다.",
+            },
+        ]
+
+        first = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 19일 예정입니다.",
+                "idempotency_key": "capture-llm-limit-1",
+            },
+        )
+        second = self.client.post(
+            self.parse_url,
+            data={
+                "raw_text": "3월 20일 예정입니다.",
+                "idempotency_key": "capture-llm-limit-2",
+            },
+        )
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 201)
+        self.assertTrue(first.json().get("llm_used"))
+        self.assertFalse(second.json().get("llm_used"))
+        self.assertEqual(mock_refine.call_count, 1)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_CLASSIFIER_ASSIST=True)
     @patch("classcalendar.views.predict_message_capture_item_type")

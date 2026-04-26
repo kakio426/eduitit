@@ -39,6 +39,7 @@ from seed_quiz.services.gate import (
     set_session,
 )
 from seed_quiz.services.generation import generate_and_save_draft
+from seed_quiz.services.limits import draft_generation_limit_exceeded
 from seed_quiz.services.paste_parser import parse_pasted_text_to_csv_bytes
 from seed_quiz.services.grading import claim_reward_for_attempt, submit_and_reward
 from seed_quiz.services.rag import consume_rag_quota, refund_rag_quota
@@ -1806,6 +1807,13 @@ def htmx_generate(request, classroom_id):
         request.POST.get("grade", "3"),
         include_all=False,
     )
+
+    if draft_generation_limit_exceeded(request.user):
+        return HttpResponse(
+            '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+            "오늘 AI 퀴즈 생성 한도를 모두 사용했습니다. 문제은행이나 CSV로 이어가 주세요.</div>",
+            status=429,
+        )
 
     try:
         quiz_set = generate_and_save_draft(classroom, preset_type, grade, request.user)

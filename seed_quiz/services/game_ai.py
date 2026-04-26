@@ -130,6 +130,27 @@ def build_multiple_choices(
     return choice_pool, choice_pool.index(correct_answer), used_fallback
 
 
+def build_fallback_multiple_choices(
+    *,
+    question: str,
+    correct_answer: str,
+    topic: str,
+    grade: int,
+) -> tuple[list[str], int, bool]:
+    choice_pool = _dedupe_choices([correct_answer, *_fallback_distractors(correct_answer)])
+    if len(choice_pool) < 4:
+        choice_pool = _dedupe_choices(
+            choice_pool + ["모르겠다", "헷갈리는 보기", "다른 답"],
+            exclude=set(),
+        )
+    choice_pool = choice_pool[:4]
+    if correct_answer not in choice_pool:
+        choice_pool = [correct_answer, *choice_pool[:3]]
+    rnd = random.Random(f"{question}|{correct_answer}|{grade}|{topic}")
+    rnd.shuffle(choice_pool)
+    return choice_pool, choice_pool.index(correct_answer), True
+
+
 def evaluate_question_quality(
     *,
     question_text: str,
@@ -169,14 +190,14 @@ def evaluate_question_quality(
     }
 
 
-def fallback_quality_result() -> dict:
+def fallback_quality_result(feedback: str = "AI 확인이 늦어져서 선생님 확인으로 넘겼습니다.") -> dict:
     return {
         "relevance": 0,
         "clarity": 0,
         "difficulty": 0,
         "overall": 0,
         "approved": False,
-        "feedback": "AI 확인이 늦어져서 선생님 확인으로 넘겼습니다.",
+        "feedback": feedback,
         "fallback_used": True,
     }
 

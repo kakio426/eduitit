@@ -21,6 +21,7 @@ from seed_quiz.services.game_ai import (
     fallback_quality_result,
 )
 from seed_quiz.services.game_scoring import calculate_solver_points, recalculate_game_scores
+from seed_quiz.services.limits import game_evaluation_limit_exceeded
 from seed_quiz.topics import TOPIC_LABELS
 
 GAME_SESSION_KEYS = [
@@ -253,7 +254,10 @@ def _finalize_question(question: SQGameQuestion, quality_result: dict) -> SQGame
 def evaluate_pending_question(question: SQGameQuestion, *, retry_after_seconds: int = 20) -> SQGameQuestion:
     now = timezone.now()
     with transaction.atomic():
-        question = SQGameQuestion.objects.select_for_update().select_related("game").get(id=question.id)
+        question = SQGameQuestion.objects.select_for_update().select_related(
+            "game__classroom__teacher",
+            "game__created_by",
+        ).get(id=question.id)
         if question.status != "pending_ai":
             return question
         if question.ai_started_at and question.ai_started_at > now - timedelta(seconds=retry_after_seconds):
@@ -261,16 +265,19 @@ def evaluate_pending_question(question: SQGameQuestion, *, retry_after_seconds: 
         question.ai_started_at = now
         question.save(update_fields=["ai_started_at", "updated_at"])
 
-    try:
-        result = evaluate_question_quality(
-            question_text=question.question_text,
-            answer_text=question.answer_text,
-            question_type=question.question_type,
-            topic=question.game.topic,
-            grade=question.game.grade,
-        )
-    except Exception:
-        result = fallback_quality_result()
+    if game_evaluation_limit_exceeded(question):
+        result = fallback_quality_result("AI 확인 한도를 넘어 선생님 확인으로 넘겼습니다.")
+    else:
+        try:
+            result = evaluate_question_quality(
+                question_text=question.question_text,
+                answer_text=question.answer_text,
+                question_type=question.question_type,
+                topic=question.game.topic,
+                grade=question.game.grade,
+            )
+        except Exception:
+            result = fallback_quality_result()
 
     with transaction.atomic():
         question = SQGameQuestion.objects.select_for_update().select_related("game").get(id=question.id)

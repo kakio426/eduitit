@@ -2,7 +2,8 @@ import uuid
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.core.cache import cache
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from core.models import UserProfile
@@ -266,6 +267,47 @@ class SeedQuizGameModeTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "문제 글자를 다시 확인해 주세요.")
+
+    @override_settings(SEED_QUIZ_GAME_CHOICE_PLAYER_DAILY_LIMIT=0)
+    @patch("seed_quiz.views_game.build_multiple_choices")
+    def test_generate_choices_uses_fallback_when_choice_limit_exceeded(self, mock_build_choices):
+        cache.clear()
+        self.room = self._create_room(question_mode="mixed")
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+
+        response = self.student_client_1.post(
+            reverse("seed_quiz:htmx_student_game_generate_choices"),
+            {
+                "question_text": "우리나라 수도는 어디일까요?",
+                "answer_text": "서울",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI 대신 기본 보기")
+        mock_build_choices.assert_not_called()
+
+    @override_settings(SEED_QUIZ_GAME_EVALUATION_ROOM_DAILY_LIMIT=0)
+    @patch("seed_quiz.services.game_core.evaluate_question_quality")
+    def test_ai_evaluation_limit_moves_question_to_needs_review(self, mock_quality):
+        cache.clear()
+        self.room = self._create_room()
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+        submit_response = self._submit_question(self.student_client_1)
+        self.assertEqual(submit_response.status_code, 200)
+        question = SQGameQuestion.objects.get(game=self.room)
+
+        response = self.student_client_1.get(
+            reverse("seed_quiz:htmx_student_game_question_status", kwargs={"question_id": question.id})
+        )
+
+        question.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(question.status, "needs_review")
+        self.assertIn("한도", question.ai_feedback)
+        mock_quality.assert_not_called()
 
     def test_submit_question_with_broken_text_returns_same_form(self):
         self.room = self._create_room(question_mode="mixed")
