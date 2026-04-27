@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}2048 | 수학 전략 게임{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}?v=20260427d">
+{% endblock %}
+
+{% block content %}
+<main
+    id="mg-2048"
+    class="mg-shell service-shell--compact"
+    data-mg-2048
+    data-start-url="{% url 'math_games:api_2048_start' %}"
+    data-csrf-token="{{ csrf_token }}"
+>
+    <div class="mg-wrap mg-wrap--2048">
+        <header class="mg-play-head mg-play-head--2048">
+            <a class="mg-back" href="{% url 'math_games:index' %}">목록</a>
+            <div>
+                <span class="mg-kicker">숫자 퍼즐</span>
+                <h1>2048</h1>
+            </div>
+            <div class="mg-score-boxes" aria-label="점수">
+                <span><b id="mg-2048-score">0</b><small>점수</small></span>
+                <span><b id="mg-2048-best">0</b><small>최고</small></span>
+            </div>
+        </header>
+
+        <section class="mg-board-panel mg-board-panel--2048">
+            <div class="mg-board-intro">
+                <div>
+                    <strong>같은 숫자 합치기</strong>
+                    <span>2048 타일을 만듭니다.</span>
+                </div>
+                <div class="mg-rule-chips" aria-label="규칙">
+                    <span>4x4</span>
+                    <span>2048</span>
+                    <span>스와이프</span>
+                </div>
+            </div>
+
+            <div class="mg-toolbar mg-toolbar--2048">
+                <button id="mg-2048-start" type="button" class="mg-primary">새 판</button>
+                <button type="button" class="mg-secondary" data-mg-help-open>게임 설명</button>
+            </div>
+
+            <div id="mg-2048-board" class="mg-2048-board" aria-live="polite" tabindex="0">
+                {% for row in "1234" %}
+                    {% for col in "1234" %}
+                        <span class="mg-2048-cell" aria-hidden="true"></span>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+
+            <div class="mg-2048-controls" aria-label="방향">
+                <button type="button" data-direction="up">위</button>
+                <button type="button" data-direction="left">왼쪽</button>
+                <button type="button" data-direction="right">오른쪽</button>
+                <button type="button" data-direction="down">아래</button>
+            </div>
+
+            <div class="mg-status-row">
+                <p id="mg-2048-status" class="mg-status">새 판</p>
+                <p id="mg-2048-detail" class="mg-thought"></p>
+            </div>
+        </section>
+
+        <div class="mg-help-modal" data-mg-help-modal hidden role="dialog" aria-modal="true" aria-labelledby="mg-2048-help-title">
+            <div class="mg-help-backdrop" data-mg-help-close></div>
+            <section class="mg-help-card" tabindex="-1">
+                <button type="button" class="mg-help-close" data-mg-help-close aria-label="설명 닫기">닫기</button>
+                <span class="mg-kicker">게임 설명</span>
+                <h2 id="mg-2048-help-title">2048</h2>
+                <div class="mg-help-visual mg-help-visual--2048" aria-hidden="true">
+                    <span>2</span>
+                    <span>2</span>
+                    <span>4</span>
+                    <span>8</span>
+                </div>
+                <ol class="mg-help-steps">
+                    <li><strong>방향 선택</strong><span>키보드, 버튼, 스와이프를 씁니다.</span></li>
+                    <li><strong>같은 수 합치기</strong><span>한 줄에서 한 번씩 합쳐집니다.</span></li>
+                    <li><strong>2048 만들기</strong><span>움직일 곳이 없으면 끝입니다.</span></li>
+                </ol>
+                <button type="button" class="mg-primary" data-mg-help-close>알겠어</button>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'math_games/js/main.js' %}?v=20260427d"></script>
+{% endblock %}

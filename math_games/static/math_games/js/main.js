@@ -59,6 +59,26 @@
         return data;
     }
 
+    async function getJson(url) {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (error) {
+            data = {};
+        }
+        if (!response.ok) {
+            const message = data.feedback || fallbackMessage(response);
+            throw new Error(message);
+        }
+        return data;
+    }
+
     function replaceEndpoint(startUrl, sessionId, actionName) {
         return startUrl.replace(/start\/$/, `${sessionId}/${actionName}/`);
     }
@@ -428,6 +448,238 @@
         });
     }
 
+    function init2048() {
+        const root = document.querySelector("[data-mg-2048]");
+        if (!root) {
+            return;
+        }
+        if (root.dataset.mg2048Ready === "true") {
+            return;
+        }
+        root.dataset.mg2048Ready = "true";
+
+        const SESSION_KEY = "math-games-2048-session";
+        const BEST_KEY = "math-games-2048-best";
+        const startUrl = root.dataset.startUrl;
+        const startButton = document.getElementById("mg-2048-start");
+        const boardNode = document.getElementById("mg-2048-board");
+        const scoreNode = document.getElementById("mg-2048-score");
+        const bestNode = document.getElementById("mg-2048-best");
+        const statusNode = document.getElementById("mg-2048-status");
+        const detailNode = document.getElementById("mg-2048-detail");
+        const controlButtons = Array.from(root.querySelectorAll("[data-direction]"));
+        let sessionId = "";
+        let finished = false;
+        let pointerStart = null;
+
+        function storageGet(key) {
+            try {
+                return window.localStorage.getItem(key) || "";
+            } catch (error) {
+                return "";
+            }
+        }
+
+        function storageSet(key, value) {
+            try {
+                window.localStorage.setItem(key, String(value));
+            } catch (error) {
+                return false;
+            }
+            return true;
+        }
+
+        function storageRemove(key) {
+            try {
+                window.localStorage.removeItem(key);
+            } catch (error) {
+                return false;
+            }
+            return true;
+        }
+
+        function tileClass(value) {
+            const known = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+            return known.includes(value) ? `mg-2048-tile--v${value}` : "mg-2048-tile--super";
+        }
+
+        function setControlsDisabled(disabled) {
+            controlButtons.forEach((button) => {
+                button.disabled = disabled;
+            });
+        }
+
+        function bestScore() {
+            const stored = Number(storageGet(BEST_KEY));
+            return Number.isFinite(stored) && stored > 0 ? stored : 0;
+        }
+
+        function updateBest(score) {
+            const best = Math.max(bestScore(), Number(score) || 0);
+            storageSet(BEST_KEY, best);
+            setText(bestNode, String(best));
+        }
+
+        function renderBoard(grid) {
+            boardNode.innerHTML = "";
+            for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
+                const row = Array.isArray(grid[rowIndex]) ? grid[rowIndex] : [];
+                for (let columnIndex = 0; columnIndex < 4; columnIndex += 1) {
+                    const value = Number(row[columnIndex]) || 0;
+                    const cell = document.createElement("span");
+                    cell.className = "mg-2048-cell";
+                    cell.setAttribute("aria-hidden", "true");
+                    if (value > 0) {
+                        const tile = document.createElement("span");
+                        tile.className = `mg-2048-tile ${tileClass(value)}`;
+                        tile.textContent = String(value);
+                        cell.appendChild(tile);
+                    }
+                    boardNode.appendChild(cell);
+                }
+            }
+        }
+
+        function render(payload) {
+            sessionId = payload.session_id || sessionId;
+            const state = payload.state || {};
+            const score = Number(state.score) || 0;
+            finished = payload.result === "win" || payload.result === "lose" || state.won || state.game_over;
+            setText(scoreNode, String(score));
+            updateBest(score);
+            renderBoard(Array.isArray(state.grid) ? state.grid : []);
+            setFeedbackClass(root, payload);
+            if (payload.result === "win" || state.won) {
+                setText(statusNode, "2048");
+                setText(detailNode, "성공");
+                addBurst(root);
+            } else if (payload.result === "lose" || state.game_over) {
+                setText(statusNode, "끝");
+                setText(detailNode, "더 이상 이동 없음");
+            } else {
+                setText(statusNode, payload.feedback || "이동");
+                setText(detailNode, `${Number(state.moves) || 0}수`);
+            }
+            setControlsDisabled(!sessionId || finished);
+            if (sessionId) {
+                storageSet(SESSION_KEY, sessionId);
+            }
+        }
+
+        async function start() {
+            startButton.disabled = true;
+            setControlsDisabled(true);
+            setText(statusNode, "준비");
+            setText(detailNode, "");
+            removeStateClasses(root);
+            try {
+                render(await requestJson(startUrl, {}));
+                boardNode.focus({ preventScroll: true });
+            } catch (error) {
+                removeStateClasses(root);
+                root.classList.add("is-error");
+                setText(statusNode, error.message || GENERIC_ERROR);
+            } finally {
+                startButton.disabled = false;
+            }
+        }
+
+        async function move(direction) {
+            if (!sessionId || finished || !direction) {
+                return;
+            }
+            setControlsDisabled(true);
+            try {
+                const moveUrl = replaceEndpoint(startUrl, sessionId, "move");
+                const payload = await requestJson(moveUrl, { direction });
+                render(payload);
+                if (payload.state && payload.state.moved === false) {
+                    flashClass(boardNode, "is-error", 260);
+                }
+            } catch (error) {
+                removeStateClasses(root);
+                root.classList.add("is-error");
+                setText(statusNode, error.message || GENERIC_ERROR);
+                setControlsDisabled(false);
+            }
+        }
+
+        function directionFromKey(key) {
+            return {
+                ArrowUp: "up",
+                ArrowDown: "down",
+                ArrowLeft: "left",
+                ArrowRight: "right",
+                w: "up",
+                W: "up",
+                s: "down",
+                S: "down",
+                a: "left",
+                A: "left",
+                d: "right",
+                D: "right",
+            }[key] || "";
+        }
+
+        startButton.addEventListener("click", start);
+
+        controlButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                move(button.dataset.direction || "");
+            });
+        });
+
+        document.addEventListener("keydown", (event) => {
+            const direction = directionFromKey(event.key);
+            if (!direction) {
+                return;
+            }
+            const openModal = root.querySelector("[data-mg-help-modal]:not([hidden])");
+            if (openModal) {
+                return;
+            }
+            event.preventDefault();
+            move(direction);
+        });
+
+        boardNode.addEventListener("pointerdown", (event) => {
+            pointerStart = { x: event.clientX, y: event.clientY };
+        });
+
+        boardNode.addEventListener("pointerup", (event) => {
+            if (!pointerStart) {
+                return;
+            }
+            const dx = event.clientX - pointerStart.x;
+            const dy = event.clientY - pointerStart.y;
+            pointerStart = null;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 28) {
+                return;
+            }
+            if (Math.abs(dx) > Math.abs(dy)) {
+                move(dx > 0 ? "right" : "left");
+                return;
+            }
+            move(dy > 0 ? "down" : "up");
+        });
+
+        setText(bestNode, String(bestScore()));
+        setControlsDisabled(true);
+        const savedSessionId = storageGet(SESSION_KEY);
+        if (savedSessionId) {
+            sessionId = savedSessionId;
+            getJson(replaceEndpoint(startUrl, savedSessionId, "status"))
+                .then(render)
+                .catch(() => {
+                    sessionId = "";
+                    storageRemove(SESSION_KEY);
+                    setText(statusNode, "새 판");
+                    setText(detailNode, "");
+                    setControlsDisabled(true);
+                });
+        }
+    }
+
     function initHelpModals() {
         const modals = Array.from(document.querySelectorAll("[data-mg-help-modal]"));
         if (!modals.length) {
@@ -493,7 +745,16 @@
         });
     }
 
-    initNim();
-    initTwentyFour();
-    initHelpModals();
+    function boot() {
+        initNim();
+        initTwentyFour();
+        init2048();
+        initHelpModals();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot, { once: true });
+    } else {
+        boot();
+    }
 }());

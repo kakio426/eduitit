@@ -8,7 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import MathGameMove, MathGameSession
-from .services import nim, twenty_four
+from .services import game_2048, nim, twenty_four
 
 
 def _student_games_mode(request):
@@ -80,6 +80,15 @@ def _twenty_four_payload(session: MathGameSession, *, feedback: str = "", value_
     }
 
 
+def _game_2048_payload(session: MathGameSession, *, feedback: str = "") -> dict:
+    return {
+        "session_id": str(session.id),
+        "state": game_2048.public_state(session.state_json),
+        "result": session.result,
+        "feedback": feedback,
+    }
+
+
 @require_GET
 def index(request):
     return render(
@@ -109,6 +118,18 @@ def twenty_four_page(request):
     return render(
         request,
         "math_games/twenty_four.html",
+        {
+            "hide_navbar": _student_games_mode(request),
+        },
+    )
+
+
+@require_GET
+@ensure_csrf_cookie
+def game_2048_page(request):
+    return render(
+        request,
+        "math_games/game_2048.html",
         {
             "hide_navbar": _student_games_mode(request),
         },
@@ -333,3 +354,84 @@ def api_twenty_four_hint(request, session_id):
         _twenty_four_payload(session, feedback="힌트", hint=hint),
         partial_template="math_games/partials/twenty_four_state.html",
     )
+
+
+@require_POST
+def api_2048_start(request):
+    state = game_2048.initial_state_json(rng=random.Random())
+    session = MathGameSession.objects.create(
+        user=_session_owner(request),
+        session_key=_ensure_session_key(request),
+        game_type=MathGameSession.GAME_2048,
+        difficulty="",
+        state_json={**state, "status": MathGameSession.RESULT_ACTIVE},
+    )
+    MathGameMove.objects.create(
+        session=session,
+        actor=MathGameMove.ACTOR_SYSTEM,
+        move_json={"event": "start"},
+        state_json=session.state_json,
+        feedback="시작",
+    )
+    return _response(request, _game_2048_payload(session, feedback="시작"))
+
+
+@require_GET
+def api_2048_status(request, session_id):
+    session = get_object_or_404(MathGameSession, id=session_id, game_type=MathGameSession.GAME_2048)
+    return _response(request, _game_2048_payload(session))
+
+
+@require_POST
+def api_2048_move(request, session_id):
+    session = get_object_or_404(MathGameSession, id=session_id, game_type=MathGameSession.GAME_2048)
+    if session.result != MathGameSession.RESULT_ACTIVE:
+        return _response(request, _game_2048_payload(session, feedback="종료"), status=409)
+
+    payload = _request_payload(request)
+    direction = str(payload.get("direction") or "").strip().lower()
+    try:
+        state = game_2048.apply_move(session.state_json, direction, rng=random.Random())
+    except game_2048.InvalidDirection:
+        MathGameMove.objects.create(
+            session=session,
+            actor=MathGameMove.ACTOR_STUDENT,
+            move_json={"payload": payload},
+            state_json=session.state_json,
+            is_valid=False,
+            feedback="방향 확인",
+        )
+        return _response(request, _game_2048_payload(session, feedback="방향 확인"), status=400)
+
+    result = MathGameSession.RESULT_ACTIVE
+    feedback = "이동"
+    if state["won"]:
+        result = MathGameSession.RESULT_WIN
+        feedback = "2048"
+    elif state["game_over"]:
+        result = MathGameSession.RESULT_LOSE
+        feedback = "끝"
+    elif not state["moved"]:
+        feedback = "막힘"
+    elif state["gained"]:
+        feedback = f"+{state['gained']}"
+
+    session.state_json = {**state, "status": result}
+    session.result = result
+    if result != MathGameSession.RESULT_ACTIVE:
+        session.ended_at = timezone.now()
+    session.save(update_fields=["state_json", "result", "ended_at", "updated_at"])
+
+    MathGameMove.objects.create(
+        session=session,
+        actor=MathGameMove.ACTOR_STUDENT,
+        move_json={
+            "direction": direction,
+            "moved": state["moved"],
+            "gained": state["gained"],
+            "spawned": state["spawned"],
+        },
+        state_json=session.state_json,
+        feedback=feedback,
+    )
+    return _response(request, _game_2048_payload(session, feedback=feedback))

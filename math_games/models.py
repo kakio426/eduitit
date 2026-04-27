@@ -7,9 +7,11 @@ from django.db import models
 class MathGameSession(models.Model):
     GAME_NIM = "nim"
     GAME_TWENTY_FOUR = "24"
+    GAME_2048 = "2048"
     GAME_CHOICES = [
         (GAME_NIM, "님"),
         (GAME_TWENTY_FOUR, "24 게임"),
+        (GAME_2048, "2048"),
     ]
 
     DIFFICULTY_RANDOM = "random"

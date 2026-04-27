@@ -9,8 +9,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         title = "수학 전략 게임"
         defaults = {
-            "lead_text": "더미 가져가기와 24 만들기를 바로 여는 수학 전략 활동입니다.",
-            "description": "AI와 겨루는 Nim 전략 게임, 사칙연산으로 24를 만드는 퍼즐을 한 화면에서 시작합니다.",
+            "lead_text": "더미 가져가기, 24 만들기, 2048을 바로 여는 수학 전략 활동입니다.",
+            "description": "AI와 겨루는 Nim 전략 게임, 사칙연산 24 퍼즐, 숫자 합치기 2048을 한 화면에서 시작합니다.",
             "price": 0.00,
             "is_active": True,
             "is_featured": False,
@@ -57,17 +57,18 @@ class Command(BaseCommand):
             [
                 {"icon": "N", "title": "더미 가져가기", "description": "더미에서 1~3개를 가져가는 AI 전략 대결"},
                 {"icon": "24", "title": "24 만들기", "description": "숫자 4개와 사칙연산으로 24 만들기"},
-                {"icon": "?", "title": "힌트", "description": "AI의 생각과 풀이 힌트를 짧게 확인"},
+                {"icon": "2048", "title": "2048", "description": "같은 숫자를 합쳐 2048 타일 만들기"},
             ],
         )
         self._sync_manual(
             product,
             "수학 전략 게임 사용 가이드",
-            "게임 선택, AI 대결, 24 풀이 흐름을 확인합니다.",
+            "게임 선택, AI 대결, 24 풀이, 2048 흐름을 확인합니다.",
             [
                 ("시작하기", "서비스 카드에서 수학 전략 게임을 열고 게임을 고릅니다.", 1),
                 ("더미 가져가기", "더미 하나를 골라 1~3개를 가져갑니다. 마지막을 가져가면 승리입니다.", 2),
                 ("24 만들기", "숫자 4개를 한 번씩 쓰고 사칙연산으로 24를 만듭니다.", 3),
+                ("2048", "방향을 골라 같은 숫자를 합치고 2048 타일을 만듭니다.", 4),
             ],
         )
         self.stdout.write(self.style.SUCCESS("ensure_math_games completed"))

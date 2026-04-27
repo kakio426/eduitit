@@ -4,7 +4,7 @@
 {% block title %}수학 전략 게임 | Eduitit{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}">
+<link rel="stylesheet" href="{% static 'math_games/css/main.css' %}?v=20260427d">
 {% endblock %}
 
 {% block content %}
@@ -56,6 +56,28 @@
                 <div class="mg-rule-chips" aria-hidden="true">
                     <span>숫자 4개</span>
                     <span>목표 24</span>
+                </div>
+                <em>이 게임 하기</em>
+            </a>
+            <a class="mg-game-card mg-game-card--2048" href="{% url 'math_games:game_2048' %}">
+                <div class="mg-card-copy">
+                    <span class="mg-card-label">숫자</span>
+                    <strong>2048</strong>
+                    <span>같은 숫자 합치기</span>
+                </div>
+                <div class="mg-game-preview mg-game-preview--2048" aria-hidden="true">
+                    <span>2</span>
+                    <span>4</span>
+                    <span>8</span>
+                    <span>16</span>
+                    <span>32</span>
+                    <span>64</span>
+                    <span>128</span>
+                    <span>256</span>
+                </div>
+                <div class="mg-rule-chips" aria-hidden="true">
+                    <span>4x4</span>
+                    <span>목표 2048</span>
                 </div>
                 <em>이 게임 하기</em>
             </a>
