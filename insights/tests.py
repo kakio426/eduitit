@@ -1,11 +1,26 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from .forms import InsightPasteForm
 from .importer import parse_pasted_insight
 from .models import Insight
 from .templatetags.insight_extras import parse_tags
+
+
+def grant_policy_consent(user):
+    UserPolicyConsent.objects.get_or_create(
+        user=user,
+        terms_version=TERMS_VERSION,
+        privacy_version=PRIVACY_VERSION,
+        defaults={
+            "agreed_at": timezone.now(),
+            "agreement_source": "required_gate",
+        },
+    )
 
 
 class InsightModelTest(TestCase):
@@ -86,6 +101,77 @@ class InsightModelTest(TestCase):
         self.assertContains(response, "원본 영상 열기")
 
 
+class InsightCreateViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="creator",
+            email="creator@example.com",
+            password="pw12345",
+        )
+        self.user.userprofile.nickname = "creator_nick"
+        self.user.userprofile.save(update_fields=["nickname"])
+
+    def test_create_post_redirects_to_detail_200(self):
+        self.client.login(username="creator", password="pw12345")
+        response = self.client.post(
+            reverse("insights:create"),
+            {
+                "title": "폼 등록 테스트",
+                "category": "youtube",
+                "video_url": "https://www.youtube.com/watch?v=2bBhnfh4StU",
+                "content": "폼 본문입니다.",
+                "kakio_note": "",
+                "tags": "#폼",
+            },
+            follow=True,
+        )
+
+        insight = Insight.objects.get(title="폼 등록 테스트")
+        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("insights:detail", args=[insight.pk]))
+        self.assertContains(response, "폼 등록 테스트")
+
+    def test_create_post_with_unsupported_youtu_be_path_does_not_500(self):
+        self.client.login(username="creator", password="pw12345")
+        long_path = "a" * 170
+        response = self.client.post(
+            reverse("insights:create"),
+            {
+                "title": "긴 공유 경로",
+                "category": "youtube",
+                "video_url": f"https://youtu.be/{long_path}",
+                "content": "영상 ID가 아닌 공유 경로입니다.",
+                "kakio_note": "",
+                "tags": "",
+            },
+            follow=True,
+        )
+
+        insight = Insight.objects.get(title="긴 공유 경로")
+        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("insights:detail", args=[insight.pk]))
+        self.assertEqual(insight.thumbnail_url, "")
+        self.assertContains(response, "원본 영상 열기")
+
+    def test_create_post_missing_content_returns_form_error(self):
+        self.client.login(username="creator", password="pw12345")
+        response = self.client.post(
+            reverse("insights:create"),
+            {
+                "title": "본문 없음",
+                "category": "column",
+                "video_url": "",
+                "content": "",
+                "kakio_note": "",
+                "tags": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Insight.objects.filter(title="본문 없음").exists())
+        self.assertTrue(response.context["form"].errors.get("content"))
+
+
 class InsightListModalTemplateTest(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
@@ -95,6 +181,7 @@ class InsightListModalTemplateTest(TestCase):
         )
         self.admin.userprofile.nickname = "modal_admin_nick"
         self.admin.userprofile.save(update_fields=["nickname"])
+        grant_policy_consent(self.admin)
         Insight.objects.create(
             title="Modal Target Insight",
             content="Body",
@@ -126,6 +213,7 @@ class InsightPermissionTest(TestCase):
         )
         self.admin.userprofile.nickname = "admin_nick"
         self.admin.userprofile.save(update_fields=["nickname"])
+        grant_policy_consent(self.admin)
         self.insight = Insight.objects.create(
             title="Original Title",
             content="Original Content",
@@ -188,6 +276,7 @@ class InsightPasteImportTest(TestCase):
         )
         self.admin.userprofile.nickname = "admin2_nick"
         self.admin.userprofile.save(update_fields=["nickname"])
+        grant_policy_consent(self.admin)
 
     def _sample_blob(self):
         return (

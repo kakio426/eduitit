@@ -1,8 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
+import re
 from urllib.parse import parse_qs, urlparse
 
 from .text_formatting import auto_format_insight_text
+
+YOUTUBE_VIDEO_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
 
 class Insight(models.Model):
     CATEGORY_CHOICES = [
@@ -40,17 +44,19 @@ class Insight(models.Model):
         path_parts = [part for part in parsed.path.split("/") if part]
 
         if "youtu.be" in host:
-            return path_parts[0] if path_parts else None
+            candidate = path_parts[0] if path_parts else None
+            return candidate if candidate and YOUTUBE_VIDEO_ID_PATTERN.fullmatch(candidate) else None
 
         if "youtube.com" not in host and "youtube-nocookie.com" not in host:
             return None
 
         query_video_id = parse_qs(parsed.query).get("v", [None])[0]
-        if query_video_id:
+        if query_video_id and YOUTUBE_VIDEO_ID_PATTERN.fullmatch(query_video_id):
             return query_video_id
 
         if path_parts and path_parts[0] in {"shorts", "embed", "live", "v"}:
-            return path_parts[1] if len(path_parts) >= 2 else None
+            candidate = path_parts[1] if len(path_parts) >= 2 else None
+            return candidate if candidate and YOUTUBE_VIDEO_ID_PATTERN.fullmatch(candidate) else None
 
         return None
 

@@ -5,7 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Post, UserProfile
+from core.models import Post, UserPolicyConsent, UserProfile
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from core.views import _build_post_feed_queryset
 from insights.models import Insight
 
@@ -19,6 +20,13 @@ def _create_onboarded_user(username, *, is_staff=False):
     if is_staff:
         user.is_staff = True
         user.save(update_fields=["is_staff"])
+        UserPolicyConsent.objects.create(
+            user=user,
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
     return user
 
 
