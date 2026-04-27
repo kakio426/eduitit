@@ -7468,7 +7468,8 @@ transform: none;
  * AI 교무비서 — reference chat design skin
  * Source: /Users/yubyeongju/Downloads/AI_ _standalone_.html
  * =========================================================== */
-.home-v6-page [data-home-v6-agent-workspace="true"] {
+.home-v6-page [data-home-v6-agent-workspace="true"],
+.home-v6-page .home-v6-mobile-agent-section {
     --home-v6-ai-ref-bg: #f0eeff;
     --home-v6-ai-ref-panel: #faf8ff;
     --home-v6-ai-ref-surface: #ffffff;
@@ -8146,5 +8147,86 @@ transform: none;
     .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
         min-height: min(38svh, 22rem);
         max-height: min(52svh, 32rem);
+    }
+}
+
+/* AI assistant comfort pass: keep the dashboard layout, tighten only the chat reading lane. */
+.home-v6-page [data-home-v6-agent-workspace="true"],
+.home-v6-page .home-v6-mobile-agent-section {
+    --home-v6-ai-readable-width: min(100%, 56rem);
+    --home-v6-ai-compact-stage-min: clamp(16rem, 34vh, 24rem);
+    --home-v6-ai-compact-stage-max: min(46vh, 30rem);
+}
+
+.home-v6-page .home-v6-cmd-stage,
+.home-v6-page .home-v6-agent-ai-queued--shell,
+.home-v6-page .home-v6-agent-main-head--single-shell .home-v6-agent-field-error,
+.home-v6-page .home-v6-agent-context-bar,
+.home-v6-page .home-v6-agent-ai-messenger,
+.home-v6-page .home-v6-agent-human-chat,
+.home-v6-page .home-v6-agent-dialogue-stage,
+.home-v6-page .home-v6-agent-composer-dock {
+    width: var(--home-v6-ai-readable-width);
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.home-v6-svc-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    scrollbar-width: auto;
+}
+
+.home-v6-svc-nav::-webkit-scrollbar {
+    display: block;
+    height: 0.35rem;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage {
+    min-height: var(--home-v6-ai-compact-stage-min);
+    max-height: var(--home-v6-ai-compact-stage-max);
+    overscroll-behavior-y: auto;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history {
+    min-height: 100%;
+}
+
+@media (min-width: 1100px) {
+    .home-v6-page .home-v6-agent-main {
+        min-height: clamp(28rem, 52vh, 38rem);
+    }
+}
+
+@media (max-width: 767px) {
+    .home-v6-page [data-home-v6-agent-workspace="true"],
+    .home-v6-page .home-v6-mobile-agent-section {
+        --home-v6-ai-readable-width: 100%;
+        --home-v6-ai-compact-stage-min: min(42svh, 24rem);
+        --home-v6-ai-compact-stage-max: min(48svh, 28rem);
+    }
+
+    .home-v6-svc-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        padding-bottom: 0.62rem;
+    }
+
+    .home-v6-page .home-v6-agent-dialogue-stage {
+        min-height: var(--home-v6-ai-compact-stage-min);
+        max-height: var(--home-v6-ai-compact-stage-max);
+    }
+}
+
+@media (max-width: 1099px) {
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
+        min-height: 0;
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
+        min-height: min(32svh, 19rem);
+        max-height: min(44svh, 26rem);
     }
 }
