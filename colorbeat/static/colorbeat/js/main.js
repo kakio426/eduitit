@@ -98,6 +98,26 @@
         return typeof Tone.getTransport === "function" ? Tone.getTransport() : Tone.Transport;
     }
 
+    function setNodeVolume(node, volume) {
+        if (node && node.volume && typeof node.volume.value === "number") {
+            node.volume.value = volume;
+        }
+        return node;
+    }
+
+    function createHatSynth(noiseType, decay, release, volume, channel) {
+        const synth = new Tone.NoiseSynth({
+            noise: { type: noiseType },
+            envelope: {
+                attack: 0.001,
+                decay,
+                sustain: 0,
+                release,
+            },
+        }).connect(channel);
+        return setNodeVolume(synth, volume);
+    }
+
     function buildInstruments(kit) {
         disposeInstruments();
         const limiter = new Tone.Limiter(-1).toDestination();
@@ -109,7 +129,7 @@
                 limiter,
                 kick: new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 3, envelope: { attack: 0.001, decay: 0.28, sustain: 0.02, release: 0.2 } }).connect(channel),
                 snare: new Tone.MetalSynth({ frequency: 240, envelope: { attack: 0.001, decay: 0.18, release: 0.08 }, harmonicity: 4.2, modulationIndex: 14, resonance: 1200, octaves: 1.2 }).connect(channel),
-                hat: new Tone.MetalSynth({ frequency: 520, envelope: { attack: 0.001, decay: 0.08, release: 0.03 }, harmonicity: 5.1, modulationIndex: 18, resonance: 1800, octaves: 0.8 }).connect(channel),
+                hat: createHatSynth("white", 0.07, 0.025, -5, channel),
                 bell: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.22, sustain: 0.08, release: 0.22 } }).connect(channel),
             };
             return;
@@ -121,7 +141,7 @@
                 limiter,
                 kick: new Tone.MembraneSynth({ pitchDecay: 0.08, octaves: 6, envelope: { attack: 0.001, decay: 0.45, sustain: 0.01, release: 0.35 } }).connect(channel),
                 snare: new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.002, decay: 0.18, sustain: 0.03, release: 0.16 } }).connect(channel),
-                hat: new Tone.MetalSynth({ frequency: 180, envelope: { attack: 0.001, decay: 0.12, release: 0.05 }, harmonicity: 7, modulationIndex: 22, resonance: 900, octaves: 2.1 }).connect(channel),
+                hat: createHatSynth("pink", 0.1, 0.04, -4, channel),
                 bell: new Tone.FMSynth({ harmonicity: 1.5, modulationIndex: 12, envelope: { attack: 0.01, decay: 0.18, sustain: 0.06, release: 0.25 } }).connect(channel),
             };
             return;
@@ -132,7 +152,7 @@
             limiter,
             kick: new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 4, envelope: { attack: 0.001, decay: 0.35, sustain: 0.01, release: 0.18 } }).connect(channel),
             snare: new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.14, sustain: 0.02, release: 0.12 } }).connect(channel),
-            hat: new Tone.MetalSynth({ frequency: 360, envelope: { attack: 0.001, decay: 0.06, release: 0.02 }, harmonicity: 5.1, modulationIndex: 18, resonance: 2200, octaves: 0.9 }).connect(channel),
+            hat: createHatSynth("white", 0.055, 0.018, -4, channel),
             bell: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.002, decay: 0.16, sustain: 0.06, release: 0.18 } }).connect(channel),
         };
     }
@@ -177,7 +197,7 @@
         } else if (trackKey === "snare") {
             instrument.triggerAttackRelease("16n", time, 0.62);
         } else if (trackKey === "hat") {
-            instrument.triggerAttackRelease("32n", time, 0.45);
+            instrument.triggerAttackRelease("32n", time, 0.82);
         } else {
             const note = state.kit === "space" ? "G4" : state.kit === "sparkle" ? "E5" : "C5";
             instrument.triggerAttackRelease(note, "16n", time, 0.72);
