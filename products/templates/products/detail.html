@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load icon_extras %}
 
 {% block title %}{{ page_title|default:'서비스 상세 - Eduitit' }}{% endblock %}
 
@@ -46,11 +47,7 @@
 
                     <div class="mt-6 flex items-start gap-4">
                         <div class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-3xl text-white shadow-lg shadow-slate-300/50">
-                            {% if "fa-" in product.icon %}
-                            <i class="{{ product.icon }}"></i>
-                            {% else %}
-                            {{ product.icon }}
-                            {% endif %}
+                            <i class="{{ product|product_icon_class }}"></i>
                         </div>
                         <div>
                             <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl">
@@ -98,7 +95,7 @@
                         {% if can_start %}
                         <a href="{{ start_href }}" {% if start_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                            class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white shadow-lg shadow-slate-300/50 transition hover:-translate-y-0.5 hover:bg-indigo-600">
-                            <i class="fa-solid fa-rocket"></i> {{ start_label }}
+                            <i class="fa-solid fa-{% if start_is_external %}arrow-up-right-from-square{% else %}circle-play{% endif %}"></i> {{ start_label }}
                         </a>
                         {% else %}
                         <button class="inline-flex items-center gap-2 rounded-2xl bg-slate-300 px-6 py-3 text-sm font-black text-slate-600" disabled>
@@ -169,12 +166,8 @@
                 <div class="mt-6 grid gap-4 md:grid-cols-3">
                     {% for feature in product_features %}
                     <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-                        <div class="text-2xl">
-                            {% if "fa-" in feature.icon %}
-                            <i class="{{ feature.icon }}"></i>
-                            {% else %}
-                            {{ feature.icon }}
-                            {% endif %}
+                        <div class="text-xl text-slate-500">
+                            <i class="{{ feature|feature_icon_class }}"></i>
                         </div>
                         <h3 class="mt-4 text-lg font-black text-slate-900">{{ feature.title }}</h3>
                         <p class="mt-2 text-sm leading-6 text-slate-600">{{ feature.description }}</p>

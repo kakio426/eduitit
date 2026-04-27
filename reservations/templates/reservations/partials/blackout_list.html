@@ -16,9 +16,9 @@
             hx-vals='{"action": "delete", "item_id": "{{ blackout.id }}", "csrfmiddlewaretoken": "{{ csrf_token }}"}'
             class="text-red-400 hover:text-red-600 p-2 transform hover:scale-110 transition-transform inline-flex items-center gap-1">
             <span id="blackout-delete-indicator-{{ blackout.id }}" class="htmx-indicator text-xs">
-                <i class="fas fa-circle-notch fa-spin"></i>
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
             </span>
-            <i class="fas fa-times"></i>
+            <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
     {% empty %}

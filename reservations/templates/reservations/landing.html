@@ -5,7 +5,7 @@
     <div class="max-w-md mx-auto text-center" data-aos="fade-up">
 
         <div class="mb-8">
-            <span class="text-6xl">🏫</span>
+            <span class="text-5xl text-purple-500"><i class="fa-solid fa-calendar-check"></i></span>
         </div>
 
         <h1 class="text-4xl font-bold text-gray-800 mb-8 font-title">학교 예약 시스템</h1>
@@ -21,7 +21,7 @@
                         <div class="font-bold text-lg text-gray-800 group-hover:text-purple-600">{{ school.name }}</div>
 
                     </div>
-                    <i class="fas fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
+                    <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
                 </a>
                 {% endfor %}
             </div>
@@ -41,7 +41,7 @@
                             {{ item.owner_name }} 선생님 공유 · {% if item.can_edit %}편집 가능{% else %}읽기 전용{% endif %}
                         </div>
                     </div>
-                    <i class="fas fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
+                    <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
                 </a>
                 {% endfor %}
             </div>
@@ -61,7 +61,7 @@
                             {{ item.summary }}
                         </div>
                     </div>
-                    <i class="fas fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
+                    <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-400"></i>
                 </a>
                 {% endfor %}
             </div>

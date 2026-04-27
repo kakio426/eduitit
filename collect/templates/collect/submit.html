@@ -46,7 +46,7 @@
         {% endif %}
 
         <div class="bg-red-50 border border-red-100 text-red-700 rounded-xl mb-6 p-4 text-sm leading-relaxed">
-            <p class="font-bold mb-1"><i class="fa-solid fa-shield-exclamation mr-1"></i>보안 및 책임 안내</p>
+            <p class="font-bold mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>보안 및 책임 안내</p>
             <p>- 주민등록번호, 연락처 등 민감한 개인정보가 포함된 자료는 제출하지 마세요.</p>
             <p>- 대외 유출이 금지된 공문/내부 문서는 업로드하지 마세요.</p>
             <p>- 제출 자료의 관리 및 유출 책임은 요청자/제출자에게 있으며, 서비스는 해당 책임을 부담하지 않습니다.</p>
@@ -145,7 +145,7 @@
                                 <p class="text-xs text-gray-400">최대 {{ req.max_file_size_mb }}MB</p>
                             </label>
                             <div x-show="fileName" class="mt-3 text-sm text-emerald-600 font-bold bg-white/60 py-2 rounded-lg inline-block px-4">
-                                <i class="fa-solid fa-check-circle mr-1"></i><span x-text="fileName"></span>
+                                <i class="fa-solid fa-circle-check mr-1"></i><span x-text="fileName"></span>
                                 <span x-text="'(' + fileSizeMB + 'MB)'" class="text-gray-400 font-normal"></span>
                             </div>
                             <div x-show="fileError" class="mt-3 text-sm text-red-600 font-medium"><i class="fa-solid fa-circle-exclamation mr-1"></i><span x-text="fileError"></span></div>

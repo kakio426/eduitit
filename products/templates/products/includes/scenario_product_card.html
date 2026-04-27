@@ -1,14 +1,11 @@
+{% load icon_extras %}
 <a href="{{ product.launch_href|default:'#' }}"
    {% if product.launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
    class="group flex h-full flex-col justify-between rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg">
     <div>
         <div class="flex items-start gap-3">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl shadow-inner">
-                {% if "fa-" in product.icon %}
-                <i class="{{ product.icon }} text-{{ product.color_theme }}-500"></i>
-                {% else %}
-                <span class="text-{{ product.color_theme }}-500">{{ product.icon }}</span>
-                {% endif %}
+                <i class="{{ product|product_icon_class }} text-{{ product.color_theme }}-500"></i>
             </div>
             <div class="min-w-0 flex-1">
                 <p class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{{ product.public_service_name|default:product.title }}</p>

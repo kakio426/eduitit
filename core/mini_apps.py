@@ -73,7 +73,7 @@ class MiniAppDefinition:
     requires_auth: bool
     supported_states: tuple[str, ...] = MINI_APP_SUPPORTED_STATES_V1
     body_template: str = ""
-    icon: str = "fa-solid fa-sparkles"
+    icon: str = "fa-solid fa-shapes"
     full_label: str = "전체 보기"
     idle_message: str = ""
     home_surface: str = HOME_SURFACE_ACTION

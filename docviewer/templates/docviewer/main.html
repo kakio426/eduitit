@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load icon_extras %}
 
 {% block title %}문서 미리보기실{% endblock %}
 
@@ -19,7 +20,7 @@
         </div>
 
         <div class="text-center mb-8" data-aos="fade-up">
-            <div class="text-6xl mb-3 float-icon">{{ service.icon|default:"📑" }}</div>
+            <div class="text-5xl mb-3 float-icon text-red-500"><i class="{{ service|product_icon_class }}"></i></div>
             <h1 class="text-4xl md:text-5xl font-bold text-gray-700 font-title mb-3">문서 미리보기실</h1>
         </div>
 

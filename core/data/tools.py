@@ -39,7 +39,7 @@ TOOLS_DATA = [
         'id': 'gemini',
         'name': 'Gemini',
         'category': 'ai',
-        'icon': '<i class="fa-solid fa-star text-blue-500"></i>',
+        'icon': '<i class="fa-solid fa-gem text-blue-500"></i>',
         'desc': '구글 생태계의 끝판왕. 구글 문서, 스프레드시트, 유튜브와 완벽하게 연동됩니다. 시각 자료가 많은 유튜브 영상을 분석해 학습용 자료로 변환할 때 최고의 효율을 보여줍니다.',
         'summary': '구글 워크스페이스(Workspace) 연동성이 극대화되어 문서 작업 환경이 완전히 바뀌었습니다.',
         'details': [

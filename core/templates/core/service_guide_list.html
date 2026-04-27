@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load icon_extras %}
 
 {% block title %}{{ page_title|default:'서비스 가이드 - Eduitit' }}{% endblock %}
 
@@ -67,11 +68,7 @@
                     <div>
                         <div class="flex items-center gap-3">
                             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl shadow-inner">
-                                {% if manual.product.icon|length > 2 %}
-                                <i class="{{ manual.product.icon }} text-{{ manual.product.color_theme }}-500"></i>
-                                {% else %}
-                                <span class="text-{{ manual.product.color_theme }}-500">{{ manual.product.icon }}</span>
-                                {% endif %}
+                                <i class="{{ manual.product|product_icon_class }} text-{{ manual.product.color_theme }}-500"></i>
                             </div>
                             <div class="min-w-0 flex-1">
                                 <h3 class="text-lg font-black text-slate-900">{{ manual.public_title }}</h3>

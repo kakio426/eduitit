@@ -40,7 +40,7 @@
                             <!-- My Reservation Highlight & Delete -->
                             {% if s.can_edit %}
                             <div class="absolute top-1 right-1">
-                                <i class="fas fa-check-circle text-purple-500 text-xs"></i>
+                                <i class="fa-solid fa-circle-check text-purple-500 text-xs"></i>
                             </div>
                             {% endif %}
 
@@ -51,7 +51,7 @@
                                 type="button"
                                 class="absolute bottom-1 right-8 text-indigo-300 hover:text-indigo-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
-                                <i class="fas fa-pen text-xs"></i>
+                                <i class="fa-solid fa-pen text-xs"></i>
                             </button>
                             <button
                                 hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
@@ -63,9 +63,9 @@
                                 class="absolute bottom-1 right-1 text-red-300 hover:text-red-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
                                 <span id="reservation-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
-                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i>
                                 </span>
-                                <i class="fas fa-trash-alt text-xs"></i>
+                                <i class="fa-solid fa-trash text-xs"></i>
                             </button>
                             {% endif %}
 
@@ -76,7 +76,7 @@
                                 class="absolute bottom-1 right-1 text-amber-400 hover:text-amber-600 hidden group-hover:block"
                                 onclick="event.stopPropagation()"
                                 title="수정 코드 입력">
-                                <i class="fas fa-key text-xs"></i>
+                                <i class="fa-solid fa-key text-xs"></i>
                             </button>
                             {% endif %}
 
@@ -92,16 +92,16 @@
                                 class="absolute bottom-1 right-1 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                                 onclick="event.stopPropagation()">
                                 <span id="reservation-admin-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
-                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i>
                                 </span>
-                                <i class="fas fa-ban text-xs"></i>
+                                <i class="fa-solid fa-ban text-xs"></i>
                             </button>
                             {% endif %}
                         </div>
                         {% elif s.state == 'recurring' %}
                         <div
                             class="w-full h-full bg-gray-100 rounded-xl border border-dashed border-gray-300 flex flex-col justify-center items-center text-gray-400">
-                            <i class="fas fa-lock text-xs mb-1"></i>
+                            <i class="fa-solid fa-lock text-xs mb-1"></i>
                             <span class="text-xs font-bold">{{ s.recurring.name }}</span>
                         </div>
                         {% elif s.state == 'grade_locked' and reservation_can_edit %}
@@ -109,7 +109,7 @@
                             @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', {{ s.grade_lock.grade }})"
                             class="w-full h-full bg-amber-50 rounded-xl border border-amber-200 hover:border-amber-300 hover:shadow-md flex flex-col justify-center items-center gap-1 group transition-all">
                             <div class="text-amber-700 text-xs font-extrabold flex items-center gap-1">
-                                <i class="fas fa-user-lock text-[10px]"></i>
+                                <i class="fa-solid fa-user-lock text-[10px]"></i>
                                 {{ s.grade_lock.grade }}학년 고정
                             </div>
                             <div class="text-[10px] text-amber-500 group-hover:text-amber-600">다른 학년 예약 시 고정 해제</div>
@@ -118,7 +118,7 @@
                         <div
                             class="w-full h-full bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-center items-center gap-1 text-slate-400">
                             <div class="text-xs font-extrabold flex items-center gap-1">
-                                <i class="fas fa-user-lock text-[10px]"></i>
+                                <i class="fa-solid fa-user-lock text-[10px]"></i>
                                 {{ s.grade_lock.grade }}학년 고정
                             </div>
                             <div class="text-[10px]">읽기 전용</div>
@@ -126,7 +126,7 @@
                         {% elif s.state == 'blackout' %}
                         <div
                             class="w-full h-full bg-red-50 rounded-xl border border-red-100 flex justify-center items-center text-red-300 cursor-not-allowed">
-                            <i class="fas fa-ban"></i>
+                            <i class="fa-solid fa-ban"></i>
                         </div>
                         {% elif reservation_can_edit %}
                         <!-- Available -->
@@ -134,7 +134,7 @@
                             @click="openBooking({{ room_data.room.id }}, '{{ room_data.room.name }}', {{ p.id }}, '{{ target_date|date:"Y-m-d" }}', '{{ p.display_label|escapejs }}', null)"
                             class="w-full h-full bg-white rounded-xl border border-gray-100 hover:border-purple-300 hover:shadow-md flex justify-center items-center group transition-all">
                             <i
-                                class="fas fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
+                                class="fa-solid fa-plus text-gray-200 group-hover:text-purple-400 transform group-hover:scale-110 transition-transform"></i>
                         </button>
                         {% else %}
                         <div
@@ -179,7 +179,7 @@
                     <!-- My Reservation -->
                     {% if s.can_edit %}
                     <div class="absolute top-1 right-2">
-                        <i class="fas fa-check-circle text-purple-500 text-[10px]"></i>
+                        <i class="fa-solid fa-circle-check text-purple-500 text-[10px]"></i>
                     </div>
                     {% endif %}
 
@@ -190,7 +190,7 @@
                         type="button"
                         class="absolute bottom-1 right-8 text-indigo-500 hover:text-indigo-700 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
-                        <i class="fas fa-pen text-[10px]"></i>
+                        <i class="fa-solid fa-pen text-[10px]"></i>
                     </button>
                     <button
                         hx-post="{% url 'reservations:delete_reservation' school.slug s.reservation.id %}"
@@ -202,9 +202,9 @@
                         class="absolute bottom-1 right-2 text-red-400 hover:text-red-600 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
                         <span id="reservation-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px]">
-                            <i class="fas fa-circle-notch fa-spin"></i>
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
                         </span>
-                        <i class="fas fa-trash-alt text-[10px]"></i>
+                        <i class="fa-solid fa-trash text-[10px]"></i>
                     </button>
                     {% endif %}
 
@@ -214,7 +214,7 @@
                         type="button"
                         class="absolute bottom-1 right-2 text-amber-500 hover:text-amber-700 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
-                        <i class="fas fa-key text-[10px]"></i>
+                        <i class="fa-solid fa-key text-[10px]"></i>
                     </button>
                     {% endif %}
 
@@ -229,9 +229,9 @@
                         class="absolute bottom-1 right-8 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                         onclick="event.stopPropagation()">
                         <span id="reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px] mr-0.5">
-                            <i class="fas fa-circle-notch fa-spin"></i>
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
                         </span>
-                        <i class="fas fa-ban text-xs"></i>
+                        <i class="fa-solid fa-ban text-xs"></i>
                     </button>
                     {% endif %}
                 </div>
@@ -245,7 +245,7 @@
                         {% endif %}
                     </div>
                     <div class="text-gray-400 text-xs font-bold flex items-center gap-1">
-                        <i class="fas fa-lock text-[10px]"></i> {{ s.recurring.name }}
+                        <i class="fa-solid fa-lock text-[10px]"></i> {{ s.recurring.name }}
                     </div>
                 </div>
                 {% elif s.state == 'grade_locked' and reservation_can_edit %}
@@ -259,7 +259,7 @@
                         {% endif %}
                     </div>
                     <div class="text-amber-700 font-extrabold text-xs flex items-center gap-1">
-                        <i class="fas fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
+                        <i class="fa-solid fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
                     </div>
                 </button>
                 {% elif s.state == 'grade_locked' %}
@@ -271,7 +271,7 @@
                         {% endif %}
                     </div>
                     <div class="text-slate-500 font-extrabold text-xs flex items-center gap-1">
-                        <i class="fas fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
+                        <i class="fa-solid fa-user-lock text-[10px]"></i> {{ s.grade_lock.grade }}학년 고정
                     </div>
                 </div>
                 {% elif s.state == 'blackout' %}
@@ -282,7 +282,7 @@
                         <div class="text-[9px] text-red-200 truncate">{{ s.time }}</div>
                         {% endif %}
                     </div>
-                    <i class="fas fa-ban text-red-300"></i>
+                    <i class="fa-solid fa-ban text-red-300"></i>
                 </div>
                 {% elif reservation_can_edit %}
                 <!-- Available -->

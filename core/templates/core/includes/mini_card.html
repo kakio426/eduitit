@@ -14,7 +14,7 @@
     <div class="space-y-2">
         <div class="flex items-start gap-3" data-home-v2-service-card-header="true">
             <div class="home-v6-service-icon-tone flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-base" data-home-v6-service-icon="true" data-home-accent="{{ product.home_accent_token|default:'external' }}">
-                <i class="{{ product.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                <i class="{{ product.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
             </div>
             <div class="min-w-0 flex-1 pt-0.5">
                 <h4 class="{% if product.launch_route_name == 'messagebox:main' %}text-[1.05rem] md:text-[1.15rem] line-clamp-1{% else %}text-[1.15rem] md:text-[1.28rem] line-clamp-2{% endif %} font-black leading-6 text-slate-900 transition-colors" data-home-v6-service-title="true">
@@ -40,8 +40,7 @@
         {% endif %}
         {% if show_access_state %}
         <div class="flex flex-wrap items-center gap-1.5 pl-[3.25rem]" data-home-v2-service-card-access="true">
-            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black {% if product.home_access_status_label == '로그인 필요' %}bg-amber-50 text-amber-700{% elif product.home_access_status_label == '외부 이동' %}bg-sky-50 text-sky-700{% else %}bg-emerald-50 text-emerald-700{% endif %}" data-home-v6-access-pill="true">
-                <i class="fa-solid {% if product.home_access_status_label == '로그인 필요' %}fa-lock{% elif product.home_access_status_label == '외부 이동' %}fa-arrow-up-right-from-square{% else %}fa-circle-play{% endif %} text-[10px]"></i>
+            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black {% if product.home_access_status_label == '로그인 필요' %}bg-amber-50 text-amber-700{% elif product.home_access_status_label == '외부 이동' %}bg-sky-50 text-sky-700{% else %}bg-emerald-50 text-emerald-700{% endif %}" data-home-v6-access-pill="true">
                 {{ product.home_access_status_label }}
             </span>
         </div>

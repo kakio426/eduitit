@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <article class="home-public-v5-featured-card">
                         <div class="flex items-start gap-3">
                             <div class="home-public-v5-icon home-public-service-icon-tone" data-home-accent="{{ featured_product.home_accent_token|default:'external' }}">
-                                <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                <i class="{{ featured_product.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                             </div>
                             <div class="min-w-0">
                                 <h3 class="home-public-v5-featured-title">{{ featured_product.public_service_name|default:featured_product.title }}</h3>
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         >
                             <div class="home-public-v5-grid-head">
                                 <span class="home-public-v5-grid-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
-                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                 </span>
                                 <span class="home-public-v5-grid-badge">{{ card.access_status_label }}</span>
                             </div>

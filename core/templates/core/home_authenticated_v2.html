@@ -53,7 +53,7 @@
                                         tabindex="0">
                                     <div class="flex items-center gap-2.5" data-home-v2-favorite-card-header="true">
                                         <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-sm shadow-sm {% if item.product.service_type == 'collect_sign' %}text-blue-500{% elif item.product.service_type == 'classroom' %}text-violet-500{% elif item.product.service_type == 'work' %}text-emerald-500{% elif item.product.service_type == 'game' %}text-red-500{% elif item.product.service_type == 'counsel' %}text-pink-500{% elif item.product.service_type == 'edutech' %}text-cyan-500{% else %}text-slate-500{% endif %}">
-                                            <i class="{{ item.product.home_icon_class|default:item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                            <i class="{{ item.product.home_icon_class|default:item.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p class="truncate text-[0.95rem] font-black leading-5 text-slate-900" data-home-v2-favorite-card-title="true" title="{{ item.favorite_full_title }}">{{ favorite_title }}</p>

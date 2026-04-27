@@ -6,7 +6,7 @@
                 <p class="text-xs text-gray-500 mt-1">보라색은 학년 고정, 회색은 이미 반복 수업이 있는 칸입니다.</p>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 w-fit">
-                <i class="fas fa-user-lock text-[11px]"></i>
+                <i class="fa-solid fa-user-lock text-[11px]"></i>
                 현재 {{ lock_total }}개 설정됨
             </div>
         </div>
@@ -45,7 +45,7 @@
                                 {% if slot.recurring %}
                                 <div class="flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-lg px-2 py-3">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-1 text-[10px] font-bold text-gray-600">
-                                        <i class="fas fa-lock text-[9px]"></i> 고정 수업
+                                        <i class="fa-solid fa-lock text-[9px]"></i> 고정 수업
                                     </span>
                                     <span class="max-w-full truncate text-[11px] font-bold text-gray-500">{{ slot.recurring.name }}</span>
                                     <span class="text-[10px] text-gray-400">학년 고정 불가</span>
@@ -56,12 +56,12 @@
                                         <div class="flex min-h-[92px] flex-col items-center justify-center gap-2">
                                             {% if slot.lock %}
                                             <span class="inline-flex items-center gap-1 rounded-full bg-purple-500 px-3 py-1 text-xs font-black text-white shadow-sm">
-                                                <i class="fas fa-user-lock text-[10px]"></i>
+                                                <i class="fa-solid fa-user-lock text-[10px]"></i>
                                                 {{ slot.lock.grade }}학년
                                             </span>
                                             <span class="text-[10px] font-semibold text-purple-500">눌러서 변경 또는 해제</span>
                                             {% else %}
-                                            <i class="fas fa-plus text-lg text-gray-300 transition-transform group-hover:scale-110 group-hover:text-purple-400"></i>
+                                            <i class="fa-solid fa-plus text-lg text-gray-300 transition-transform group-hover:scale-110 group-hover:text-purple-400"></i>
                                             <span class="text-[11px] font-bold text-gray-500">학년 고정</span>
                                             <span class="text-[10px] text-gray-400">눌러서 선택</span>
                                             {% endif %}
@@ -86,7 +86,7 @@
                                                 <button type="submit"
                                                     class="w-full rounded-lg border px-2 py-2 text-[11px] font-bold transition-colors {% if slot.lock and slot.lock.grade == grade %}border-purple-500 bg-purple-500 text-white{% else %}border-purple-100 bg-purple-50 text-purple-700 hover:border-purple-300 hover:bg-purple-100{% endif %}">
                                                     <span class="js-grade-lock-loading htmx-indicator text-[10px]">
-                                                        <i class="fas fa-circle-notch fa-spin"></i>
+                                                        <i class="fa-solid fa-circle-notch fa-spin"></i>
                                                     </span>
                                                     <span>{{ grade }}학년</span>
                                                 </button>
@@ -110,7 +110,7 @@
                                                 <input type="hidden" name="period" value="{{ row.period.id }}">
                                                 <button type="submit" class="w-full rounded-lg border border-red-100 bg-red-50 px-2 py-2 text-[11px] font-bold text-red-600 transition-colors hover:border-red-200 hover:bg-red-100">
                                                     <span class="js-grade-lock-loading htmx-indicator text-[10px]">
-                                                        <i class="fas fa-circle-notch fa-spin"></i>
+                                                        <i class="fa-solid fa-circle-notch fa-spin"></i>
                                                     </span>
                                                     <span>해제</span>
                                                 </button>

@@ -4258,6 +4258,14 @@ class HomeV6ViewTest(TestCase):
 
     def test_v6_nav_surfaces_schoolprograms_as_direct_link(self):
         Product.objects.create(
+            title="몽글몽글 미술 수업",
+            description="미술 수업 준비",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='artclass:setup',
+        )
+        Product.objects.create(
             title="학교 체험·행사 찾기",
             description="학교로 찾아오는 프로그램을 바로 찾기",
             price=0,
@@ -4412,6 +4420,14 @@ class HomeV6ViewTest(TestCase):
 
     def test_v6_home_nav_sections_use_enterprise_home_accent_tokens(self):
         Product.objects.create(
+            title="몽글몽글 미술 수업",
+            description="미술 수업 준비",
+            price=0,
+            is_active=True,
+            service_type='classroom',
+            launch_route_name='artclass:setup',
+        )
+        Product.objects.create(
             title="업무 메시지 보관함",
             description="학교 공지와 메시지를 정리",
             price=0,
@@ -4524,7 +4540,9 @@ class HomeV6ViewTest(TestCase):
 
         self.assertIn('.home-v6-page [data-home-v6-favorites-panel="true"] .home-v6-favorite-card-star {', css)
         self.assertIn('.home-v6-page .home-v6-tool-favorite-badge {', css)
-        self.assertIn('opacity: 1;', css)
+        self.assertIn('opacity: 0.38;', css)
+        self.assertIn('opacity: 0.42;', css)
+        self.assertIn('.home-v6-page .home-v6-tool-item:hover .home-v6-tool-favorite-badge', css)
         self.assertIn('pointer-events: auto;', css)
 
     def test_v6_css_keeps_favorites_titles_visible_without_widening_side_rail(self):

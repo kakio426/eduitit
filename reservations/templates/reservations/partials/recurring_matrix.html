@@ -44,13 +44,13 @@
                                 <button type="submit"
                                     class="w-full h-full rounded-lg flex flex-col items-center justify-center gap-1 group">
                                     <span class="js-recurring-loading htmx-indicator text-[10px] text-purple-500">
-                                        <i class="fas fa-circle-notch fa-spin"></i>
+                                        <i class="fa-solid fa-circle-notch fa-spin"></i>
                                     </span>
                                     {% if schedule %}
                                     <!-- Active State -->
                                     <div
                                         class="text-purple-600 font-bold text-xs sm:text-sm bg-purple-100 px-2 sm:px-3 py-1 rounded-full shadow-sm max-w-[90%] truncate">
-                                        <i class="fas fa-lock text-[10px] mr-1"></i>
+                                        <i class="fa-solid fa-lock text-[10px] mr-1"></i>
                                         {{ schedule.name }}
                                     </div>
                                     <span class="text-[9px] sm:text-[10px] text-gray-400 group-hover:text-red-400 transition-colors">
@@ -59,7 +59,7 @@
                                     {% else %}
                                     <!-- Inactive State -->
                                     <i
-                                        class="fas fa-plus text-gray-300 group-hover:text-purple-400 text-lg transition-transform group-hover:scale-110"></i>
+                                        class="fa-solid fa-plus text-gray-300 group-hover:text-purple-400 text-lg transition-transform group-hover:scale-110"></i>
                                     {% endif %}
                                 </button>
                             </form>

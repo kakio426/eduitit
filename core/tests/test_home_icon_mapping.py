@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from core.service_launcher import resolve_home_icon_class
+from core.service_launcher import resolve_feature_icon_class, resolve_home_icon_class, resolve_ui_icon_class
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -33,15 +33,15 @@ class HomeIconMappingTests(SimpleTestCase):
                 template = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertNotIn("fa-solid fa-sparkles", template)
 
-    def test_fortune_routes_use_supported_star_icon(self):
-        self.assertEqual(resolve_home_icon_class(route_name="fortune:saju"), "fa-solid fa-star")
-        self.assertEqual(resolve_home_icon_class(route_name="saju:landing"), "fa-solid fa-star")
+    def test_fortune_routes_use_supported_moon_icon(self):
+        self.assertEqual(resolve_home_icon_class(route_name="fortune:saju"), "fa-solid fa-moon")
+        self.assertEqual(resolve_home_icon_class(route_name="saju:landing"), "fa-solid fa-moon")
         self.assertEqual(resolve_home_icon_class(route_name="docsign:list"), "fa-solid fa-file-signature")
 
     def test_legacy_home_icon_aliases_are_normalized_for_home_surfaces(self):
         self.assertEqual(
             resolve_home_icon_class(icon="fa-solid fa-sparkles"),
-            "fa-solid fa-star",
+            "fa-solid fa-wand-magic-sparkles",
         )
         self.assertEqual(
             resolve_home_icon_class(icon="fa-solid fa-up-right-from-square"),
@@ -51,9 +51,14 @@ class HomeIconMappingTests(SimpleTestCase):
     def test_title_keyword_fallbacks_keep_refresh_icons_deterministic(self):
         self.assertEqual(
             resolve_home_icon_class(title="선생님 사주"),
-            "fa-solid fa-star",
+            "fa-solid fa-moon",
         )
         self.assertEqual(
             resolve_home_icon_class(title="쌤BTI"),
             "fa-solid fa-id-badge",
         )
+
+    def test_home_icon_fallbacks_avoid_generic_star(self):
+        self.assertEqual(resolve_home_icon_class(), "fa-solid fa-shapes")
+        self.assertEqual(resolve_ui_icon_class("🛠️"), "fa-solid fa-shapes")
+        self.assertEqual(resolve_feature_icon_class("📋"), "fa-regular fa-circle-dot")

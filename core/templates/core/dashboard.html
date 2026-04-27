@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load icon_extras %}
 
 {% block title %}대시보드 - Eduitit{% endblock %}
 
@@ -20,11 +21,7 @@
                             {% elif product.color_theme == 'red' %}text-red-500
                             {% elif product.color_theme == 'blue' %}text-blue-500
                             {% else %}text-gray-500{% endif %}">
-                    {% if "fa-" in product.icon %}
-                    <i class="{{ product.icon }}"></i>
-                    {% else %}
-                    {{ product.icon }}
-                    {% endif %}
+                    <i class="{{ product|product_icon_class }}"></i>
                 </div>
 
                 <h3 class="text-3xl font-bold text-gray-700 mb-2 group-hover:text-purple-600 transition-colors">

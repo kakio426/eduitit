@@ -221,6 +221,9 @@ HOME_ACCENT_TOKEN_BY_ROUTE = {
     "schoolprograms:landing": "schoolprograms",
 }
 
+HOME_ICON_CLASS_FALLBACK = "fa-solid fa-shapes"
+FEATURE_ICON_CLASS_FALLBACK = "fa-regular fa-circle-dot"
+
 HOME_ICON_CLASS_BY_SERVICE_TYPE = {
     "collect_sign": "fa-solid fa-inbox",
     "work": "fa-solid fa-file-lines",
@@ -232,7 +235,9 @@ HOME_ICON_CLASS_BY_SERVICE_TYPE = {
 }
 
 HOME_ICON_CLASS_ALIASES = {
-    "fa-solid fa-sparkles": "fa-solid fa-star",
+    "fa-solid fa-sparkles": "fa-solid fa-wand-magic-sparkles",
+    "fa-solid fa-magic": "fa-solid fa-wand-magic-sparkles",
+    "fa-solid fa-wand-sparkles": "fa-solid fa-wand-magic-sparkles",
     "fa-solid fa-up-right-from-square": "fa-solid fa-arrow-up-right-from-square",
 }
 
@@ -267,9 +272,9 @@ HOME_ICON_CLASS_BY_ROUTE = {
     "ssambti:main": "fa-solid fa-id-badge",
     "studentmbti:landing": "fa-solid fa-users",
     "studentmbti:start": "fa-solid fa-users",
-    "fortune:saju": "fa-solid fa-star",
-    "fortune:landing": "fa-solid fa-star",
-    "saju:landing": "fa-solid fa-star",
+    "fortune:saju": "fa-solid fa-moon",
+    "fortune:landing": "fa-solid fa-moon",
+    "saju:landing": "fa-solid fa-moon",
 }
 
 HOME_ICON_CLASS_BY_ROUTE_PREFIX = (
@@ -279,8 +284,8 @@ HOME_ICON_CLASS_BY_ROUTE_PREFIX = (
 HOME_ICON_CLASS_BY_TITLE_KEYWORD = (
     ("쌤bti", "fa-solid fa-id-badge"),
     ("우리반bti", "fa-solid fa-users"),
-    ("사주", "fa-solid fa-star"),
-    ("운세", "fa-solid fa-star"),
+    ("사주", "fa-solid fa-moon"),
+    ("운세", "fa-solid fa-moon"),
     ("법", "fa-solid fa-scale-balanced"),
 )
 
@@ -364,6 +369,17 @@ def normalize_home_icon_class(icon_class):
     return HOME_ICON_CLASS_ALIASES.get(normalized_icon_class, normalized_icon_class)
 
 
+def resolve_ui_icon_class(icon="", *, fallback=HOME_ICON_CLASS_FALLBACK):
+    normalized_icon = str(icon or "").strip()
+    if "fa-" in normalized_icon:
+        return normalize_home_icon_class(normalized_icon)
+    return fallback
+
+
+def resolve_feature_icon_class(icon="", *, fallback=FEATURE_ICON_CLASS_FALLBACK):
+    return resolve_ui_icon_class(icon, fallback=fallback)
+
+
 def resolve_home_section_key(product):
     route_name = product_route_name(product)
     if route_name in HOME_SECTION_BY_ROUTE:
@@ -426,7 +442,7 @@ def resolve_home_icon_class(product=None, *, icon="", route_name="", service_typ
     if normalized_service_type in HOME_ICON_CLASS_BY_SERVICE_TYPE:
         return HOME_ICON_CLASS_BY_SERVICE_TYPE[normalized_service_type]
 
-    return "fa-solid fa-star"
+    return HOME_ICON_CLASS_FALLBACK
 
 
 def resolve_product_launch_route_name(product, user=None):

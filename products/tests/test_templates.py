@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
-from products.models import Product
+from products.models import Product, ProductFeature
 
 
 class ProductTemplateTests(TestCase):
@@ -89,3 +89,26 @@ class ProductTemplateTests(TestCase):
         
         # Should show service type
         self.assertContains(response, "game")
+
+    def test_detail_page_normalizes_product_and_feature_icons(self):
+        product = Product.objects.create(
+            title="Emoji Tool",
+            description="Emoji icon product",
+            price=0,
+            is_active=True,
+            service_type="work",
+            icon="🧰",
+        )
+        ProductFeature.objects.create(
+            product=product,
+            title="Emoji Feature",
+            description="Feature Description",
+            icon="🧩",
+        )
+
+        response = self.client.get(reverse('product_detail', kwargs={'pk': product.pk}))
+
+        self.assertContains(response, "fa-solid fa-file-lines")
+        self.assertContains(response, "fa-regular fa-circle-dot")
+        self.assertNotContains(response, "🧰")
+        self.assertNotContains(response, "🧩")

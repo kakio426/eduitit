@@ -33,6 +33,20 @@ class ProductPreviewTest(TestCase):
         self.assertContains(response, "Test Feature")
         self.assertContains(response, "Feature Description")
 
+    def test_preview_normalizes_emoji_icons(self):
+        self.product.icon = "🧰"
+        self.product.service_type = "work"
+        self.product.save(update_fields=["icon", "service_type"])
+        self.feature.icon = "🧩"
+        self.feature.save(update_fields=["icon"])
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "fa-solid fa-file-lines")
+        self.assertContains(response, "fa-regular fa-circle-dot")
+        self.assertNotContains(response, "🧰")
+        self.assertNotContains(response, "🧩")
+
     def test_preview_uses_launch_route_name_when_provided(self):
         self.product.launch_route_name = "collect:landing"
         self.product.save(update_fields=["launch_route_name"])

@@ -353,7 +353,7 @@
             <div class="grid grid-cols-1 gap-4 pt-4">
                 <a id="playLink" href="#"
                     class="flex items-center justify-center gap-3 py-5 bg-green-500 text-white rounded-[2rem] text-xl font-black shadow-lg hover:bg-green-600 hover:scale-[1.02] active:scale-95 transition-all">
-                    <i class="fa-solid fa-rocket"></i> 런처로 수업 시작하기
+                    <i class="fa-solid fa-circle-play"></i> 런처로 수업 시작하기
                 </a>
                 <a id="modalInstallGuideLink" href="{{ launcher_install_url }}"
                     class="hidden items-center justify-center gap-3 py-4 px-4 bg-emerald-50 text-emerald-700 border-2 border-emerald-200 rounded-[2rem] text-base font-black shadow-sm hover:bg-emerald-100 transition-all">
@@ -494,7 +494,7 @@
         document.getElementById('modalTitle').textContent = title;
         const shouldAutoStartLauncher = true;
         playLink.href = `/artclass/classroom/${pk}/?autostart_launcher=1`;
-        playLink.innerHTML = '<i class="fa-solid fa-rocket"></i> 런처로 수업 시작하기';
+        playLink.innerHTML = '<i class="fa-solid fa-circle-play"></i> 런처로 수업 시작하기';
         if (recommendationEl) {
             recommendationEl.textContent = '초록 버튼으로 시작합니다.';
             recommendationEl.className = 'text-sm font-black text-emerald-700';

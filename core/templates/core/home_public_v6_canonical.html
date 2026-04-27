@@ -171,7 +171,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                                 class="home-public-v6-preview-item"
                                                 {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
                                                 <span class="home-public-v6-preview-item-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
-                                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                                 </span>
                                                 <span class="home-public-v6-preview-item-copy">
                                                     <strong class="home-public-v6-preview-item-title">{{ card.title }}</strong>
@@ -189,7 +189,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                                 class="home-public-v6-preview-item"
                                                 {% if card.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
                                                 <span class="home-public-v6-preview-item-icon home-public-service-icon-tone" data-home-accent="{{ card.home_accent_token|default:'external' }}">
-                                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                                    <i class="{{ card.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                                 </span>
                                                 <span class="home-public-v6-preview-item-copy">
                                                     <strong class="home-public-v6-preview-item-title">{{ card.title }}</strong>
@@ -238,7 +238,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                 {% if item.is_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
                                 <div class="home-public-v6-bento-top">
                                     <span class="home-public-v6-bento-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token|default:'external' }}">
-                                        <i class="{{ item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                        <i class="{{ item.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                     </span>
                                     <span class="home-public-v6-bento-badge">{{ item.access_status_label }}</span>
                                 </div>
@@ -282,7 +282,7 @@ document.documentElement.setAttribute('data-home-mobile-chrome', 'minimal');
                                     {% for item in group.items %}
                                     <a href="{{ item.href }}" class="home-public-v6-group-item"{% if item.is_external %} target="_blank" rel="noopener noreferrer"{% endif %}>
                                         <span class="home-public-v6-group-item-icon home-public-service-icon-tone" data-home-accent="{{ item.home_accent_token|default:'external' }}">
-                                            <i class="{{ item.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                                            <i class="{{ item.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                                         </span>
                                         <span class="home-public-v6-group-item-copy">
                                             <strong class="home-public-v6-group-item-title">{{ item.title }}</strong>

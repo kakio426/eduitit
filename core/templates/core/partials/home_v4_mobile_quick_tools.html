@@ -1,3 +1,4 @@
+{% load icon_extras %}
 <article class="home-v4-card home-v4-mobile-quick-tools" data-home-v4-mobile-quick-tools="true">
     <div class="home-v4-mobile-quick-tools-header">
         <div>
@@ -15,9 +16,9 @@
         >
             <span class="home-v4-mobile-quick-icon">
                 {% if item.icon %}
-                    {% if "fa-" in item.icon %}<i class="{{ item.icon }}"></i>{% else %}{{ item.icon }}{% endif %}
+                    <i class="{{ item.icon|ui_icon_class }}"></i>
                 {% else %}
-                    <i class="{{ card.home_icon_class|default:'fa-solid fa-star' }}"></i>
+                    <i class="{{ card.home_icon_class|default:'fa-solid fa-shapes' }}"></i>
                 {% endif %}
             </span>
             <span class="home-v4-mobile-quick-title">{{ item.title }}</span>
