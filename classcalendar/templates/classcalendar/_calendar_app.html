@@ -2426,26 +2426,37 @@
 
                 <div x-show="dayModalMode === 'create'" class="space-y-4">
                     <form @submit.prevent="submitCreateEvent" class="space-y-4">
+                        <p
+                            id="calendar-create-form-error"
+                            x-show="createFormErrors.__all__"
+                            x-cloak
+                            class="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700"
+                            x-text="createFormErrors.__all__"
+                        ></p>
                         <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
-                            <input x-model="createForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                            <label for="calendar-create-title" class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
+                            <input id="calendar-create-title" x-ref="createTitleInput" x-model="createForm.title" @input="clearEventFormError('create', 'title')" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.title ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="createFormErrors.title ? 'true' : 'false'" aria-describedby="calendar-create-title-error" required maxlength="200">
+                            <p id="calendar-create-title-error" x-show="createFormErrors.title" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="createFormErrors.title"></p>
                         </div>
                         <div x-show="calendarOwnerOptions.length > 1">
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">저장 달력</label>
-                            <select x-model="createForm.calendar_owner_id" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <label for="calendar-create-owner" class="mb-1.5 block text-sm font-bold text-slate-700">저장 달력</label>
+                            <select id="calendar-create-owner" x-ref="createOwnerInput" x-model="createForm.calendar_owner_id" @change="clearEventFormError('create', 'calendar_owner_id')" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.calendar_owner_id ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="createFormErrors.calendar_owner_id ? 'true' : 'false'" aria-describedby="calendar-create-owner-error">
                                 <template x-for="option in calendarOwnerOptions" :key="`owner-option-${option.id}`">
                                     <option :value="option.id" x-text="option.label"></option>
                                 </template>
                             </select>
+                            <p id="calendar-create-owner-error" x-show="createFormErrors.calendar_owner_id" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="createFormErrors.calendar_owner_id"></p>
                         </div>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                                <label class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
-                            <input x-model="createForm.start_date" @change="handleEventFormStartDateChange('create')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                <label for="calendar-create-start-date" class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
+                                <input id="calendar-create-start-date" x-ref="createStartDateInput" x-model="createForm.start_date" @change="handleEventFormStartDateChange('create'); clearEventFormError('create', 'start_time'); clearEventFormError('create', 'end_time')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.start_time ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="createFormErrors.start_time ? 'true' : 'false'" aria-describedby="calendar-create-start-error" required>
+                                <p id="calendar-create-start-error" x-show="createFormErrors.start_time" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="createFormErrors.start_time"></p>
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
-                            <input x-model="createForm.end_date" @change="markEventFormEndManual('create')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                <label for="calendar-create-end-date" class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
+                                <input id="calendar-create-end-date" x-ref="createEndDateInput" x-model="createForm.end_date" @change="markEventFormEndManual('create'); clearEventFormError('create', 'end_time')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.end_time ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="createFormErrors.end_time ? 'true' : 'false'" aria-describedby="calendar-create-end-error" required>
+                                <p id="calendar-create-end-error" x-show="createFormErrors.end_time" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="createFormErrors.end_time"></p>
                             </div>
                         </div>
                         <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
@@ -2457,18 +2468,19 @@
                             </div>
                             <div x-show="createForm.has_time" x-transition class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
-                                    <input x-model="createForm.start_clock" @change="handleEventFormStartClockChange('create')" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <label for="calendar-create-start-clock" class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
+                                    <input id="calendar-create-start-clock" x-ref="createStartClockInput" x-model="createForm.start_clock" @change="handleEventFormStartClockChange('create'); clearEventFormError('create', 'start_time'); clearEventFormError('create', 'end_time')" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.start_time ? 'border-rose-300 focus:ring-rose-300' : ''">
                                 </div>
                                 <div>
-                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
-                                    <input x-model="createForm.end_clock" @change="markEventFormEndManual('create')" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <label for="calendar-create-end-clock" class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
+                                    <input id="calendar-create-end-clock" x-ref="createEndClockInput" x-model="createForm.end_clock" @change="markEventFormEndManual('create'); clearEventFormError('create', 'end_time')" type="time" :required="createForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.end_time ? 'border-rose-300 focus:ring-rose-300' : ''">
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
-                            <textarea x-model="createForm.note" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                            <label for="calendar-create-note" class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
+                            <textarea id="calendar-create-note" x-ref="createNoteInput" x-model="createForm.note" @input="clearEventFormError('create', 'note')" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="createFormErrors.note ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="createFormErrors.note ? 'true' : 'false'" aria-describedby="calendar-create-note-error" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                            <p id="calendar-create-note-error" x-show="createFormErrors.note" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="createFormErrors.note"></p>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2 pt-2">
                             <button type="button" @click="showDayOverview()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">목록으로</button>
@@ -2531,18 +2543,28 @@
 
                 <div x-show="dayModalMode === 'edit' && selectedEvent" class="space-y-4">
                     <form @submit.prevent="submitEditEvent" class="space-y-4">
+                        <p
+                            id="calendar-edit-form-error"
+                            x-show="editFormErrors.__all__"
+                            x-cloak
+                            class="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-sm font-semibold text-rose-700"
+                            x-text="editFormErrors.__all__"
+                        ></p>
                         <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
-                            <input x-model="editForm.title" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required maxlength="200">
+                            <label for="calendar-edit-title" class="mb-1.5 block text-sm font-bold text-slate-700">제목</label>
+                            <input id="calendar-edit-title" x-ref="editTitleInput" x-model="editForm.title" @input="clearEventFormError('edit', 'title')" type="text" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.title ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="editFormErrors.title ? 'true' : 'false'" aria-describedby="calendar-edit-title-error" required maxlength="200">
+                            <p id="calendar-edit-title-error" x-show="editFormErrors.title" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="editFormErrors.title"></p>
                         </div>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                                <label class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
-                            <input x-model="editForm.start_date" @change="handleEventFormStartDateChange('edit')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                <label for="calendar-edit-start-date" class="mb-1.5 block text-sm font-bold text-slate-700">시작일</label>
+                                <input id="calendar-edit-start-date" x-ref="editStartDateInput" x-model="editForm.start_date" @change="handleEventFormStartDateChange('edit'); clearEventFormError('edit', 'start_time'); clearEventFormError('edit', 'end_time')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.start_time ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="editFormErrors.start_time ? 'true' : 'false'" aria-describedby="calendar-edit-start-error" required>
+                                <p id="calendar-edit-start-error" x-show="editFormErrors.start_time" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="editFormErrors.start_time"></p>
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
-                            <input x-model="editForm.end_date" @change="markEventFormEndManual('edit')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                <label for="calendar-edit-end-date" class="mb-1.5 block text-sm font-bold text-slate-700">종료일</label>
+                                <input id="calendar-edit-end-date" x-ref="editEndDateInput" x-model="editForm.end_date" @change="markEventFormEndManual('edit'); clearEventFormError('edit', 'end_time')" type="date" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.end_time ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="editFormErrors.end_time ? 'true' : 'false'" aria-describedby="calendar-edit-end-error" required>
+                                <p id="calendar-edit-end-error" x-show="editFormErrors.end_time" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="editFormErrors.end_time"></p>
                             </div>
                         </div>
                         <div class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
@@ -2554,22 +2576,25 @@
                             </div>
                             <div x-show="editForm.has_time" x-transition class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
-                                    <input x-model="editForm.start_clock" @change="handleEventFormStartClockChange('edit')" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <label for="calendar-edit-start-clock" class="mb-1.5 block text-sm font-bold text-slate-700">시작 시간</label>
+                                    <input id="calendar-edit-start-clock" x-ref="editStartClockInput" x-model="editForm.start_clock" @change="handleEventFormStartClockChange('edit'); clearEventFormError('edit', 'start_time'); clearEventFormError('edit', 'end_time')" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.start_time ? 'border-rose-300 focus:ring-rose-300' : ''">
                                 </div>
                                 <div>
-                                    <label class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
-                                    <input x-model="editForm.end_clock" @change="markEventFormEndManual('edit')" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                                    <label for="calendar-edit-end-clock" class="mb-1.5 block text-sm font-bold text-slate-700">종료 시간</label>
+                                    <input id="calendar-edit-end-clock" x-ref="editEndClockInput" x-model="editForm.end_clock" @change="markEventFormEndManual('edit'); clearEventFormError('edit', 'end_time')" type="time" :required="editForm.has_time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.end_time ? 'border-rose-300 focus:ring-rose-300' : ''">
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <label class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
-                            <textarea x-model="editForm.note" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                            <label for="calendar-edit-note" class="mb-1.5 block text-sm font-bold text-slate-700">메모</label>
+                            <textarea id="calendar-edit-note" x-ref="editNoteInput" x-model="editForm.note" @input="clearEventFormError('edit', 'note')" rows="4" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" :class="editFormErrors.note ? 'border-rose-300 focus:ring-rose-300' : ''" :aria-invalid="editFormErrors.note ? 'true' : 'false'" aria-describedby="calendar-edit-note-error" placeholder="준비물이나 확인할 내용을 적어두세요."></textarea>
+                            <p id="calendar-edit-note-error" x-show="editFormErrors.note" x-cloak class="mt-1 text-xs font-semibold text-rose-600" x-text="editFormErrors.note"></p>
                         </div>
                         <div class="flex flex-wrap justify-end gap-2 pt-2">
                             <button type="button" @click="dayModalMode = 'detail'; syncPageState();" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">취소</button>
-                            <button type="submit" :disabled="isEditing" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">저장</button>
+                            <button type="submit" :disabled="isEditing" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">
+                                <span x-text="isEditing ? '저장 중' : '저장'">저장</span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -2732,6 +2757,8 @@ function calendarApp() {
         defaultCalendarOwnerId: '',
         createForm: { title: '', note: '', calendar_owner_id: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
         editForm: { title: '', note: '', start_date: '', end_date: '', has_time: false, start_clock: '09:00', end_clock: '10:00', end_clock_auto: true, color: 'indigo' },
+        createFormErrors: {},
+        editFormErrors: {},
         messageboxHomeDraftText: '',
         messageCaptureStep: 'input',
         messageCaptureInputText: '',
@@ -3210,6 +3237,75 @@ function calendarApp() {
         resolveEventForm(formKey) {
             return formKey === 'edit' ? this.editForm : this.createForm;
         },
+        resolveEventFormErrorsKey(formKey) {
+            return formKey === 'edit' ? 'editFormErrors' : 'createFormErrors';
+        },
+        normalizeEventFormErrors(errors = {}) {
+            const normalized = {};
+            Object.entries(errors || {}).forEach(([field, messages]) => {
+                const fieldMessages = Array.isArray(messages) ? messages : [messages];
+                const text = fieldMessages
+                    .map((item) => {
+                        if (!item) return '';
+                        if (typeof item === 'string') return item;
+                        return item.message || '';
+                    })
+                    .filter(Boolean)
+                    .join(' ');
+                if (text) {
+                    normalized[field] = text;
+                }
+            });
+            return normalized;
+        },
+        setEventFormErrors(formKey, errors = {}) {
+            const key = this.resolveEventFormErrorsKey(formKey);
+            this[key] = this.normalizeEventFormErrors(errors);
+        },
+        setEventFormError(formKey, field, message) {
+            const key = this.resolveEventFormErrorsKey(formKey);
+            this[key] = { ...this[key], [field]: message };
+        },
+        clearEventFormErrors(formKey) {
+            const key = this.resolveEventFormErrorsKey(formKey);
+            this[key] = {};
+        },
+        clearEventFormError(formKey, field) {
+            const key = this.resolveEventFormErrorsKey(formKey);
+            if (!this[key] || !this[key][field]) return;
+            const nextErrors = { ...this[key] };
+            delete nextErrors[field];
+            if (field === 'start_time' || field === 'end_time') {
+                delete nextErrors.__all__;
+            }
+            this[key] = nextErrors;
+        },
+        focusFirstEventFormError(formKey) {
+            const key = this.resolveEventFormErrorsKey(formKey);
+            const errors = this[key] || {};
+            const fieldOrder = ['title', 'calendar_owner_id', 'start_time', 'end_time', 'note', '__all__'];
+            const refMap = {
+                create: {
+                    title: 'createTitleInput',
+                    calendar_owner_id: 'createOwnerInput',
+                    start_time: 'createStartDateInput',
+                    end_time: 'createEndDateInput',
+                    note: 'createNoteInput',
+                },
+                edit: {
+                    title: 'editTitleInput',
+                    start_time: 'editStartDateInput',
+                    end_time: 'editEndDateInput',
+                    note: 'editNoteInput',
+                },
+            };
+            const targetField = fieldOrder.find((field) => errors[field]);
+            const refName = refMap[formKey] && refMap[formKey][targetField];
+            const target = refName && this.$refs ? this.$refs[refName] : null;
+            if (target && typeof target.focus === 'function') {
+                this.$nextTick(() => target.focus());
+            }
+        },
         syncEventFormAutoEnd(form, options = {}) {
             if (!form || !form.start_date || !form.start_clock) return;
             const start = new Date(`${form.start_date}T${form.start_clock}`);
@@ -3258,12 +3354,16 @@ function calendarApp() {
                 });
             }
         },
-        buildEventTimes(form) {
+        buildEventTimes(form, formKey = 'create') {
             if (!form.start_date || !form.end_date) {
+                this.setEventFormError(formKey, !form.start_date ? 'start_time' : 'end_time', '시작일과 종료일을 확인해 주세요.');
+                this.focusFirstEventFormError(formKey);
                 window.showToast('시작일과 종료일을 입력해 주세요.', 'error');
                 return null;
             }
             if (form.end_date < form.start_date) {
+                this.setEventFormError(formKey, 'end_time', '종료일은 시작일보다 빠를 수 없습니다.');
+                this.focusFirstEventFormError(formKey);
                 window.showToast('종료일은 시작일보다 빠를 수 없습니다.', 'error');
                 return null;
             }
@@ -3275,16 +3375,22 @@ function calendarApp() {
                 };
             }
             if (!form.start_clock || !form.end_clock) {
+                this.setEventFormError(formKey, !form.start_clock ? 'start_time' : 'end_time', '시간을 확인해 주세요.');
+                this.focusFirstEventFormError(formKey);
                 window.showToast('시간 지정을 켠 경우 시작/종료 시간을 입력해 주세요.', 'error');
                 return null;
             }
             const start = new Date(`${form.start_date}T${form.start_clock}`);
             const end = new Date(`${form.end_date}T${form.end_clock}`);
             if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+                this.setEventFormError(formKey, '__all__', '시간 형식을 확인해 주세요.');
+                this.focusFirstEventFormError(formKey);
                 window.showToast('시간 형식을 확인해 주세요.', 'error');
                 return null;
             }
             if (end <= start) {
+                this.setEventFormError(formKey, 'end_time', '종료 시간은 시작 시간 이후여야 합니다.');
+                this.focusFirstEventFormError(formKey);
                 window.showToast('종료 시간은 시작 시간 이후여야 합니다.', 'error');
                 return null;
             }
@@ -4719,6 +4825,7 @@ function calendarApp() {
                 end_clock_auto: true,
                 color: 'indigo',
             };
+            this.clearEventFormErrors('create');
             this.selectedEvent = null;
             this.selectedTask = null;
             this.dayModalOpen = true;
@@ -4760,11 +4867,13 @@ function calendarApp() {
 
         async submitCreateEvent() {
             this.isSubmitting = true;
-            const eventTimes = this.buildEventTimes(this.createForm);
+            this.clearEventFormErrors('create');
+            const eventTimes = this.buildEventTimes(this.createForm, 'create');
             if (!eventTimes) {
                 this.isSubmitting = false;
                 return;
             }
+            const shouldReturnToSummary = this.agendaPanelMode === 'results' && !!String(this.agendaQuery || '').trim();
             const body = new URLSearchParams();
             body.set('title', this.createForm.title);
             body.set('note', this.createForm.note || '');
@@ -4785,6 +4894,11 @@ function calendarApp() {
                 });
                 const createdEventId = payload && payload.event ? String(payload.event.id || '') : '';
                 await this.refreshEvents();
+                if (shouldReturnToSummary) {
+                    this.agendaQuery = '';
+                    this.agendaPanelMode = 'summary';
+                    this.rebuildAgendaSections();
+                }
                 this.createModalOpen = false;
                 this.showDayOverview();
                 if (createdEventId) {
@@ -4797,12 +4911,13 @@ function calendarApp() {
                 window.showToast('일정을 저장했습니다.', 'success');
             } catch (err) {
                 const isValidationError = err.payload && err.payload.code === 'validation_error';
-                window.showToast(
-                    isValidationError
-                        ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
-                        : (err.message || '일정 저장에 실패했습니다.'),
-                    'error'
-                );
+                if (isValidationError) {
+                    this.setEventFormErrors('create', err.payload.errors || {});
+                    this.focusFirstEventFormError('create');
+                    window.showToast('입력값 확인', 'error');
+                    return;
+                }
+                window.showToast(err.message || '일정 저장에 실패했습니다.', 'error');
             } finally {
                 this.isSubmitting = false;
             }
@@ -5017,6 +5132,7 @@ function calendarApp() {
                 end_clock_auto: hasTime ? this.isOneHourTimedRange(this.selectedEvent.start_time, this.selectedEvent.end_time) : true,
                 color: this.selectedEvent.color || 'indigo',
             };
+            this.clearEventFormErrors('edit');
             this.dayModalOpen = true;
             this.dayModalMode = 'edit';
             this.editModalOpen = false;
@@ -5026,7 +5142,8 @@ function calendarApp() {
         async submitEditEvent() {
             if (!this.selectedEvent) return;
             this.isEditing = true;
-            const eventTimes = this.buildEventTimes(this.editForm);
+            this.clearEventFormErrors('edit');
+            const eventTimes = this.buildEventTimes(this.editForm, 'edit');
             if (!eventTimes) {
                 this.isEditing = false;
                 return;
@@ -5059,12 +5176,13 @@ function calendarApp() {
                 window.showToast('일정을 수정했습니다.', 'success');
             } catch (err) {
                 const isValidationError = err.payload && err.payload.code === 'validation_error';
-                window.showToast(
-                    isValidationError
-                        ? '입력값을 확인해 주세요. 종료 시간은 시작 시간 이후여야 합니다.'
-                        : (err.message || '일정 수정에 실패했습니다.'),
-                    'error'
-                );
+                if (isValidationError) {
+                    this.setEventFormErrors('edit', err.payload.errors || {});
+                    this.focusFirstEventFormError('edit');
+                    window.showToast('입력값 확인', 'error');
+                    return;
+                }
+                window.showToast(err.message || '일정 수정에 실패했습니다.', 'error');
             } finally {
                 this.isEditing = false;
             }

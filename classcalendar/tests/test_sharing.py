@@ -70,6 +70,5 @@ class CalendarSharingTests(TestCase):
 
     def test_main_view_uses_workspace_cache_headers(self):
         response = self.client.get(reverse("classcalendar:main"))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("home"), response["Location"])
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")

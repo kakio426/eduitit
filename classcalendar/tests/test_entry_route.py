@@ -21,11 +21,13 @@ class CalendarEntryRouteTests(TestCase):
             defaults={"nickname": "entry_user", "role": "school"},
         )
 
-    def test_main_route_redirects_to_home_calendar(self):
+    def test_main_route_renders_independent_calendar_center(self):
         response = self.client.get(reverse("classcalendar:main"))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("home"), response["Location"])
-        self.assertIn("#home-calendar", response["Location"])
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-classcalendar-center="true"', content)
+        self.assertIn('data-classcalendar-embed-mode="page"', content)
 
     def test_entry_route_redirects_to_home_calendar(self):
         response = self.client.get(reverse("classcalendar:entry"))

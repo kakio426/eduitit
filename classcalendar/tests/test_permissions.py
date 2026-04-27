@@ -208,6 +208,11 @@ class PermissionTest(TestCase):
         self.assertIn("x-show=\"agendaPanelMode === 'results'\"", agenda_panel)
         self.assertIn("getAgendaSummaryDateLabel()", agenda_panel)
         self.assertIn("getAgendaSummaryItems()", agenda_panel)
+        self.assertIn('for="calendar-create-title"', content)
+        self.assertIn('id="calendar-create-title"', content)
+        self.assertIn("createFormErrors", content)
+        self.assertIn("setEventFormErrors('create'", content)
+        self.assertIn("focusFirstEventFormError('create')", content)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('today')\"", agenda_panel)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('week')\"", agenda_panel)
         self.assertIn("@click.prevent.stop=\"setAgendaScope('month')\"", agenda_panel)
@@ -338,7 +343,7 @@ class PermissionTest(TestCase):
         self.assertIn("markEventFormEndManual('edit')", content)
 
     def test_legacy_today_memo_panel_route_redirects_to_home_surface(self):
-        response = self.client_teacher.get(f"{reverse('classcalendar:main')}?panel=today-memos")
+        response = self.client_teacher.get(f"{reverse('calendar_main')}?panel=today-memos")
 
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("home"), response["Location"])
