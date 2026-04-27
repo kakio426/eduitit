@@ -33,8 +33,8 @@ class CalendarEventCreateForm(forms.Form):
         cleaned_data = super().clean()
         start_time = cleaned_data.get("start_time")
         end_time = cleaned_data.get("end_time")
-        if start_time and end_time and end_time < start_time:
-            raise forms.ValidationError("종료 시간은 시작 시간보다 같거나 이후여야 합니다.")
+        if start_time and end_time and end_time <= start_time:
+            raise forms.ValidationError("종료 시간은 시작 시간 이후여야 합니다.")
         return cleaned_data
 
 

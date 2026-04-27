@@ -53,6 +53,9 @@
         return protocol + '//' + window.location.host + '/' + rawPath.replace(/^\/+/, '');
     }
 
+    var HOME_CONVERSATION_SOCKET_MAX_RETRIES = 2;
+    var HOME_CONVERSATION_SOCKET_RETRY_DELAY_MS = 3000;
+
     function quickdropFileExtensionLabel(filename) {
         var name = String(filename || '').trim();
         var parts = name.split('.');
@@ -735,6 +738,8 @@
             agentConversationContext: null,
             isSharingAgentPreviewToRoom: false,
             homeConversationSocket: null,
+            homeConversationSocketRetryCount: 0,
+            homeConversationSocketRetryTimer: 0,
             homeActiveRoomSocket: null,
             homeActiveRoomSocketId: '',
             homeConversationRefreshTimer: 0,
@@ -1728,6 +1733,9 @@
                 }
                 if (this.activeModeKey === 'teacher-law' && this.teacherLawHasFollowupContext()) {
                     return '보내기';
+                }
+                if (this.activeModeKey === 'notice') {
+                    return '초안 만들기';
                 }
                 if (this.aiMessengerIsFlow('guided')) {
                     return '실행';
@@ -3484,6 +3492,10 @@
             },
 
             disconnectHomeConversationSocket: function () {
+                if (this.homeConversationSocketRetryTimer) {
+                    window.clearTimeout(this.homeConversationSocketRetryTimer);
+                    this.homeConversationSocketRetryTimer = 0;
+                }
                 if (this.homeConversationSocket && typeof this.homeConversationSocket.close === 'function') {
                     try {
                         this.homeConversationSocket.onclose = null;
@@ -3502,6 +3514,13 @@
                         || (workspaceConfig.conversations && workspaceConfig.conversations.user_ws_url)
                     )
                 );
+                var realtimeEnabled = Boolean(
+                    (this.agentConversationRail && this.agentConversationRail.realtime_enabled === true)
+                    || (workspaceConfig.conversations && workspaceConfig.conversations.realtime_enabled === true)
+                );
+                if (!realtimeEnabled) {
+                    return;
+                }
                 if (!socketUrl || typeof window.WebSocket !== 'function') {
                     return;
                 }
@@ -3509,6 +3528,14 @@
                 var self = this;
                 var socket = new window.WebSocket(socketUrl);
                 this.homeConversationSocket = socket;
+                socket.onopen = function () {
+                    self.homeConversationSocketRetryCount = 0;
+                };
+                socket.onerror = function () {
+                    if (self.homeConversationSocket === socket && socket.readyState !== window.WebSocket.CLOSED) {
+                        socket.close();
+                    }
+                };
                 socket.onmessage = function (event) {
                     try {
                         var data = JSON.parse(event.data || '{}');
@@ -3522,9 +3549,15 @@
                 socket.onclose = function () {
                     if (self.homeConversationSocket === socket) {
                         self.homeConversationSocket = null;
-                        window.setTimeout(function () {
+                        if (self.homeConversationSocketRetryCount >= HOME_CONVERSATION_SOCKET_MAX_RETRIES) {
+                            return;
+                        }
+                        self.homeConversationSocketRetryCount += 1;
+                        var retryDelay = HOME_CONVERSATION_SOCKET_RETRY_DELAY_MS * self.homeConversationSocketRetryCount;
+                        self.homeConversationSocketRetryTimer = window.setTimeout(function () {
+                            self.homeConversationSocketRetryTimer = 0;
                             self.connectHomeConversationSocket();
-                        }, 1200);
+                        }, retryDelay);
                     }
                 };
             },
@@ -7761,7 +7794,9 @@
                         service_key: targetMode.service_key || '',
                         workflow_keys: Array.isArray(targetMode.workflow_keys) ? targetMode.workflow_keys : [],
                         tacit_rule_keys: Array.isArray(targetMode.tacit_rule_keys) ? targetMode.tacit_rule_keys : [],
-                        context_questions: Array.isArray(workspaceConfig.context_questions) ? workspaceConfig.context_questions : [],
+                        context_questions: Array.isArray(targetMode.context_questions)
+                            ? targetMode.context_questions
+                            : (Array.isArray(workspaceConfig.context_questions) ? workspaceConfig.context_questions : []),
                         signal_sources: Array.isArray(workspaceConfig.signal_sources) ? workspaceConfig.signal_sources : [],
                         conversation_key: trimLine(context.conversation_key),
                         room_id: trimLine(context.room_id),
@@ -7806,6 +7841,7 @@
                 var activeModeAtResult = '';
                 var activeModeStateAtResult = null;
                 var contextSnapshot = null;
+                var submittedText = text;
                 if (!modeKey) {
                     this.showIdlePreview();
                     return;
@@ -7937,6 +7973,11 @@
                         if (activeModeAtResult === modeKey) {
                             this.showIdlePreview();
                             this.isAgentLoading = false;
+                            if (!trimLine(this.workspaceInput)) {
+                                this.workspaceInput = submittedText;
+                                this.handleActiveAiComposerInput();
+                                this.scheduleAiComposerResize();
+                            }
                         }
                         this.abortChatHistoryEntry(historyEntryId, error && error.message ? error.message : '', {
                             activate: activeModeAtResult === modeKey,

@@ -133,7 +133,7 @@ def _reverse_calendar_surface(alias_name, fallback_name):
     return ""
 
 
-def _build_home_calendar_surface_url(request, *, include_request_state=True):
+def _build_home_calendar_surface_url(request, *, include_request_state=True, force_manage=False):
     home_url = reverse("home")
     preserved_pairs = []
     if include_request_state:
@@ -145,6 +145,8 @@ def _build_home_calendar_surface_url(request, *, include_request_state=True):
             key == "focus" for key, _ in preserved_pairs
         ):
             preserved_pairs.append(("focus", "memos"))
+    if force_manage:
+        preserved_pairs.append(("calendar_manage", "1"))
     query_string = urlencode(preserved_pairs, doseq=True)
     if query_string:
         return f"{home_url}?{query_string}#{HOME_CALENDAR_ANCHOR}"
@@ -172,7 +174,7 @@ def _prime_calendar_surface_state(request):
 
 def _redirect_to_home_calendar_surface(request):
     _prime_calendar_surface_state(request)
-    response = redirect(_build_home_calendar_surface_url(request))
+    response = redirect(_build_home_calendar_surface_url(request, force_manage=True))
     return _apply_workspace_cache_headers(response)
 
 
@@ -3559,6 +3561,8 @@ def build_calendar_surface_context(
         "message_capture_urls_json": message_capture_ui["urls"],
         "messagebox_home_card": messagebox_home_card,
         "calendar_page_variant": page_variant,
+        "home_surface_allows_manage": normalized_surface != "home"
+        or _parse_bool_value(request.GET.get("calendar_manage", "")),
         "today_workspace": today_workspace,
         "today_url": today_url,
         "today_focus": today_focus,

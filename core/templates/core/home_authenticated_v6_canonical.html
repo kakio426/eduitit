@@ -19,7 +19,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen home-v6-page" data-home-layout-version="v6">
+<div class="min-h-screen home-v6-page" data-home-layout-version="v6" data-home-user-mode="{{ home_user_mode|default:'guest' }}">
     <div class="mx-auto max-w-[1760px]" data-home-v6-page-frame="true" style="padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);">
         <main class="min-w-0 px-3 pb-8 pt-0 sm:px-4 md:px-5 lg:px-5 xl:px-6 2xl:px-6">
             <div
@@ -174,8 +174,8 @@
                         {% endif %}
                     </article>
                     {% elif mobile_section == 'calendar' %}
+                    {% if home_user_mode == 'guest' %}
                     <section class="home-v6-mobile-calendar-section" data-home-v6-calendar-panel="mobile">
-                        {% if home_user_mode == 'guest' %}
                         <div class="home-v6-card">
                             <div class="mb-4">
                                 <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">오늘 시작</p>
@@ -201,10 +201,8 @@
                             </div>
                             {% endif %}
                         </div>
-                        {% else %}
-                        {% include 'core/partials/home_v6_calendar_panel.html' %}
-                        {% endif %}
                     </section>
+                    {% endif %}
                     <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
                         {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
                     </section>

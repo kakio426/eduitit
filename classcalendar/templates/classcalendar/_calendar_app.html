@@ -1666,10 +1666,6 @@
                                 <template x-if="homeMobileVisibleSelectedItems.length === 0">
                                     <div class="classcalendar-home-mobile-agenda-empty">
                                         <p class="classcalendar-home-mobile-agenda-empty-copy">이 날은 비어 있습니다.</p>
-                                        <button type="button" @click="openCreateModalForSelectedDate()" class="classcalendar-home-mobile-agenda-empty-action">
-                                            새 일정
-                                            <i class="fa-solid fa-arrow-right text-[10px]" aria-hidden="true"></i>
-                                        </button>
                                     </div>
                                 </template>
 
@@ -2316,7 +2312,11 @@
                     <div class="min-w-0">
                         <p class="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500" x-text="dayModalEyebrow()"></p>
                         <h3 class="classcalendar-copy mt-1 text-2xl font-black text-slate-900" x-text="dayModalTitle()"></h3>
-                        <p class="mt-1 text-sm font-medium text-slate-500" x-text="dayModalSubtitle()"></p>
+                        <p
+                            x-show="dayModalMode === 'overview' || dayModalMode === 'detail'"
+                            class="mt-1 text-sm font-medium text-slate-500"
+                            x-text="dayModalSubtitle()"
+                        ></p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button
@@ -2338,7 +2338,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="mt-4 flex flex-wrap items-center gap-2">
+                <div x-show="dayModalMode === 'overview'" class="mt-4 flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-bold text-indigo-700">일정 <span class="ml-1.5" x-text="getSelectedDateEventCount()"></span></span>
                     <span x-show="getSelectedDateDirectHubCount() > 0" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">연결 항목 <span class="ml-1.5" x-text="getSelectedDateDirectHubCount()"></span></span>
                     <button
@@ -2355,9 +2355,8 @@
             <div class="overflow-y-auto px-5 py-5 sm:px-6">
                 <div x-show="dayModalMode === 'overview'" class="space-y-6">
                     <div x-show="getSelectedDateEventCount() === 0 && getSelectedDateDirectHubCount() === 0" class="rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
-                        <p class="text-base font-black text-slate-900">등록된 내용이 없습니다.</p>
-                        <p class="mt-2 text-sm text-slate-500">이 날짜에 필요한 일은 새 일정으로 바로 남길 수 있어요.</p>
-                        <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정 추가</button>
+                        <p class="text-base font-black text-slate-900">비어 있습니다.</p>
+                        <button type="button" @click="openCreateModalForSelectedDate($event)" class="mt-4 inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">새 일정</button>
                     </div>
 
                     <section x-show="getSelectedDateDirectHubCount() > 0" class="space-y-3">
@@ -2473,7 +2472,9 @@
                         </div>
                         <div class="flex flex-wrap justify-end gap-2 pt-2">
                             <button type="button" @click="showDayOverview()" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">목록으로</button>
-                            <button type="submit" :disabled="isSubmitting" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">저장</button>
+                            <button type="submit" :disabled="isSubmitting" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">
+                                <span x-text="isSubmitting ? '저장 중' : '저장'">저장</span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -2711,7 +2712,7 @@ function calendarApp() {
         agendaPanelMode: 'summary',
         agendaScope: 'month',
         agendaDateSections: [],
-        surfaceAllowsManage: true,
+        surfaceAllowsManage: {{ home_surface_allows_manage|yesno:"true,false" }},
         integrationSettings: {
             collect_deadline_enabled: true,
             consent_expiry_enabled: true,

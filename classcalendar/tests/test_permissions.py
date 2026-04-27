@@ -492,6 +492,18 @@ class PermissionTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "validation_error")
 
+    def test_create_event_rejects_equal_time_range(self):
+        response = self.client_teacher.post(
+            reverse("classcalendar:api_create_event"),
+            {
+                "title": "Zero Length Event",
+                "start_time": "2026-03-01T10:00",
+                "end_time": "2026-03-01T10:00",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "validation_error")
+
     def test_create_event_without_active_classroom_creates_personal_event(self):
         client = Client()
         client.login(username="teacher", password="pw")

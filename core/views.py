@@ -1340,12 +1340,14 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
 
 
 def _build_home_v7_agent_conversations(request):
+    realtime_enabled = bool(getattr(settings, 'HOME_AGENT_CONVERSATION_REALTIME_ENABLED', False))
     empty_payload = {
         'title': '끼리끼리 채팅방',
         'workspace_name': '',
         'open_url': _safe_reverse('schoolcomm:main') or '',
         'refresh_url': _safe_reverse('home_agent_conversations') or '',
         'user_ws_url': '/schoolcomm/ws/users/me/',
+        'realtime_enabled': realtime_enabled,
         'items': (),
     }
     if request is None or not getattr(getattr(request, 'user', None), 'is_authenticated', False):
@@ -1372,6 +1374,7 @@ def _build_home_v7_agent_conversations(request):
                 'open_url': open_url,
                 'refresh_url': _safe_reverse('home_agent_conversations') or '',
                 'user_ws_url': '/schoolcomm/ws/users/me/',
+                'realtime_enabled': realtime_enabled,
                 'items': (),
             }
 
@@ -1421,6 +1424,7 @@ def _build_home_v7_agent_conversations(request):
             'open_url': open_url,
             'refresh_url': _safe_reverse('home_agent_conversations') or '',
             'user_ws_url': '/schoolcomm/ws/users/me/',
+            'realtime_enabled': realtime_enabled,
             'renderer_key': 'human-chat',
             'items': tuple(items),
         }
@@ -1671,17 +1675,25 @@ def _build_home_v7_context_router_preview(
         starter_items = resolve_home_agent_starter_items(definition, request=request)
         ui_options = resolve_home_agent_ui_options(definition, request=request)
         tool = tool_map.get(definition.tool_key) or {}
-        modes.append(
-            build_home_agent_mode_payload(
-                definition,
-                product_id=tool.get('product_id'),
-                links=links,
-                starter_items=starter_items,
-                ui_options=ui_options,
-                workflow_keys=workflow_keys,
-                tacit_rule_keys=tacit_rule_keys,
-            )
+        mode_context_questions = []
+        seen_mode_context_questions = set()
+        for workflow in mode_workflows:
+            for question in workflow.get('required_context_questions', ()):
+                normalized_question = str(question or '').strip()
+                if normalized_question and normalized_question not in seen_mode_context_questions:
+                    seen_mode_context_questions.add(normalized_question)
+                    mode_context_questions.append(normalized_question)
+        mode_payload = build_home_agent_mode_payload(
+            definition,
+            product_id=tool.get('product_id'),
+            links=links,
+            starter_items=starter_items,
+            ui_options=ui_options,
+            workflow_keys=workflow_keys,
+            tacit_rule_keys=tacit_rule_keys,
         )
+        mode_payload['context_questions'] = tuple(mode_context_questions[:4])
+        modes.append(mode_payload)
 
     context_questions = []
     seen_questions = set()
