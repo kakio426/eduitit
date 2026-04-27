@@ -681,6 +681,8 @@
             isSendingQuickdrop: false,
             quickdropDragDepth: 0,
             isQuickdropDragActive: false,
+            isQuickdropSyncing: false,
+            quickdropSnapshotTimer: 0,
             isTtsReading: false,
             workspaceSpeechRecognition: null,
             isWorkspaceVoiceListening: false,
@@ -805,6 +807,7 @@
                 window.addEventListener('beforeunload', function () {
                     self.disconnectHomeConversationSocket();
                     self.disconnectActiveRoomSocket();
+                    self.stopQuickdropSnapshotPolling();
                 });
                 window.addEventListener('resize', function () {
                     self.syncShellModeMenuPosition();
@@ -812,6 +815,9 @@
                 window.addEventListener('scroll', function () {
                     self.syncShellModeMenuPosition();
                 }, true);
+                if (this.activeModeKey === 'quickdrop') {
+                    this.startQuickdropSnapshotPolling();
+                }
             },
 
             revealHomeAgentLimitNavChip: function (href, label) {
@@ -1305,6 +1311,18 @@
                 return Boolean(item.disabled);
             },
 
+            chatHistoryUserLabel: function (item) {
+                var bubble = item && item.userBubble && typeof item.userBubble === 'object' ? item.userBubble : {};
+                var label = trimLine(bubble.senderLabel || '') || '나';
+                return label.length > 2 ? label.slice(0, 2) : label;
+            },
+
+            chatHistoryAssistantSilent: function (item) {
+                var entry = item && typeof item === 'object' ? item : {};
+                var result = entry.aiResult && typeof entry.aiResult === 'object' ? entry.aiResult : {};
+                return Boolean(result.silent && !entry.pending && !entry.failed);
+            },
+
             buildChatHistoryActionContext: function (overrides) {
                 return this.normalizeModeState(Object.assign({
                     workspaceInput: this.workspaceInput,
@@ -1694,7 +1712,7 @@
 
             workspaceShellSubmitLabel: function () {
                 if (this.aiMessengerIsFlow('direct-send')) {
-                    return this.isSendingQuickdrop ? '보내는 중' : '실행';
+                    return this.quickdropSubmitLabel();
                 }
                 if (this.aiMessengerIsFlow('pipeline')) {
                     return (this.isSavingMessageSave || this.isExtractingMessageSave || this.isCommittingMessageSave) ? '처리 중' : '실행';
@@ -1969,24 +1987,30 @@
                 this.resetActiveAiChat();
             },
 
-            startChatHistoryEntry: function (userText, modeKey, modeLabel) {
+            startChatHistoryEntry: function (userText, modeKey, modeLabel, options) {
                 try {
                     var text = trimLine(userText);
                     var dateMeta;
+                    var settings = options && typeof options === 'object' ? options : {};
+                    var userBubbleKind = trimLine(settings.userBubbleKind || 'text') || 'text';
                     if (!text) {
                         return '';
                     }
-                    dateMeta = this.buildChatHistoryDateMeta();
+                    dateMeta = this.buildChatHistoryDateMeta(settings.createdAt || '');
                     var entry = {
-                        id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+                        id: trimLine(settings.entryId || '') || (String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8)),
                         createdAt: dateMeta.createdAt,
                         dateKey: dateMeta.dateKey,
                         dateLabel: dateMeta.dateLabel,
                         modeKey: modeKey || this.activeModeKey,
                         modeLabel: modeLabel || ((this.activeMode && this.activeMode.label) || ''),
                         userBubble: {
-                            kind: 'text',
+                            kind: userBubbleKind,
                             text: text,
+                            senderLabel: trimLine(settings.senderLabel || '') || '나',
+                            downloadUrl: trimLine(settings.downloadUrl || ''),
+                            previewUrl: trimLine(settings.previewUrl || ''),
+                            quickdropItemId: trimLine(settings.quickdropItemId || ''),
                         },
                         aiResult: {
                             title: '',
@@ -2002,7 +2026,7 @@
                         actionContext: this.buildChatHistoryActionContext({
                             workspaceInput: '',
                         }),
-                        pending: true,
+                        pending: settings.pending === false ? false : true,
                         failed: false,
                     };
                     this.chatHistory.push(entry);
@@ -2315,6 +2339,7 @@
                         actionLabel: actionLabel,
                         actions: [],
                         cards: [],
+                        silent: Boolean(finalizeOptions.silent),
                     };
                     result.cards = Array.isArray(finalizeOptions.cards)
                         ? finalizeOptions.cards.slice(0, 2)
@@ -5546,8 +5571,236 @@
                         : (normalizedKind === 'image' ? '사진 전송 완료' : '파일 전송 완료'),
                     summary: '',
                     sections: [],
-                    note: '전송함에서 확인',
+                    note: '연결 기기에 표시됨',
                 });
+            },
+
+            quickdropSnapshotUrl: function (mode) {
+                var targetMode = mode && typeof mode === 'object' ? mode : this.activeMode;
+                return trimLine(targetMode.snapshot_url || (targetMode.links && targetMode.links.snapshot_url) || '');
+            },
+
+            quickdropItemId: function (item) {
+                return trimLine(item && item.id);
+            },
+
+            quickdropItemBubbleKind: function (item) {
+                var kind = trimLine(item && item.kind).toLowerCase();
+                if (kind === 'image') {
+                    return 'image';
+                }
+                if (kind === 'file') {
+                    return 'file';
+                }
+                return 'text';
+            },
+
+            quickdropItemBubbleText: function (item) {
+                var kind = this.quickdropItemBubbleKind(item);
+                if (kind === 'text') {
+                    return trimLine(item && item.text);
+                }
+                return trimLine(item && item.filename) || (kind === 'image' ? '사진' : '파일');
+            },
+
+            quickdropHistoryEntryIdForItem: function (item) {
+                var itemId = this.quickdropItemId(item);
+                return itemId ? 'quickdrop-item-' + itemId : '';
+            },
+
+            findQuickdropHistoryIndexByItemId: function (itemId) {
+                var targetId = trimLine(itemId);
+                var entryId = targetId ? 'quickdrop-item-' + targetId : '';
+                if (!targetId || !Array.isArray(this.chatHistory)) {
+                    return -1;
+                }
+                for (var i = 0; i < this.chatHistory.length; i++) {
+                    var entry = this.chatHistory[i] || {};
+                    var bubble = entry.userBubble && typeof entry.userBubble === 'object' ? entry.userBubble : {};
+                    if (trimLine(bubble.quickdropItemId || '') === targetId || trimLine(entry.id || '') === entryId) {
+                        return i;
+                    }
+                }
+                return -1;
+            },
+
+            updateQuickdropHistoryEntryFromItem: function (entryId, item, senderLabel) {
+                var itemId = this.quickdropItemId(item);
+                if (!entryId || !itemId || !Array.isArray(this.chatHistory)) {
+                    return;
+                }
+                for (var i = this.chatHistory.length - 1; i >= 0; i--) {
+                    if (this.chatHistory[i] && this.chatHistory[i].id === entryId) {
+                        this.chatHistory[i].userBubble = Object.assign({}, this.chatHistory[i].userBubble || {}, {
+                            kind: this.quickdropItemBubbleKind(item),
+                            text: this.quickdropItemBubbleText(item),
+                            senderLabel: trimLine(senderLabel || (item && item.sender_label) || '') || '나',
+                            downloadUrl: trimLine(item && item.download_url),
+                            previewUrl: trimLine(item && item.preview_url),
+                            quickdropItemId: itemId,
+                        });
+                        break;
+                    }
+                }
+            },
+
+            latestQuickdropItemFromSession: function (session) {
+                var payload = session && typeof session === 'object' ? session : {};
+                var items = Array.isArray(payload.today_items) ? payload.today_items : [];
+                if (items.length) {
+                    return items[items.length - 1];
+                }
+                if (!trimLine(payload.current_kind || '') || trimLine(payload.current_kind || '') === 'empty') {
+                    return null;
+                }
+                return {
+                    id: trimLine(payload.id || '') ? 'session-' + trimLine(payload.id) : '',
+                    kind: payload.current_kind,
+                    text: payload.current_text,
+                    filename: payload.current_filename,
+                    mime_type: payload.current_mime_type,
+                    download_url: payload.current_download_url,
+                    preview_url: payload.current_preview_url,
+                    created_at: payload.updated_at || payload.last_activity_at,
+                };
+            },
+
+            upsertQuickdropHistoryItem: function (item) {
+                var payload = item && typeof item === 'object' ? item : {};
+                var itemId = this.quickdropItemId(payload);
+                var text = this.quickdropItemBubbleText(payload);
+                var kind = this.quickdropItemBubbleKind(payload);
+                var senderLabel = trimLine(payload.sender_label || '') || '기기';
+                var idx;
+                var entryId;
+                var dateMeta;
+                if (!itemId || !text) {
+                    return;
+                }
+                idx = this.findQuickdropHistoryIndexByItemId(itemId);
+                if (idx >= 0) {
+                    this.chatHistory[idx].userBubble = Object.assign({}, this.chatHistory[idx].userBubble || {}, {
+                        kind: kind,
+                        text: text,
+                        senderLabel: senderLabel,
+                        downloadUrl: trimLine(payload.download_url || ''),
+                        previewUrl: trimLine(payload.preview_url || ''),
+                        quickdropItemId: itemId,
+                    });
+                    if (this.chatHistory[idx].aiResult && typeof this.chatHistory[idx].aiResult === 'object') {
+                        this.chatHistory[idx].aiResult.silent = true;
+                    }
+                    this.chatHistory[idx].pending = false;
+                    this.chatHistory[idx].failed = false;
+                    return;
+                }
+
+                entryId = this.quickdropHistoryEntryIdForItem(payload);
+                dateMeta = this.buildChatHistoryDateMeta(payload.created_at || '');
+                this.chatHistory.push({
+                    id: entryId,
+                    createdAt: dateMeta.createdAt,
+                    dateKey: dateMeta.dateKey,
+                    dateLabel: dateMeta.dateLabel,
+                    modeKey: 'quickdrop',
+                    modeLabel: '바로 전송',
+                    userBubble: {
+                        kind: kind,
+                        text: text,
+                        senderLabel: senderLabel,
+                        downloadUrl: trimLine(payload.download_url || ''),
+                        previewUrl: trimLine(payload.preview_url || ''),
+                        quickdropItemId: itemId,
+                    },
+                    aiResult: {
+                        title: '',
+                        lines: [],
+                        note: '',
+                        openHref: '',
+                        openLabel: '',
+                        actionKind: '',
+                        actionLabel: '',
+                        actions: [],
+                        cards: [],
+                        silent: true,
+                    },
+                    actionContext: this.buildChatHistoryActionContext({
+                        workspaceInput: '',
+                    }),
+                    pending: false,
+                    failed: false,
+                });
+                if (this.chatHistory.length > 50) {
+                    this.chatHistory = this.chatHistory.slice(-50);
+                }
+            },
+
+            applyQuickdropSessionToChat: function (session) {
+                var payload = session && typeof session === 'object' ? session : {};
+                var items = Array.isArray(payload.today_items) ? payload.today_items : [];
+                var self = this;
+                if (!items.length) {
+                    return;
+                }
+                items.forEach(function (item) {
+                    self.upsertQuickdropHistoryItem(item);
+                });
+                this.scrollWorkspaceDialogueToBottom();
+            },
+
+            refreshQuickdropSnapshot: async function (options) {
+                var settings = options && typeof options === 'object' ? options : {};
+                var snapshotUrl = this.quickdropSnapshotUrl();
+                var response;
+                var payload;
+                if (!snapshotUrl || this.isQuickdropSyncing) {
+                    return;
+                }
+                this.isQuickdropSyncing = true;
+                try {
+                    response = await fetch(snapshotUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    payload = await response.json().catch(function () {
+                        return {};
+                    });
+                    if (!response.ok || payload.ok === false) {
+                        throw new Error(payload.error || payload.detail || payload.message || '기록을 불러오지 못했습니다.');
+                    }
+                    this.applyQuickdropSessionToChat(payload.session || {});
+                } catch (error) {
+                    if (!settings.quiet) {
+                        showFeedback(error && error.message ? error.message : '기록을 불러오지 못했습니다.', 'error');
+                    }
+                } finally {
+                    this.isQuickdropSyncing = false;
+                }
+            },
+
+            startQuickdropSnapshotPolling: function () {
+                var self = this;
+                this.stopQuickdropSnapshotPolling();
+                if (trimLine(this.activeModeKey || '') !== 'quickdrop' || !this.quickdropSnapshotUrl()) {
+                    return;
+                }
+                this.refreshQuickdropSnapshot({ quiet: true });
+                this.quickdropSnapshotTimer = window.setInterval(function () {
+                    if (trimLine(self.activeModeKey || '') !== 'quickdrop') {
+                        self.stopQuickdropSnapshotPolling();
+                        return;
+                    }
+                    self.refreshQuickdropSnapshot({ quiet: true });
+                }, 7000);
+            },
+
+            stopQuickdropSnapshotPolling: function () {
+                if (this.quickdropSnapshotTimer) {
+                    window.clearInterval(this.quickdropSnapshotTimer);
+                    this.quickdropSnapshotTimer = 0;
+                }
             },
 
             sendQuickdropChat: async function () {
@@ -5568,6 +5821,10 @@
                 var historyEntryId = '';
                 var quickdropPreviewMeta;
                 var activeModeAtResult = '';
+                var initialBubbleKind = queuedFile
+                    ? (String(queuedFile.type || '').indexOf('image/') === 0 ? 'image' : 'file')
+                    : 'text';
+                var latestItem;
 
                 if (!queuedFile && !text) {
                     this.quickdropErrorText = '보낼 내용을 넣어 주세요.';
@@ -5600,7 +5857,11 @@
                 historyEntryId = this.startChatHistoryEntry(
                     text || queuedFileName || '파일 전송',
                     modeKey,
-                    modeLabel
+                    modeLabel,
+                    {
+                        userBubbleKind: initialBubbleKind,
+                        senderLabel: '나',
+                    }
                 );
                 if (text) {
                     this.workspaceInput = '';
@@ -5654,6 +5915,10 @@
                     sentValue = sentKind === 'text'
                         ? trimLine(session.current_text || text)
                         : trimLine(session.current_filename || queuedFileName || (queuedFile && queuedFile.name) || '');
+                    latestItem = this.latestQuickdropItemFromSession(session);
+                    if (latestItem) {
+                        this.updateQuickdropHistoryEntryFromItem(historyEntryId, latestItem, '나');
+                    }
 
                     this.quickdropLastSentKind = sentKind;
                     this.quickdropLastSentText = sentKind === 'text' ? sentValue : '';
@@ -5677,9 +5942,9 @@
                             : (sentKind === 'image' ? '사진 전송 완료' : '파일 전송 완료'),
                         summary: '',
                         sections: [],
-                        note: '전송함에서 확인',
-                        confirmHref: this.buildModeContinueHref(mode),
-                        confirmLabel: trimLine(mode.after_action_label || mode.confirm_label || '전송함 보기'),
+                        note: '',
+                        confirmHref: '',
+                        confirmLabel: '',
                     }, quickdropPreviewMeta);
                     activeModeAtResult = trimLine(this.activeModeKey || '');
                     if (modeKey === activeModeAtResult) {
@@ -5691,6 +5956,10 @@
                         modeLabel: modeLabel,
                         preview: quickdropPreview,
                         previewMeta: quickdropPreviewMeta,
+                        silent: true,
+                        actions: [],
+                        openHref: '',
+                        openLabel: '',
                         context: this.buildChatHistoryActionContext({
                             agentPreview: quickdropPreview,
                             agentPreviewMeta: quickdropPreviewMeta,
@@ -5698,6 +5967,7 @@
                         }),
                         activate: modeKey === activeModeAtResult,
                     });
+                    this.applyQuickdropSessionToChat(session);
                     showFeedback(sentKind === 'text' ? '글을 보냈어요.' : '파일을 보냈어요.', 'success');
                     this.scrollWorkspaceDialogueToBottom();
                 } catch (error) {
@@ -7460,6 +7730,11 @@
                 this.restoreModeState(nextModeKey);
                 this.scheduleAiComposerResize();
                 this.scrollWorkspaceDialogueToBottom();
+                if (nextModeKey === 'quickdrop') {
+                    this.startQuickdropSnapshotPolling();
+                } else {
+                    this.stopQuickdropSnapshotPolling();
+                }
             },
 
             useExample: function (text) {

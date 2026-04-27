@@ -1437,10 +1437,10 @@ class HomeV2ViewTest(TestCase):
             for mode in workspace['modes']
         }
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-agent-mode-select="true"', content)
+        self.assertIn('home-v6-svc-nav', content)
+        self.assertIn('aria-label="AI 교무비서 서비스"', content)
         self.assertIn('id="home-v7-agent-workspace"', content)
         self.assertIn('id="home-v7-signal-layer"', content)
-        self.assertIn('서비스와 대화 찾기', content)
         self.assertIn('notice', mode_keys)
         self.assertIn('teacher-law', mode_keys)
         self.assertEqual(mode_map['notice']['renderer_key'], 'notice')
@@ -1450,6 +1450,7 @@ class HomeV2ViewTest(TestCase):
         self.assertEqual(mode_map['notice']['messenger_flow_key'], 'one-shot')
         self.assertEqual(mode_map['schedule']['messenger_flow_key'], 'guided')
         self.assertEqual(mode_map['quickdrop']['messenger_flow_key'], 'direct-send')
+        self.assertTrue(mode_map['quickdrop']['snapshot_url'])
         self.assertEqual(mode_map['message-save']['messenger_flow_key'], 'pipeline')
         self.assertIn('messenger_capabilities', mode_map['teacher-law'])
         self.assertIn('messenger_ui', mode_map['teacher-law'])

@@ -405,6 +405,15 @@
                         </div>
                     </div>
                 </div>
+                <input
+                    id="home-v6-agent-ai-quickdrop-file-input"
+                    type="file"
+                    class="sr-only"
+                    accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                    data-default-accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
+                    data-home-v6-agent-quickdrop-file-input="true"
+                    @change="queueQuickdropFileFromInput($event)"
+                >
                 <div
                     class="home-v6-limit-modal-backdrop"
                     x-cloak

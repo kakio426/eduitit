@@ -1317,6 +1317,7 @@ def _build_home_quickdrop_card(user, favorite_products, product_list):
         "open_url": reverse("quickdrop:open"),
         "manage_url": reverse("quickdrop:landing"),
         "history_url": history_url,
+        "snapshot_url": reverse("quickdrop:snapshot", kwargs={"slug": channel.slug}) if channel is not None else "",
         "send_text_url": reverse("quickdrop:send_text", kwargs={"slug": channel.slug}) if channel is not None else "",
         "send_file_url": reverse("quickdrop:send_file", kwargs={"slug": channel.slug}) if channel is not None else "",
         "shortcut_url": reverse("quickdrop:landing"),

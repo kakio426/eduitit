@@ -1,7 +1,6 @@
 <section
     class="home-v6-representative-section"
-    {% if agent_workspace_surface != 'mobile' %}data-home-v6-representative-services="true"{% endif %}
-    data-home-v6-agent-workspace="true"
+    {% if agent_workspace_surface != 'mobile' %}data-home-v6-representative-services="true" data-home-v6-agent-workspace="true"{% endif %}
 >
     <div class="home-v6-card home-v6-agent-card" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
         <div class="home-v6-agent-main" :class="{ 'is-shell-empty': !activeAiHasVisibleConversation() }">
@@ -567,17 +566,32 @@
                                         <p class="home-v6-agent-chat-text" x-text="item.userBubble.text"></p>
                                     </template>
                                     <template x-if="item.userBubble.kind !== 'text'">
-                                        <div class="home-v6-agent-ai-file-pill">
-                                            <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
-                                                <i class="fa-solid fa-paperclip"></i>
+                                        <div>
+                                            <a
+                                                class="home-v6-agent-ai-file-pill"
+                                                x-cloak
+                                                x-show="item.userBubble.downloadUrl"
+                                                :href="item.userBubble.downloadUrl"
+                                                target="_blank"
+                                                rel="noopener"
+                                            >
+                                                <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </span>
+                                                <span x-text="item.userBubble.text"></span>
+                                            </a>
+                                            <span class="home-v6-agent-ai-file-pill" x-cloak x-show="!item.userBubble.downloadUrl">
+                                                <span class="home-v6-agent-ai-file-icon" aria-hidden="true">
+                                                    <i class="fa-solid fa-paperclip"></i>
+                                                </span>
+                                                <span x-text="item.userBubble.text"></span>
                                             </span>
-                                            <span x-text="item.userBubble.text"></span>
                                         </div>
                                     </template>
                                 </div>
-                                <div class="home-v6-chat-history-user-dot" aria-hidden="true">나</div>
+                                <div class="home-v6-chat-history-user-dot" aria-hidden="true" x-text="chatHistoryUserLabel(item)"></div>
                             </div>
-                            <div class="home-v6-agent-chat-row home-v6-agent-chat-row--assistant">
+                            <div class="home-v6-agent-chat-row home-v6-agent-chat-row--assistant" x-cloak x-show="!chatHistoryAssistantSilent(item)">
                                 <div class="home-v6-chat-history-ai-dot" aria-hidden="true">
                                     <i class="fa-solid fa-robot"></i>
                                 </div>
@@ -812,15 +826,6 @@
                         x-text="workspaceShellSubmitLabel()"
                     ></button>
 
-                    <input
-                        id="home-v6-agent-ai-quickdrop-file-input"
-                        type="file"
-                        class="sr-only"
-                        accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                        data-default-accept="image/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.zip"
-                        data-home-v6-agent-quickdrop-file-input="true"
-                        @change="queueQuickdropFileFromInput($event)"
-                    >
                 </div>
 
                 <p class="home-v6-agent-field-error" x-cloak x-show="activeAiErrorText()" x-text="activeAiErrorText()"></p>
