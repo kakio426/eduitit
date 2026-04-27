@@ -7,6 +7,8 @@
     }
 
     const STORAGE_KEY = root.dataset.storageKey || "colorbeat_pattern_v1";
+    const CARDS_KEY = root.dataset.cardsKey || "colorbeat_cards_v1";
+    const CARD_LIMIT = 6;
     const TRACKS = [
         { key: "kick", label: "쿵", name: "큰북", hue: "red" },
         { key: "snare", label: "짝", name: "작은북", hue: "orange" },
@@ -20,19 +22,63 @@
         [1, 1, 1, 1, 1, 1, 1, 1],
         [0, 0, 0, 1, 0, 0, 0, 1],
     ];
+    const KIT_LABELS = {
+        drum: "드럼",
+        sparkle: "반짝",
+        space: "우주",
+    };
+    const MAGIC_PATTERNS = [
+        {
+            name: "두근",
+            kit: "drum",
+            tempo: 115,
+            pattern: [
+                [1, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 1, 0],
+                [1, 1, 1, 1, 1, 1, 1, 1],
+                [0, 0, 0, 1, 0, 0, 0, 1],
+            ],
+        },
+        {
+            name: "반짝",
+            kit: "sparkle",
+            tempo: 125,
+            pattern: [
+                [1, 0, 0, 0, 1, 0, 0, 1],
+                [0, 0, 1, 0, 0, 1, 0, 0],
+                [1, 0, 1, 1, 0, 1, 1, 0],
+                [0, 1, 0, 0, 1, 0, 1, 0],
+            ],
+        },
+        {
+            name: "우주",
+            kit: "space",
+            tempo: 95,
+            pattern: [
+                [1, 0, 0, 1, 0, 0, 1, 0],
+                [0, 0, 0, 1, 0, 0, 0, 1],
+                [1, 0, 1, 0, 0, 1, 0, 1],
+                [0, 1, 0, 0, 0, 1, 0, 0],
+            ],
+        },
+    ];
 
     const els = {
         grid: document.getElementById("cb-grid"),
         play: document.getElementById("cb-play"),
         random: document.getElementById("cb-random"),
+        shake: document.getElementById("cb-shake"),
         clear: document.getElementById("cb-clear"),
         fullscreen: document.getElementById("cb-fullscreen"),
+        save: document.getElementById("cb-save"),
         status: document.getElementById("cb-status"),
         tempo: document.getElementById("cb-tempo"),
         tempoValue: document.getElementById("cb-tempo-value"),
         kitButtons: Array.from(document.querySelectorAll("[data-kit]")),
         codeToggle: document.getElementById("cb-code-toggle"),
         code: document.getElementById("cb-code"),
+        cardPanel: document.getElementById("cb-card-panel"),
+        cards: document.getElementById("cb-cards"),
     };
 
     const state = {
@@ -44,6 +90,8 @@
         scheduledId: null,
         audioReady: false,
         instruments: null,
+        cards: loadCards(),
+        stage: false,
     };
 
     function clonePattern(pattern) {
@@ -66,6 +114,31 @@
         }
     }
 
+    function loadCards() {
+        try {
+            const raw = window.localStorage.getItem(CARDS_KEY);
+            if (!raw) {
+                return [];
+            }
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            return parsed
+                .filter((card) => card && isValidPattern(card.pattern))
+                .slice(0, CARD_LIMIT)
+                .map((card, index) => ({
+                    id: typeof card.id === "string" ? card.id : `card-${Date.now()}-${index}`,
+                    name: typeof card.name === "string" && card.name.trim() ? card.name.trim() : `비트 ${index + 1}`,
+                    kit: card.kit === "sparkle" || card.kit === "space" ? card.kit : "drum",
+                    tempo: Number.isFinite(Number(card.tempo)) ? Number(card.tempo) : 110,
+                    pattern: card.pattern.map((row) => row.map((cell) => (cell ? 1 : 0))),
+                }));
+        } catch (error) {
+            return [];
+        }
+    }
+
     function isValidPattern(pattern) {
         return Array.isArray(pattern)
             && pattern.length === TRACKS.length
@@ -76,12 +149,22 @@
             ));
     }
 
-    function savePattern() {
+    function savePattern(statusText) {
         try {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.pattern));
-            setStatus(state.playing ? "재생 중" : "저장됨");
+            setStatus(state.playing ? "재생 중" : statusText || "저장됨");
         } catch (error) {
             setStatus("저장 실패");
+        }
+    }
+
+    function saveCards() {
+        try {
+            window.localStorage.setItem(CARDS_KEY, JSON.stringify(state.cards));
+            return true;
+        } catch (error) {
+            setStatus("저장 실패");
+            return false;
         }
     }
 
@@ -332,23 +415,29 @@
     }
 
     function renderPlayhead() {
-        if (!els.grid) {
-            return;
+        if (els.grid) {
+            els.grid.querySelectorAll(".cb-cell, .cb-track").forEach((node) => {
+                node.classList.remove("is-current");
+            });
+            if (state.playhead >= 0) {
+                els.grid.querySelectorAll(`[data-step="${state.playhead}"]`).forEach((cell) => {
+                    cell.classList.add("is-current");
+                });
+            }
         }
-        els.grid.querySelectorAll(".cb-cell, .cb-track").forEach((node) => {
-            node.classList.remove("is-current");
-        });
-        if (state.playhead < 0) {
-            return;
-        }
-        els.grid.querySelectorAll(`[data-step="${state.playhead}"]`).forEach((cell) => {
-            cell.classList.add("is-current");
-        });
+        renderCode();
     }
 
     function renderCode() {
         if (els.code) {
-            els.code.textContent = JSON.stringify(state.pattern);
+            const rows = state.pattern.map((row) => {
+                const bits = row.map((cell, step) => {
+                    const currentClass = state.playhead === step ? " is-current-code" : "";
+                    return `<span class="cb-code-bit${currentClass}">${cell ? 1 : 0}</span>`;
+                }).join(",");
+                return `[${bits}]`;
+            });
+            els.code.innerHTML = `[${rows.join(",")}]`;
         }
     }
 
@@ -358,24 +447,57 @@
         savePattern();
     }
 
-    function randomizePattern() {
-        const chances = [0.32, 0.24, 0.58, 0.22];
-        state.pattern = state.pattern.map((row, rowIndex) => (
-            row.map((_, step) => {
-                if (rowIndex === 0 && step % 4 === 0) {
-                    return 1;
+    function countOnCells(pattern) {
+        return pattern.reduce((total, row) => total + row.reduce((rowTotal, cell) => rowTotal + (cell ? 1 : 0), 0), 0);
+    }
+
+    function makeMagicPattern(magic) {
+        const pattern = clonePattern(magic.pattern);
+        pattern.forEach((row, rowIndex) => {
+            row.forEach((cell, step) => {
+                if (Math.random() < 0.16 && !(rowIndex === 0 && (step === 0 || step === 4))) {
+                    row[step] = cell ? 0 : 1;
                 }
-                return Math.random() < chances[rowIndex] ? 1 : 0;
-            })
-        ));
+            });
+        });
+        if (countOnCells(pattern) < 4) {
+            return clonePattern(magic.pattern);
+        }
+        return pattern;
+    }
+
+    function castMagic() {
+        const magic = MAGIC_PATTERNS[Math.floor(Math.random() * MAGIC_PATTERNS.length)];
+        state.pattern = makeMagicPattern(magic);
+        setKit(magic.kit);
+        if (els.tempo) {
+            els.tempo.value = String(magic.tempo);
+            updateTempo();
+        }
         renderCells();
-        savePattern();
+        savePattern(magic.name);
+    }
+
+    function shakePattern() {
+        const nextPattern = clonePattern(state.pattern);
+        const flips = countOnCells(nextPattern) === 0 ? 2 : 3;
+        for (let i = 0; i < flips; i += 1) {
+            const row = Math.floor(Math.random() * TRACKS.length);
+            const step = Math.floor(Math.random() * STEPS);
+            nextPattern[row][step] = nextPattern[row][step] ? 0 : 1;
+        }
+        if (countOnCells(nextPattern) === 0) {
+            nextPattern[0][0] = 1;
+        }
+        state.pattern = nextPattern;
+        renderCells();
+        savePattern("살짝");
     }
 
     function clearPattern() {
         state.pattern = TRACKS.map(() => Array(STEPS).fill(0));
         renderCells();
-        savePattern();
+        savePattern("지움");
     }
 
     function setKit(kit) {
@@ -391,7 +513,81 @@
         if (state.audioReady) {
             buildInstruments(kit);
         }
-        setStatus(kit === "drum" ? "드럼" : kit === "sparkle" ? "반짝" : "우주");
+        setStatus(KIT_LABELS[kit] || "소리");
+    }
+
+    function renderCards() {
+        if (!els.cardPanel || !els.cards) {
+            return;
+        }
+        els.cardPanel.hidden = state.cards.length === 0;
+        els.cards.innerHTML = "";
+        state.cards.forEach((card) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "cb-card";
+            button.setAttribute("aria-label", `${card.name} 불러오기`);
+
+            const name = document.createElement("span");
+            name.className = "cb-card-name";
+            name.textContent = card.name;
+            button.appendChild(name);
+
+            const mini = document.createElement("span");
+            mini.className = "cb-card-mini";
+            card.pattern.forEach((row) => {
+                row.forEach((cell) => {
+                    const dot = document.createElement("span");
+                    dot.className = `cb-card-dot${cell ? " is-on" : ""}`;
+                    mini.appendChild(dot);
+                });
+            });
+            button.appendChild(mini);
+            button.addEventListener("click", () => loadCard(card.id));
+            els.cards.appendChild(button);
+        });
+    }
+
+    function saveCard() {
+        const nextNumber = state.cards.length + 1;
+        const name = `${KIT_LABELS[state.kit] || "비트"} ${nextNumber}`;
+        const card = {
+            id: `card-${Date.now()}`,
+            name,
+            kit: state.kit,
+            tempo: state.tempo,
+            pattern: clonePattern(state.pattern),
+        };
+        state.cards = [card].concat(state.cards).slice(0, CARD_LIMIT);
+        if (saveCards()) {
+            renderCards();
+            setStatus("저장");
+        }
+    }
+
+    function loadCard(id) {
+        const card = state.cards.find((item) => item.id === id);
+        if (!card) {
+            return;
+        }
+        state.pattern = clonePattern(card.pattern);
+        setKit(card.kit);
+        if (els.tempo) {
+            els.tempo.value = String(card.tempo);
+            updateTempo();
+        }
+        renderCells();
+        savePattern(card.name);
+    }
+
+    function setStage(active) {
+        state.stage = active;
+        root.classList.toggle("is-stage", active);
+        if (els.fullscreen) {
+            els.fullscreen.textContent = active ? "나가기" : "무대";
+            els.fullscreen.classList.toggle("cb-button-stage", active);
+            els.fullscreen.setAttribute("aria-pressed", active ? "true" : "false");
+        }
     }
 
     function updateTempo() {
@@ -405,17 +601,33 @@
         }
     }
 
-    async function toggleFullscreen() {
+    async function toggleStage() {
         try {
-            if (document.fullscreenElement) {
-                await document.exitFullscreen();
+            if (state.stage) {
+                setStage(false);
+                if (document.fullscreenElement === root) {
+                    await document.exitFullscreen();
+                }
                 setStatus(state.playing ? "재생 중" : "준비");
-            } else if (root.requestFullscreen) {
+                return;
+            }
+            setStage(true);
+            setStatus("무대");
+            if (root.requestFullscreen && !document.fullscreenElement) {
                 await root.requestFullscreen();
-                setStatus("전체");
             }
         } catch (error) {
-            setStatus("전체 실패");
+            setStage(true);
+            setStatus("무대");
+        }
+    }
+
+    function syncStage() {
+        if (!document.fullscreenElement && state.stage) {
+            setStage(false);
+            setStatus(state.playing ? "재생 중" : "준비");
+        } else if (document.fullscreenElement === root) {
+            setStage(true);
         }
     }
 
@@ -434,13 +646,19 @@
             els.play.addEventListener("click", togglePlay);
         }
         if (els.random) {
-            els.random.addEventListener("click", randomizePattern);
+            els.random.addEventListener("click", castMagic);
+        }
+        if (els.shake) {
+            els.shake.addEventListener("click", shakePattern);
         }
         if (els.clear) {
             els.clear.addEventListener("click", clearPattern);
         }
         if (els.fullscreen) {
-            els.fullscreen.addEventListener("click", toggleFullscreen);
+            els.fullscreen.addEventListener("click", toggleStage);
+        }
+        if (els.save) {
+            els.save.addEventListener("click", saveCard);
         }
         if (els.tempo) {
             els.tempo.addEventListener("input", updateTempo);
@@ -453,11 +671,14 @@
             els.codeToggle.setAttribute("aria-expanded", "false");
             els.codeToggle.addEventListener("click", toggleCode);
         }
+        document.addEventListener("fullscreenchange", syncStage);
         window.addEventListener("pagehide", stopPlayback);
     }
 
     renderGrid();
+    renderCards();
     updateTempo();
     updatePlayButton();
+    setStage(false);
     bindEvents();
 }());

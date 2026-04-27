@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<main id="cb-app" class="cb-root service-shell--compact" data-storage-key="colorbeat_pattern_v1">
+<main id="cb-app" class="cb-root service-shell--compact" data-storage-key="colorbeat_pattern_v1" data-cards-key="colorbeat_cards_v1">
     <header class="cb-topbar">
         <div class="cb-brand">
             <span class="cb-mark" aria-hidden="true">♪</span>
@@ -20,9 +20,10 @@
 
         <div class="cb-actions" aria-label="비트메이커 조작">
             <button id="cb-play" type="button" class="cb-button cb-button-primary">재생</button>
-            <button id="cb-random" type="button" class="cb-button">랜덤</button>
+            <button id="cb-random" type="button" class="cb-button">마법</button>
+            <button id="cb-shake" type="button" class="cb-button">살짝</button>
             <button id="cb-clear" type="button" class="cb-button">지우기</button>
-            <button id="cb-fullscreen" type="button" class="cb-button">전체</button>
+            <button id="cb-fullscreen" type="button" class="cb-button">무대</button>
         </div>
     </header>
 
@@ -57,8 +58,16 @@
     </section>
 
     <section class="cb-bottom">
-        <button id="cb-code-toggle" type="button" class="cb-button">코드</button>
+        <div class="cb-bottom-actions">
+            <button id="cb-code-toggle" type="button" class="cb-button">코드</button>
+            <button id="cb-save" type="button" class="cb-button">저장</button>
+        </div>
         <pre id="cb-code" class="cb-code" hidden>[[0,0,0,0,0,0,0,0]]</pre>
+    </section>
+
+    <section id="cb-card-panel" class="cb-cards" aria-label="비트 카드" hidden>
+        <div class="cb-card-title">내 비트</div>
+        <div id="cb-cards" class="cb-card-list"></div>
     </section>
 </main>
 {% endblock %}
