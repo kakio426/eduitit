@@ -307,6 +307,33 @@ class InsightPasteImportTest(TestCase):
         self.assertEqual(insight.tags, "#태그하나,#태그둘")
         self.assertRedirects(response, reverse("insights:detail", args=[insight.pk]))
 
+    def test_superuser_can_create_lecun_payload_from_paste_blob(self):
+        payload = (
+            "Title: 인공지능은 바보! 바보다! (얀 르쿤)\n\n"
+            "카테고리: YouTube Scrap\n\n"
+            "Video url: https://youtu.be/04EO9Qqi_Wk?si=Bc9WHKgm73hPcXDB\n\n"
+            "Thumbnail url: https://i.ytimg.com/vi/04EO9Qqi_Wk/maxresdefault.jpg\n\n"
+            "Content:\n"
+            "세계적인 AI 석학 얀 르쿤은 현재의 거대언어모델(LLM)이 인간 수준의 지능에 도달하는 데에는 "
+            "명확한 한계가 있다고 주장합니다.\n\n"
+            "Kakio note:\n"
+            "얀 르쿤의 통찰은 AI가 만능이라는 환상에서 벗어나 우리가 무엇을 준비해야 할지 명확한 방향을 제시해 줍니다.\n\n"
+            "Tags: #얀르쿤, #인공지능, #월드모델, #미래설계, #학습의본질, #AI시대의태도"
+        )
+
+        self.client.login(username="admin2", password="pw12345")
+        response = self.client.post(
+            reverse("insights:paste_create"),
+            {"raw_text": payload},
+            follow=True,
+        )
+
+        insight = Insight.objects.get(video_url="https://www.youtube.com/watch?v=04EO9Qqi_Wk")
+        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("insights:detail", args=[insight.pk]))
+        self.assertEqual(insight.thumbnail_url, "https://i.ytimg.com/vi/04EO9Qqi_Wk/maxresdefault.jpg")
+        self.assertEqual(insight.tags, "#얀르쿤,#인공지능,#월드모델,#미래설계,#학습의본질,#AI시대의태도")
+
     def test_non_superuser_cannot_access_paste_create(self):
         self.client.login(username="teacher2", password="pw12345")
         response = self.client.get(reverse("insights:paste_create"), follow=True)
