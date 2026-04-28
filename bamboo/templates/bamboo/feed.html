@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}교사 대나무숲 - Eduitit{% endblock %}
+
+{% block content %}
+<section class="service-shell service-shell--compact min-h-screen bg-gradient-to-b from-emerald-50 via-white to-teal-50 px-4 pb-20 md:px-6">
+    <div class="mx-auto max-w-7xl">
+        <header class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-black text-emerald-700">교사 대나무숲</p>
+                <h1 class="font-title text-3xl font-black text-slate-950 md:text-4xl">우화 게시판</h1>
+            </div>
+            <a href="{% url 'bamboo:write' %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
+                <i class="ph ph-pencil-simple-line text-lg"></i>
+                쓰기
+            </a>
+        </header>
+
+        <nav class="mb-5 flex flex-wrap gap-2" aria-label="우화 정렬">
+            <a href="{% url 'bamboo:feed' %}?sort=latest" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'latest' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="ph ph-clock"></i>
+                최신
+            </a>
+            <a href="{% url 'bamboo:feed' %}?sort=popular" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'popular' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="ph ph-heart"></i>
+                인기
+            </a>
+            <a href="{% url 'bamboo:feed' %}?sort=comments" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'comments' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="ph ph-chat-circle"></i>
+                댓글
+            </a>
+        </nav>
+
+        <div class="flex flex-col gap-6 xl:flex-row xl:items-start">
+            <main class="min-w-0 flex-1 space-y-4">
+                {% if stories %}
+                    {% for story in stories %}
+                    {% include "bamboo/partials/story_card.html" %}
+                    {% endfor %}
+                {% else %}
+                <div class="rounded-2xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
+                    <p class="text-lg font-black text-slate-900">아직 조용한 숲</p>
+                    <a href="{% url 'bamboo:write' %}" class="mt-4 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white">첫 우화 쓰기</a>
+                </div>
+                {% endif %}
+
+                {% if page_obj.has_other_pages %}
+                <nav class="flex items-center justify-center gap-2 pt-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-bold text-emerald-700">이전</a>
+                    {% endif %}
+                    <span class="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                    <a href="?sort={{ sort }}&page={{ page_obj.next_page_number }}" class="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm font-bold text-emerald-700">다음</a>
+                    {% endif %}
+                </nav>
+                {% endif %}
+            </main>
+
+            <div class="hidden xl:block">
+                {% include "core/partials/home_v6_sns_widget.html" with compact_posts=True surface_variant="home_rail" %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

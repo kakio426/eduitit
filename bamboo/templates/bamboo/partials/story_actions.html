@@ -1,0 +1,36 @@
+<div id="bamboo-story-actions" class="flex flex-wrap items-center gap-3">
+    {% if story.was_reported_now or story.is_hidden_by_report %}
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-black text-amber-800">
+        <i class="ph ph-flag"></i>
+        신고 접수됨
+    </span>
+    {% else %}
+    <form method="post" action="{% url 'bamboo:like' story.uuid %}" hx-post="{% url 'bamboo:like' story.uuid %}" hx-target="#bamboo-story-actions" hx-swap="outerHTML" hx-disabled-elt="find button">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="post">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-black transition {% if story.user_has_liked %}border-rose-200 bg-rose-50 text-rose-600{% else %}border-slate-200 bg-white text-slate-500 hover:text-rose-600{% endif %}">
+            <i class="{% if story.user_has_liked %}ph-fill{% else %}ph{% endif %} ph-heart"></i>
+            {{ story.like_count }}
+        </button>
+    </form>
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500">
+        <i class="ph ph-chat-circle"></i>
+        {{ story.comment_count }}
+    </span>
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500">
+        <i class="ph ph-eye"></i>
+        {{ story.view_count }}
+    </span>
+    {% if story.author_id != request.user.id %}
+    <form method="post" action="{% url 'bamboo:report' story.uuid %}" hx-post="{% url 'bamboo:report' story.uuid %}" hx-target="#bamboo-story-actions" hx-swap="outerHTML" hx-disabled-elt="find button">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="post">
+        <button type="submit" class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500 transition hover:text-amber-700">
+            <i class="ph ph-flag"></i>
+            신고
+        </button>
+    </form>
+    {% endif %}
+    {% endif %}
+</div>

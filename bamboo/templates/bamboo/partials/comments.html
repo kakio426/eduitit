@@ -1,0 +1,56 @@
+<section id="bamboo-comments" class="space-y-4">
+    <div class="flex items-center justify-between gap-3">
+        <h2 class="font-title text-2xl font-black text-slate-950">댓글 {{ story.comment_count }}</h2>
+    </div>
+
+    <form method="post" action="{% url 'bamboo:comment_create' story.uuid %}" hx-post="{% url 'bamboo:comment_create' story.uuid %}" hx-target="#bamboo-comments" hx-swap="outerHTML" hx-disabled-elt="find button" class="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+        {% csrf_token %}
+        <label for="bamboo-comment-body" class="sr-only">댓글</label>
+        <textarea id="bamboo-comment-body" name="body" maxlength="100" rows="3" class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100" placeholder="웃긴 한마디">{{ comment_form.body.value|default_if_none:"" }}</textarea>
+        {% if comment_form.body.errors %}
+        <p class="mt-2 text-sm font-bold text-red-600">{{ comment_form.body.errors.0 }}</p>
+        {% endif %}
+        <div class="mt-3 flex justify-end">
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700">
+                <i class="ph ph-paper-plane-tilt"></i>
+                등록
+            </button>
+        </div>
+    </form>
+
+    {% if comments %}
+    <div class="space-y-3">
+        {% for comment in comments %}
+        <article class="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-black text-emerald-700">{{ comment.anon_handle }}</span>
+                    {% if comment.author_id == story.author_id %}
+                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-black text-emerald-700">글쓴이</span>
+                    {% endif %}
+                    <time class="text-xs font-semibold text-slate-400">{{ comment.created_at|date:"m.d H:i" }}</time>
+                </div>
+                <div class="flex items-center gap-2">
+                    {% if comment.author_id == request.user.id or request.user.is_staff %}
+                    <form method="post" action="{% url 'bamboo:comment_delete' story.uuid comment.id %}" hx-post="{% url 'bamboo:comment_delete' story.uuid comment.id %}" hx-target="#bamboo-comments" hx-swap="outerHTML" hx-disabled-elt="find button">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs font-black text-slate-400 transition hover:text-red-600">삭제</button>
+                    </form>
+                    {% elif not comment.is_hidden_by_report %}
+                    <form method="post" action="{% url 'bamboo:comment_report' story.uuid comment.id %}" hx-post="{% url 'bamboo:comment_report' story.uuid comment.id %}" hx-target="#bamboo-comments" hx-swap="outerHTML" hx-disabled-elt="find button">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs font-black text-slate-400 transition hover:text-amber-700">신고</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="text-sm font-semibold leading-7 text-slate-700">{{ comment.body_masked }}</p>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 px-4 py-6 text-center text-sm font-black text-emerald-700">
+        첫 댓글
+    </div>
+    {% endif %}
+</section>

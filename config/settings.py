@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'happy_seed.apps.HappySeedConfig',
     'seed_quiz.apps.SeedQuizConfig',
     'noticegen.apps.NoticegenConfig',
+    'bamboo.apps.BambooConfig',
     'timetable.apps.TimetableConfig',
     'classcalendar.apps.ClasscalendarConfig',
     'messagebox.apps.MessageboxConfig',

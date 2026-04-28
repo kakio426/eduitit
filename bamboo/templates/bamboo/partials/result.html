@@ -1,0 +1,67 @@
+<section class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm md:p-6">
+    {% if error_message %}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+        <i class="ph ph-warning-circle text-base"></i>
+        {{ error_message }}
+    </div>
+    {% elif story %}
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <p class="text-xs font-black text-emerald-700">{{ story.anon_handle }}</p>
+            <h2 class="mt-1 text-2xl font-black text-slate-950">{{ story.display_title }}</h2>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            {% if story.author_id == request.user.id %}
+            <form method="post" action="{% url 'bamboo:visibility' story.uuid %}">
+                {% csrf_token %}
+                <input type="hidden" name="is_public" value="{% if story.is_public %}0{% else %}1{% endif %}">
+                <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50">
+                    <i class="ph {% if story.is_public %}ph-eye-slash{% else %}ph-eye{% endif %}"></i>
+                    {% if story.is_public %}비공개{% else %}공개{% endif %}
+                </button>
+            </form>
+            {% endif %}
+            {% if story.is_public and not story.is_hidden_by_report %}
+            <a href="{% url 'bamboo:post' story.uuid %}" class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50">
+                <i class="ph ph-chat-circle"></i>
+                게시글
+            </a>
+            {% endif %}
+            <a href="{% url 'bamboo:write' %}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
+                <i class="ph ph-arrow-clockwise"></i>
+                다시 쓰기
+            </a>
+        </div>
+    </div>
+
+    {% if story.is_hidden_by_report %}
+    <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">신고 검토 중</div>
+    {% endif %}
+
+    <article class="rounded-2xl border border-emerald-100 bg-emerald-50/50 px-4 py-4 text-base leading-8 text-slate-800 whitespace-pre-line md:px-5">{{ story.fable_body }}</article>
+
+    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <textarea id="bamboo-copy-{{ story.uuid }}" class="hidden">{{ story.fable_output }}</textarea>
+        <button
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700"
+            onclick="var field = document.getElementById('bamboo-copy-{{ story.uuid }}'); navigator.clipboard.writeText(field ? field.value : '').then(() => { this.querySelector('span').textContent = '복사됨'; }).catch(() => alert('복사에 실패했습니다. 직접 선택해 주세요.'));"
+        >
+            <i class="ph ph-copy"></i>
+            <span>복사</span>
+        </button>
+        <button
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-700 transition hover:bg-emerald-50"
+            onclick="navigator.clipboard.writeText(window.location.href).then(() => { this.querySelector('span').textContent = '링크 복사됨'; }).catch(() => alert('복사에 실패했습니다.'));"
+        >
+            <i class="ph ph-share-fat"></i>
+            <span>공유</span>
+        </button>
+    </div>
+    {% else %}
+    <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 text-center">
+        <p class="font-black text-slate-900">사연을 쓰면 여기에 우화가 나옵니다.</p>
+    </div>
+    {% endif %}
+</section>
