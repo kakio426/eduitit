@@ -10,23 +10,22 @@
                 <p class="text-sm font-black text-emerald-700">교사 대나무숲</p>
                 <h1 class="font-title text-3xl font-black text-slate-950 md:text-4xl">우화 게시판</h1>
             </div>
-            <a href="{% url 'bamboo:write' %}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
-                <i class="ph ph-pencil-simple-line text-lg"></i>
-                쓰기
+            <a href="{% url 'bamboo:write' %}" class="inline-flex h-12 min-w-24 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-black leading-none text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
+                <span>쓰기</span>
             </a>
         </header>
 
         <nav class="mb-5 flex flex-wrap gap-2" aria-label="우화 정렬">
-            <a href="{% url 'bamboo:feed' %}?sort=latest" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'latest' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
-                <i class="ph ph-clock"></i>
+            <a href="{% url 'bamboo:feed' %}?sort=latest" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-black leading-none transition {% if sort == 'latest' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="fa-solid fa-clock text-xs leading-none"></i>
                 최신
             </a>
-            <a href="{% url 'bamboo:feed' %}?sort=popular" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'popular' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
-                <i class="ph ph-heart"></i>
+            <a href="{% url 'bamboo:feed' %}?sort=popular" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-black leading-none transition {% if sort == 'popular' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="fa-solid fa-heart text-xs leading-none"></i>
                 인기
             </a>
-            <a href="{% url 'bamboo:feed' %}?sort=comments" class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black transition {% if sort == 'comments' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
-                <i class="ph ph-chat-circle"></i>
+            <a href="{% url 'bamboo:feed' %}?sort=comments" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-black leading-none transition {% if sort == 'comments' %}bg-slate-950 text-white{% else %}bg-white text-slate-500 hover:text-slate-900{% endif %}">
+                <i class="fa-solid fa-comment text-xs leading-none"></i>
                 댓글
             </a>
         </nav>
@@ -40,7 +39,7 @@
                 {% else %}
                 <div class="rounded-2xl border border-emerald-100 bg-white p-8 text-center shadow-sm">
                     <p class="text-lg font-black text-slate-900">아직 조용한 숲</p>
-                    <a href="{% url 'bamboo:write' %}" class="mt-4 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white">첫 우화 쓰기</a>
+                    <a href="{% url 'bamboo:write' %}" class="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black leading-none text-white">첫 우화 쓰기</a>
                 </div>
                 {% endif %}
 

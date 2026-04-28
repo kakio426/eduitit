@@ -13,14 +13,14 @@
                     <form method="post" action="{% url 'bamboo:delete' story.uuid %}" onsubmit="return confirm('이 우화를 삭제할까요?');">
                         {% csrf_token %}
                         <input type="hidden" name="source" value="post">
-                        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-black text-red-600 shadow-sm transition hover:bg-red-50">
-                            <i class="ph ph-trash text-base"></i>
+                        <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-sm font-black leading-none text-red-600 shadow-sm transition hover:bg-red-50">
+                            <i class="fa-solid fa-trash text-sm leading-none"></i>
                             삭제
                         </button>
                     </form>
                     {% endif %}
-                    <a href="{% url 'bamboo:feed' %}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-50">
-                        <i class="ph ph-list-bullets text-base"></i>
+                    <a href="{% url 'bamboo:feed' %}" class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-black leading-none text-emerald-700 shadow-sm transition hover:bg-emerald-50">
+                        <i class="fa-solid fa-list text-sm leading-none"></i>
                         목록
                     </a>
                 </div>
@@ -30,9 +30,14 @@
                     <span class="font-black text-emerald-700">{{ story.anon_handle }}</span>
                     <span>·</span>
                     <time>{{ story.created_at|date:"m.d H:i" }}</time>
+                    {% if story.is_hidden_by_report %}
+                    <span class="inline-flex h-6 items-center rounded-full bg-amber-50 px-2 text-xs font-black leading-none text-amber-800">검토 중</span>
+                    {% elif not story.is_public %}
+                    <span class="inline-flex h-6 items-center rounded-full bg-slate-100 px-2 text-xs font-black leading-none text-slate-600">비공개</span>
+                    {% endif %}
                 </div>
                 <div class="flex min-w-0 items-start gap-2">
-                    <i class="ph-fill ph-fire mt-1 shrink-0 text-xl text-rose-500 sm:text-2xl"></i>
+                    <i class="fa-solid fa-fire mt-1 shrink-0 text-xl leading-none text-rose-500 sm:text-2xl"></i>
                     <h1 class="min-w-0 flex-1 whitespace-normal font-title text-2xl font-black leading-snug text-slate-950 sm:text-3xl md:text-4xl" style="overflow-wrap: anywhere; word-break: break-all;">
                         {{ story.display_title }}
                     </h1>

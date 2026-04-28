@@ -6,7 +6,7 @@
     {% endif %}
     {% if error_message %}
     <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-        <i class="ph ph-warning-circle text-base"></i>
+        <i class="fa-solid fa-triangle-exclamation text-sm leading-none"></i>
         {{ error_message }}
     </div>
     {% if show_guest_signup_modal %}
@@ -17,26 +17,29 @@
         <div class="min-w-0">
             <p class="text-xs font-black text-emerald-700">{{ story.anon_handle }}</p>
             <h2 class="mt-1 max-w-full break-words text-2xl font-black leading-snug text-slate-950" style="overflow-wrap: anywhere; word-break: break-all;">{{ story.display_title }}</h2>
+            <p class="mt-2 inline-flex h-7 items-center justify-center rounded-full px-3 text-xs font-black leading-none {% if story.is_hidden_by_report %}bg-amber-50 text-amber-800{% elif story.is_public %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                {% if story.is_hidden_by_report %}검토 중{% elif story.is_public %}공개 중{% else %}비공개{% endif %}
+            </p>
         </div>
         <div class="flex flex-wrap gap-2">
-            {% if story.user_can_manage %}
+            {% if story.user_can_manage and not story.is_hidden_by_report %}
             <form method="post" action="{% url 'bamboo:visibility' story.uuid %}">
                 {% csrf_token %}
                 <input type="hidden" name="is_public" value="{% if story.is_public %}0{% else %}1{% endif %}">
-                <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50">
-                    <i class="ph {% if story.is_public %}ph-eye-slash{% else %}ph-eye{% endif %}"></i>
-                    {% if story.is_public %}비공개{% else %}공개{% endif %}
+                <button type="submit" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 text-xs font-black leading-none text-emerald-700 transition hover:bg-emerald-50">
+                    <i class="fa-solid {% if story.is_public %}fa-eye-slash{% else %}fa-eye{% endif %} text-xs leading-none"></i>
+                    {% if story.is_public %}숨기기{% else %}공개하기{% endif %}
                 </button>
             </form>
             {% endif %}
             {% if story.is_public and not story.is_hidden_by_report %}
-            <a href="{% url 'bamboo:post' story.uuid %}" class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-50">
-                <i class="ph ph-chat-circle"></i>
+            <a href="{% url 'bamboo:post' story.uuid %}" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 text-xs font-black leading-none text-emerald-700 transition hover:bg-emerald-50">
+                <i class="fa-solid fa-comment text-xs leading-none"></i>
                 게시글
             </a>
             {% endif %}
-            <a href="{% url 'bamboo:write' %}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">
-                <i class="ph ph-arrow-clockwise"></i>
+            <a href="{% url 'bamboo:write' %}" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black leading-none text-slate-700 transition hover:bg-slate-50">
+                <i class="fa-solid fa-rotate-right text-xs leading-none"></i>
                 다시 쓰기
             </a>
             {% if story.user_can_manage %}
@@ -51,8 +54,8 @@
             >
                 {% csrf_token %}
                 <input type="hidden" name="source" value="result">
-                <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-50">
-                    <i class="ph ph-trash"></i>
+                <button type="submit" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 text-xs font-black leading-none text-red-600 transition hover:bg-red-50">
+                    <i class="fa-solid fa-trash text-xs leading-none"></i>
                     삭제
                 </button>
             </form>
@@ -70,18 +73,18 @@
         <textarea id="bamboo-copy-{{ story.uuid }}" class="hidden">{{ story.fable_output }}</textarea>
         <button
             type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-black leading-none text-white transition hover:bg-emerald-700"
             onclick="var field = document.getElementById('bamboo-copy-{{ story.uuid }}'); navigator.clipboard.writeText(field ? field.value : '').then(() => { this.querySelector('span').textContent = '복사됨'; }).catch(() => alert('복사에 실패했습니다. 직접 선택해 주세요.'));"
         >
-            <i class="ph ph-copy"></i>
+            <i class="fa-solid fa-copy text-sm leading-none"></i>
             <span>복사</span>
         </button>
         <button
             type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-700 transition hover:bg-emerald-50"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-black leading-none text-emerald-700 transition hover:bg-emerald-50"
             onclick="navigator.clipboard.writeText(window.location.href).then(() => { this.querySelector('span').textContent = '링크 복사됨'; }).catch(() => alert('복사에 실패했습니다.'));"
         >
-            <i class="ph ph-share-fat"></i>
+            <i class="fa-solid fa-share text-sm leading-none"></i>
             <span>공유</span>
         </button>
     </div>

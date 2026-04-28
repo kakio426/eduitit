@@ -6,13 +6,13 @@
                 <h3 class="mt-1 text-xl font-black text-slate-950">오늘 더 쓰기</h3>
             </div>
             <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" @click="open = false" aria-label="닫기">
-                <i class="ph ph-x"></i>
+                <i class="fa-solid fa-xmark text-sm leading-none"></i>
             </button>
         </div>
         <p class="mt-4 text-sm font-semibold leading-6 text-slate-700">회원가입하면 오늘 더 쓸 수 있어요.</p>
         <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button type="button" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50" @click="open = false">닫기</button>
-            <a href="{% url 'account_signup' %}?next={% url 'bamboo:write' %}" class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700">회원가입</a>
+            <button type="button" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black leading-none text-slate-600 transition hover:bg-slate-50" @click="open = false">닫기</button>
+            <a href="{% url 'account_signup' %}?next={% url 'bamboo:write' %}" class="inline-flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black leading-none text-white transition hover:bg-emerald-700">회원가입</a>
         </div>
     </div>
 </div>
