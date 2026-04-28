@@ -58,6 +58,11 @@
         <form method="post" id="docsignForm" class="space-y-4">
           {% csrf_token %}
           {{ form.signature_data }}
+          {% if form.non_field_errors %}
+          <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {{ form.non_field_errors|join:", " }}
+          </div>
+          {% endif %}
           {% if not job.requires_signature_input %}
           <div class="space-y-3">
             <h2 class="text-lg font-bold text-slate-900">진한 체크</h2>
@@ -69,9 +74,6 @@
               </div>
               <p class="mt-4 text-center text-sm font-semibold text-slate-600">문서 위에 진하게 올립니다.</p>
             </div>
-            {% if form.non_field_errors %}
-            <p class="text-sm font-semibold text-red-600">{{ form.non_field_errors|join:", " }}</p>
-            {% endif %}
           </div>
           {% else %}
           <div class="space-y-2">

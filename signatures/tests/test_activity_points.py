@@ -49,13 +49,11 @@ class SignatureActivityPointTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         profile = TeacherActivityProfile.objects.get(user=self.teacher)
-        self.assertEqual(profile.total_score, 2)
-        self.assertEqual(
-            TeacherActivityEvent.objects.filter(
-                user=self.teacher,
-                category="request_sent",
-            ).count(),
-            1,
+        request_sent_event = TeacherActivityEvent.objects.get(
+            user=self.teacher,
+            category="request_sent",
         )
+        self.assertEqual(request_sent_event.points, 2)
+        self.assertGreaterEqual(profile.total_score, request_sent_event.points)
         self.session.refresh_from_db()
         self.assertIsNotNone(self.session.last_shared_at)

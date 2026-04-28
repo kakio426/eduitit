@@ -459,10 +459,20 @@
   pageInput.addEventListener("change", () => renderPage(Number(pageInput.value || 1)));
   window.addEventListener("resize", () => renderPage(Number(pageInput.value || 1)));
 
-  const pdfjsLib = await import(pdfModuleUrl);
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-  pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
-  pageInput.value = clamp(activeMark()?.page || 1, 1, pdfDoc.numPages);
-  await renderPage(Number(pageInput.value || 1));
+  async function initPositionCanvas() {
+    const pdfjsLib = await import(pdfModuleUrl);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+    pdfDoc = await pdfjsLib.getDocument(documentUrl).promise;
+    pageInput.value = clamp(activeMark()?.page || 1, 1, pdfDoc.numPages);
+    await renderPage(Number(pageInput.value || 1));
+  }
+
+  initPositionCanvas().catch((error) => {
+    console.warn("docsign-position-preview-failed", error);
+    setStatus("문서 확인");
+    [prevPageBtn, nextPageBtn, addSignatureBtn, addCheckBtn, resetBoxBtn, deleteBoxBtn].forEach((button) => {
+      if (button) button.disabled = true;
+    });
+  });
 </script>
 {% endblock %}

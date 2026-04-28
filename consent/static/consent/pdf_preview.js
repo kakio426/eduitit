@@ -557,12 +557,12 @@ async function renderRemotePreview(root) {
   const fileName = root.dataset.fileName || "";
   if (!sourceUrl) {
     showPlaceholder(root, "미리보기 주소를 찾지 못했습니다.");
-    setStatus(root, "문서 연결 정보를 다시 확인해 주세요.");
+    setStatus(root, "문서 확인");
     return;
   }
 
   showPlaceholder(root, "문서를 불러오는 중입니다.");
-  setStatus(root, "same-origin으로 문서를 불러오는 중입니다.");
+  setStatus(root, "문서 확인 중");
   setMeta(root, [fileName, formatBytes(root.dataset.fileSize)].filter(Boolean).join(" · "));
 
   try {
@@ -577,7 +577,7 @@ async function renderRemotePreview(root) {
   } catch (error) {
     console.warn("consent-remote-preview-failed", error);
     showPlaceholder(root, "문서를 불러오지 못했습니다.");
-    setStatus(root, "새 탭 열기 또는 다운로드 버튼으로 이어가 주세요.");
+    setStatus(root, "문서 확인");
   }
 }
 
@@ -626,7 +626,7 @@ function bindUploadPreview(root) {
     } catch (error) {
       console.warn("consent-upload-preview-failed", error);
       showPlaceholder(root, "이 파일은 여기서 바로 미리보지 못했습니다.");
-      setStatus(root, "파일 형식이나 브라우저 상태를 확인해 주세요.");
+      setStatus(root, "파일 확인");
     }
   });
 }

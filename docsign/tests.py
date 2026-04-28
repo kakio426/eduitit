@@ -145,6 +145,25 @@ class DocumentSignFlowTests(TestCase):
         self.assertContains(response, "PDF만 올릴 수 있습니다.")
         self.assertFalse(DocumentSignJob.objects.exists())
 
+    def test_invalid_pdf_upload_fails_without_dead_end_job(self):
+        self.client.force_login(self.teacher)
+
+        response = self.client.post(
+            reverse("docsign:create"),
+            {
+                "title": "깨진 PDF",
+                "source_file": SimpleUploadedFile(
+                    "broken.pdf",
+                    b"not really a pdf",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "파일 확인")
+        self.assertFalse(DocumentSignJob.objects.exists())
+
     def test_position_and_sign_generates_signed_pdf(self):
         try:
             from pypdf import PdfReader
@@ -191,6 +210,47 @@ class DocumentSignFlowTests(TestCase):
         self.assertRegex(raw_stream, r"204(?:\.0+)? 44(?:\.0+)? 112(?:\.0+)? 40(?:\.0+)? re")
         self.assertRegex(raw_stream, r"80(?:\.0+)? 0 0 40(?:\.0+)? 220(?:\.0+)? 44(?:\.0+)? cm")
         self.assertEqual(len(job.configured_marks), 1)
+
+    def test_sign_generation_failure_returns_form_error(self):
+        self.client.force_login(self.teacher)
+        job = DocumentSignJob.objects.create(
+            owner=self.teacher,
+            title="사인 실패 복구",
+            source_file=SimpleUploadedFile(
+                "source.pdf",
+                build_test_pdf_bytes(page_size=(400, 400)),
+                content_type="application/pdf",
+            ),
+            source_file_name_snapshot="source.pdf",
+            source_file_size_snapshot=0,
+            source_file_sha256_snapshot="abc",
+            file_type="pdf",
+            marks=[
+                {
+                    "page": 1,
+                    "x": 200,
+                    "y": 40,
+                    "width": 120,
+                    "height": 48,
+                    "mark_type": "signature",
+                }
+            ],
+            signature_page=1,
+            x=200,
+            y=40,
+            width=120,
+            height=48,
+            mark_type="signature",
+        )
+
+        with patch("docsign.views.generate_signed_pdf", side_effect=RuntimeError("pdf failed")):
+            response = self.client.post(
+                reverse("docsign:sign", kwargs={"job_id": job.id}),
+                {"signature_data": build_signature_data_url()},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "다시 시도")
 
     def test_position_step_can_store_multiple_marks(self):
         self.client.force_login(self.teacher)

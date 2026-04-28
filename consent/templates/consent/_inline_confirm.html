@@ -1,0 +1,51 @@
+<script>
+(function () {
+  function ready(callback) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", callback, { once: true });
+    } else {
+      callback();
+    }
+  }
+
+  ready(function () {
+    document.querySelectorAll("form[data-inline-confirm]").forEach(function (form) {
+      const fallbackHandler = form.getAttribute("onsubmit");
+      if (fallbackHandler) {
+        form.dataset.fallbackSubmitConfirm = fallbackHandler;
+        form.removeAttribute("onsubmit");
+        form.onsubmit = null;
+      }
+
+      form.addEventListener("submit", function (event) {
+        if (form.dataset.confirmed === "1") {
+          return;
+        }
+        event.preventDefault();
+        form.querySelector("[data-inline-confirm-panel]")?.remove();
+
+        const panel = document.createElement("div");
+        panel.dataset.inlineConfirmPanel = "1";
+        panel.className = "mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-xs font-semibold text-red-700";
+        panel.innerHTML = `
+          <p>${form.dataset.confirmMessage || "삭제할까요?"}</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button type="button" data-confirm-ok class="rounded-lg bg-red-600 px-3 py-2 text-white">삭제</button>
+            <button type="button" data-confirm-cancel class="rounded-lg bg-white px-3 py-2 text-red-700 ring-1 ring-red-200">취소</button>
+          </div>
+        `;
+        form.appendChild(panel);
+        panel.querySelector("[data-confirm-cancel]").addEventListener("click", function () {
+          panel.remove();
+          form.querySelector("button[type='submit']")?.focus();
+        });
+        panel.querySelector("[data-confirm-ok]").addEventListener("click", function () {
+          form.dataset.confirmed = "1";
+          form.requestSubmit();
+        });
+        panel.querySelector("[data-confirm-ok]")?.focus();
+      });
+    });
+  });
+})();
+</script>

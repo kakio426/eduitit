@@ -102,6 +102,8 @@
         </div>
     </div>
 
+    <div id="signatureMakerStatus" class="mb-6 hidden rounded-2xl border px-4 py-3 text-sm font-bold" aria-live="polite"></div>
+
     <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-8">
         <div class="space-y-4">
             <div class="signature-display p-10" id="captureArea">
@@ -244,6 +246,19 @@
         applyTextLayout();
     }
 
+    function showMakerStatus(message, tone = 'error') {
+        const status = document.getElementById('signatureMakerStatus');
+        if (!status) return;
+        const isError = tone === 'error';
+        status.textContent = message || (isError ? '다시 시도' : '완료');
+        status.className = [
+            'mb-6 rounded-2xl border px-4 py-3 text-sm font-bold',
+            isError ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        ].join(' ');
+        status.classList.remove('hidden');
+        status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     nameInput.addEventListener('input', (e) => {
         updateSignatureName(e.target.value);
     });
@@ -314,13 +329,13 @@
             }
 
             if (!response.ok || !result.success) {
-                alert('저장 실패: ' + (result.error || '잠시 후 다시 시도해 주세요.'));
+                showMakerStatus(result.error || '저장 실패');
                 return;
             }
 
-            alert('폰트 스타일을 저장했습니다.');
+            showMakerStatus('폰트 스타일을 저장했습니다.', 'success');
         } catch (e) {
-            alert('오류가 발생했습니다.');
+            showMakerStatus('다시 시도');
         }
     }
 

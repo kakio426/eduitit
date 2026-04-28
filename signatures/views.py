@@ -1868,9 +1868,6 @@ def session_create(request):
 @login_required
 def session_detail(request, uuid):
     """연수 상세 (관리자용) - 미매칭과 중복 점검 포함"""
-    from django.http import HttpResponse
-    import traceback
-
     try:
         session = _get_signature_session_or_404(request.user, uuid)
         signatures = session.signatures.all()
@@ -1986,9 +1983,10 @@ def session_detail(request, uuid):
             'pending_participants_preview': unmatched_expected_participants[:5],
             **stage_payload,
         })
-    except Exception as e:
-        traceback.print_exc()
-        return HttpResponse(f"Server Error in session_detail: {str(e)}<br><pre>{traceback.format_exc()}</pre>", status=500)
+    except Exception:
+        logger.exception("failed to render signature session detail uuid=%s user=%s", uuid, request.user.pk)
+        messages.error(request, "다시 시도")
+        return redirect("signatures:list")
 
 
 @login_required

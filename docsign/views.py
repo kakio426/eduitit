@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from functools import wraps
 from urllib.parse import quote
@@ -25,6 +26,9 @@ from core.document_signing import (
 from .forms import DocumentSignPositionForm, DocumentSignSignatureForm, DocumentSignUploadForm
 from .models import DocumentSignJob
 from .services import build_signed_download_name, generate_signed_pdf
+
+
+logger = logging.getLogger(__name__)
 
 
 def _is_docsign_schema_error(exc: Exception) -> bool:
@@ -136,18 +140,35 @@ def job_create(request):
         form = DocumentSignUploadForm(request.POST, request.FILES)
         if form.is_valid():
             upload = form.cleaned_data["source_file"]
-            source_name, source_size, source_sha256 = snapshot_file_metadata(upload)
-            title = (form.cleaned_data.get("title") or "").strip() or os.path.splitext(source_name)[0] or "문서 사인"
-            job = DocumentSignJob.objects.create(
-                owner=request.user,
-                title=title[:200],
-                source_file=upload,
-                source_file_name_snapshot=source_name,
-                source_file_size_snapshot=source_size,
-                source_file_sha256_snapshot=source_sha256,
-                file_type=guess_file_type(upload.name),
-            )
-            return redirect("docsign:position", job_id=job.id)
+            try:
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+                get_pdf_page_sizes(normalize_pdf_bytes(upload.read()))
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+                source_name, source_size, source_sha256 = snapshot_file_metadata(upload)
+                title = (form.cleaned_data.get("title") or "").strip() or os.path.splitext(source_name)[0] or "문서 사인"
+                job = DocumentSignJob.objects.create(
+                    owner=request.user,
+                    title=title[:200],
+                    source_file=upload,
+                    source_file_name_snapshot=source_name,
+                    source_file_size_snapshot=source_size,
+                    source_file_sha256_snapshot=source_sha256,
+                    file_type=guess_file_type(upload.name),
+                )
+                return redirect("docsign:position", job_id=job.id)
+            except Exception:
+                logger.exception("docsign upload validation failed user=%s", request.user.pk)
+                form.add_error("source_file", "파일 확인")
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
     else:
         form = DocumentSignUploadForm()
 
@@ -217,7 +238,12 @@ def job_signed_document(request, job_id: int):
 @_docsign_runtime_guard
 def job_position(request, job_id: int):
     job = _owned_job_or_404(request.user, job_id)
-    page_sizes = _page_sizes(job)
+    try:
+        page_sizes = _page_sizes(job)
+    except Exception:
+        logger.exception("docsign source page read failed job=%s user=%s", job.pk, request.user.pk)
+        messages.error(request, "문서 확인")
+        return redirect("docsign:create")
 
     if request.method == "POST":
         form = DocumentSignPositionForm(request.POST)
@@ -302,9 +328,13 @@ def job_sign(request, job_id: int):
             requires_signature=job.requires_signature_input,
         )
         if form.is_valid():
-            generate_signed_pdf(job, form.cleaned_data["signature_data"])
-            messages.success(request, "표시된 PDF를 만들었습니다.")
-            return redirect(f'{reverse("docsign:detail", kwargs={"job_id": job.id})}?download=1')
+            try:
+                generate_signed_pdf(job, form.cleaned_data["signature_data"])
+                messages.success(request, "표시된 PDF를 만들었습니다.")
+                return redirect(f'{reverse("docsign:detail", kwargs={"job_id": job.id})}?download=1')
+            except Exception:
+                logger.exception("docsign signed PDF generation failed job=%s user=%s", job.pk, request.user.pk)
+                form.add_error(None, "다시 시도")
     else:
         form = DocumentSignSignatureForm(requires_signature=job.requires_signature_input)
 

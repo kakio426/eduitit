@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
@@ -175,9 +176,11 @@ class SignatureTeacherFirstPagesTests(TestCase):
         self.assertContains(response, "이번에는 인원 수만 적기")
         self.assertContains(response, 'data-create-form', html=False)
         self.assertContains(response, 'data-create-submit', html=False)
+        self.assertContains(response, "signatureCreateStatus")
         self.assertNotContains(response, "기본 요청은 위 정보만으로 충분")
         self.assertNotContains(response, "직접 쓴 손서명이 기본이고")
         self.assertNotContains(response, 'fixed inset-x-4 bottom-4', html=False)
+        self.assertNotContains(response, "window.confirm", html=False)
 
     def test_create_page_shows_secondary_roster_button_when_rosters_exist(self):
         HandoffRosterGroup.objects.create(owner=self.user, name="교무실 명단")
@@ -230,6 +233,47 @@ class SignatureTeacherFirstPagesTests(TestCase):
             "개인정보 수집·이용에 동의합니다.",
         )
         self.assertTrue(restored_response.context["attachment_reupload_notice"])
+
+    def test_detail_and_public_sign_use_inline_feedback_without_alerts(self):
+        session = TrainingSession.objects.create(
+            title="교무 회의 서명",
+            instructor="교감",
+            datetime=timezone.now() + timedelta(days=1),
+            location="회의실",
+            created_by=self.user,
+            is_active=True,
+        )
+
+        detail_response = self.client.get(reverse("signatures:detail", kwargs={"uuid": session.uuid}))
+        sign_response = self.client.get(reverse("signatures:sign", kwargs={"uuid": session.uuid}))
+        detail_content = detail_response.content.decode("utf-8")
+        sign_content = sign_response.content.decode("utf-8")
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertIn("signaturePageStatus", detail_content)
+        self.assertNotIn("alert(", detail_content)
+        self.assertNotIn("confirm(", detail_content)
+        self.assertEqual(sign_response.status_code, 200)
+        self.assertIn("signatureFormStatus", sign_content)
+        self.assertNotIn("alert(", sign_content)
+        self.assertNotIn("confirm(", sign_content)
+
+    def test_detail_exception_redirects_without_raw_traceback(self):
+        session = TrainingSession.objects.create(
+            title="오류 복구 확인",
+            instructor="교감",
+            datetime=timezone.now() + timedelta(days=1),
+            location="회의실",
+            created_by=self.user,
+            is_active=True,
+        )
+
+        with patch("signatures.views._build_session_stage_payload", side_effect=RuntimeError("boom")):
+            response = self.client.get(reverse("signatures:detail", kwargs={"uuid": session.uuid}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("signatures:list"))
+        self.assertNotIn("traceback", response.content.decode("utf-8").lower())
 
     def test_prepare_roster_return_restores_draft_and_auto_selects_roster(self):
         session_dt = timezone.localtime(timezone.now() + timedelta(days=1)).replace(minute=0, second=0, microsecond=0)

@@ -105,6 +105,36 @@ class CollectFlowTest(TestCase):
         self.assertIn("attachment;", response["Content-Disposition"])
         self.assertEqual(response["Cache-Control"], "no-store, private")
 
+    def test_request_detail_uses_inline_feedback_for_copy_download_and_delete(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="학급 파일 수합",
+            description="파일 제출",
+            allow_file=True,
+            allow_link=False,
+            allow_text=False,
+            status="active",
+        )
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="학생1",
+            contributor_affiliation="1반",
+            submission_type="file",
+            file=SimpleUploadedFile("report.txt", b"hello", content_type="text/plain"),
+            original_filename="report.txt",
+            file_size=5,
+        )
+        self.client.force_login(self.teacher)
+
+        response = self.client.get(reverse("collect:request_detail", args=[req.id]))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("collect-action-status", content)
+        self.assertIn("data-download-all-button", content)
+        self.assertIn("data-confirm-submit", content)
+        self.assertNotIn("alert(", content)
+
     def test_reference_image_is_visible_on_submit_page_and_served_inline(self):
         req = CollectionRequest.objects.create(
             creator=self.teacher,

@@ -1497,6 +1497,19 @@ class ConsentFlowTests(TestCase):
         self.assertContains(response, "완료율")
         self.assertContains(response, "50%")
 
+    def test_dashboard_and_detail_use_inline_delete_confirmation(self):
+        self.client.login(username="teacher", password="pw123456")
+
+        dashboard_response = self.client.get(reverse("consent:dashboard"))
+        detail_response = self.client.get(reverse("consent:detail", kwargs={"request_id": self.request_obj.request_id}))
+
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, "data-inline-confirm")
+        self.assertContains(dashboard_response, "data-confirm-message")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "data-inline-confirm")
+        self.assertContains(detail_response, "data-inline-confirm-panel")
+
     def test_delete_request_allows_when_submitted_response_exists(self):
         self.recipient.status = SignatureRecipient.STATUS_SIGNED
         self.recipient.decision = SignatureRecipient.DECISION_AGREE

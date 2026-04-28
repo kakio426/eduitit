@@ -283,7 +283,7 @@
           >
             수정 열기
           </button>
-          <form method="post" action="{% url 'consent:delete_recipient' recipient_id=r.id %}" onsubmit="return confirm('이 수신자를 삭제할까요?');">
+          <form method="post" action="{% url 'consent:delete_recipient' recipient_id=r.id %}" onsubmit="return confirm('이 수신자를 삭제할까요?');" data-inline-confirm data-confirm-message="수신자를 삭제합니다.">
             {% csrf_token %}
             <button type="submit" class="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">삭제</button>
           </form>
@@ -319,6 +319,7 @@
 
 {% block extra_js %}
 <script type="module" src="{% static 'consent/pdf_preview.js' %}"></script>
+{% include "consent/_inline_confirm.html" %}
 <script>
   async function copyFromElement(sourceId, buttonEl) {
     const source = document.getElementById(sourceId);

@@ -19,6 +19,8 @@
         {% endfor %}
         {% endif %}
 
+        <div id="signaturePageStatus" class="hidden rounded-2xl border px-4 py-3 text-sm md:text-base font-bold" aria-live="polite"></div>
+
         <section class="overflow-hidden rounded-[2rem] border border-indigo-100 bg-gradient-to-br from-white via-indigo-50 to-sky-50 p-5 md:p-7 shadow-[0_25px_60px_-45px_rgba(79,70,229,0.45)]">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-2xl">
@@ -941,12 +943,55 @@
         signatureId: '',
     };
 
+    function showSignatureNotice(message, tone = 'error') {
+        const status = document.getElementById('signaturePageStatus');
+        if (!status) return;
+        const isError = tone === 'error';
+        status.textContent = message || (isError ? '다시 시도' : '완료');
+        status.className = [
+            'rounded-2xl border px-4 py-3 text-sm md:text-base font-bold',
+            isError ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        ].join(' ');
+        status.classList.remove('hidden');
+        status.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function confirmSignatureAction(message) {
+        const status = document.getElementById('signaturePageStatus');
+        return new Promise((resolve) => {
+            if (!status) {
+                resolve(false);
+                return;
+            }
+            status.className = 'rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm md:text-base font-bold text-red-700';
+            status.classList.remove('hidden');
+            status.innerHTML = `
+                <p>${escapeHtml(message || '진행할까요?')}</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" data-confirm-ok class="rounded-xl bg-red-600 px-4 py-2 text-white">확인</button>
+                    <button type="button" data-confirm-cancel class="rounded-xl bg-white px-4 py-2 text-red-700 ring-1 ring-red-200">취소</button>
+                </div>
+            `;
+            const ok = status.querySelector('[data-confirm-ok]');
+            const cancel = status.querySelector('[data-confirm-cancel]');
+            ok.addEventListener('click', () => {
+                status.classList.add('hidden');
+                resolve(true);
+            }, { once: true });
+            cancel.addEventListener('click', () => {
+                status.classList.add('hidden');
+                resolve(false);
+            }, { once: true });
+            ok.focus();
+        });
+    }
+
     function toggleGuide() {
         const guide = document.getElementById('participantGuide');
         guide.classList.toggle('hidden');
     }
 
-    function fillExample() {
+    async function fillExample() {
         const textarea = document.getElementById('bulkInput');
         const exampleText = `홍길동, 1-1
 김철수, 1-2
@@ -954,7 +999,7 @@
 이순신, 2-1
 최영, 3-1`;
 
-        if (textarea.value.trim() && !confirm('기존 내용을 지우고 예시를 채우시겠습니까?')) {
+        if (textarea.value.trim() && !(await confirmSignatureAction('기존 내용을 지웁니다.'))) {
             return;
         }
 
@@ -1010,13 +1055,13 @@
     async function copySharePackage() {
         const textarea = document.getElementById('sharePackageText');
         if (!textarea) {
-            alert('복사할 문구를 찾지 못했습니다.');
+            showSignatureNotice('다시 시도');
             return;
         }
 
         const text = textarea.value.trim();
         if (!text) {
-            alert('복사할 문구가 비어 있습니다.');
+            showSignatureNotice('다시 시도');
             return;
         }
 
@@ -1038,13 +1083,13 @@
             } else {
                 fallbackCopyFromInput(textarea);
             }
-            alert('문구와 링크 복사 완료');
+            showSignatureNotice('복사됨', 'success');
         } catch (error) {
             try {
                 fallbackCopyFromInput(textarea);
-                alert('문구와 링크를 복사했습니다. QR은 화면에서 확인하세요.');
+                showSignatureNotice('복사됨', 'success');
             } catch (fallbackError) {
-                alert('복사 실패. 아래 문구를 직접 복사해 주세요.');
+                showSignatureNotice('다시 시도');
             }
         }
     }
@@ -1052,7 +1097,7 @@
     async function copyLink() {
         const input = document.getElementById('shareLink');
         if (!input) {
-            alert('복사할 링크를 찾지 못했습니다.');
+            showSignatureNotice('다시 시도');
             return;
         }
 
@@ -1062,13 +1107,13 @@
             } else {
                 fallbackCopyFromInput(input);
             }
-            alert('링크가 복사되었습니다.');
+            showSignatureNotice('복사됨', 'success');
         } catch (error) {
             try {
                 fallbackCopyFromInput(input);
-                alert('링크가 복사되었습니다.');
+                showSignatureNotice('복사됨', 'success');
             } catch (fallbackError) {
-                alert('링크 복사에 실패했습니다. 직접 복사해 주세요.');
+                showSignatureNotice('다시 시도');
             }
         }
     }
@@ -1081,7 +1126,7 @@
         const durationSelect = document.getElementById('accessCodeDurationSelect');
         const codeInput = document.getElementById('accessCodeInput');
         if (!durationSelect || !codeInput) {
-            alert('현장 코드 입력창을 찾지 못했습니다.');
+            showSignatureNotice('다시 시도');
             return;
         }
 
@@ -1090,7 +1135,7 @@
         codeInput.value = accessCode;
 
         if (![0, 5, 10].includes(duration)) {
-            alert('코드 시간은 5분 또는 10분');
+            showSignatureNotice('코드 확인');
             durationSelect.focus();
             return;
         }
@@ -1101,7 +1146,7 @@
         }
 
         if (!/^\d{4,6}$/.test(accessCode)) {
-            alert('현장 코드는 4~6자리 숫자로 입력해 주세요.');
+            showSignatureNotice('코드 확인');
             codeInput.focus();
             return;
         }
@@ -1120,13 +1165,13 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '현장 코드를 적용하지 못했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
-            alert(data.message || '현장 코드를 적용했습니다.');
+            showSignatureNotice(data.message || '저장됨', 'success');
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1144,13 +1189,13 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '현장 코드를 끄지 못했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
-            alert(data.message || '현장 코드를 사용하지 않도록 변경했습니다.');
+            showSignatureNotice(data.message || '저장됨', 'success');
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1188,12 +1233,12 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '정렬 방식을 바꾸지 못했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1209,12 +1254,12 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '순서를 바꾸지 못했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1230,12 +1275,12 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '명단 순서를 바꾸지 못했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1244,7 +1289,7 @@
         if (!input) return;
         const position = Number(input.value);
         if (!Number.isInteger(position) || position < 1) {
-            alert('순번은 1 이상의 숫자로 입력해 주세요.');
+            showSignatureNotice('다시 시도');
             input.focus();
             return;
         }
@@ -1262,7 +1307,7 @@
         if (!input) return;
         const position = Number(input.value);
         if (!Number.isInteger(position) || position < 1) {
-            alert('순번은 1 이상의 숫자로 입력해 주세요.');
+            showSignatureNotice('다시 시도');
             input.focus();
             return;
         }
@@ -1329,17 +1374,17 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('상태를 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요.');
+                showSignatureNotice('저장 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
     async function deleteSignature(pk) {
-        if (!confirm('이 서명을 삭제하시겠습니까?')) return;
+        if (!(await confirmSignatureAction('서명을 삭제합니다.'))) return;
         try {
             const response = await fetch(`/signatures/signature/${pk}/delete/`, {
                 method: 'POST',
@@ -1347,19 +1392,20 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('서명을 삭제하지 못했습니다.');
+                showSignatureNotice('삭제 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
     async function submitBulkInput() {
         const input = document.getElementById('bulkInput');
         if (!input.value.trim()) {
-            alert('명단을 입력해주세요.');
+            showSignatureNotice('다시 시도');
+            input.focus();
             return;
         }
         try {
@@ -1370,22 +1416,23 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '명단 등록에 실패했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
-            alert(data.message || '명단을 등록했습니다.');
+            showSignatureNotice(data.message || '저장됨', 'success');
             input.value = '';
             await loadParticipants();
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
     async function uploadFile() {
         const fileInput = document.getElementById('participantFile');
         if (!fileInput.files[0]) {
-            alert('파일을 선택해주세요.');
+            showSignatureNotice('파일 확인');
+            fileInput.focus();
             return;
         }
         const formData = new FormData();
@@ -1398,14 +1445,14 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '파일 업로드에 실패했습니다.'));
+                showSignatureNotice(data.error || '파일 확인');
                 return;
             }
-            alert(data.message || '명단 파일을 반영했습니다.');
+            showSignatureNotice(data.message || '저장됨', 'success');
             await loadParticipants();
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1491,12 +1538,12 @@
             list.innerHTML = html + '</div>';
         } catch (error) {
             list.innerHTML = '<p class="text-red-500 text-center py-8">명단을 불러오지 못했습니다.</p>';
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
     async function deleteParticipant(id) {
-        if (!confirm('삭제하시겠습니까?')) return;
+        if (!(await confirmSignatureAction('명단을 삭제합니다.'))) return;
         try {
             const response = await fetch(`/signatures/${sessionUuid}/participants/${id}/delete/`, {
                 method: 'POST',
@@ -1504,13 +1551,13 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('명단을 삭제하지 못했습니다.');
+                showSignatureNotice('삭제 실패');
                 return;
             }
             await loadParticipants();
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1572,7 +1619,7 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '정정에 실패했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
             closeAffiliationCorrectionModal();
@@ -1583,7 +1630,7 @@
             await loadParticipants();
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
@@ -1593,7 +1640,7 @@
         const target = document.getElementById('bulkCorrectionTarget').value;
         const reason = document.getElementById('bulkCorrectionReason').value.trim();
         if (!sourceAffiliation || !correctedAffiliation) {
-            alert('원본 값과 정정 값을 모두 입력해 주세요.');
+            showSignatureNotice('다시 시도');
             return;
         }
         try {
@@ -1609,18 +1656,18 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '일괄 정정에 실패했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
-            alert(`일괄 정정 완료: 총 ${data.updated_total}건 (서명 ${data.updated_signatures}건, 명단 ${data.updated_participants}건)`);
+            showSignatureNotice(`정정 완료 ${data.updated_total}건`, 'success');
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
     async function matchSignature(sigId, partId, confirmMessage = '연결하시겠습니까?') {
-        if (confirmMessage && !confirm(confirmMessage)) return;
+        if (confirmMessage && !(await confirmSignatureAction(confirmMessage))) return;
         try {
             const response = await fetch(`/signatures/${sessionUuid}/signatures/${sigId}/match/`, {
                 method: 'POST',
@@ -1629,12 +1676,12 @@
             });
             const data = await parseJsonResponse(response);
             if (!data.success) {
-                alert('오류: ' + (data.error || '연결에 실패했습니다.'));
+                showSignatureNotice(data.error || '저장 실패');
                 return;
             }
             location.reload();
         } catch (error) {
-            alert('오류: ' + error.message);
+            showSignatureNotice(error.message || '다시 시도');
         }
     }
 
