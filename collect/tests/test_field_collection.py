@@ -23,7 +23,7 @@ class FieldCollectionTests(TestCase):
     def _schema(self):
         return [
             {"id": "login_id", "label": "아이디", "kind": "short_text", "required": True, "options": []},
-            {"id": "temp_password", "label": "임시 비밀번호", "kind": "secret", "required": True, "options": []},
+            {"id": "temp_password", "label": "비밀번호", "kind": "secret", "required": True, "options": []},
         ]
 
     def _request(self, schema=None, **kwargs):
@@ -44,7 +44,7 @@ class FieldCollectionTests(TestCase):
             data={
                 "collection_mode": "fields",
                 "title": "계정 수합",
-                "description": "개인 비밀번호 금지 · 임시 정보만",
+                "description": "",
                 "expected_submitters": "",
                 "deadline": "",
                 "max_submissions": 20,
@@ -64,7 +64,8 @@ class FieldCollectionTests(TestCase):
         submit_response = self.client.get(reverse("collect:submit", args=[req.id]))
         self.assertEqual(submit_response.status_code, 200)
         self.assertContains(submit_response, "아이디")
-        self.assertContains(submit_response, "임시 비밀번호")
+        self.assertContains(submit_response, "비밀번호")
+        self.assertNotContains(submit_response, "임시로 발급한 정보만")
         self.assertNotContains(submit_response, "제출 유형")
 
     def test_submit_fields_request_success_then_manage_page_masks_secret(self):
@@ -96,7 +97,7 @@ class FieldCollectionTests(TestCase):
         req = self._request(
             schema=[
                 {"id": "login_id", "label": "아이디", "kind": "short_text", "required": True, "options": []},
-                {"id": "temp_password", "label": "임시 비밀번호", "kind": "secret", "required": True, "options": []},
+                {"id": "temp_password", "label": "비밀번호", "kind": "secret", "required": True, "options": []},
                 {"id": "profile", "label": "확인 링크", "kind": "link", "required": True, "options": []},
             ]
         )
@@ -165,6 +166,6 @@ class FieldCollectionTests(TestCase):
         csv_text = response.content.decode("utf-8-sig")
         rows = list(csv.reader(io.StringIO(csv_text)))
         rows[0][0] = rows[0][0].lstrip("\ufeff")
-        self.assertEqual(rows[0][:5], ["번호", "이름", "소속", "아이디", "임시 비밀번호"])
+        self.assertEqual(rows[0][:5], ["번호", "이름", "소속", "아이디", "비밀번호"])
         self.assertIn("student01", rows[1])
         self.assertIn("secret123", rows[1])

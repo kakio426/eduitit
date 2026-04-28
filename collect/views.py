@@ -126,8 +126,9 @@ def _remote_file_chunks(file_url, chunk_size=8192):
                 yield chunk
 
 
-def _build_download_response(file_field, *, filename):
+def _build_download_response(file_field, *, filename, as_attachment=True):
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    disposition = "attachment" if as_attachment else "inline"
 
     try:
         file_obj = file_field.open("rb")
@@ -139,13 +140,13 @@ def _build_download_response(file_field, *, filename):
             _async_wrap_sync_iterable(_remote_file_chunks(file_url)),
             content_type=content_type,
         )
-        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(filename)}"
         return _apply_sensitive_cache_headers(response)
 
     response = FileResponse(
         file_obj,
         content_type=content_type,
-        as_attachment=True,
+        as_attachment=as_attachment,
         filename=filename,
     )
     return _apply_sensitive_cache_headers(response)
@@ -1204,6 +1205,7 @@ def submit(request, request_id):
         initial_submission_type=initial_submission_type,
         choice_values=choice_values,
     )
+    context["can_edit_request"] = request.user.is_authenticated and collection_req.creator_id == request.user.id
     context.update(prefill)
     context.update(_build_collect_submit_seo(request, collection_req).as_context())
     response = render(request, 'collect/submit.html', context)
@@ -1530,10 +1532,10 @@ def submission_download(request, submission_id):
 
 @ratelimit(key=_collect_public_ratelimit_key, rate="60/10m", method="GET", block=True, group="collect_template_download")
 def template_download(request, request_id):
-    """양식 파일 다운로드"""
+    """참고 자료 다운로드"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
     if not collection_req.template_file:
-        return HttpResponse("양식 파일이 없습니다.", status=404)
+        return HttpResponse("참고 자료가 없습니다.", status=404)
 
     download_name = collection_req.template_file_name or (collection_req.template_file.name or "").split("/")[-1] or "collect-template"
     logger.info(
@@ -1541,4 +1543,8 @@ def template_download(request, request_id):
         collection_req.id,
         _request_client_ip(request),
     )
-    return _build_download_response(collection_req.template_file, filename=download_name)
+    return _build_download_response(
+        collection_req.template_file,
+        filename=download_name,
+        as_attachment=not collection_req.template_file_is_image,
+    )

@@ -10,6 +10,8 @@ from django.utils import timezone
 
 from .field_schema import FIELD_KIND_LABELS, normalize_field_schema
 
+REFERENCE_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')
+
 
 def get_raw_storage():
     """Cloudinary가 설정된 경우에만 Cloudinary 로컬/원격 저장소 반환, 
@@ -188,6 +190,15 @@ class CollectionRequest(models.Model):
     @property
     def normalized_field_schema(self):
         return normalize_field_schema(self.field_schema)
+
+    @property
+    def template_file_display_name(self):
+        return self.template_file_name or (self.template_file.name or "").split("/")[-1]
+
+    @property
+    def template_file_is_image(self):
+        filename = self.template_file_display_name.lower()
+        return filename.endswith(REFERENCE_IMAGE_EXTENSIONS)
 
     @property
     def allowed_submission_types(self):

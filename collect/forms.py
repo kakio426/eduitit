@@ -76,7 +76,7 @@ class CollectionRequestForm(forms.ModelForm):
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
                     "rows": 3,
-                    "placeholder": "제출자에게 보일 안내사항을 입력하세요.",
+                    "placeholder": "예: 발급받은 정보만",
                 }
             ),
             "bti_integration_source": forms.Select(
@@ -126,14 +126,14 @@ class CollectionRequestForm(forms.ModelForm):
             "template_file": forms.ClearableFileInput(
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none",
-                    "accept": ".hwp,.hwpx,.xlsx,.xls,.docx,.doc,.pdf,.zip",
+                    "accept": ".hwp,.hwpx,.xlsx,.xls,.docx,.doc,.pdf,.zip,.jpg,.jpeg,.png,.gif,.webp,.bmp",
                 }
             ),
         }
         labels = {
             "collection_mode": "수합 방식",
             "title": "수합 제목",
-            "description": "안내사항",
+            "description": "부제목",
             "bti_integration_source": "BTI 연동",
             "shared_roster_group": "배부 체크 공유 명단",
             "allow_file": "파일 업로드 허용",
@@ -147,7 +147,7 @@ class CollectionRequestForm(forms.ModelForm):
             "deadline": "마감일시",
             "max_submissions": "최대 제출 건수",
             "expected_submitters": "제출 대상자 목록",
-            "template_file": "양식 파일",
+            "template_file": "참고 자료",
         }
 
     def __init__(self, *args, **kwargs):

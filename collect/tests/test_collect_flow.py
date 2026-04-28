@@ -13,6 +13,8 @@ class CollectFlowTest(TestCase):
             email="teacher@example.com",
             password="pw123456",
         )
+        self.teacher.userprofile.nickname = "teacher"
+        self.teacher.userprofile.save(update_fields=["nickname"])
 
     def test_join_by_access_code_redirects_to_submit(self):
         req = CollectionRequest.objects.create(
@@ -103,6 +105,37 @@ class CollectFlowTest(TestCase):
         self.assertIn("attachment;", response["Content-Disposition"])
         self.assertEqual(response["Cache-Control"], "no-store, private")
 
+    def test_reference_image_is_visible_on_submit_page_and_served_inline(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="이미지 참고 자료 수합",
+            description="이미지를 보고 제출",
+            allow_file=False,
+            allow_link=False,
+            allow_text=True,
+            status="active",
+            template_file=SimpleUploadedFile(
+                "guide.png",
+                b"\x89PNG\r\n\x1a\n",
+                content_type="image/png",
+            ),
+            template_file_name="참고이미지.png",
+        )
+
+        submit_response = self.client.get(reverse("collect:submit", args=[req.id]))
+
+        self.assertEqual(submit_response.status_code, 200)
+        self.assertContains(submit_response, "참고 자료")
+        self.assertContains(submit_response, "이미지 보기")
+        self.assertContains(submit_response, "참고이미지.png")
+        self.assertContains(submit_response, "<img", html=False)
+
+        image_response = self.client.get(reverse("collect:template_download", args=[req.id]))
+
+        self.assertEqual(image_response.status_code, 200)
+        self.assertIn("inline;", image_response["Content-Disposition"])
+        self.assertEqual(image_response["Cache-Control"], "no-store, private")
+
     def test_public_submit_page_uses_sensitive_cache_headers(self):
         req = CollectionRequest.objects.create(
             creator=self.teacher,
@@ -118,3 +151,30 @@ class CollectFlowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store, private")
+        content = response.content.decode("utf-8")
+        self.assertIn("<details", content)
+        self.assertIn("보안 및 책임 안내", content)
+        self.assertNotIn("<details open", content)
+        self.assertLess(content.index('type="submit"'), content.index("보안 및 책임 안내"))
+
+    def test_creator_can_reach_title_edit_from_submit_page(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="아이디 비밀번호 수합",
+            description="",
+            allow_file=False,
+            allow_link=True,
+            allow_text=False,
+            status="active",
+        )
+
+        guest_response = self.client.get(reverse("collect:submit", args=[req.id]))
+        self.assertNotContains(guest_response, "제목 수정")
+
+        self.client.force_login(self.teacher)
+        submit_response = self.client.get(reverse("collect:submit", args=[req.id]))
+        edit_response = self.client.get(reverse("collect:request_edit", args=[req.id]))
+
+        self.assertContains(submit_response, "제목 수정")
+        self.assertContains(submit_response, reverse("collect:request_edit", args=[req.id]))
+        self.assertContains(edit_response, "부제목")
