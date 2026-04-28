@@ -96,11 +96,82 @@
 
         async function fetchJson(url, options) {
             const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
+            const rawText = await response.text().catch(() => "");
+            let data = {};
+            if (rawText) {
+                try {
+                    data = JSON.parse(rawText);
+                } catch (_error) {
+                    data = {};
+                }
+            }
             if (!response.ok) {
-                throw new Error(data.message || "요청을 처리하지 못했습니다.");
+                throw new Error(data.message || data.error || (response.status === 403 ? "권한 없음" : "다시 시도"));
+            }
+            if (!rawText || !Object.keys(data).length) {
+                throw new Error("다시 시도");
             }
             return data;
+        }
+
+        function requestDeleteConfirmation(message) {
+            return new Promise((resolve) => {
+                const returnFocusElement = document.activeElement && typeof document.activeElement.focus === "function"
+                    ? document.activeElement
+                    : null;
+                const overlay = document.createElement("div");
+                overlay.className = "developer-chat-confirm-overlay";
+                overlay.setAttribute("role", "dialog");
+                overlay.setAttribute("aria-modal", "true");
+                overlay.innerHTML = `
+                    <div class="developer-chat-confirm-card">
+                        <h2 class="developer-chat-confirm-title">대화 삭제</h2>
+                        <p class="developer-chat-confirm-body"></p>
+                        <div class="developer-chat-confirm-actions">
+                            <button type="button" class="developer-chat-confirm-cancel">취소</button>
+                            <button type="button" class="developer-chat-confirm-submit">삭제</button>
+                        </div>
+                    </div>
+                `;
+                const body = overlay.querySelector(".developer-chat-confirm-body");
+                const cancelButton = overlay.querySelector(".developer-chat-confirm-cancel");
+                const submitButton = overlay.querySelector(".developer-chat-confirm-submit");
+                if (body) {
+                    body.textContent = message;
+                }
+
+                function close(confirmed) {
+                    overlay.remove();
+                    document.removeEventListener("keydown", onKeydown);
+                    if (returnFocusElement) {
+                        window.setTimeout(() => returnFocusElement.focus(), 0);
+                    }
+                    resolve(!!confirmed);
+                }
+
+                function onKeydown(event) {
+                    if (event.key === "Escape") {
+                        close(false);
+                    }
+                }
+
+                overlay.addEventListener("click", (event) => {
+                    if (event.target === overlay) {
+                        close(false);
+                    }
+                });
+                if (cancelButton) {
+                    cancelButton.addEventListener("click", () => close(false));
+                }
+                if (submitButton) {
+                    submitButton.addEventListener("click", () => close(true));
+                }
+                document.addEventListener("keydown", onKeydown);
+                document.body.appendChild(overlay);
+                if (submitButton && typeof submitButton.focus === "function") {
+                    submitButton.focus();
+                }
+            });
         }
 
         function setLoadingState() {
@@ -447,7 +518,8 @@
             const confirmMessage = state.isAdmin
                 ? `${state.selectedThread.participant.display_name}님과의 대화를 삭제할까요?`
                 : "이 대화를 삭제할까요?";
-            if (!window.confirm(`${confirmMessage}\n삭제하면 메시지를 되돌릴 수 없습니다.`)) {
+            const confirmed = await requestDeleteConfirmation(`${confirmMessage} 삭제하면 메시지를 되돌릴 수 없습니다.`);
+            if (!confirmed) {
                 return;
             }
 

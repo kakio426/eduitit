@@ -679,6 +679,39 @@
         </div>
         {% endif %}
     </div>
+
+    <div
+        x-show="messageboxConfirmDialog.open"
+        x-cloak
+        class="fixed inset-x-0 bottom-0 z-[90] flex items-center justify-center bg-slate-950/35 px-4 py-6"
+        style="top: var(--main-nav-height, 88px);"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="messagebox-confirm-title"
+        @keydown.escape.window="resolveMessageboxConfirm(false)"
+        @click.self="resolveMessageboxConfirm(false)"
+    >
+        <div class="w-full max-w-sm rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-2xl" @click.stop>
+            <h2 id="messagebox-confirm-title" class="text-lg font-black text-slate-900" x-text="messageboxConfirmDialog.title"></h2>
+            <p class="mt-3 text-sm font-semibold leading-6 text-slate-600" x-text="messageboxConfirmDialog.body"></p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button
+                    type="button"
+                    class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700"
+                    @click="resolveMessageboxConfirm(false)"
+                >
+                    취소
+                </button>
+                <button
+                    type="button"
+                    class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-black text-white"
+                    x-ref="messageboxConfirmPrimary"
+                    @click="resolveMessageboxConfirm(true)"
+                    x-text="messageboxConfirmDialog.confirmLabel"
+                ></button>
+            </div>
+        </div>
+    </div>
 </section>
 
 <div id="messagebox-toast-root" class="pointer-events-none fixed bottom-4 right-4 z-[80] flex max-w-sm flex-col gap-2"></div>

@@ -204,12 +204,31 @@
                             </div>
                         </form>
 
-                        <form method="post" action="{{ event.delete_url }}" class="mt-3" onsubmit="return window.confirm('이 일정을 지울까요?');">
+                        <form
+                            method="post"
+                            action="{{ event.delete_url }}"
+                            class="mt-3"
+                            onsubmit="return window.confirm('이 일정을 지울까요?');"
+                            data-schoolcomm-confirm-form="true"
+                        >
                             {% csrf_token %}
                             <input type="hidden" name="redirect_month" value="{{ shared_calendar.month }}">
                             <input type="hidden" name="redirect_date" value="{{ shared_calendar.selected_date }}">
                             <input type="hidden" name="redirect_query" value="{{ current_query }}">
-                            <button type="submit" class="inline-flex rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700">이 일정 삭제</button>
+                            <button
+                                type="submit"
+                                class="inline-flex rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700"
+                                data-schoolcomm-confirm-trigger="true"
+                            >
+                                이 일정 삭제
+                            </button>
+                            <div class="mt-3 hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3" data-schoolcomm-confirm-panel="true">
+                                <p class="text-sm font-bold text-rose-800">삭제할까요?</p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button type="button" class="rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white" data-schoolcomm-confirm-yes="true">삭제</button>
+                                    <button type="button" class="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700" data-schoolcomm-confirm-no="true">취소</button>
+                                </div>
+                            </div>
                         </form>
                     </details>
                 </div>

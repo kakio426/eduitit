@@ -44,6 +44,12 @@
             </div>
         </header>
 
+        {% if form_status_message %}
+        <div id="parentcomm-form-status" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+            {{ form_status_message }}
+        </div>
+        {% endif %}
+
         <div x-show="tab==='today'" x-cloak class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <section class="clay-card p-5">
                 <h2 class="text-xl font-bold text-gray-700 mb-3">긴급</h2>
@@ -163,15 +169,19 @@
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.parent_contact.label }}</label>
                         {{ consultation_request_form.parent_contact }}
+                        {% if consultation_request_form.parent_contact.errors %}<p class="text-red-600 text-sm mt-1">{{ consultation_request_form.parent_contact.errors|join:", " }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.reason.label }}</label>
                         {{ consultation_request_form.reason }}
+                        {% if consultation_request_form.reason.errors %}<p class="text-red-600 text-sm mt-1">{{ consultation_request_form.reason.errors|join:", " }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ consultation_request_form.escalation_reason.label }}</label>
                         {{ consultation_request_form.escalation_reason }}
+                        {% if consultation_request_form.escalation_reason.errors %}<p class="text-red-600 text-sm mt-1">{{ consultation_request_form.escalation_reason.errors|join:", " }}</p>{% endif %}
                     </div>
+                    {% if consultation_request_form.non_field_errors %}<p class="text-red-600 text-sm">{{ consultation_request_form.non_field_errors|join:", " }}</p>{% endif %}
                     <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold">상담 필요 등록</button>
                 </form>
             </section>
@@ -266,22 +276,27 @@
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ notice_form.classroom_label.label }}</label>
                         {{ notice_form.classroom_label }}
+                        {% if notice_form.classroom_label.errors %}<p class="text-red-600 text-sm mt-1">{{ notice_form.classroom_label.errors|join:", " }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ notice_form.title.label }}</label>
                         {{ notice_form.title }}
+                        {% if notice_form.title.errors %}<p class="text-red-600 text-sm mt-1">{{ notice_form.title.errors|join:", " }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ notice_form.content.label }}</label>
                         {{ notice_form.content }}
+                        {% if notice_form.content.errors %}<p class="text-red-600 text-sm mt-1">{{ notice_form.content.errors|join:", " }}</p>{% endif %}
                     </div>
                     <div>
                         <label class="block text-sm text-gray-600 mb-1">{{ notice_form.attachment.label }}</label>
                         {{ notice_form.attachment }}
+                        {% if notice_form.attachment.errors %}<p class="text-red-600 text-sm mt-1">{{ notice_form.attachment.errors|join:", " }}</p>{% endif %}
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                         {{ notice_form.is_pinned }} {{ notice_form.is_pinned.label }}
                     </label>
+                    {% if notice_form.non_field_errors %}<p class="text-red-600 text-sm">{{ notice_form.non_field_errors|join:", " }}</p>{% endif %}
                     <button type="submit" class="px-5 py-2 rounded-xl bg-teal-600 text-white font-semibold">알림장 등록</button>
                 </form>
             </section>

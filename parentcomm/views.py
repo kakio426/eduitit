@@ -197,6 +197,7 @@ def main(request):
     invalid_request_forms = {}
     invalid_slot_forms = {}
     invalid_message_forms = {}
+    form_status_message = ""
 
     def _redirect_to(tab_name):
         return redirect(f"{reverse('parentcomm:main')}?tab={tab_name}")
@@ -212,6 +213,7 @@ def main(request):
                 contact.save()
                 messages.success(request, "학부모 연락처를 등록했습니다.")
                 return _redirect_to(TAB_CONTACTS)
+            form_status_message = "입력값 확인"
             messages.error(request, "연락처를 저장하지 못했습니다. 입력값을 확인해 주세요.")
         elif action == "add_contact_csv":
             active_tab = TAB_CONTACTS
@@ -219,9 +221,11 @@ def main(request):
             if contact_csv_form.is_valid():
                 rows, parse_errors = _parse_contact_csv_rows(contact_csv_form.cleaned_data["csv_file"])
                 if parse_errors:
+                    form_status_message = "CSV 확인"
                     for err in parse_errors[:3]:
                         messages.error(request, err)
                 elif not rows:
+                    form_status_message = "CSV 확인"
                     messages.warning(request, "CSV에서 등록 가능한 행을 찾지 못했습니다.")
                 else:
                     created_count, updated_count = _upsert_parent_contacts(teacher, rows)
@@ -231,6 +235,7 @@ def main(request):
                     )
                     return _redirect_to(TAB_CONTACTS)
             else:
+                form_status_message = "CSV 확인"
                 messages.error(request, "CSV 파일을 다시 확인해 주세요.")
         elif action == "add_contact_bulk_text":
             active_tab = TAB_CONTACTS
@@ -238,9 +243,11 @@ def main(request):
             if contact_bulk_form.is_valid():
                 rows, parse_errors = _parse_contact_bulk_text_rows(contact_bulk_form.cleaned_data["bulk_text"])
                 if parse_errors:
+                    form_status_message = "입력값 확인"
                     for err in parse_errors[:3]:
                         messages.error(request, err)
                 elif not rows:
+                    form_status_message = "입력값 확인"
                     messages.warning(request, "입력한 내용에서 등록 가능한 항목을 찾지 못했습니다.")
                 else:
                     created_count, updated_count = _upsert_parent_contacts(teacher, rows)
@@ -250,6 +257,7 @@ def main(request):
                     )
                     return _redirect_to(TAB_CONTACTS)
             else:
+                form_status_message = "입력값 확인"
                 messages.error(request, "빠른 등록 입력값을 확인해 주세요.")
         elif action == "create_notice":
             active_tab = TAB_NOTICES
@@ -262,6 +270,7 @@ def main(request):
                     _pop_action_seed(request, workflow_seed_token, expected_action='parentcomm_notice')
                 messages.success(request, "알림장을 등록했습니다.")
                 return _redirect_to(TAB_NOTICES)
+            form_status_message = "저장 실패"
             messages.error(request, "알림장을 저장하지 못했습니다.")
         elif action == "create_thread":
             active_tab = TAB_MESSAGES
@@ -270,6 +279,7 @@ def main(request):
                 thread_form.save()
                 messages.success(request, "새 쪽지를 시작했습니다.")
                 return _redirect_to(TAB_MESSAGES)
+            form_status_message = "저장 실패"
             messages.error(request, "쪽지를 시작하지 못했습니다.")
         elif action == "reply_thread":
             active_tab = TAB_MESSAGES
@@ -284,6 +294,7 @@ def main(request):
                 messages.success(request, "답장을 보냈습니다.")
                 return _redirect_to(TAB_MESSAGES)
             invalid_message_forms[thread.id] = thread_message_form
+            form_status_message = "전송 실패"
             messages.error(request, "답장을 보내지 못했습니다.")
         elif action == "create_consultation_request":
             active_tab = TAB_CONSULT
@@ -292,6 +303,7 @@ def main(request):
                 consultation_request_form.save()
                 messages.success(request, "상담 요청을 등록했습니다.")
                 return _redirect_to(TAB_CONSULT)
+            form_status_message = "저장 실패"
             messages.error(request, "상담 요청을 등록하지 못했습니다.")
         elif action == "create_proposal":
             active_tab = TAB_CONSULT
@@ -311,6 +323,7 @@ def main(request):
                 messages.success(request, "상담 방식 제안을 저장했습니다.")
                 return _redirect_to(TAB_CONSULT)
             invalid_request_forms[consultation_request.id] = proposal_form
+            form_status_message = "저장 실패"
             messages.error(request, "상담 방식 제안을 저장하지 못했습니다.")
         elif action == "add_slot":
             active_tab = TAB_CONSULT
@@ -326,6 +339,7 @@ def main(request):
                 messages.success(request, "상담 조율 시간을 추가했습니다.")
                 return _redirect_to(TAB_CONSULT)
             invalid_slot_forms[proposal.id] = slot_form
+            form_status_message = "저장 실패"
             messages.error(request, "상담 조율 시간을 추가하지 못했습니다.")
 
     contacts = ParentContact.objects.filter(teacher=teacher).order_by("student_name", "parent_name")
@@ -391,6 +405,7 @@ def main(request):
         "consultation_request_form": consultation_request_form,
         "request_proposal_forms": request_proposal_forms,
         "proposal_slot_forms": proposal_slot_forms,
+        "form_status_message": form_status_message,
         "workflow_seed_token": workflow_seed_token if notice_prefill_active else "",
         "notice_prefill_active": notice_prefill_active,
         "notice_prefill_source_label": notice_prefill_source_label if notice_prefill_active else "",

@@ -565,6 +565,72 @@
     background: #0f766e;
 }
 
+.developer-chat-confirm-overlay {
+    position: fixed;
+    top: var(--main-nav-height, 88px);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.38);
+}
+
+.developer-chat-confirm-card {
+    width: min(100%, 22rem);
+    border: 1px solid #e2e8f0;
+    border-radius: 1.3rem;
+    background: #ffffff;
+    padding: 1.25rem;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+}
+
+.developer-chat-confirm-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.developer-chat-confirm-body {
+    margin: 0.8rem 0 0;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.developer-chat-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.1rem;
+}
+
+.developer-chat-confirm-cancel,
+.developer-chat-confirm-submit {
+    border: 0;
+    border-radius: 0.85rem;
+    padding: 0.72rem 1rem;
+    font-size: 0.86rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.developer-chat-confirm-cancel {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+}
+
+.developer-chat-confirm-submit {
+    background: #dc2626;
+    color: #ffffff;
+}
+
 @media (min-width: 900px) {
     .developer-chat-header {
         flex-direction: row;

@@ -184,6 +184,24 @@ class ParentCommViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(ParentNotice.objects.filter(title='예약 안내').exists())
         self.assertNotIn('workflow-seed', self.client.session.get('workflow_action_seeds', {}))
+
+    def test_invalid_notice_post_keeps_input_and_inline_status(self):
+        response = self.client.post(
+            reverse("parentcomm:main"),
+            {
+                "action": "create_notice",
+                "classroom_label": "3-2",
+                "title": "",
+                "content": "준비물을 챙겨 주세요.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="parentcomm-form-status"')
+        self.assertContains(response, "저장 실패")
+        self.assertContains(response, "준비물을 챙겨 주세요.")
+        self.assertContains(response, "필수")
+
     def test_teacher_can_add_contact_without_email_field(self):
         response = self.client.post(
             reverse("parentcomm:main"),

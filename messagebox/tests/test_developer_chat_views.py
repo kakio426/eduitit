@@ -257,3 +257,5 @@ class DeveloperChatViewTests(TestCase):
         self.assertIn('appendTextElement(button, "div", "developer-chat-thread-preview", thread.last_message_preview || "");', script)
         self.assertIn('appendTextElement(bubble, "p", "developer-chat-message-sender", message.sender_name || "");', script)
         self.assertIn('elements.input.value = prefillText;', script)
+        self.assertIn("requestDeleteConfirmation", script)
+        self.assertNotIn("window.confirm", script)

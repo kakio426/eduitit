@@ -2,8 +2,10 @@ import json
 import os
 from datetime import timedelta
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
@@ -69,13 +71,22 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.channel.slug)
-        self.assertContains(response, "텍스트를 붙여넣거나 첨부파일을 골라 바로 옮깁니다.")
+        self.assertContains(response, "이 브라우저는 기억됩니다")
         self.assertContains(response, "새 기기 추가")
         self.assertContains(response, "연결된 기기")
         self.assertEqual(response.headers["Cache-Control"], "no-store, private")
         self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
         self.assertIn(DEVICE_COOKIE_NAME, response.cookies)
         self.assertEqual(response.cookies[DEVICE_COOKIE_NAME]["path"], DEVICE_COOKIE_PATH)
+
+    def test_quickdrop_js_recovers_non_json_failures(self):
+        js_path = Path(settings.BASE_DIR) / "quickdrop" / "static" / "quickdrop" / "quickdrop.js"
+        source = js_path.read_text(encoding="utf-8")
+
+        self.assertIn("readJsonResponse", source)
+        self.assertIn("전송 실패", source)
+        self.assertIn("실시간 지연", source)
+        self.assertIn("this.sendTextBtn.disabled = !enabled || this.isPosting", source)
 
     @override_settings(SESSION_COOKIE_SECURE=True)
     def test_device_cookie_uses_secure_flag_when_production_cookies_are_secure(self):
@@ -151,7 +162,7 @@ class QuickdropViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-quickdrop-root="true"')
-        self.assertContains(response, "보낸 내용이 여기에 쌓입니다.")
+        self.assertContains(response, "보낸 내용 표시")
         self.assertContains(response, "첨부파일")
         self.assertContains(response, "예) 회의 링크, 메모, 주소")
         self.assertContains(response, 'data-quickdrop-history-panel="true"')

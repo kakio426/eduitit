@@ -59,9 +59,36 @@
                 inFlight: false,
                 queued: false,
                 timerId: 0,
+                pollingTimerId: 0,
+                delayedStatusTimerId: 0,
             };
         }
         return root._schoolcommRoomState;
+    }
+
+    function startRoomPolling(root, roomState) {
+        roomState = roomState || getRoomRefreshState(root);
+        if (roomState.pollingTimerId) {
+            return;
+        }
+        roomState.delayedStatusTimerId = window.setTimeout(function () {
+            setRoomStatus(root, '실시간 연결 끊김', true);
+        }, 12000);
+        roomState.pollingTimerId = window.setInterval(function () {
+            refreshRoomFragment(root, roomState);
+        }, 15000);
+    }
+
+    function stopRoomPolling(root, roomState) {
+        roomState = roomState || getRoomRefreshState(root);
+        if (roomState.pollingTimerId) {
+            window.clearInterval(roomState.pollingTimerId);
+            roomState.pollingTimerId = 0;
+        }
+        if (roomState.delayedStatusTimerId) {
+            window.clearTimeout(roomState.delayedStatusTimerId);
+            roomState.delayedStatusTimerId = 0;
+        }
     }
 
     function captureRoomUiState(fragment) {
@@ -183,6 +210,9 @@
         var roomState = getRoomRefreshState(root);
 
         var socket = new WebSocket(socketUrl);
+        socket.onopen = function () {
+            stopRoomPolling(root, roomState);
+        };
         socket.onmessage = function (event) {
             try {
                 var data = JSON.parse(event.data || '{}');
@@ -193,6 +223,9 @@
             } catch (error) {
                 console.warn('[schoolcomm] failed to parse room socket payload', error);
             }
+        };
+        socket.onclose = function () {
+            startRoomPolling(root, roomState);
         };
     }
 
@@ -470,22 +503,26 @@
     }
 
     function readComposerError(response) {
-        var fallbackMessage = '메시지를 보내지 못했습니다. 다시 확인해 주세요.';
+        var fallbackMessage = '전송 실패';
         var contentType = response.headers.get('content-type') || '';
 
         if (contentType.indexOf('application/json') !== -1) {
             return response.json().then(function (payload) {
-                return (payload && payload.error) || fallbackMessage;
+                if (payload && payload.code === 'permission_denied') {
+                    return '권한 없음';
+                }
+                return (payload && (payload.error || payload.message)) || fallbackMessage;
             }).catch(function () {
                 return fallbackMessage;
             });
         }
 
-        return response.text().then(function (text) {
-            var trimmed = (text || '').trim();
-            return trimmed || fallbackMessage;
-        }).catch(function () {
-            return fallbackMessage;
+        return Promise.resolve(response.status === 403 ? '권한 없음' : fallbackMessage);
+    }
+
+    function readComposerSuccess(response) {
+        return response.json().catch(function () {
+            throw new Error('다시 시도');
         });
     }
 
@@ -505,7 +542,7 @@
             },
         }).then(function (response) {
             if (response.ok) {
-                return response.json();
+                return readComposerSuccess(response);
             }
             return readComposerError(response).then(function (message) {
                 throw new Error(message);
@@ -525,11 +562,63 @@
                 }
             });
         }).catch(function (error) {
-            var message = error && error.message ? error.message : '메시지를 보내지 못했습니다. 다시 확인해 주세요.';
+            var message = error && error.message ? error.message : '전송 실패';
             setRoomStatus(root, message, true);
-            window.alert(message);
         }).finally(function () {
             setChatComposerSubmitting(composer, textarea, false);
+        });
+    }
+
+    function initInlineConfirmations(root) {
+        root.querySelectorAll('[data-schoolcomm-confirm-form="true"]').forEach(function (form) {
+            if (form._schoolcommConfirmBound) {
+                return;
+            }
+            form._schoolcommConfirmBound = true;
+            form.addEventListener('submit', function (event) {
+                if (!window.fetch || form._schoolcommConfirmed) {
+                    return;
+                }
+                event.preventDefault();
+                var panel = form.querySelector('[data-schoolcomm-confirm-panel="true"]');
+                var trigger = form.querySelector('[data-schoolcomm-confirm-trigger="true"]');
+                if (!panel || !trigger) {
+                    form._schoolcommConfirmed = true;
+                    form.submit();
+                    return;
+                }
+                panel.classList.remove('hidden');
+                trigger.classList.add('hidden');
+                var confirmButton = panel.querySelector('[data-schoolcomm-confirm-yes="true"]');
+                if (confirmButton && typeof confirmButton.focus === 'function') {
+                    confirmButton.focus();
+                }
+            });
+
+            form.addEventListener('click', function (event) {
+                var confirmButton = event.target.closest('[data-schoolcomm-confirm-yes="true"]');
+                if (confirmButton && form.contains(confirmButton)) {
+                    form._schoolcommConfirmed = true;
+                    form.submit();
+                    return;
+                }
+                var cancelButton = event.target.closest('[data-schoolcomm-confirm-no="true"]');
+                if (!cancelButton || !form.contains(cancelButton)) {
+                    return;
+                }
+                event.preventDefault();
+                var panel = form.querySelector('[data-schoolcomm-confirm-panel="true"]');
+                var trigger = form.querySelector('[data-schoolcomm-confirm-trigger="true"]');
+                if (panel) {
+                    panel.classList.add('hidden');
+                }
+                if (trigger) {
+                    trigger.classList.remove('hidden');
+                    if (typeof trigger.focus === 'function') {
+                        trigger.focus();
+                    }
+                }
+            });
         });
     }
 
@@ -593,5 +682,6 @@
         initMemberPicker(root);
         initCalendarPanel(root);
         initChatReplyComposer(root);
+        initInlineConfirmations(root);
     });
 })();

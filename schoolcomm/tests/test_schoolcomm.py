@@ -608,6 +608,13 @@ class SchoolcommViewTests(SchoolcommTestCase):
 
     def test_calendar_panel_fragment_returns_partial_markup(self):
         self.client.force_login(self.owner)
+        create_shared_calendar_event(
+            self.workspace,
+            self.owner_membership,
+            title="학년 회의",
+            start_time=timezone.make_aware(datetime(2026, 5, 2, 10, 0)),
+            end_time=timezone.make_aware(datetime(2026, 5, 2, 11, 0)),
+        )
         response = self.client.get(
             reverse("schoolcomm:main"),
             {
@@ -623,6 +630,8 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertTemplateUsed(response, "schoolcomm/partials/calendar_panel.html")
         self.assertContains(response, 'data-schoolcomm-calendar-panel="true"')
         self.assertContains(response, 'data-schoolcomm-calendar-link="true"')
+        self.assertContains(response, 'data-schoolcomm-confirm-form="true"')
+        self.assertContains(response, "return window.confirm('이 일정을 지울까요?');")
         self.assertNotContains(response, "<html", html=False)
 
     def test_shared_calendar_keeps_requested_date_inside_month(self):
@@ -733,3 +742,5 @@ class SchoolcommViewTests(SchoolcommTestCase):
         self.assertIn('[data-schoolcomm-chat-reply-trigger="true"]', source)
         self.assertIn('[data-schoolcomm-chat-parent-input="true"]', source)
         self.assertIn('setChatReplyState', source)
+        self.assertIn('전송 실패', source)
+        self.assertNotIn('window.alert', source)

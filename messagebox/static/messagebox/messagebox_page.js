@@ -38,6 +38,14 @@ function messageboxPage(options = {}) {
         messageCaptureSourcePreviewOpen: true,
         messageboxDeletingLinkedItemKeys: [],
         isDeletingMessageArchiveCapture: false,
+        messageboxConfirmDialog: {
+            open: false,
+            title: "",
+            body: "",
+            confirmLabel: "삭제",
+            returnFocusElement: null,
+            resolve: null,
+        },
 
         init() {
             ensureMessageboxToastBridge();
@@ -88,9 +96,19 @@ function messageboxPage(options = {}) {
             const baseSubmitCommit = this.submitMessageCaptureCommit.bind(this);
 
             this.requestJson = async (url, fetchOptions = {}) => {
-                return calendarMessageHubRequestJson(url, fetchOptions, {
-                    logContext: "messagebox",
-                });
+                try {
+                    return await calendarMessageHubRequestJson(url, fetchOptions, {
+                        logContext: "messagebox",
+                    });
+                } catch (error) {
+                    const payload = error && error.payload && typeof error.payload === "object" ? error.payload : {};
+                    const hasPayloadMessage = !!(payload.message || payload.detail || payload.error);
+                    const rawText = String((error && error.rawText) || "").trim();
+                    if (!hasPayloadMessage || rawText.startsWith("<")) {
+                        error.message = "다시 시도";
+                    }
+                    throw error;
+                }
             };
 
             this.resetMessageCaptureFlow = () => {
@@ -237,6 +255,57 @@ function messageboxPage(options = {}) {
                 }
                 return commitResult;
             };
+        },
+
+        resetMessageboxConfirmDialog() {
+            this.messageboxConfirmDialog = {
+                open: false,
+                title: "",
+                body: "",
+                confirmLabel: "삭제",
+                returnFocusElement: null,
+                resolve: null,
+            };
+        },
+
+        requestMessageboxConfirm(options = {}) {
+            if (this.messageboxConfirmDialog.open) {
+                return Promise.resolve(false);
+            }
+            const activeElement = typeof document !== "undefined" ? document.activeElement : null;
+            return new Promise((resolve) => {
+                this.messageboxConfirmDialog = {
+                    open: true,
+                    title: String(options.title || "삭제할까요?"),
+                    body: String(options.body || ""),
+                    confirmLabel: String(options.confirmLabel || "삭제"),
+                    returnFocusElement: activeElement && typeof activeElement.focus === "function" ? activeElement : null,
+                    resolve,
+                };
+                window.setTimeout(() => {
+                    const target = this.$refs && this.$refs.messageboxConfirmPrimary
+                        ? this.$refs.messageboxConfirmPrimary
+                        : null;
+                    if (target && typeof target.focus === "function") {
+                        target.focus();
+                    }
+                }, 0);
+            });
+        },
+
+        resolveMessageboxConfirm(confirmed) {
+            const dialog = this.messageboxConfirmDialog || {};
+            const resolve = typeof dialog.resolve === "function" ? dialog.resolve : null;
+            const returnFocusElement = dialog.returnFocusElement;
+            this.resetMessageboxConfirmDialog();
+            if (resolve) {
+                resolve(!!confirmed);
+            }
+            window.setTimeout(() => {
+                if (returnFocusElement && typeof returnFocusElement.focus === "function") {
+                    returnFocusElement.focus();
+                }
+            }, 0);
         },
 
         buildCalendarFocusUrl(rawUrl, itemOrEvent = "") {
@@ -1628,7 +1697,12 @@ function messageboxPage(options = {}) {
             const confirmText = linkedCount > 0
                 ? `${captureLabel} 보관 기록을 지울까요? 캘린더에 연결된 ${linkedCount}개 항목은 그대로 남습니다.`
                 : `${captureLabel} 보관 기록을 지울까요?`;
-            if (!window.confirm(confirmText)) {
+            const confirmed = await this.requestMessageboxConfirm({
+                title: "메시지 삭제",
+                body: confirmText,
+                confirmLabel: "삭제",
+            });
+            if (!confirmed) {
                 return;
             }
 
@@ -1726,7 +1800,12 @@ function messageboxPage(options = {}) {
                 return;
             }
             const title = String((linked && linked.title) || itemLabel).trim() || itemLabel;
-            if (!window.confirm(`${title} ${itemLabel === "할 일" ? "항목을" : "일정을"} 삭제할까요? 캘린더에서도 바로 사라집니다.`)) {
+            const confirmed = await this.requestMessageboxConfirm({
+                title: `${itemLabel} 삭제`,
+                body: `${title} ${itemLabel === "할 일" ? "항목을" : "일정을"} 삭제할까요? 캘린더에서도 바로 사라집니다.`,
+                confirmLabel: "삭제",
+            });
+            if (!confirmed) {
                 return;
             }
 

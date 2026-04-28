@@ -104,6 +104,25 @@
         return 'clipboard-' + Date.now() + '.' + extension;
     }
 
+    async function readJsonResponse(response) {
+        const rawText = await response.text().catch(() => '');
+        let data = {};
+        if (rawText) {
+            try {
+                data = JSON.parse(rawText);
+            } catch (_error) {
+                data = {};
+            }
+        }
+        if (!response.ok || !data.ok) {
+            const error = new Error(data.error || (response.status === 403 ? '권한 없음' : '전송 실패'));
+            error.status = response.status || 0;
+            error.payload = data;
+            throw error;
+        }
+        return data;
+    }
+
     function createApp(root, bootstrap) {
         return {
             root: root,
@@ -112,6 +131,8 @@
             pingTimer: null,
             pollTimer: null,
             reconnectTimer: null,
+            wsDelayTimer: null,
+            wsDelayNotified: false,
             isPosting: false,
             isPulling: false,
             wsConnected: false,
@@ -321,6 +342,7 @@
 
             async post(url, body, onSuccess, successMessage) {
                 this.isPosting = true;
+                this.syncComposerState();
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -331,10 +353,7 @@
                             'X-CSRFToken': csrfToken(this.textForm),
                         },
                     });
-                    const data = await response.json();
-                    if (!response.ok || !data.ok) {
-                        throw new Error(data.error || 'request failed');
-                    }
+                    const data = await readJsonResponse(response);
                     if (data.session && Object.keys(data.session).length) {
                         this.session = data.session;
                     }
@@ -346,9 +365,10 @@
                         this.toast(successMessage, 'success');
                     }
                 } catch (error) {
-                    this.toast(error.message || '전송에 실패했습니다.', 'error');
+                    this.toast(error.message || '전송 실패', 'error');
                 } finally {
                     this.isPosting = false;
+                    this.syncComposerState();
                 }
             },
 
@@ -690,6 +710,8 @@
                 this.ws = socket;
                 socket.addEventListener('open', () => {
                     this.wsConnected = true;
+                    this.wsDelayNotified = false;
+                    window.clearTimeout(this.wsDelayTimer);
                     this.stopSnapshotPolling();
                     this.startPing();
                     this.pullSnapshot();
@@ -708,6 +730,15 @@
                     this.wsConnected = false;
                     window.clearInterval(this.pingTimer);
                     this.startSnapshotPolling(true);
+                    if (!this.wsDelayNotified) {
+                        window.clearTimeout(this.wsDelayTimer);
+                        this.wsDelayTimer = window.setTimeout(() => {
+                            if (!this.wsConnected) {
+                                this.wsDelayNotified = true;
+                                this.toast('실시간 지연', 'error');
+                            }
+                        }, 10000);
+                    }
                     window.clearTimeout(this.reconnectTimer);
                     this.reconnectTimer = window.setTimeout(() => this.connectSocket(), 4000);
                 });
@@ -848,9 +879,10 @@
                 const hasText = Boolean((this.textInput.value || '').trim());
                 const hasFile = Boolean(this.getQueuedFile());
                 const enabled = hasText || hasFile;
-                this.sendTextBtn.disabled = !enabled;
-                this.sendTextBtn.classList.toggle('cursor-not-allowed', !enabled);
-                this.sendTextBtn.textContent = hasFile ? '파일 보내기' : '보내기';
+                this.sendTextBtn.disabled = !enabled || this.isPosting;
+                this.sendTextBtn.classList.toggle('cursor-not-allowed', !enabled || this.isPosting);
+                this.sendTextBtn.classList.toggle('cursor-wait', this.isPosting);
+                this.sendTextBtn.textContent = this.isPosting ? '보내는 중...' : (hasFile ? '파일 보내기' : '보내기');
             },
 
             async deleteItem(url) {

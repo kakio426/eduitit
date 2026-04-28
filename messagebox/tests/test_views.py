@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -41,7 +44,7 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, 'order-1 space-y-5')
         self.assertContains(response, "messageCaptureStep === 'input' && !messageComposerOpen")
         self.assertContains(response, 'x-show="messageComposerOpen || messageCaptureStep !== \'input\'"')
-        self.assertContains(response, 'padding-top: calc(var(--main-nav-height, 88px) + 0.75rem);')
+        self.assertContains(response, "service-shell--compact")
         self.assertContains(response, 'scroll-margin-top: calc(var(--main-nav-height, 88px) + 1rem);')
         self.assertContains(response, '@click="focusMessageArchive()"')
         self.assertContains(response, "받은 메시지")
@@ -72,6 +75,8 @@ class MessageboxViewTests(TestCase):
         self.assertContains(response, "지우기")
         self.assertContains(response, "deleteSelectedMessageArchiveCapture()")
         self.assertContains(response, "메시지 삭제")
+        self.assertContains(response, 'role="dialog"')
+        self.assertContains(response, "messageboxConfirmDialog.open")
         self.assertContains(response, "deleteSavedEventFromDone(savedEvent)")
         self.assertContains(response, "deleteLinkedItem(linked, { refreshArchive: true, captureId: selectedCaptureId() })")
         self.assertContains(response, "editSelectedArchiveCandidate(candidate.candidate_id)")
@@ -103,6 +108,15 @@ class MessageboxViewTests(TestCase):
         self.assertNotContains(response, "날짜 후보 불러오는 중...")
         self.assertNotContains(response, "이 일정 삭제")
         self.assertNotContains(response, "바로 일정 넣기")
+
+    def test_messagebox_delete_confirmation_uses_internal_modal(self):
+        js_path = Path(settings.BASE_DIR) / "messagebox" / "static" / "messagebox" / "messagebox_page.js"
+        source = js_path.read_text(encoding="utf-8")
+
+        self.assertIn("requestMessageboxConfirm", source)
+        self.assertIn("resolveMessageboxConfirm", source)
+        self.assertNotIn("window.confirm", source)
+        self.assertIn("다시 시도", source)
 
     def test_home_card_is_enabled_for_any_authenticated_teacher_when_feature_is_on(self):
         card = build_messagebox_home_card_context(self.user)
