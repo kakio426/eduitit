@@ -519,7 +519,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
             "placeholder": "저장할 메시지를 붙여넣으세요.",
         },
         ui={
-            "empty_prompt": "메시지를 바로 붙여넣으세요.",
+            "empty_prompt": "무엇을 보관할까요?",
             "preview_line_limit": 8,
         },
         links={

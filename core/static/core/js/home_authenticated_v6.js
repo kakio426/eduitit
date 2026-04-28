@@ -1699,20 +1699,27 @@
                 return trimLine(this.activeMode.label || 'AI 교무비서');
             },
 
+            workspaceShellPrompt: function () {
+                var prompt = trimLine(this.activeMode.empty_prompt || this.activeMode.usage_hint || this.activeMode.helper || '');
+                var placeholder = this.workspaceShellPlaceholder();
+                if (!prompt || prompt === placeholder) {
+                    return this.workspaceShellServiceLabel();
+                }
+                return prompt;
+            },
+
             workspaceShellPlaceholder: function () {
                 var modeKey = trimLine(this.activeModeKey || '');
-                var placeholders = {
-                    notice: '보낼 내용을 적으세요.',
-                    schedule: '일정이 들어 있는 내용을 적으세요.',
-                    'teacher-law': this.teacherLawHasButtonChoices()
+                var contextualPlaceholder = '';
+                if (modeKey === 'teacher-law') {
+                    contextualPlaceholder = this.teacherLawHasButtonChoices()
                         ? '버튼을 골라 주세요.'
-                        : (this.teacherLawHasFollowupContext() ? '이어서 물어보세요.' : '상황을 적으세요.'),
-                    reservation: '필요한 시간과 장소를 적으세요.',
-                };
+                        : (this.teacherLawHasFollowupContext() ? '이어서 물어보세요.' : '');
+                }
                 if (this.activeConversationItem) {
                     return '메시지를 이어서 적으세요.';
                 }
-                return trimLine(placeholders[modeKey] || this.activeMode.placeholder || '하고 싶은 일을 적으세요.');
+                return trimLine(contextualPlaceholder || this.activeMode.placeholder || '하고 싶은 일을 적으세요.');
             },
 
             workspaceShellSubmitLabel: function () {
@@ -1744,27 +1751,26 @@
             },
 
             workspaceShellBadge: function () {
-                var label = this.workspaceShellServiceLabel();
-                if (this.activeConversationItem) {
-                    return '';
-                }
-                return label ? '현재 서비스 · ' + label : '현재 서비스 · AI 교무비서';
+                return '';
             },
 
             workspaceShellHint: function () {
                 var modeKey = trimLine(this.activeModeKey || '');
                 var hints = {
-                    notice: '가정통신문처럼 바로 써 드려요.',
-                    schedule: '학사 일정이나 약속을 정리해요.',
+                    notice: '알림 문구 정리',
+                    schedule: '날짜·시간 찾기',
                     'teacher-law': this.teacherLawHasButtonChoices()
-                        ? '필요한 사실을 고릅니다.'
-                        : (this.teacherLawHasFollowupContext() ? '방금 법률 대화를 이어갑니다.' : '상황을 적으면 대응 순서를 정리해요.'),
-                    reservation: '필요한 시간과 장소를 적어 주세요.',
+                        ? '사실 선택'
+                        : (this.teacherLawHasFollowupContext() ? '법률 대화 이어가기' : '대응 순서 정리'),
+                    reservation: '예약 값 정리',
+                    quickdrop: '텍스트 전송',
+                    tts: '방송 문구 정리',
+                    'message-save': '메시지 보관',
                 };
                 if (this.activeConversationItem) {
                     return '';
                 }
-                return trimLine(hints[modeKey] || this.activeMode.empty_prompt || this.activeMode.usage_hint || '');
+                return trimLine(hints[modeKey] || this.activeMode.helper || '');
             },
 
             workspaceShellCanAttachUtility: function () {
@@ -2162,21 +2168,14 @@
                     });
                 };
                 var rows;
-                var choice;
                 var school;
                 var room;
                 var period;
                 if (activeModeKey === 'schedule' && execution && execution.kind === 'schedule' && trimLine(draft.start_time || '')) {
                     rows = [];
-                    choice = Array.isArray(execution.choices)
-                        ? execution.choices.find(function (item) {
-                            return String(item && item.id || '') === String(draft.choice_id || '');
-                        })
-                        : null;
                     pushRow(rows, '날짜', this.formatChatHistoryDateTimeDate(draft.start_time));
                     pushRow(rows, '시간', this.formatChatHistoryDateTimeTime(draft.start_time, draft.end_time, Boolean(draft.is_all_day)));
-                    pushRow(rows, '후보', choice ? choice.label : '');
-                    pushRow(rows, '요약', previewPayload.summary);
+                    pushRow(rows, '메모', draft.note);
                     cards.push({
                         type: 'schedule-summary',
                         title: trimLine(draft.title || execution.title || previewPayload.title || '일정 후보'),
