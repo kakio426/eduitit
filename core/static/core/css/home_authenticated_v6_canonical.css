@@ -6964,7 +6964,7 @@ transform: none;
 .home-v6-page .home-v6-agent-dialogue-stage {
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 1rem;
     width: min(100%, 84rem);
     min-height: clamp(20rem, 44vh, 34rem);
@@ -7003,9 +7003,9 @@ transform: none;
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
-    min-height: clamp(18rem, 44vh, 34rem);
-    max-height: min(58vh, 38rem);
-    overflow-y: auto;
+    min-height: 100%;
+    max-height: none;
+    overflow: visible;
     overscroll-behavior: contain;
     scroll-behavior: smooth;
     padding: 1rem 0.2rem 0.35rem;
@@ -7014,12 +7014,12 @@ transform: none;
 
 .home-v6-chat-history::before {
     content: "";
-    margin-top: auto;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    margin-top: 0;
 }
 
 .home-v6-chat-history > .home-v6-chat-history-pair:first-child {
-    margin-top: auto;
+    margin-top: 0;
 }
 
 .home-v6-chat-history-pair {
@@ -8243,10 +8243,23 @@ transform: none;
     min-height: var(--home-v6-ai-compact-stage-min);
     max-height: var(--home-v6-ai-compact-stage-max);
     overscroll-behavior-y: auto;
+    justify-content: flex-start;
+    overflow-y: auto;
 }
 
 .home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history {
     min-height: 100%;
+    max-height: none;
+    overflow: visible;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history::before {
+    flex: 1 1 auto;
+    margin-top: 0;
+}
+
+.home-v6-page .home-v6-agent-dialogue-stage .home-v6-chat-history > .home-v6-chat-history-pair:first-child {
+    margin-top: 0;
 }
 
 @media (min-width: 1100px) {
