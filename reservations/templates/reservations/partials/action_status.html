@@ -1,0 +1,10 @@
+{% if message %}
+<div data-reservation-status="{{ target|default:'global' }}"
+    role="alert"
+    class="rounded-xl border px-3 py-2 text-sm font-semibold {% if tone == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-sky-200 bg-sky-50 text-sky-800{% endif %}">
+    <div class="text-[11px] font-black uppercase tracking-wide {% if tone == 'success' %}text-emerald-600{% else %}text-sky-600{% endif %}">
+        {{ title|default:'확인 필요' }}
+    </div>
+    <div class="mt-0.5">{{ message }}</div>
+</div>
+{% endif %}

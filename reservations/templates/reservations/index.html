@@ -2,7 +2,9 @@
 
 {% block content %}
 {% now 'Y-m-d' as today_iso %}
-<div class="service-shell--relaxed pb-20 min-h-screen bg-[#E0E5EC]"
+<div id="reservation-app"
+    data-reservation-app
+    class="service-shell--relaxed pb-20 min-h-screen bg-[#E0E5EC]"
     x-data="{ 
         showModal: false,
         showClaimModal: false,
@@ -50,6 +52,10 @@
         claimHasEditCode: true,
         claimEditCode: '',
         claimSubmitMode: 'open',
+        bookingClientError: '',
+        claimClientError: '',
+        globalClientError: '',
+        lastFocusedElement: null,
         getSubmitUrl() {
             if (this.submitMode === 'edit' && this.editReservationId) {
                 return this.reservationUpdateUrlTemplate.replace('999999', this.editReservationId);
@@ -65,6 +71,63 @@
         },
         getSubmitLabel() {
             return this.submitMode === 'edit' ? '수정하기' : '예약하기';
+        },
+        rememberCurrentFocus() {
+            const active = document.activeElement;
+            this.lastFocusedElement = active && active !== document.body ? active : null;
+        },
+        restorePreviousFocus() {
+            const element = this.lastFocusedElement;
+            this.lastFocusedElement = null;
+            if (element && document.contains(element) && typeof element.focus === 'function') {
+                this.$nextTick(() => element.focus({ preventScroll: true }));
+            }
+        },
+        clearStatus(selector) {
+            const element = document.querySelector(selector);
+            if (element) element.innerHTML = '';
+        },
+        clearBookingError() {
+            this.bookingClientError = '';
+            this.clearStatus('#reservation-booking-error');
+        },
+        clearClaimError() {
+            this.claimClientError = '';
+            this.clearStatus('#reservation-claim-error');
+        },
+        showBookingError(message) {
+            this.clearStatus('#reservation-booking-error');
+            this.bookingClientError = message;
+            this.$nextTick(() => document.querySelector('[data-booking-error]')?.scrollIntoView({ block: 'nearest' }));
+        },
+        showClaimError(message) {
+            this.clearStatus('#reservation-claim-error');
+            this.claimClientError = message;
+            this.$nextTick(() => document.querySelector('[data-claim-error]')?.scrollIntoView({ block: 'nearest' }));
+        },
+        showGlobalError(message) {
+            this.clearStatus('#reservation-action-status');
+            this.globalClientError = message;
+            this.$nextTick(() => document.querySelector('[data-global-error]')?.scrollIntoView({ block: 'nearest' }));
+        },
+        focusBookingFirstField() {
+            this.$nextTick(() => {
+                const selector = this.bookingKind === 'custom' ? '[data-booking-target-input]' : '[data-booking-grade-input]';
+                document.querySelector(selector)?.focus({ preventScroll: true });
+            });
+        },
+        focusClaimCode() {
+            this.$nextTick(() => document.querySelector('[data-claim-code-input]')?.focus({ preventScroll: true }));
+        },
+        closeBookingModal() {
+            this.showModal = false;
+            this.clearBookingError();
+            this.restorePreviousFocus();
+        },
+        closeClaimModal() {
+            this.showClaimModal = false;
+            this.clearClaimError();
+            this.restorePreviousFocus();
         },
         init() {
             this.applyProfileVersionReset();
@@ -200,7 +263,7 @@
                 this.profileApplied = false;
                 this.clearOwnerCookie();
                 if (!silent && (this.profileName || this.profileTargetLabel || this.profileGrade || this.profileClassNo)) {
-                    alert('예약할 때 쓴 학년/반/이름 또는 역할/이름을 함께 입력해 주세요.');
+                    this.showGlobalError('학년/반/이름 확인');
                 }
                 if (refresh) {
                     this.triggerReservationRefresh();
@@ -311,6 +374,8 @@
             this.storeEditCode();
         },
         openBooking(roomId, roomName, period, date, periodLabel, lockGrade = null) {
+            this.rememberCurrentFocus();
+            this.clearBookingError();
             this.submitMode = 'create';
             this.editReservationId = null;
             this.selectedRoomId = roomId;
@@ -328,8 +393,11 @@
             this.memo = '';
             this.editCode = this.readSavedEditCode();
             this.showModal = true;
+            this.focusBookingFirstField();
         },
         openEditBooking(payload) {
+            this.rememberCurrentFocus();
+            this.clearBookingError();
             this.submitMode = 'edit';
             this.editReservationId = payload.id;
             this.selectedRoomId = payload.roomId;
@@ -352,8 +420,11 @@
             this.memo = payload.memo ?? '';
             this.editCode = this.editingRequiresCodeSetup ? this.readSavedEditCode() : '';
             this.showModal = true;
+            this.focusBookingFirstField();
         },
         openClaimReservation(payload) {
+            this.rememberCurrentFocus();
+            this.clearClaimError();
             this.claimReservationId = payload.id;
             this.claimRoomName = payload.roomName;
             this.claimParty = payload.party;
@@ -363,24 +434,28 @@
             this.claimEditCode = this.readSavedEditCode();
             this.claimSubmitMode = 'open';
             this.showClaimModal = true;
+            this.focusClaimCode();
         },
         prepareClaimSubmit(event) {
+            this.clearClaimError();
             if (!this.claimHasEditCode) {
-                alert('이 예약은 아직 수정 코드가 없습니다. 아래 내 예약 찾기로 먼저 연 뒤 코드를 저장해 주세요.');
+                this.showClaimError('수정 코드 없음');
+                this.claimSubmitMode = 'open';
                 event.preventDefault();
                 return;
             }
             const normalizedEditCode = (this.claimEditCode || '').trim();
             if (!/^\d{4}$/.test(normalizedEditCode)) {
-                alert('수정 코드는 숫자 4자리로 입력해 주세요.');
+                this.showClaimError('수정 코드 확인');
+                this.claimSubmitMode = 'open';
                 event.preventDefault();
                 return;
             }
             this.claimEditCode = normalizedEditCode;
             this.storeEditCode(normalizedEditCode);
-            this.showClaimModal = false;
         },
         prepareReservationSubmit(event) {
+            this.clearBookingError();
             const numericGrade = this.bookingKind === 'class' ? Number(this.grade) : 0;
             const normalizedEditCode = (this.editCode || '').trim();
             const requiresEditCode = this.submitMode === 'create' || this.editingRequiresCodeSetup;
@@ -388,7 +463,7 @@
 
             if (this.bookingKind === 'custom') {
                 if (!this.targetLabel || !this.targetLabel.trim()) {
-                    alert('역할 또는 소속을 입력해 주세요. (예: 사서, 영양, 보건, 상담, 돌봄, 늘봄, 교무실, 행정실)');
+                    this.showBookingError('역할 또는 소속 필요');
                     event.preventDefault();
                     return;
                 }
@@ -396,7 +471,7 @@
                 this.classNo = 0;
             } else {
                 if (!this.grade || !this.classNo) {
-                    alert('학년과 반을 입력해 주세요.');
+                    this.showBookingError('학년/반 필요');
                     event.preventDefault();
                     return;
                 }
@@ -404,7 +479,7 @@
             }
 
             if ((requiresEditCode || normalizedEditCode) && !/^\d{4}$/.test(normalizedEditCode)) {
-                alert('수정 코드는 숫자 4자리로 입력해 주세요.');
+                this.showBookingError('수정 코드 확인');
                 event.preventDefault();
                 return;
             }
@@ -433,7 +508,6 @@
             this.storeProfileInfo();
             this.storeEditCode(normalizedEditCode);
             this.applyProfileToCookie({ refresh: false, silent: true });
-            this.showModal = false;
         }
     }"
     >
@@ -461,6 +535,13 @@
         </div>
     </div>
     {% endif %}
+
+    <div class="max-w-7xl mx-auto px-4 mb-4 space-y-2">
+        <div id="reservation-action-status" aria-live="polite"></div>
+        <div x-show="globalClientError" x-cloak data-global-error
+            class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800"
+            x-text="globalClientError"></div>
+    </div>
 
     <!-- Header & Date Navigation -->
     <div class="max-w-7xl mx-auto px-4 mb-6">
@@ -512,10 +593,15 @@
                             예약 가능: {{ max_date|date:"m/d" }}까지
                         </div>
                         {% endif %}
+                        {% if max_date and target_date >= max_date %}
+                        <div class="text-[10px] text-sky-600 font-bold mt-1">다음 예약 전</div>
+                        {% endif %}
                     </div>
 
                     {% if max_date and target_date >= max_date %}
-                    <button @click="alert('다음 예약은 학교 설정에 따라 아직 열리지 않았습니다.\n(예약 가능일: {{ max_date|date:"Y-m-d" }}까지)')"
+                    <button type="button" disabled
+                        aria-label="예약 전"
+                        title="예약 전"
                         class="w-8 h-8 md:w-10 md:h-10 text-gray-300 bg-gray-100 flex items-center justify-center rounded-full cursor-not-allowed">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
@@ -642,6 +728,30 @@
 
 <!-- Listen for HTMX events -->
 <script>
+    function applyReservationErrorResponse(evt) {
+        const xhr = evt.detail.xhr;
+        const explicitTarget = xhr.getResponseHeader('HX-Retarget');
+        const fallbackTarget = evt.detail.elt?.dataset?.errorTarget || '#reservation-action-status';
+        const target = explicitTarget || fallbackTarget;
+        const container = document.querySelector(target);
+        if (!container) return;
+        container.innerHTML = xhr.responseText || '<div class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800" role="alert">다시 시도</div>';
+        container.scrollIntoView({ block: 'nearest' });
+    }
+
+    document.body.addEventListener('htmx:responseError', function (evt) {
+        applyReservationErrorResponse(evt);
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+        const source = evt.detail.elt;
+        if (!evt.detail.successful || !source || !source.closest('[data-claim-modal]')) return;
+        const app = document.querySelector('[data-reservation-app]');
+        if (window.Alpine && app) {
+            window.Alpine.$data(app).closeClaimModal();
+        }
+    });
+
     document.body.addEventListener('htmx:afterSwap', function (evt) {
         if (evt.detail.xhr.getResponseHeader('HX-Refresh') === 'true') {
             window.location.reload();

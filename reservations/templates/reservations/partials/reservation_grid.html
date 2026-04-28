@@ -59,7 +59,7 @@
                                 hx-swap="none"
                                 hx-indicator="#reservation-delete-indicator-desktop-{{ s.reservation.id }}"
                                 hx-disabled-elt="this"
-                                hx-on::response-error="alert('예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                                data-error-target="#reservation-action-status"
                                 class="absolute bottom-1 right-1 text-red-300 hover:text-red-500 hidden group-hover:block"
                                 onclick="event.stopPropagation()">
                                 <span id="reservation-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
@@ -88,7 +88,7 @@
                                 hx-swap="none"
                                 hx-indicator="#reservation-admin-delete-indicator-desktop-{{ s.reservation.id }}"
                                 hx-disabled-elt="this"
-                                hx-on::response-error="alert('강제 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                                data-error-target="#reservation-action-status"
                                 class="absolute bottom-1 right-1 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                                 onclick="event.stopPropagation()">
                                 <span id="reservation-admin-delete-indicator-desktop-{{ s.reservation.id }}" class="htmx-indicator text-[10px] mr-1">
@@ -198,7 +198,7 @@
                         hx-swap="none"
                         hx-indicator="#reservation-delete-indicator-mobile-{{ s.reservation.id }}"
                         hx-disabled-elt="this"
-                        hx-on::response-error="alert('예약 취소 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                        data-error-target="#reservation-action-status"
                         class="absolute bottom-1 right-2 text-red-400 hover:text-red-600 p-1 inline-flex items-center gap-1"
                         onclick="event.stopPropagation()">
                         <span id="reservation-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px]">
@@ -225,7 +225,7 @@
                         hx-swap="none"
                         hx-indicator="#reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}"
                         hx-disabled-elt="this"
-                        hx-on::response-error="alert('강제 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')"
+                        data-error-target="#reservation-action-status"
                         class="absolute bottom-1 right-8 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md z-10"
                         onclick="event.stopPropagation()">
                         <span id="reservation-admin-delete-indicator-mobile-{{ s.reservation.id }}" class="htmx-indicator text-[9px] mr-0.5">

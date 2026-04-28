@@ -425,7 +425,61 @@ class ReservationsViewTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn('수정 코드 4자리를 입력해 주세요.', response.content.decode('utf-8'))
+        self.assertIn('수정 코드 확인', response.content.decode('utf-8'))
+
+    def test_create_reservation_htmx_error_targets_booking_modal(self):
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': self.target_date.strftime('%Y-%m-%d'),
+                'period': 2,
+                'grade': 6,
+                'class_no': 1,
+                'name': '무코드',
+            },
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.headers.get('HX-Retarget'), '#reservation-booking-error')
+        self.assertEqual(response.headers.get('HX-Reswap'), 'innerHTML')
+        content = response.content.decode('utf-8')
+        self.assertIn('수정 코드 확인', content)
+        self.assertIn('data-reservation-status="booking"', content)
+
+    def test_weekly_limit_htmx_returns_conflict_without_script_alert(self):
+        self.config.weekly_opening_mode = True
+        self.config.save(update_fields=['weekly_opening_mode'])
+        max_date = get_max_booking_date(self.school)
+        limited_date = max_date + timedelta(days=1)
+        teacher = User.objects.create_user(username='weekly-teacher', password='password2', email='weekly@example.com')
+        teacher_profile, _ = UserProfile.objects.get_or_create(user=teacher)
+        teacher_profile.nickname = '주간교사'
+        teacher_profile.role = 'school'
+        teacher_profile.save(update_fields=['nickname', 'role'])
+        ReservationCollaborator.objects.create(school=self.school, collaborator=teacher, can_edit=True)
+        self.client.force_login(teacher)
+
+        response = self.client.post(
+            reverse('reservations:create_reservation', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'date': limited_date.strftime('%Y-%m-%d'),
+                'period': 2,
+                'grade': 6,
+                'class_no': 1,
+                'name': '제한일',
+                'edit_code': self.default_edit_code,
+            },
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.headers.get('HX-Retarget'), '#reservation-booking-error')
+        content = response.content.decode('utf-8')
+        self.assertIn('예약 전', content)
+        self.assertNotIn('<script>', content)
 
     def test_delete_reservation(self):
         reservation = Reservation.objects.create(
@@ -587,6 +641,7 @@ class ReservationsViewTest(TestCase):
         response = second_client.post(url, {'edit_code': '9999'}, HTTP_HX_REQUEST='true')
 
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.headers.get('HX-Retarget'), '#reservation-action-status')
         self.assertTrue(Reservation.objects.filter(id=reservation.id).exists())
 
     def test_delete_reservation_forbidden_without_ownership(self):
@@ -647,6 +702,7 @@ class ReservationsViewTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.headers.get('HX-Retarget'), '#reservation-claim-error')
         self.assertEqual(second_client.session.get('owned_reservation_ids', []), [])
 
     def test_claim_reservation_access_redirects_when_reservation_missing(self):
@@ -759,6 +815,49 @@ class ReservationsViewTest(TestCase):
         self.assertEqual(reservation.target_label, '사서')
         self.assertEqual(reservation.name, 'After')
 
+    def test_update_weekly_limit_htmx_returns_conflict_without_script_alert(self):
+        self.config.weekly_opening_mode = True
+        self.config.save(update_fields=['weekly_opening_mode'])
+        max_date = get_max_booking_date(self.school)
+        limited_date = max_date + timedelta(days=1)
+        teacher = User.objects.create_user(username='weekly-editor', password='password2', email='weekly-editor@example.com')
+        teacher_profile, _ = UserProfile.objects.get_or_create(user=teacher)
+        teacher_profile.nickname = '주간수정교사'
+        teacher_profile.role = 'school'
+        teacher_profile.save(update_fields=['nickname', 'role'])
+        ReservationCollaborator.objects.create(school=self.school, collaborator=teacher, can_edit=True)
+        reservation = Reservation.objects.create(
+            room=self.room,
+            created_by=teacher,
+            edit_code_hash=hash_reservation_edit_code(self.default_edit_code),
+            date=self.target_date,
+            period=5,
+            grade=3,
+            class_no=1,
+            name='Before',
+        )
+        self.client.force_login(teacher)
+
+        response = self.client.post(
+            reverse('reservations:update_reservation', args=[self.school.slug, reservation.id]),
+            {
+                'room_id': self.room.id,
+                'date': limited_date.strftime('%Y-%m-%d'),
+                'period': 5,
+                'grade': 3,
+                'class_no': 1,
+                'name': 'After',
+                'edit_code': '',
+            },
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.headers.get('HX-Retarget'), '#reservation-booking-error')
+        content = response.content.decode('utf-8')
+        self.assertIn('예약 전', content)
+        self.assertNotIn('<script>', content)
+
     def test_update_legacy_reservation_requires_new_edit_code(self):
         reservation = Reservation.objects.create(
             room=self.room,
@@ -782,7 +881,7 @@ class ReservationsViewTest(TestCase):
         })
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn('예전 예약이라 수정 코드가 없습니다.', response.content.decode('utf-8'))
+        self.assertIn('수정 코드 확인', response.content.decode('utf-8'))
 
         response = self.client.post(url, {
             'room_id': self.room.id,
@@ -1175,6 +1274,9 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, "reservation_profile_version")
         self.assertContains(response, "학년/반 또는 역할을 다시 입력")
         self.assertContains(response, "수정 코드 4자리")
+        self.assertContains(response, 'id="reservation-action-status"', html=False)
+        self.assertContains(response, "this.claimSubmitMode = 'open';")
+        self.assertNotContains(response, "alert(")
 
     def test_grade_lock_blocks_different_grade_without_override(self):
         GradeRecurringLock.objects.create(
