@@ -12,6 +12,7 @@
   }
 
   const editorNameInput = document.getElementById("class-editor-name");
+  const editorNameError = document.getElementById("class-editor-name-error");
   const statusNode = document.getElementById("class-edit-status");
   const issuesList = document.getElementById("class-edit-issues");
   const saveButton = document.getElementById("class-edit-save-button");
@@ -20,6 +21,47 @@
   const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
 
   const currentMode = bootstrap.mode || "weekly";
+
+  const visibleInputs = (selector) =>
+    Array.from(document.querySelectorAll(selector)).filter((input) => input.offsetParent !== null && !input.disabled);
+
+  const messageFromError = (error, fallback) => {
+    const message = String(error?.message || "").trim();
+    if (!message || message === "Failed to fetch" || message.includes("JSON")) {
+      return fallback;
+    }
+    return message;
+  };
+
+  const readJsonResponse = async (response) => {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_error) {
+      return { ok: false, message: response.redirected ? "로그인 필요" : "다시 시도" };
+    }
+  };
+
+  const requestJson = async (url, payload) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await readJsonResponse(response);
+    if (!response.ok || !result.ok) {
+      const error = new Error(result.message || "다시 시도");
+      error.payload = result;
+      throw error;
+    }
+    return result;
+  };
 
   const setStatus = (text, tone) => {
     if (!statusNode) {
@@ -34,6 +76,15 @@
     } else {
       statusNode.className += "bg-slate-100 text-slate-600";
     }
+  };
+
+  const setNameError = (message) => {
+    if (!editorNameInput || !editorNameError) {
+      return;
+    }
+    editorNameInput.setAttribute("aria-invalid", message ? "true" : "false");
+    editorNameError.textContent = message || "";
+    editorNameError.classList.toggle("hidden", !message);
   };
 
   const renderIssues = (validation) => {
@@ -66,20 +117,22 @@
   const requireEditorName = () => {
     const value = editorNameInput?.value?.trim() || "";
     if (!value) {
-      throw new Error("입력자 이름을 먼저 적어 주세요.");
+      setNameError("이름 필요");
+      throw new Error("이름 필요");
     }
+    setNameError("");
     return value;
   };
 
   const collectWeeklyEntries = () =>
-    Array.from(document.querySelectorAll(".weekly-cell-input")).map((input) => ({
+    visibleInputs(".weekly-cell-input").map((input) => ({
       day_key: input.dataset.dayKey,
       period_no: Number(input.dataset.periodNo),
       text: input.value.trim(),
     }));
 
   const collectDailyEntries = () =>
-    Array.from(document.querySelectorAll(".daily-override-input")).map((input) => ({
+    visibleInputs(".daily-override-input").map((input) => ({
       period_no: Number(input.dataset.periodNo),
       text: input.value.trim(),
     }));
@@ -99,33 +152,43 @@
     return payload;
   };
 
-  const saveCurrent = async (submitted) => {
-    const payload = requestPayload(submitted);
-    const url = submitted
-      ? bootstrap.submit_url
-      : currentMode === "daily"
-        ? bootstrap.daily_save_url
-        : bootstrap.weekly_save_url;
-    const button = submitted ? submitButton : saveButton;
-    if (button) {
-      button.disabled = true;
-    }
-    setStatus(submitted ? "입력 완료 처리 중..." : "저장 중...", "idle");
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify(payload),
+  const syncPeerInputs = (source) => {
+    if (source.classList.contains("weekly-cell-input")) {
+      document.querySelectorAll(".weekly-cell-input").forEach((input) => {
+        if (
+          input !== source &&
+          input.dataset.dayKey === source.dataset.dayKey &&
+          input.dataset.periodNo === source.dataset.periodNo
+        ) {
+          input.value = source.value;
+        }
       });
-      const result = await response.json();
-      if (!response.ok || !result.ok) {
-        renderIssues(result.validation || {});
-        throw new Error(result.message || "저장에 실패했습니다.");
-      }
+    }
+    if (source.classList.contains("daily-override-input")) {
+      document.querySelectorAll(".daily-override-input").forEach((input) => {
+        if (input !== source && input.dataset.periodNo === source.dataset.periodNo) {
+          input.value = source.value;
+        }
+      });
+    }
+  };
+
+  const saveCurrent = async (submitted) => {
+    try {
+      const payload = requestPayload(submitted);
+      const url = submitted
+        ? bootstrap.submit_url
+        : currentMode === "daily"
+          ? bootstrap.daily_save_url
+          : bootstrap.weekly_save_url;
+      [saveButton, submitButton].forEach((button) => {
+        if (button) {
+          button.disabled = true;
+        }
+      });
+      setStatus(submitted ? "입력 완료 처리 중..." : "저장 중...", "idle");
+
+      const result = await requestJson(url, payload);
       renderIssues(result.validation || {});
       setStatus(
         submitted
@@ -141,14 +204,28 @@
         }, 250);
       }
     } catch (error) {
-      setStatus(error.message, "error");
-      window.alert(error.message);
+      renderIssues(error.payload?.validation || {});
+      setStatus(messageFromError(error, "다시 시도"), "error");
     } finally {
-      if (button) {
-        button.disabled = false;
-      }
+      [saveButton, submitButton].forEach((button) => {
+        if (button) {
+          button.disabled = false;
+        }
+      });
     }
   };
+
+  editorNameInput?.addEventListener("input", () => {
+    if (editorNameInput.value.trim()) {
+      setNameError("");
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLInputElement) {
+      syncPeerInputs(event.target);
+    }
+  });
 
   saveButton?.addEventListener("click", () => {
     saveCurrent(false);

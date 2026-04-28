@@ -26,10 +26,17 @@
     selection: null,
     autosaveTimer: null,
     workbookApi: null,
+    workbookReady: false,
+    workbookUserInteracted: false,
+    lastSavedSignature: "",
     saveInFlight: false,
+    hasUnsavedChanges: false,
+    saveFailed: false,
+    changeVersion: 0,
     editingEventId: null,
     eventSlotMap: {},
   };
+  state.lastSavedSignature = JSON.stringify(state.sheetData || []);
 
   const classroomMap = {};
   (bootstrap.classrooms || []).forEach((item) => {
@@ -41,6 +48,7 @@
   });
 
   const statusNode = document.getElementById("timetable-save-status");
+  const retrySaveButton = document.getElementById("timetable-retry-save-button");
   const conflictList = document.getElementById("conflict-list");
   const teacherStatsList = document.getElementById("teacher-stats-list");
   const summaryConflicts = document.getElementById("summary-conflicts");
@@ -71,6 +79,14 @@
   const selectionSheetLabel = document.getElementById("selection-sheet-label");
   const selectionSlotLabel = document.getElementById("selection-slot-label");
   const selectionRangeLabel = document.getElementById("selection-range-label");
+  const actionDialog = document.getElementById("timetable-action-dialog");
+  const actionDialogTitle = document.getElementById("timetable-dialog-title");
+  const actionDialogMessage = document.getElementById("timetable-dialog-message");
+  const actionDialogInputWrap = document.getElementById("timetable-dialog-input-wrap");
+  const actionDialogInputLabel = document.getElementById("timetable-dialog-input-label");
+  const actionDialogInput = document.getElementById("timetable-dialog-input");
+  const actionDialogCancel = document.getElementById("timetable-dialog-cancel");
+  const actionDialogConfirm = document.getElementById("timetable-dialog-confirm");
   const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
 
   const escapeHtml = (value) =>
@@ -80,6 +96,52 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+
+  const messageFromError = (error, fallback) => {
+    const message = String(error?.message || "").trim();
+    if (!message || message === "Failed to fetch" || message.includes("JSON")) {
+      return fallback;
+    }
+    return message;
+  };
+
+  const readJsonResponse = async (response) => {
+    const text = await response.text();
+    if (!text) {
+      return {};
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_error) {
+      return { ok: false, message: response.redirected ? "로그인 필요" : "다시 시도" };
+    }
+  };
+
+  const requestJson = async (url, options, fallbackMessage) => {
+    const response = await fetch(url, options || {});
+    const payload = await readJsonResponse(response);
+    if (!response.ok || !payload.ok) {
+      const error = new Error(payload.message || fallbackMessage || "다시 시도");
+      error.payload = payload;
+      error.status = response.status;
+      throw error;
+    }
+    return payload;
+  };
+
+  const postJson = (url, payload) =>
+    requestJson(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify(payload || {}),
+      },
+      "다시 시도",
+    );
 
   const buildEventSummary = (events) =>
     (events || []).map((event) => `${event.scope_label} 행사 '${event.title}'`).join(", ");
@@ -111,6 +173,53 @@
     } else {
       sharedEventsStatus.className += "bg-slate-50 text-slate-600";
     }
+  };
+
+  let actionDialogResolve = null;
+
+  const closeActionDialog = (result) => {
+    if (!actionDialog || !actionDialogResolve) {
+      return;
+    }
+    actionDialog.classList.add("hidden");
+    actionDialog.classList.remove("flex");
+    const resolve = actionDialogResolve;
+    actionDialogResolve = null;
+    resolve(result);
+  };
+
+  const openActionDialog = ({
+    title,
+    message,
+    confirmText = "확인",
+    cancelText = "취소",
+    input = false,
+    inputLabel = "이름",
+    defaultValue = "",
+  }) => {
+    if (!actionDialog) {
+      return Promise.resolve({ confirmed: true, value: defaultValue });
+    }
+    actionDialogTitle.textContent = title || "확인";
+    actionDialogMessage.textContent = message || "";
+    actionDialogConfirm.textContent = confirmText;
+    actionDialogCancel.textContent = cancelText;
+    actionDialogInputLabel.textContent = inputLabel;
+    actionDialogInput.value = defaultValue;
+    actionDialogInputWrap.classList.toggle("hidden", !input);
+    actionDialog.classList.remove("hidden");
+    actionDialog.classList.add("flex");
+    window.setTimeout(() => {
+      if (input) {
+        actionDialogInput.focus();
+        actionDialogInput.select();
+      } else {
+        actionDialogConfirm.focus();
+      }
+    }, 0);
+    return new Promise((resolve) => {
+      actionDialogResolve = resolve;
+    });
   };
 
   const resetEventForm = () => {
@@ -277,6 +386,9 @@
   };
 
   const setSaveStatus = (text, tone) => {
+    if (!statusNode) {
+      return;
+    }
     statusNode.textContent = text;
     statusNode.className = "rounded-full px-4 py-2 text-sm font-bold ";
     if (tone === "error") {
@@ -287,6 +399,25 @@
       statusNode.className += "bg-slate-100 text-slate-600";
     }
   };
+
+  const setRetryVisible = (visible) => {
+    retrySaveButton?.classList.toggle("hidden", !visible);
+  };
+
+  const markDirty = () => {
+    state.hasUnsavedChanges = true;
+    state.saveFailed = false;
+    state.changeVersion += 1;
+    setRetryVisible(false);
+  };
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!state.hasUnsavedChanges) {
+      return;
+    }
+    event.preventDefault();
+    event.returnValue = "";
+  });
 
   const renderTeacherStats = (rows) => {
     teacherStatsList.innerHTML = "";
@@ -551,59 +682,76 @@
     return { cell_messages: cellMessages };
   };
 
-  const scheduleAutosave = () => {
+  const runAutosave = async () => {
     window.clearTimeout(state.autosaveTimer);
-    setSaveStatus("저장 대기 중...", "idle");
-    state.autosaveTimer = window.setTimeout(async () => {
-      if (state.saveInFlight) {
-        scheduleAutosave();
-        return;
-      }
-      state.saveInFlight = true;
-      setSaveStatus("저장 중...", "idle");
-      try {
-        const response = await fetch(bootstrap.autosave_url, {
+    if (state.saveInFlight) {
+      state.autosaveTimer = window.setTimeout(() => {
+        runAutosave();
+      }, 450);
+      return;
+    }
+    state.saveInFlight = true;
+    state.saveFailed = false;
+    setRetryVisible(false);
+    setSaveStatus("저장 중...", "idle");
+    const versionAtStart = state.changeVersion;
+    try {
+      const payload = await requestJson(
+        bootstrap.autosave_url,
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken,
           },
           body: JSON.stringify({ sheet_data: state.sheetData }),
-        });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) {
-          throw new Error(payload.message || "자동 저장에 실패했습니다.");
-        }
-        renderValidation(payload.validation);
-        renderTeacherStats(payload.teacher_stats);
-        applyConflictHighlights();
-        setSaveStatus("자동 저장됨", "success");
-      } catch (error) {
-        setSaveStatus(error.message, "error");
-      } finally {
-        state.saveInFlight = false;
+        },
+        "저장 실패",
+      );
+      renderValidation(payload.validation);
+      renderTeacherStats(payload.teacher_stats);
+      applyConflictHighlights();
+      if (versionAtStart === state.changeVersion) {
+        state.hasUnsavedChanges = false;
+        state.saveFailed = false;
+        state.lastSavedSignature = JSON.stringify(state.sheetData || []);
+        setRetryVisible(false);
+        setSaveStatus("저장됨", "success");
+      } else {
+        scheduleAutosave();
       }
+    } catch (error) {
+      state.hasUnsavedChanges = true;
+      state.saveFailed = true;
+      setRetryVisible(true);
+      setSaveStatus(messageFromError(error, "저장 실패"), "error");
+    } finally {
+      state.saveInFlight = false;
+    }
+  };
+
+  const scheduleAutosave = () => {
+    markDirty();
+    window.clearTimeout(state.autosaveTimer);
+    setSaveStatus("저장 대기 중...", "idle");
+    state.autosaveTimer = window.setTimeout(() => {
+      runAutosave();
     }, 450);
   };
 
   const saveSnapshot = async () => {
-    const name = window.prompt("스냅샷 이름을 입력해 주세요.", "");
-    if (name === null) {
+    const dialog = await openActionDialog({
+      title: "스냅샷 저장",
+      message: "현재 초안을 저장합니다.",
+      confirmText: "저장",
+      input: true,
+      inputLabel: "스냅샷 이름",
+    });
+    if (!dialog?.confirmed) {
       return;
     }
     setSaveStatus("스냅샷 저장 중...", "idle");
-    const response = await fetch(bootstrap.snapshots_url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify({ name }),
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.message || "스냅샷 저장에 실패했습니다.");
-    }
+    const payload = await postJson(bootstrap.snapshots_url, { name: dialog.value || "" });
     setSaveStatus(`스냅샷 저장: ${payload.snapshot.name}`, "success");
     window.location.reload();
   };
@@ -667,23 +815,23 @@
   };
 
   const publishWorkspace = async () => {
-    if (!window.confirm("현재 시간표를 확정하고 읽기 전용 링크를 만들까요?")) {
+    const dialog = await openActionDialog({
+      title: "시간표 확정",
+      message: "읽기 전용 링크를 만듭니다.",
+      confirmText: "확정",
+      input: true,
+      inputLabel: "확정본 이름",
+    });
+    if (!dialog?.confirmed) {
       return;
     }
-    const name = window.prompt("확정본 이름", "");
     setSaveStatus("확정본 생성 중...", "idle");
-    const response = await fetch(bootstrap.publish_url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify({ name, sheet_data: state.sheetData }),
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      syncValidationUI(payload);
-      throw new Error(payload.message || "확정에 실패했습니다.");
+    let payload;
+    try {
+      payload = await postJson(bootstrap.publish_url, { name: dialog.value || "", sheet_data: state.sheetData });
+    } catch (error) {
+      syncValidationUI(error.payload || {});
+      throw error;
     }
     renderShareLinks(payload.share_links || [], payload.portal_url || "");
     const publishConflicts = payload.publish_result?.conflicts || [];
@@ -698,20 +846,30 @@
 
   const restoreSnapshot = async (button) => {
     const snapshotName = button.dataset.snapshotName || "선택한 스냅샷";
-    if (!window.confirm(`'${snapshotName}' 상태로 현재 초안을 되돌릴까요?`)) {
+    const dialog = await openActionDialog({
+      title: "스냅샷 복원",
+      message: `'${snapshotName}' 상태로 되돌립니다.`,
+      confirmText: "복원",
+    });
+    if (!dialog?.confirmed) {
       return;
     }
     setSaveStatus("스냅샷 복원 중...", "idle");
-    const response = await fetch(button.dataset.restoreUrl, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": csrfToken,
-      },
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      syncValidationUI(payload);
-      throw new Error(payload.message || "스냅샷 복원에 실패했습니다.");
+    let payload;
+    try {
+      payload = await requestJson(
+        button.dataset.restoreUrl,
+        {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+        },
+        "다시 시도",
+      );
+    } catch (error) {
+      syncValidationUI(error.payload || {});
+      throw error;
     }
     syncValidationUI(payload);
     setSaveStatus(`스냅샷 복원: ${payload.snapshot.name}`, "success");
@@ -726,6 +884,7 @@
       setSaveStatus("칸 선택 필요", "error");
       return;
     }
+    state.workbookUserInteracted = true;
     for (let row = range.startRow; row <= range.endRow; row += 1) {
       for (let column = range.startColumn; column <= range.endColumn; column += 1) {
         state.workbookApi.setCellValue(row, column, value, { id: range.sheetId });
@@ -764,7 +923,17 @@
         },
       },
       onChange(data) {
-        state.sheetData = data || [];
+        const nextSheetData = data || [];
+        const nextSignature = JSON.stringify(nextSheetData);
+        state.sheetData = nextSheetData;
+        if (!state.workbookReady || nextSignature === state.lastSavedSignature) {
+          return;
+        }
+        if (!state.workbookUserInteracted && state.changeVersion === 0) {
+          state.lastSavedSignature = nextSignature;
+          setSaveStatus("변경 없음", "idle");
+          return;
+        }
         const localValidation = buildLocalValidation();
         renderValidation({
           conflicts: state.validation.conflicts || [],
@@ -788,6 +957,8 @@
 
     window.setTimeout(() => {
       state.workbookApi = ref.current;
+      state.workbookReady = true;
+      state.lastSavedSignature = JSON.stringify(state.sheetData || []);
       state.selectedSheetId = (state.sheetData[0] || {}).id || null;
       refreshEventSlotMap();
       renderSharedEvents();
@@ -797,6 +968,16 @@
       updateSelectionState();
     }, 150);
   };
+
+  ["pointerdown", "keydown", "paste", "input"].forEach((eventName) => {
+    editorRoot.addEventListener(
+      eventName,
+      () => {
+        state.workbookUserInteracted = true;
+      },
+      { capture: true },
+    );
+  });
 
   const saveSharedEvent = async () => {
     if (!bootstrap.events_url) {
@@ -814,18 +995,18 @@
     const url = state.editingEventId ? buildEventDetailUrl(state.editingEventId) : bootstrap.events_url;
     const method = state.editingEventId ? "PATCH" : "POST";
     setEventStatus(isEditing ? "행사 수정 중..." : "행사 저장 중...", "idle");
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
+    const result = await requestJson(
+      url,
+      {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      throw new Error(result.message || "행사 저장에 실패했습니다.");
-    }
+      "다시 시도",
+    );
     syncValidationUI(result);
     resetEventForm();
     setEventStatus(isEditing ? "행사를 수정했습니다." : "행사를 저장했습니다.", "success");
@@ -833,42 +1014,31 @@
   };
 
   const deleteSharedEvent = async (eventId) => {
-    if (!window.confirm("이 공통 행사를 삭제할까요?")) {
+    const dialog = await openActionDialog({
+      title: "행사 삭제",
+      message: "이 공통 행사를 삭제합니다.",
+      confirmText: "삭제",
+    });
+    if (!dialog?.confirmed) {
       return;
     }
     setEventStatus("행사 삭제 중...", "idle");
-    const response = await fetch(buildEventDetailUrl(eventId), {
-      method: "DELETE",
-      headers: {
-        "X-CSRFToken": csrfToken,
+    const result = await requestJson(
+      buildEventDetailUrl(eventId),
+      {
+        method: "DELETE",
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
       },
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      throw new Error(result.message || "행사 삭제에 실패했습니다.");
-    }
+      "다시 시도",
+    );
     if (state.editingEventId === eventId) {
       resetEventForm();
     }
     syncValidationUI(result);
     setEventStatus("행사를 삭제했습니다.", "success");
     setSaveStatus("공통 행사 삭제 완료", "success");
-  };
-
-  const postJson = async (url, payload) => {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken,
-      },
-      body: JSON.stringify(payload || {}),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      throw new Error(result.message || "작업을 처리하지 못했습니다.");
-    }
-    return result;
   };
 
   document.getElementById("apply-selection-button")?.addEventListener("click", () => {
@@ -884,12 +1054,16 @@
     applySelectionValue("");
   });
 
+  retrySaveButton?.addEventListener("click", () => {
+    runAutosave();
+  });
+
   document.getElementById("save-snapshot-button")?.addEventListener("click", () => {
-    saveSnapshot().catch((error) => setSaveStatus(error.message, "error"));
+    saveSnapshot().catch((error) => setSaveStatus(messageFromError(error, "다시 시도"), "error"));
   });
 
   document.getElementById("publish-workspace-button")?.addEventListener("click", () => {
-    publishWorkspace().catch((error) => setSaveStatus(error.message, "error"));
+    publishWorkspace().catch((error) => setSaveStatus(messageFromError(error, "다시 시도"), "error"));
   });
 
   snapshotList?.addEventListener("click", (event) => {
@@ -897,7 +1071,7 @@
     if (!button) {
       return;
     }
-    restoreSnapshot(button).catch((error) => setSaveStatus(error.message, "error"));
+    restoreSnapshot(button).catch((error) => setSaveStatus(messageFromError(error, "다시 시도"), "error"));
   });
 
   document.getElementById("copy-first-share-link")?.addEventListener("click", async () => {
@@ -916,7 +1090,7 @@
 
   saveSharedEventButton?.addEventListener("click", () => {
     saveSharedEvent()
-      .catch((error) => setEventStatus(error.message, "error"));
+      .catch((error) => setEventStatus(messageFromError(error, "다시 시도"), "error"));
   });
 
   cancelSharedEventButton?.addEventListener("click", () => {
@@ -936,7 +1110,7 @@
     if (!deleteButton) {
       return;
     }
-    deleteSharedEvent(Number(deleteButton.dataset.eventId)).catch((error) => setEventStatus(error.message, "error"));
+    deleteSharedEvent(Number(deleteButton.dataset.eventId)).catch((error) => setEventStatus(messageFromError(error, "다시 시도"), "error"));
   });
 
   classInputStatusList?.addEventListener("click", async (event) => {
@@ -960,7 +1134,7 @@
         });
         window.location.reload();
       } catch (error) {
-        setSaveStatus(error.message, "error");
+        setSaveStatus(messageFromError(error, "다시 시도"), "error");
       }
       return;
     }
@@ -970,7 +1144,12 @@
       if (revokeButton.disabled) {
         return;
       }
-      if (!window.confirm("이 반 입력 링크를 끊을까요?")) {
+      const dialog = await openActionDialog({
+        title: "링크 끊기",
+        message: "이 반 입력 링크를 끊습니다.",
+        confirmText: "끊기",
+      });
+      if (!dialog?.confirmed) {
         return;
       }
       try {
@@ -978,7 +1157,7 @@
         await postJson(revokeButton.dataset.revokeUrl, {});
         window.location.reload();
       } catch (error) {
-        setSaveStatus(error.message, "error");
+        setSaveStatus(messageFromError(error, "다시 시도"), "error");
       }
       return;
     }
@@ -987,15 +1166,24 @@
     if (!reviewButton) {
       return;
     }
-    const reviewNote = window.prompt("검토 메모가 있으면 남겨 주세요.", "") ?? "";
+    const dialog = await openActionDialog({
+      title: "검토 완료",
+      message: "검토 메모를 남길 수 있습니다.",
+      confirmText: "저장",
+      input: true,
+      inputLabel: "검토 메모",
+    });
+    if (!dialog?.confirmed) {
+      return;
+    }
     try {
       setSaveStatus("검토 상태를 저장하는 중...", "idle");
       await postJson(reviewButton.dataset.reviewUrl, {
-        review_note: reviewNote.trim(),
+        review_note: (dialog.value || "").trim(),
       });
       window.location.reload();
     } catch (error) {
-      setSaveStatus(error.message, "error");
+      setSaveStatus(messageFromError(error, "다시 시도"), "error");
     }
   });
 
@@ -1006,6 +1194,59 @@
       row.classList.toggle("hidden", Boolean(keyword) && !text.includes(keyword));
     });
   });
+
+  actionDialogCancel?.addEventListener("click", () => {
+    closeActionDialog({ confirmed: false, value: "" });
+  });
+
+  actionDialogConfirm?.addEventListener("click", () => {
+    closeActionDialog({ confirmed: true, value: actionDialogInput?.value || "" });
+  });
+
+  actionDialog?.addEventListener("click", (event) => {
+    if (event.target === actionDialog) {
+      closeActionDialog({ confirmed: false, value: "" });
+    }
+  });
+
+  actionDialog?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeActionDialog({ confirmed: false, value: "" });
+    }
+    if (event.key === "Enter" && event.target === actionDialogInput) {
+      closeActionDialog({ confirmed: true, value: actionDialogInput?.value || "" });
+    }
+  });
+
+  const desktopOnlyQuery = typeof window.matchMedia === "function"
+    ? window.matchMedia("(max-width: 1279px)")
+    : { matches: false };
+  const updateDesktopOnlyActions = () => {
+    const locked = desktopOnlyQuery.matches;
+    document.querySelectorAll("[data-desktop-only-action='true']").forEach((button) => {
+      const reason = button.dataset.mobileLockLabel || "데스크톱에서 진행";
+      if (!button.dataset.originalLabel) {
+        button.dataset.originalLabel = button.textContent.trim();
+      }
+      if (!button.dataset.originalTitle) {
+        button.dataset.originalTitle = button.getAttribute("title") || "";
+      }
+      button.disabled = locked || button.dataset.originalDisabled === "true";
+      button.setAttribute("aria-disabled", button.disabled ? "true" : "false");
+      button.setAttribute("title", locked ? reason : button.dataset.originalTitle);
+      button.textContent = locked ? `${button.dataset.originalLabel} · 데스크톱` : button.dataset.originalLabel;
+    });
+  };
+
+  document.querySelectorAll("[data-desktop-only-action='true']").forEach((button) => {
+    button.dataset.originalDisabled = button.disabled ? "true" : "false";
+  });
+  if (typeof desktopOnlyQuery.addEventListener === "function") {
+    desktopOnlyQuery.addEventListener("change", updateDesktopOnlyActions);
+  } else if (typeof desktopOnlyQuery.addListener === "function") {
+    desktopOnlyQuery.addListener(updateDesktopOnlyActions);
+  }
+  updateDesktopOnlyActions();
 
   resetEventForm();
   mountWorkbook();

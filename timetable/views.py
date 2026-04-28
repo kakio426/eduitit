@@ -802,15 +802,46 @@ def _persist_class_date_override_entries(workspace, classroom, target_date, entr
     }
 
 
-def _get_public_class_edit_link_or_404(token):
-    link = get_object_or_404(
-        TimetableClassEditLink.objects.select_related("workspace", "workspace__school", "classroom"),
-        token=token,
-        is_active=True,
+def _resolve_public_class_edit_link(token):
+    link = (
+        TimetableClassEditLink.objects.select_related("workspace", "workspace__school", "classroom")
+        .filter(token=token)
+        .first()
     )
+    if not link or not link.is_active:
+        return None, "링크 확인", 404
     if link.is_expired:
+        return None, "링크 만료", 410
+    return link, "", 200
+
+
+def _get_public_class_edit_link_or_404(token):
+    link, _message, _status = _resolve_public_class_edit_link(token)
+    if link is None:
         raise Http404
     return link
+
+
+def _render_class_edit_unavailable(request, *, message, status):
+    response = render(
+        request,
+        "timetable/link_unavailable.html",
+        {
+            "message": message,
+            "status_code": status,
+            "robots": "noindex,nofollow",
+        },
+        status=status,
+    )
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return _apply_sensitive_cache_headers(response)
+
+
+def _resolve_public_class_edit_link_for_api(token):
+    link, message, status = _resolve_public_class_edit_link(token)
+    if link is None:
+        return None, _json_error(message, status=status)
+    return link, None
 
 
 def _resolve_class_editor_name(workspace, classroom, payload):
@@ -2438,7 +2469,9 @@ def api_meeting_apply(request, workspace_id):
 
 
 def class_edit_view(request, token):
-    link = _get_public_class_edit_link_or_404(token)
+    link, message, status = _resolve_public_class_edit_link(token)
+    if link is None:
+        return _render_class_edit_unavailable(request, message=message, status=status)
     workspace = link.workspace
     classroom = link.classroom
     link.last_accessed_at = timezone.now()
@@ -2497,7 +2530,9 @@ def class_edit_view(request, token):
 
 @require_POST
 def api_class_edit_weekly_autosave(request, token):
-    link = _get_public_class_edit_link_or_404(token)
+    link, error_response = _resolve_public_class_edit_link_for_api(token)
+    if error_response is not None:
+        return error_response
     payload = _parse_json_request(request)
     if payload is None:
         return _json_error("JSON 형식을 다시 확인해 주세요.")
@@ -2525,7 +2560,9 @@ def api_class_edit_weekly_autosave(request, token):
 
 @require_POST
 def api_class_edit_date_override_autosave(request, token):
-    link = _get_public_class_edit_link_or_404(token)
+    link, error_response = _resolve_public_class_edit_link_for_api(token)
+    if error_response is not None:
+        return error_response
     payload = _parse_json_request(request)
     if payload is None:
         return _json_error("JSON 형식을 다시 확인해 주세요.")
@@ -2557,7 +2594,9 @@ def api_class_edit_date_override_autosave(request, token):
 
 @require_POST
 def api_class_edit_submit(request, token):
-    link = _get_public_class_edit_link_or_404(token)
+    link, error_response = _resolve_public_class_edit_link_for_api(token)
+    if error_response is not None:
+        return error_response
     payload = _parse_json_request(request)
     if payload is None:
         return _json_error("JSON 형식을 다시 확인해 주세요.")

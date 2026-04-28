@@ -27,7 +27,8 @@
             <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <label class="block">
                     <span class="mb-2 block text-sm font-semibold text-slate-700">입력자 이름</span>
-                    <input id="class-editor-name" type="text" value="{{ input_status.editor_name }}" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 3-4 담임 김선생">
+                    <input id="class-editor-name" type="text" value="{{ input_status.editor_name }}" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800" placeholder="예: 3-4 담임 김선생" aria-describedby="class-editor-name-error">
+                    <span id="class-editor-name-error" class="mt-2 hidden text-sm font-semibold text-rose-600"></span>
                 </label>
                 <div class="flex flex-wrap gap-2">
                     <a href="{% url 'timetable:class_edit' link.token %}?mode=weekly"
@@ -90,7 +91,27 @@
             </div>
 
             {% if mode == 'weekly' %}
-            <div class="mt-5 overflow-x-auto">
+            <div class="mt-5 space-y-4 md:hidden">
+                {% for row in weekly_rows %}
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <h3 class="text-sm font-black text-slate-900">{{ row.period_label }}</h3>
+                    <div class="mt-3 grid gap-3">
+                        {% for cell in row.cells %}
+                        <label class="block rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                            <span class="mb-2 block text-xs font-black text-slate-500">{{ cell.day_key }}</span>
+                            <input type="text"
+                                class="weekly-cell-input block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800"
+                                data-day-key="{{ cell.day_key }}"
+                                data-period-no="{{ cell.period_no }}"
+                                value="{{ cell.text }}"
+                                placeholder="예: 영어(홍길동)">
+                        </label>
+                        {% endfor %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            <div class="mt-5 hidden overflow-x-auto md:block">
                 <table class="w-full min-w-[760px] border-separate border-spacing-2 text-sm">
                     <thead>
                         <tr>
@@ -120,7 +141,35 @@
                 </table>
             </div>
             {% else %}
-            <div class="mt-5 overflow-x-auto">
+            <div class="mt-5 space-y-4 md:hidden">
+                {% for row in daily_rows %}
+                <article class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="text-sm font-black text-slate-900">{{ row.period_label }}</h3>
+                        <span class="rounded-full px-3 py-1 text-xs font-bold {% if row.status_tone == 'blocked' %}bg-rose-100 text-rose-700{% elif row.status_tone == 'override' %}bg-amber-100 text-amber-800{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+                            {{ row.status_label }}
+                        </span>
+                    </div>
+                    <div class="mt-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                        <p class="text-xs font-black text-slate-500">기본</p>
+                        <p class="mt-1 text-sm font-bold text-slate-800">{% if row.base_text %}{{ row.base_text }}{% else %}<span class="text-slate-400">빈칸</span>{% endif %}</p>
+                        {% if row.status_reason %}
+                        <p class="mt-2 text-xs font-semibold text-slate-500">{{ row.status_reason }}</p>
+                        {% endif %}
+                    </div>
+                    <label class="mt-3 block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">이 날짜만 변경</span>
+                        <input type="text"
+                            class="daily-override-input block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 {% if row.status_tone == 'override' %}border-amber-300 bg-amber-50{% elif row.status_tone == 'blocked' %}border-rose-200 bg-rose-50 text-rose-700{% endif %}"
+                            data-period-no="{{ row.period_no }}"
+                            value="{{ row.override_text }}"
+                            {% if row.is_blocked %}disabled aria-disabled="true"{% endif %}
+                            placeholder="예: 수채화(홍길동) @ 미술실">
+                    </label>
+                </article>
+                {% endfor %}
+            </div>
+            <div class="mt-5 hidden overflow-x-auto md:block">
                 <table class="w-full min-w-[820px] border-separate border-spacing-y-3 text-sm">
                     <thead>
                         <tr>

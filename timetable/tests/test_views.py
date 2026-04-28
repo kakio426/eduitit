@@ -1,4 +1,6 @@
+from datetime import timedelta
 from io import BytesIO
+from pathlib import Path
 
 import openpyxl
 from django.contrib.auth import get_user_model
@@ -499,6 +501,65 @@ class TimetableViewTests(TestCase):
         link.save(update_fields=["is_active", "updated_at"])
         response = self.client.get(reverse("timetable:class_edit", args=[link.token]))
         self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "링크 확인", status_code=404)
+
+    def test_class_edit_expired_link_renders_410(self):
+        link = TimetableClassEditLink.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom,
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        response = self.client.get(reverse("timetable:class_edit", args=[link.token]))
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "링크 만료", status_code=410)
+        self.assertContains(response, "새 링크", status_code=410)
+
+    def test_class_edit_expired_link_apis_return_json_error(self):
+        link = TimetableClassEditLink.objects.create(
+            workspace=self.workspace,
+            classroom=self.classroom,
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        api_cases = [
+            (
+                "api_class_edit_weekly_autosave",
+                {"editor_name": "3-1 담임", "entries": [{"day_key": "월", "period_no": 1, "text": "국어"}]},
+            ),
+            (
+                "api_class_edit_date_override_autosave",
+                {"editor_name": "3-1 담임", "date": "2026-05-18", "entries": [{"period_no": 1, "text": "국어"}]},
+            ),
+            (
+                "api_class_edit_submit",
+                {"editor_name": "3-1 담임", "mode": "weekly", "entries": [{"day_key": "월", "period_no": 1, "text": "국어"}]},
+            ),
+        ]
+        for route_name, payload in api_cases:
+            with self.subTest(route_name=route_name):
+                response = self.client.post(
+                    reverse(f"timetable:{route_name}", args=[link.token]),
+                    data=payload,
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, 410)
+                self.assertEqual(response.json()["message"], "링크 만료")
+
+    def test_timetable_templates_expose_recovery_controls(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("timetable:workspace_detail", args=[self.workspace.id]))
+        self.assertContains(response, 'id="timetable-retry-save-button"')
+        self.assertContains(response, 'id="timetable-action-dialog"')
+        self.assertContains(response, 'data-desktop-only-action="true"')
+
+    def test_timetable_static_scripts_use_inline_feedback(self):
+        app_root = Path(__file__).resolve().parents[1]
+        class_edit_js = (app_root / "static" / "timetable" / "class_edit.js").read_text(encoding="utf-8")
+        hub_js = (app_root / "static" / "timetable" / "timetable_hub.js").read_text(encoding="utf-8")
+        self.assertNotIn("window.alert", class_edit_js)
+        self.assertNotIn("window.confirm", hub_js)
+        self.assertNotIn("window.prompt", hub_js)
+        self.assertIn("readJsonResponse", class_edit_js)
+        self.assertIn("readJsonResponse", hub_js)
 
     def test_class_edit_weekly_autosave_updates_only_one_classroom_and_status(self):
         teacher = TimetableTeacher.objects.create(
