@@ -1,0 +1,15 @@
+{% firstof form_status_message error_message limit_message as status_message %}
+{% if status_message %}
+<div
+    id="noticegen-form-status"
+    tabindex="-1"
+    role="alert"
+    aria-live="assertive"
+    class="mt-2 rounded-xl border px-3 py-2 text-sm font-bold {% if form_status_kind == 'warning' or limit_message %}border-amber-200 bg-amber-50 text-amber-700{% else %}border-red-200 bg-red-50 text-red-700{% endif %}"
+>
+    <i class="fa-solid {% if form_status_kind == 'warning' or limit_message %}fa-triangle-exclamation{% else %}fa-circle-exclamation{% endif %} mr-1 text-xs"></i>
+    {{ status_message }}
+</div>
+{% else %}
+<div id="noticegen-form-status" class="hidden" aria-live="polite"></div>
+{% endif %}

@@ -62,7 +62,8 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
+        self.assertEqual(response["HX-Retarget"], "#noticegen-form-status")
+        self.assertContains(response, "오늘 한도", status_code=429)
         self.assertContains(response, "로그인하고 계속", status_code=429)
 
     def test_member_daily_limit_is_10(self):
@@ -92,7 +93,8 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "오늘 멘트 생성 횟수(10회)를 모두 사용했습니다.", status_code=429)
+        self.assertEqual(response["HX-Retarget"], "#noticegen-form-status")
+        self.assertContains(response, "오늘 한도", status_code=429)
 
     def test_guest_trial_limit_blocks_even_when_cache_exists(self):
         session = self.client.session
@@ -137,7 +139,7 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
+        self.assertContains(response, "오늘 한도", status_code=429)
 
     def test_exact_cache_hit_does_not_charge(self):
         payload = self._payload(target="parent", topic="notice", keywords="수학 준비물 챙기기")
@@ -180,8 +182,9 @@ class NoticeGenViewTests(TestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "멘트 생성 중 오류가 발생했습니다.")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response["HX-Retarget"], "#noticegen-form-status")
+        self.assertContains(response, "다시 시도", status_code=503)
         attempt = NoticeGenerationAttempt.objects.filter(charged=True).latest("id")
         self.assertEqual(attempt.status, NoticeGenerationAttempt.STATUS_LLM_FAIL)
 
@@ -306,7 +309,7 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertContains(response, 'data-mini-app-state="error"', status_code=400, html=False)
-        self.assertContains(response, "전달 사항을 2글자 이상 적어 주세요.", status_code=400)
+        self.assertContains(response, "전달 사항 필요", status_code=400)
 
     def test_generate_mini_guest_limit_uses_compact_error_panel(self):
         session = self.client.session
@@ -331,7 +334,7 @@ class NoticeGenViewTests(TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, 'data-mini-app-state="error"', status_code=429, html=False)
-        self.assertContains(response, "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.", status_code=429)
+        self.assertContains(response, "오늘 한도", status_code=429)
         self.assertContains(response, "로그인", status_code=429)
 
     def test_parent_prompt_has_length_and_natural_flow_rules(self):
@@ -484,6 +487,33 @@ class NoticeGenViewTests(TestCase):
         response = self.client.get(reverse("noticegen:main"))
         self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
 
+    def test_main_uses_inline_loading_and_brand_accent(self):
+        response = self.client.get(reverse("noticegen:main"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "noticegen-inline-loading")
+        self.assertContains(response, "from-indigo-600")
+        self.assertNotContains(response, "noticegen-loading")
+        self.assertNotContains(response, "z-[120]")
+        self.assertNotContains(response, "bg-[#E0E5EC]")
+        self.assertNotContains(response, "from-blue-500")
+        self.assertNotContains(response, "to-cyan-500")
+
+    def test_generate_validation_error_targets_form_status_and_result_state(self):
+        response = self.client.post(
+            reverse("noticegen:generate"),
+            self._payload(keywords=""),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response["HX-Retarget"], "#noticegen-form-status")
+        self.assertEqual(response["HX-Reswap"], "outerHTML")
+        self.assertEqual(response["HX-Noticegen-Error"], "true")
+        self.assertContains(response, 'id="noticegen-form-status"', status_code=400)
+        self.assertContains(response, "전달 사항 필요", status_code=400)
+        self.assertContains(response, 'id="noticegen-result" hx-swap-oob="innerHTML"', status_code=400)
+
     @patch("noticegen.views._call_deepseek")
     def test_generate_accepts_keywords_only_with_parent_notice_defaults(self, mock_call):
         mock_call.return_value = "가정통신문 안내를 확인해 주세요."
@@ -600,7 +630,7 @@ class NoticeGenViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 429)
-        self.assertContains(response, "짧은 시간에 생성 요청이 많았습니다.", status_code=429)
+        self.assertContains(response, "다시 시도", status_code=429)
 
     def test_main_prefills_from_workflow_seed(self):
         session = self.client.session

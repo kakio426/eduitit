@@ -5,33 +5,59 @@
 
 {% block content %}
 <style>
-    #noticegen-loading {
+    #noticegen-inline-loading {
         display: none;
-        pointer-events: none;
     }
 
-    #noticegen-loading.htmx-request {
+    #noticegen-inline-loading.htmx-request {
         display: flex;
-        pointer-events: auto;
+    }
+
+    .noticegen-generate-form .noticegen-submit-loading {
+        display: none;
+    }
+
+    .noticegen-generate-form.htmx-request .noticegen-submit-ready {
+        display: none;
+    }
+
+    .noticegen-generate-form.htmx-request .noticegen-submit-loading {
+        display: inline-flex;
     }
 </style>
+<script>
+    document.body.addEventListener('htmx:beforeSwap', function (event) {
+        var xhr = event.detail && event.detail.xhr;
+        if (!xhr || xhr.getResponseHeader('HX-Noticegen-Error') !== 'true') {
+            return;
+        }
+        event.detail.shouldSwap = true;
+        event.detail.isError = false;
+    });
 
-<section class="service-shell pb-20 px-4 md:px-6 min-h-screen bg-[#E0E5EC]">
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (event.detail && event.detail.target && event.detail.target.id === 'noticegen-form-status') {
+            event.detail.target.focus({ preventScroll: true });
+        }
+    });
+</script>
+
+<section class="service-shell pb-20 px-4 md:px-6 min-h-screen bg-gradient-to-b from-white via-indigo-50/40 to-white">
     <div class="max-w-6xl mx-auto space-y-6">
-        <header class="clay-card p-5 md:p-6">
+        <header class="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm md:p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-white shadow-clay-inner flex items-center justify-center text-2xl">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-2xl text-indigo-700">
                         {{ service.icon|default:"📝" }}
                     </div>
                     <div>
-                        <h1 class="text-3xl md:text-4xl font-bold text-gray-700 font-title">알림장·주간학습 멘트</h1>
-                        <p class="mt-2 text-sm text-gray-600">전달 내용을 넣으면 알림장 문구로 정리합니다.</p>
+                        <h1 class="font-title text-3xl font-bold text-slate-900 md:text-4xl">알림장·주간학습 멘트</h1>
+                        <p class="mt-2 text-sm text-slate-600">전달 내용을 알림장 문구로 정리합니다.</p>
                     </div>
                 </div>
                 {% if daily_limit %}
-                <div class="rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-clay-inner">
-                    {{ usage_limit_label }} <span class="text-slate-800">{{ remaining_count }}</span> / {{ daily_limit }}
+                <div class="rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700">
+                    {{ usage_limit_label }} <span class="text-indigo-900">{{ remaining_count }}</span> / {{ daily_limit }}
                 </div>
                 {% endif %}
             </div>
@@ -39,19 +65,19 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div class="lg:col-span-2 space-y-4">
-                <section class="clay-card p-6 md:p-7">
+                <section class="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm md:p-7">
                     {% if prefill_source_label %}
-                    <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                    <div class="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
                         <p class="font-semibold">{{ prefill_source_label }}</p>
                         {% if prefill_origin_url %}
-                        <a href="{{ prefill_origin_url }}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-700 underline underline-offset-2">{{ prefill_origin_label|default:'원래 화면으로 돌아가기' }}</a>
+                        <a href="{{ prefill_origin_url }}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-indigo-700 underline underline-offset-2">{{ prefill_origin_label|default:'원래 화면으로 돌아가기' }}</a>
                         {% endif %}
                     </div>
                     {% endif %}
 
                     <div class="mb-5">
-                        <h2 class="text-xl font-bold text-gray-700">메모 입력</h2>
-                        <p class="mt-1 text-sm text-gray-500">메모처럼 적기</p>
+                        <h2 class="text-xl font-bold text-slate-900">메모 입력</h2>
+                        <p class="mt-1 text-sm text-slate-500">메모처럼 적기</p>
                     </div>
 
                     {% if guest_trial_completed %}
@@ -70,8 +96,8 @@
                         hx-post="{% url 'noticegen:generate' %}"
                         hx-target="#noticegen-result"
                         hx-swap="innerHTML"
-                        hx-indicator="#noticegen-loading"
-                        class="space-y-5"
+                        hx-indicator="#noticegen-inline-loading"
+                        class="noticegen-generate-form space-y-5"
                     >
                         {% csrf_token %}
 
@@ -87,11 +113,11 @@
                                 id="noticegen-keywords"
                                 name="keywords"
                                 rows="9"
-                                required
                                 placeholder="예: 내일 체험학습, 8시 40분까지 등교, 도시락/물 챙겨 주세요"
-                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-sm md:text-base text-gray-700 focus:border-blue-500 focus:outline-none"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-sm text-slate-800 focus:border-indigo-500 focus:outline-none md:text-base"
                             >{{ initial_keywords }}</textarea>
                             <p class="mt-2 text-xs text-gray-500">핵심만 적기</p>
+                            {% include "noticegen/partials/form_status.html" %}
                         </div>
 
                         <details class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -138,8 +164,18 @@
                             </div>
                         </details>
 
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>문장 만들기
+                        <div id="noticegen-inline-loading" class="htmx-indicator items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700">
+                            <i class="fa-solid fa-circle-notch fa-spin text-sm"></i>
+                            생성 중
+                        </div>
+
+                        <button type="submit" aria-label="문장 만들기" class="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-base font-bold text-white shadow-lg shadow-indigo-200/70 transition hover:shadow-xl">
+                            <span class="noticegen-submit-ready">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>문장 만들기
+                            </span>
+                            <span class="noticegen-submit-loading items-center justify-center gap-2" aria-hidden="true">
+                                <i class="fa-solid fa-circle-notch fa-spin text-sm"></i>생성 중
+                            </span>
                         </button>
                     </form>
                     {% endif %}
@@ -154,11 +190,4 @@
         </div>
     </div>
 </section>
-
-<div id="noticegen-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
-    <div class="clay-card px-6 py-5 flex items-center gap-3">
-        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-500"></i>
-        <span class="text-gray-700 font-bold">문장 생성 중</span>
-    </div>
-</div>
 {% endblock %}

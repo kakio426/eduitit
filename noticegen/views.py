@@ -2,15 +2,14 @@ import hashlib
 import logging
 import os
 import re
-import secrets
 from difflib import SequenceMatcher
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.core import is_ratelimited
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import F
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -132,7 +131,7 @@ PARENT_META_INSTRUCTION_RE = re.compile(
 CACHE_REUSE_THRESHOLD = 0.93
 CACHE_SIMILAR_HINT_THRESHOLD = 0.7
 SIMILAR_CANDIDATE_LIMIT = 60
-FALLBACK_ERROR_MESSAGE = "멘트 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+FALLBACK_ERROR_MESSAGE = "다시 시도"
 WORKFLOW_ACTION_SEED_SESSION_KEY = "workflow_action_seeds"
 
 
@@ -162,6 +161,9 @@ def _result_defaults():
         "error_message": "",
         "info_message": "",
         "limit_message": "",
+        "form_status_message": "",
+        "form_status_kind": "",
+        "include_form_status_oob": False,
         "remaining_count": None,
         "daily_limit": None,
         "usage_limit_label": "",
@@ -184,82 +186,6 @@ def _peek_workflow_seed(request, token, *, expected_action=""):
     if expected_action and seed.get("action") != expected_action:
         return None
     return seed
-
-
-def _store_action_seed(request, *, action, data):
-    token = secrets.token_urlsafe(16)
-    seed = {
-        "action": action,
-        "data": data,
-        "created_at": timezone.now().isoformat(),
-    }
-    seeds = request.session.get(WORKFLOW_ACTION_SEED_SESSION_KEY, {})
-    if not isinstance(seeds, dict):
-        seeds = {}
-    seeds[token] = seed
-    if len(seeds) > 20:
-        overflow = len(seeds) - 20
-        for old_key in list(seeds.keys())[:overflow]:
-            seeds.pop(old_key, None)
-    request.session[WORKFLOW_ACTION_SEED_SESSION_KEY] = seeds
-    request.session.modified = True
-    return token
-
-
-def _build_workflow_origin(request):
-    return {
-        "origin_service": "noticegen",
-        "origin_url": request.build_absolute_uri(reverse("noticegen:main")),
-        "origin_label": "안내문 멘트 생성기로 돌아가기",
-    }
-
-
-def _build_followup_title(target, topic):
-    return f"{TARGET_LABELS.get(target, '학급')} {TOPIC_LABELS.get(topic, '안내')}".strip()
-
-
-def _build_followup_context(target, topic, length_style, keywords, result_text):
-    return {
-        "followup_target": target,
-        "followup_topic": topic,
-        "followup_length_style": length_style,
-        "followup_keywords": keywords,
-        "followup_result_text": result_text,
-    }
-
-
-def _build_consent_followup_seed_data(request, *, target, topic, keywords, result_text, length_style):
-    base_title = _build_followup_title(target, topic)
-    data = {
-        "document_title": f"{base_title} 안내문"[:200],
-        "title": f"{base_title} 동의서"[:200],
-        "message": (result_text or keywords).strip()[:4000],
-        "keywords": keywords[:1000],
-        "length_style": length_style,
-        "source_label": "안내문 멘트에서 가져온 내용을 먼저 채워두었어요.",
-    }
-    data.update(_build_workflow_origin(request))
-    return data
-
-
-def _build_signature_followup_seed_data(request, *, target, topic, keywords, result_text, length_style):
-    base_title = _build_followup_title(target, topic)
-    instructor = ""
-    if request.user.is_authenticated:
-        profile = getattr(request.user, "userprofile", None)
-        instructor = (getattr(profile, "nickname", "") or request.user.get_full_name() or request.user.username or "").strip()[:100]
-    data = {
-        "title": f"{base_title} 확인 서명"[:200],
-        "print_title": f"{base_title} 확인"[:200],
-        "instructor": instructor,
-        "location": "",
-        "description": (result_text or keywords).strip()[:2000],
-        "datetime": "",
-        "length_style": length_style,
-        "source_label": "안내문 멘트에서 가져온 내용을 먼저 채워두었어요.",
-    }
-    data.update(_build_workflow_origin(request))
-    return data
 
 
 def _get_service():
@@ -299,6 +225,16 @@ def _build_page_context(*, prefill=None):
         "prefill_source_label": source_label,
         "prefill_origin_url": (prefill.get("origin_url") or "").strip(),
         "prefill_origin_label": (prefill.get("origin_label") or "").strip(),
+    }
+
+
+def _build_request_prefill(request):
+    return {
+        "target": request.POST.get("target"),
+        "topic": request.POST.get("topic"),
+        "length_style": request.POST.get("length_style"),
+        "keywords": request.POST.get("keywords"),
+        "contexts": request.POST.getlist("contexts"),
     }
 
 
@@ -788,12 +724,32 @@ def _generate_validated_result(system_prompt, user_prompt, source_keywords, requ
 def _render_result(request, payload, *, status=200):
     context = _result_defaults()
     context.update(payload)
+    is_failure = status >= 400 or bool(context.get("error_message") or context.get("limit_message"))
+    if is_failure:
+        context["form_status_message"] = (
+            context.get("form_status_message")
+            or context.get("error_message")
+            or context.get("limit_message")
+            or FALLBACK_ERROR_MESSAGE
+        )
+        context["form_status_kind"] = context.get("form_status_kind") or (
+            "warning" if context.get("limit_message") else "error"
+        )
 
     if request.headers.get("HX-Request") == "true":
+        if is_failure:
+            response = render(request, "noticegen/partials/form_status_response.html", context, status=status)
+            response["HX-Retarget"] = "#noticegen-form-status"
+            response["HX-Reswap"] = "outerHTML"
+            response["HX-Noticegen-Error"] = "true"
+            return _apply_sensitive_cache_headers(response)
+        context["include_form_status_oob"] = True
         response = render(request, "noticegen/partials/result_panel.html", context, status=status)
         return _apply_sensitive_cache_headers(response)
 
-    page_context = _build_page_context()
+    page_context = _build_page_context(
+        prefill=_build_request_prefill(request) if request.method == "POST" else None
+    )
     page_context.update(context)
     response = render(request, "noticegen/main.html", page_context, status=status)
     return _apply_sensitive_cache_headers(response)
@@ -868,7 +824,8 @@ def _generate_notice_payload(request):
             _request_client_ip(request),
         )
         return 429, {
-            "limit_message": "짧은 시간에 생성 요청이 많았습니다. 잠시 후 다시 시도해 주세요.",
+            "limit_message": "다시 시도",
+            "form_status_kind": "warning",
             **_build_usage_context(request),
         }
 
@@ -894,7 +851,7 @@ def _generate_notice_payload(request):
             error_code="INVALID_INPUT",
         )
         return 400, {
-            "error_message": "전달 사항을 2글자 이상 적어 주세요.",
+            "error_message": "전달 사항 필요",
         }
 
     tone = get_tone_for_target(target)
@@ -913,7 +870,7 @@ def _generate_notice_payload(request):
             error_code="GUEST_TRIAL_REACHED",
         )
         return 429, {
-            "limit_message": "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다.",
+            "limit_message": "오늘 한도",
             **_build_usage_context(request),
         }
 
@@ -946,9 +903,9 @@ def _generate_notice_payload(request):
             error_code="DAILY_LIMIT_REACHED",
         )
         if request.user.is_authenticated:
-            limit_message = f"오늘 멘트 생성 횟수({_daily_limit(request)}회)를 모두 사용했습니다."
+            limit_message = "오늘 한도"
         else:
-            limit_message = "비회원 체험 2회를 모두 사용했습니다. 로그인 후 계속 쓸 수 있습니다."
+            limit_message = "오늘 한도"
         return 429, {
             "limit_message": limit_message,
             **_build_usage_context(request),
@@ -1024,7 +981,7 @@ def _generate_notice_payload(request):
             status=NoticeGenerationAttempt.STATUS_LLM_FAIL,
             error_code=error_code,
         )
-        return 200, {
+        return 503, {
             "error_message": FALLBACK_ERROR_MESSAGE,
             "similar_items": similar_items,
             **_build_usage_context(request),
@@ -1100,47 +1057,9 @@ def daily_recommendation(request):
     )
 
 
-@login_required
-@require_POST
 def start_consent_followup(request):
-    target = (request.POST.get("target") or "").strip()
-    topic = (request.POST.get("topic") or "").strip()
-    keywords = (request.POST.get("keywords") or "").strip()
-    result_text = (request.POST.get("result_text") or "").strip()
-    length_style = (request.POST.get("length_style") or LENGTH_MEDIUM).strip()
-    seed_token = _store_action_seed(
-        request,
-        action="consent",
-        data=_build_consent_followup_seed_data(
-            request,
-            target=target,
-            topic=topic,
-            keywords=keywords,
-            result_text=result_text,
-            length_style=length_style,
-        ),
-    )
-    return redirect(f"{reverse('consent:create_step1')}?sb_seed={seed_token}")
+    return HttpResponse("연결 종료", status=410)
 
 
-@login_required
-@require_POST
 def start_signature_followup(request):
-    target = (request.POST.get("target") or "").strip()
-    topic = (request.POST.get("topic") or "").strip()
-    keywords = (request.POST.get("keywords") or "").strip()
-    result_text = (request.POST.get("result_text") or "").strip()
-    length_style = (request.POST.get("length_style") or LENGTH_MEDIUM).strip()
-    seed_token = _store_action_seed(
-        request,
-        action="signature",
-        data=_build_signature_followup_seed_data(
-            request,
-            target=target,
-            topic=topic,
-            keywords=keywords,
-            result_text=result_text,
-            length_style=length_style,
-        ),
-    )
-    return redirect(f"{reverse('signatures:create')}?sb_seed={seed_token}")
+    return HttpResponse("연결 종료", status=410)

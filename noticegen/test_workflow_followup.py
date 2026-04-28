@@ -67,7 +67,7 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         self.assertNotContains(response, "동의서로 이어서 만들기")
         self.assertNotContains(response, "서명으로 이어서 만들기")
 
-    def test_consent_followup_stores_seed_and_redirects(self):
+    def test_consent_followup_is_retired(self):
         response = self.client.post(
             reverse("noticegen:start_consent_followup"),
             {
@@ -79,16 +79,12 @@ class NoticeGenWorkflowFollowupTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("consent:create_step1"), response["Location"])
-        seed_token = response["Location"].split("sb_seed=")[-1]
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "연결 종료", status_code=410)
         session = self.client.session
-        workflow_seed = session["workflow_action_seeds"][seed_token]
-        self.assertEqual(workflow_seed["action"], "consent")
-        self.assertIn("origin_url", workflow_seed["data"])
-        self.assertEqual(workflow_seed["data"]["message"], "내일은 준비물을 꼭 챙겨 주세요.")
+        self.assertNotIn("workflow_action_seeds", session)
 
-    def test_signature_followup_stores_seed_and_redirects(self):
+    def test_signature_followup_is_retired(self):
         response = self.client.post(
             reverse("noticegen:start_signature_followup"),
             {
@@ -100,11 +96,7 @@ class NoticeGenWorkflowFollowupTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("signatures:create"), response["Location"])
-        seed_token = response["Location"].split("sb_seed=")[-1]
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "연결 종료", status_code=410)
         session = self.client.session
-        workflow_seed = session["workflow_action_seeds"][seed_token]
-        self.assertEqual(workflow_seed["action"], "signature")
-        self.assertIn("origin_url", workflow_seed["data"])
-        self.assertIn("확인 서명", workflow_seed["data"]["title"])
+        self.assertNotIn("workflow_action_seeds", session)
