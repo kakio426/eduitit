@@ -36,7 +36,7 @@
             {{ sub.choice_summary|truncatechars:90 }}
             {% elif sub.submission_type == 'fields' %}
             <div class="space-y-1">
-                {% for item in sub.field_summary_items %}
+                {% for item in sub.field_summary_items_for_teacher %}
                 <p><span class="font-bold text-gray-500">{{ item.label }}</span>: {{ item.value|default:"-" }}</p>
                 {% endfor %}
             </div>
@@ -91,7 +91,7 @@
                     {{ sub.choice_summary|truncatechars:80 }}
                     {% elif sub.submission_type == 'fields' %}
                     <div class="space-y-1">
-                        {% for item in sub.field_summary_items %}
+                        {% for item in sub.field_summary_items_for_teacher %}
                         <div><span class="font-bold text-gray-500">{{ item.label }}</span>: {{ item.value|default:"-" }}</div>
                         {% endfor %}
                     </div>

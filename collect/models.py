@@ -11,6 +11,7 @@ from django.utils import timezone
 from .field_schema import FIELD_KIND_LABELS, normalize_field_schema
 
 REFERENCE_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')
+REFERENCE_PDF_EXTENSIONS = ('.pdf',)
 
 
 def get_raw_storage():
@@ -201,6 +202,23 @@ class CollectionRequest(models.Model):
         return filename.endswith(REFERENCE_IMAGE_EXTENSIONS)
 
     @property
+    def template_file_is_pdf(self):
+        filename = self.template_file_display_name.lower()
+        return filename.endswith(REFERENCE_PDF_EXTENSIONS)
+
+    @property
+    def template_file_is_previewable(self):
+        return self.template_file_is_image or self.template_file_is_pdf
+
+    @property
+    def template_file_preview_type(self):
+        if self.template_file_is_pdf:
+            return "pdf"
+        if self.template_file_is_image:
+            return "image"
+        return ""
+
+    @property
     def allowed_submission_types(self):
         if self.is_fields_mode:
             return ['fields'] if self.normalized_field_schema else []
@@ -331,6 +349,13 @@ class Submission(models.Model):
 
     @property
     def field_summary_items(self):
+        return self._build_field_summary_items(mask_secret=True)
+
+    @property
+    def field_summary_items_for_teacher(self):
+        return self._build_field_summary_items(mask_secret=False)
+
+    def _build_field_summary_items(self, *, mask_secret):
         if self.submission_type != 'fields':
             return []
 
@@ -343,7 +368,7 @@ class Submission(models.Model):
             if kind == "file":
                 display_value = raw_value or self.original_filename
             elif kind == "secret":
-                display_value = "••••••" if raw_value else ""
+                display_value = "••••••" if mask_secret and raw_value else str(raw_value or "").strip()
             elif isinstance(raw_value, list):
                 display_value = ", ".join(str(value).strip() for value in raw_value if str(value).strip())
             else:

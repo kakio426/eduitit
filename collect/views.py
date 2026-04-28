@@ -348,6 +348,52 @@ def _field_csv_value(submission, field):
     return str(value or "").strip()
 
 
+def _safe_export_filename(title, extension):
+    safe_title = "".join(
+        char if char.isalnum() or char in {" ", "_", "-"} else "_"
+        for char in str(title or "").strip()
+    ).strip()
+    if not safe_title:
+        safe_title = "collect"
+    return f"{safe_title}_submissions.{extension}"
+
+
+def _build_export_rows(collection_req, submissions):
+    if collection_req.is_fields_mode:
+        fields = collection_req.normalized_field_schema
+        rows = [['번호', '이름', '소속', *[field["label"] for field in fields], '제출시간']]
+        for idx, sub in enumerate(submissions, 1):
+            rows.append([
+                idx,
+                sub.contributor_name,
+                sub.contributor_affiliation,
+                *[_field_csv_value(sub, field) for field in fields],
+                sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
+            ])
+        return rows
+
+    rows = [['번호', '이름', '소속', '유형', '파일명/링크/내용', '제출시간']]
+    for idx, sub in enumerate(submissions, 1):
+        if sub.submission_type == 'file':
+            content = sub.original_filename
+        elif sub.submission_type == 'link':
+            content = sub.link_url
+        elif sub.submission_type == 'choice':
+            content = sub.choice_summary
+        else:
+            content = sub.text_content[:100]
+
+        rows.append([
+            idx,
+            sub.contributor_name,
+            sub.contributor_affiliation,
+            sub.get_submission_type_display(),
+            content,
+            sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
+        ])
+    return rows
+
+
 def _get_submit_context(
     collection_req,
     submission=None,
@@ -1065,55 +1111,66 @@ def export_csv(request, request_id):
     """제출 목록 CSV 내보내기"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
     submissions = collection_req.submissions.all().order_by('submitted_at')
+    rows = _build_export_rows(collection_req, submissions)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = f'attachment; filename="{collection_req.title}_submissions.csv"'
+    filename = _safe_export_filename(collection_req.title, "csv")
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(filename)}"
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    if collection_req.is_fields_mode:
-        fields = collection_req.normalized_field_schema
-        writer.writerow(['번호', '이름', '소속', *[field["label"] for field in fields], '제출시간'])
-        for idx, sub in enumerate(submissions, 1):
-            writer.writerow([
-                idx,
-                sub.contributor_name,
-                sub.contributor_affiliation,
-                *[_field_csv_value(sub, field) for field in fields],
-                sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
-            ])
-
-        logger.info(
-            "[collect] export csv request_id=%s user=%s submission_count=%s",
-            collection_req.id,
-            request.user.username,
-            submissions.count(),
-        )
-        return _apply_sensitive_cache_headers(response)
-
-    writer.writerow(['번호', '이름', '소속', '유형', '파일명/링크/내용', '제출시간'])
-
-    for idx, sub in enumerate(submissions, 1):
-        if sub.submission_type == 'file':
-            content = sub.original_filename
-        elif sub.submission_type == 'link':
-            content = sub.link_url
-        elif sub.submission_type == 'choice':
-            content = sub.choice_summary
-        else:
-            content = sub.text_content[:100]
-
-        writer.writerow([
-            idx,
-            sub.contributor_name,
-            sub.contributor_affiliation,
-            sub.get_submission_type_display(),
-            content,
-            sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
-        ])
+    writer.writerows(rows)
 
     logger.info(
         "[collect] export csv request_id=%s user=%s submission_count=%s",
+        collection_req.id,
+        request.user.username,
+        submissions.count(),
+    )
+    return _apply_sensitive_cache_headers(response)
+
+
+@login_required
+def export_excel(request, request_id):
+    """제출 목록 엑셀 내보내기"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    collection_req = get_object_or_404(CollectionRequest, id=request_id, creator=request.user)
+    submissions = collection_req.submissions.all().order_by('submitted_at')
+    rows = _build_export_rows(collection_req, submissions)
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "제출 결과"
+
+    for row in rows:
+        worksheet.append(row)
+
+    header_fill = PatternFill(fill_type="solid", fgColor="E2F3EC")
+    header_font = Font(bold=True, color="1F2937")
+    for cell in worksheet[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    for column_cells in worksheet.columns:
+        values = [str(cell.value or "") for cell in column_cells]
+        width = min(max([len(value) for value in values] + [8]) + 2, 42)
+        worksheet.column_dimensions[get_column_letter(column_cells[0].column)].width = width
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    filename = _safe_export_filename(collection_req.title, "xlsx")
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(filename)}"
+    logger.info(
+        "[collect] export excel request_id=%s user=%s submission_count=%s",
         collection_req.id,
         request.user.username,
         submissions.count(),
@@ -1532,12 +1589,13 @@ def submission_download(request, submission_id):
 
 @ratelimit(key=_collect_public_ratelimit_key, rate="60/10m", method="GET", block=True, group="collect_template_download")
 def template_download(request, request_id):
-    """참고 자료 다운로드"""
+    """참고 자료 미리보기/다운로드"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)
     if not collection_req.template_file:
         return HttpResponse("참고 자료가 없습니다.", status=404)
 
     download_name = collection_req.template_file_name or (collection_req.template_file.name or "").split("/")[-1] or "collect-template"
+    force_download = request.GET.get("download") == "1"
     logger.info(
         "[collect] template download request_id=%s ip=%s",
         collection_req.id,
@@ -1546,5 +1604,5 @@ def template_download(request, request_id):
     return _build_download_response(
         collection_req.template_file,
         filename=download_name,
-        as_attachment=not collection_req.template_file_is_image,
+        as_attachment=force_download or not collection_req.template_file_is_previewable,
     )

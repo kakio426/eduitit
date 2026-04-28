@@ -20,6 +20,7 @@ urlpatterns = [
     path('<uuid:request_id>/extend-retention/', views.request_extend_retention, name='request_extend_retention'),
     path('<uuid:request_id>/delete/', views.request_delete, name='request_delete'),
     path('<uuid:request_id>/export-csv/', views.export_csv, name='export_csv'),
+    path('<uuid:request_id>/export-excel/', views.export_excel, name='export_excel'),
 
     # 제출자용 (비로그인)
     path('s/<str:code>/', views.short_link, name='short_link'),

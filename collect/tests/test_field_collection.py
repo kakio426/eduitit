@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from collect.models import CollectionRequest, Submission
 
@@ -68,7 +69,7 @@ class FieldCollectionTests(TestCase):
         self.assertNotContains(submit_response, "임시로 발급한 정보만")
         self.assertNotContains(submit_response, "제출 유형")
 
-    def test_submit_fields_request_success_then_manage_page_masks_secret(self):
+    def test_submit_fields_request_success_then_teacher_detail_shows_secret_but_submitter_manage_masks_it(self):
         req = self._request()
 
         response = self.client.post(
@@ -92,6 +93,12 @@ class FieldCollectionTests(TestCase):
         self.assertContains(manage_response, "student01")
         self.assertContains(manage_response, "••••••")
         self.assertNotContains(manage_response, "secret123")
+
+        self.client.force_login(self.teacher)
+        detail_response = self.client.get(reverse("collect:request_detail", args=[req.id]))
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "student01")
+        self.assertContains(detail_response, "secret123")
 
     def test_fields_submit_validation_errors_do_not_expose_secret(self):
         req = self._request(
@@ -169,3 +176,29 @@ class FieldCollectionTests(TestCase):
         self.assertEqual(rows[0][:5], ["번호", "이름", "소속", "아이디", "비밀번호"])
         self.assertIn("student01", rows[1])
         self.assertIn("secret123", rows[1])
+
+    def test_fields_excel_uses_field_labels_as_columns(self):
+        req = self._request()
+        Submission.objects.create(
+            collection_request=req,
+            contributor_name="김학생",
+            submission_type="fields",
+            field_answers={"login_id": "student01", "temp_password": "secret123"},
+        )
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(reverse("collect:export_excel", args=[req.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("attachment;", response["Content-Disposition"])
+        workbook = load_workbook(io.BytesIO(response.content))
+        sheet = workbook.active
+        headers = [cell.value for cell in sheet[1]]
+        values = [cell.value for cell in sheet[2]]
+        self.assertEqual(headers[:5], ["번호", "이름", "소속", "아이디", "비밀번호"])
+        self.assertIn("student01", values)
+        self.assertIn("secret123", values)

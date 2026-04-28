@@ -126,8 +126,10 @@ class CollectFlowTest(TestCase):
 
         self.assertEqual(submit_response.status_code, 200)
         self.assertContains(submit_response, "참고 자료")
-        self.assertContains(submit_response, "이미지 보기")
+        self.assertContains(submit_response, "다운로드")
         self.assertContains(submit_response, "참고이미지.png")
+        self.assertContains(submit_response, "data-consent-document-preview")
+        self.assertContains(submit_response, "data-preview-image")
         self.assertContains(submit_response, "<img", html=False)
 
         image_response = self.client.get(reverse("collect:template_download", args=[req.id]))
@@ -135,6 +137,51 @@ class CollectFlowTest(TestCase):
         self.assertEqual(image_response.status_code, 200)
         self.assertIn("inline;", image_response["Content-Disposition"])
         self.assertEqual(image_response["Cache-Control"], "no-store, private")
+
+        download_response = self.client.get(reverse("collect:template_download", args=[req.id]), data={"download": "1"})
+
+        self.assertEqual(download_response.status_code, 200)
+        self.assertIn("attachment;", download_response["Content-Disposition"])
+
+    def test_reference_pdf_is_previewed_inline_and_still_downloadable(self):
+        req = CollectionRequest.objects.create(
+            creator=self.teacher,
+            title="PDF 참고 자료 수합",
+            description="PDF를 보고 제출",
+            allow_file=False,
+            allow_link=False,
+            allow_text=True,
+            status="active",
+            template_file=SimpleUploadedFile(
+                "guide.pdf",
+                b"%PDF-1.4\n% collect reference\n",
+                content_type="application/pdf",
+            ),
+            template_file_name="참고자료.pdf",
+        )
+
+        submit_response = self.client.get(reverse("collect:submit", args=[req.id]))
+
+        self.assertEqual(submit_response.status_code, 200)
+        self.assertContains(submit_response, "참고 자료")
+        self.assertContains(submit_response, "참고자료.pdf")
+        self.assertContains(submit_response, "다운로드")
+        self.assertContains(submit_response, "data-consent-document-preview")
+        self.assertContains(submit_response, "data-file-type=\"pdf\"")
+        self.assertContains(submit_response, "data-preview-pagination")
+        self.assertContains(submit_response, "consent/pdf_preview.js")
+        self.assertContains(submit_response, f"{reverse('collect:template_download', args=[req.id])}?download=1")
+
+        preview_response = self.client.get(reverse("collect:template_download", args=[req.id]))
+
+        self.assertEqual(preview_response.status_code, 200)
+        self.assertIn("inline;", preview_response["Content-Disposition"])
+        self.assertEqual(preview_response["Cache-Control"], "no-store, private")
+
+        download_response = self.client.get(reverse("collect:template_download", args=[req.id]), data={"download": "1"})
+
+        self.assertEqual(download_response.status_code, 200)
+        self.assertIn("attachment;", download_response["Content-Disposition"])
 
     def test_public_submit_page_uses_sensitive_cache_headers(self):
         req = CollectionRequest.objects.create(
