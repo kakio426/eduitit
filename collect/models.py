@@ -8,6 +8,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from .field_schema import FIELD_KIND_LABELS, normalize_field_schema
+
 
 def get_raw_storage():
     """Cloudinary가 설정된 경우에만 Cloudinary 로컬/원격 저장소 반환, 
@@ -27,6 +29,10 @@ class CollectionRequest(models.Model):
         ('active', '진행중'),
         ('closed', '마감'),
         ('archived', '보관'),
+    ]
+    COLLECTION_MODE_CHOICES = [
+        ('legacy', '기존 방식'),
+        ('fields', '항목식'),
     ]
     CHOICE_MODE_CHOICES = [
         ('single', '단일 선택'),
@@ -52,6 +58,13 @@ class CollectionRequest(models.Model):
     access_code = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="6자리 입장코드")
     title = models.CharField(max_length=200, help_text="수합 제목")
     description = models.TextField(blank=True, help_text="안내사항")
+    collection_mode = models.CharField(
+        max_length=12,
+        choices=COLLECTION_MODE_CHOICES,
+        default='legacy',
+        help_text="수합 입력 방식",
+    )
+    field_schema = models.JSONField(default=list, blank=True, help_text="항목식 수합 입력 항목")
     allow_file = models.BooleanField(default=True, help_text="파일 업로드 허용")
     allow_link = models.BooleanField(default=True, help_text="링크 제출 허용")
     allow_text = models.BooleanField(default=True, help_text="텍스트 제출 허용")
@@ -169,7 +182,17 @@ class CollectionRequest(models.Model):
         return names
 
     @property
+    def is_fields_mode(self):
+        return self.collection_mode == 'fields'
+
+    @property
+    def normalized_field_schema(self):
+        return normalize_field_schema(self.field_schema)
+
+    @property
     def allowed_submission_types(self):
+        if self.is_fields_mode:
+            return ['fields'] if self.normalized_field_schema else []
         submission_types = []
         if self.allow_file:
             submission_types.append('file')
@@ -223,6 +246,7 @@ class Submission(models.Model):
         ('link', '링크'),
         ('text', '텍스트'),
         ('choice', '선택형'),
+        ('fields', '항목식'),
     ]
     INTEGRATION_SOURCE_CHOICES = [
         ("", "직접 제출"),
@@ -251,6 +275,8 @@ class Submission(models.Model):
     # 선택형 제출
     choice_answers = models.JSONField(default=list, blank=True)
     choice_other_text = models.TextField(blank=True)
+    # 항목식 제출
+    field_answers = models.JSONField(default=dict, blank=True)
     integration_source = models.CharField(
         max_length=20,
         choices=INTEGRATION_SOURCE_CHOICES,
@@ -291,3 +317,43 @@ class Submission(models.Model):
         if self.choice_other_text.strip():
             tokens.append(f"기타: {self.choice_other_text.strip()}")
         return ", ".join(tokens)
+
+    @property
+    def field_summary_items(self):
+        if self.submission_type != 'fields':
+            return []
+
+        answers = self.field_answers if isinstance(self.field_answers, dict) else {}
+        items = []
+        for field in self.collection_request.normalized_field_schema:
+            field_id = field.get("id", "")
+            kind = field.get("kind", "short_text")
+            raw_value = answers.get(field_id, "")
+            if kind == "file":
+                display_value = raw_value or self.original_filename
+            elif kind == "secret":
+                display_value = "••••••" if raw_value else ""
+            elif isinstance(raw_value, list):
+                display_value = ", ".join(str(value).strip() for value in raw_value if str(value).strip())
+            else:
+                display_value = str(raw_value or "").strip()
+
+            items.append(
+                {
+                    "id": field_id,
+                    "label": field.get("label", FIELD_KIND_LABELS.get(kind, "항목")),
+                    "kind": kind,
+                    "kind_label": FIELD_KIND_LABELS.get(kind, "항목"),
+                    "value": display_value,
+                    "has_value": bool(display_value),
+                }
+            )
+        return items
+
+    @property
+    def field_summary_text(self):
+        return ", ".join(
+            f"{item['label']}: {item['value']}"
+            for item in self.field_summary_items
+            if item.get("has_value")
+        )

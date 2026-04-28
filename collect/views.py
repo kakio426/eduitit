@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse, FileResponse, StreamingHttpResponse
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db.models import Count
 from django.utils import timezone
 from django.conf import settings
@@ -24,6 +26,7 @@ from urllib.parse import quote
 from core.seo import build_product_route_page_seo, build_public_service_landing_seo, build_route_page_seo
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
+from .field_schema import FIELD_KIND_LABELS
 from .integration import (
     BTI_SOURCE_SSAMBTI,
     BTI_SOURCE_STUDENTMBTI,
@@ -57,6 +60,7 @@ SUBMISSION_TYPE_LABELS = {
     "link": "링크",
     "text": "텍스트",
     "choice": "선택형",
+    "fields": "항목",
 }
 
 
@@ -157,6 +161,192 @@ def _parse_extension_days(raw_days, fallback):
     return days
 
 
+def _extract_contributor_identity(request):
+    contributor_name = request.POST.get('contributor_name_custom', '').strip()
+    if not contributor_name:
+        selected = request.POST.get('contributor_name_select', '').strip()
+        if selected and selected != '__custom__':
+            contributor_name = selected
+    if not contributor_name:
+        contributor_name = request.POST.get('contributor_name', '').strip()
+    contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
+    return contributor_name, contributor_affiliation
+
+
+def _posted_field_values_for_context(collection_req, post_data):
+    values = {}
+    for field in collection_req.normalized_field_schema:
+        field_id = field["id"]
+        input_name = f"field_{field_id}"
+        kind = field["kind"]
+        if kind == "secret":
+            values[field_id] = ""
+        elif kind == "multi_choice":
+            values[field_id] = [value.strip() for value in post_data.getlist(input_name) if value.strip()]
+        elif kind == "file":
+            values[field_id] = ""
+        else:
+            values[field_id] = post_data.get(input_name, "").strip()
+    return values
+
+
+def _build_field_render_items(collection_req, *, submission=None, field_values=None):
+    if not collection_req.is_fields_mode:
+        return []
+
+    answers = field_values
+    if answers is None and submission and isinstance(submission.field_answers, dict):
+        answers = submission.field_answers
+    if not isinstance(answers, dict):
+        answers = {}
+
+    render_items = []
+    for field in collection_req.normalized_field_schema:
+        field_id = field["id"]
+        kind = field["kind"]
+        raw_value = answers.get(field_id, "")
+        value = "" if raw_value is None else raw_value
+        if kind == "secret":
+            value = ""
+
+        if kind == "multi_choice":
+            values = value if isinstance(value, list) else []
+        elif kind == "single_choice":
+            values = [str(value)] if value else []
+        else:
+            values = []
+
+        options = [
+            {
+                "label": option,
+                "selected": option in values,
+            }
+            for option in field.get("options", [])
+        ]
+
+        file_filename = ""
+        if kind == "file":
+            file_filename = str(answers.get(field_id) or "").strip()
+            if not file_filename and submission and submission.file:
+                file_filename = submission.original_filename
+
+        render_items.append(
+            {
+                **field,
+                "kind_label": FIELD_KIND_LABELS.get(kind, "항목"),
+                "input_name": f"field_{field_id}",
+                "file_input_name": f"field_file_{field_id}",
+                "value": value if isinstance(value, str) else "",
+                "values": values,
+                "options_for_template": options,
+                "file_filename": file_filename,
+                "is_file": kind == "file",
+                "is_link": kind == "link",
+                "is_secret": kind == "secret",
+                "is_short_text": kind == "short_text",
+                "is_long_text": kind == "long_text",
+                "is_single_choice": kind == "single_choice",
+                "is_multi_choice": kind == "multi_choice",
+            }
+        )
+    return render_items
+
+
+def _extract_fields_submission_data(collection_req, post_data, files_data, *, submission=None):
+    fields = collection_req.normalized_field_schema
+    if not fields:
+        return None, None, "받을 항목이 없습니다."
+
+    existing_answers = {}
+    if submission and isinstance(submission.field_answers, dict):
+        existing_answers = dict(submission.field_answers)
+    answers = dict(existing_answers)
+    uploaded_file = None
+    validate_url = URLValidator()
+
+    for field in fields:
+        field_id = field["id"]
+        label = field["label"]
+        kind = field["kind"]
+        required = bool(field.get("required"))
+        input_name = f"field_{field_id}"
+
+        if kind == "file":
+            uploaded = files_data.get(f"field_file_{field_id}") or files_data.get(input_name)
+            if uploaded:
+                max_size = collection_req.max_file_size_mb * 1024 * 1024
+                if uploaded.size > max_size:
+                    return None, None, f"{label}: {collection_req.max_file_size_mb}MB 이하로 올려주세요."
+                uploaded_file = uploaded
+                answers[field_id] = uploaded.name
+                continue
+
+            existing_filename = str(answers.get(field_id) or "").strip()
+            if not existing_filename and submission and submission.file:
+                existing_filename = submission.original_filename
+            if required and not existing_filename:
+                return None, None, f"{label}: 파일을 선택해주세요."
+            if existing_filename:
+                answers[field_id] = existing_filename
+            else:
+                answers.pop(field_id, None)
+            continue
+
+        if kind == "multi_choice":
+            options = set(field.get("options", []))
+            raw_values = [value.strip() for value in post_data.getlist(input_name) if value.strip()]
+            invalid = [value for value in raw_values if value not in options]
+            if invalid:
+                return None, None, f"{label}: 보기를 다시 선택해주세요."
+            values = []
+            seen = set()
+            for value in raw_values:
+                if value in seen:
+                    continue
+                values.append(value)
+                seen.add(value)
+            if required and not values:
+                return None, None, f"{label}: 1개 이상 선택해주세요."
+            if values:
+                answers[field_id] = values
+            else:
+                answers.pop(field_id, None)
+            continue
+
+        value = post_data.get(input_name, "").strip()
+        if kind == "secret" and not value and answers.get(field_id):
+            continue
+        if required and not value:
+            return None, None, f"{label}: 입력해주세요."
+
+        if kind == "link" and value:
+            try:
+                validate_url(value)
+            except ValidationError:
+                return None, None, f"{label}: 링크 주소를 확인해주세요."
+
+        if kind == "single_choice" and value:
+            if value not in set(field.get("options", [])):
+                return None, None, f"{label}: 보기를 다시 선택해주세요."
+
+        if value:
+            answers[field_id] = value
+        else:
+            answers.pop(field_id, None)
+
+    return answers, uploaded_file, None
+
+
+def _field_csv_value(submission, field):
+    answers = submission.field_answers if isinstance(submission.field_answers, dict) else {}
+    value = answers.get(field["id"], "")
+    if field["kind"] == "file":
+        return value or submission.original_filename
+    if isinstance(value, list):
+        return ", ".join(str(item).strip() for item in value if str(item).strip())
+    return str(value or "").strip()
+
+
 def _get_submit_context(
     collection_req,
     submission=None,
@@ -166,11 +356,14 @@ def _get_submit_context(
     initial_submission_type=None,
     choice_values=None,
     choice_other_text=None,
+    field_values=None,
 ):
     allowed_types = collection_req.allowed_submission_types
     initial_type = initial_submission_type
     if is_edit and submission:
         initial_type = submission.submission_type
+    if collection_req.is_fields_mode:
+        initial_type = "fields"
     if not (is_edit and submission) and initial_type not in allowed_types:
         initial_type = allowed_types[0] if allowed_types else ""
 
@@ -200,6 +393,12 @@ def _get_submit_context(
         "initial_submission_type": initial_type,
         "choice_values": resolved_choice_values,
         "choice_other_text": resolved_choice_other_text,
+        "is_fields_mode": collection_req.is_fields_mode,
+        "field_items": _build_field_render_items(
+            collection_req,
+            submission=submission,
+            field_values=field_values,
+        ),
     }
 
 
@@ -215,6 +414,7 @@ def _render_submit_error(
     posted = form_data or request.POST
     choice_values = posted.getlist("choice_answers") if posted else []
     choice_other_text = posted.get("choice_other_text", "").strip() if posted else ""
+    field_values = _posted_field_values_for_context(collection_req, posted) if posted and collection_req.is_fields_mode else None
     response = render(
         request,
         "collect/submit.html",
@@ -228,6 +428,7 @@ def _render_submit_error(
                 initial_submission_type=submission_type,
                 choice_values=choice_values,
                 choice_other_text=choice_other_text,
+                field_values=field_values,
             ),
             **_build_collect_submit_seo(
                 request,
@@ -712,7 +913,7 @@ def request_detail(request, request_id):
     # 파일 데이터 JSON 구성을 위한 리스트
     files_data = []
     for sub in submissions:
-        if sub.submission_type == 'file' and sub.file:
+        if sub.submission_type in {'file', 'fields'} and sub.file:
             aff = f"[{sub.contributor_affiliation}]_" if sub.contributor_affiliation else ""
             descriptive_name = f"{aff}{sub.contributor_name}_{sub.original_filename}"
             files_data.append({
@@ -869,6 +1070,26 @@ def export_csv(request, request_id):
     response.write('\ufeff')
 
     writer = csv.writer(response)
+    if collection_req.is_fields_mode:
+        fields = collection_req.normalized_field_schema
+        writer.writerow(['번호', '이름', '소속', *[field["label"] for field in fields], '제출시간'])
+        for idx, sub in enumerate(submissions, 1):
+            writer.writerow([
+                idx,
+                sub.contributor_name,
+                sub.contributor_affiliation,
+                *[_field_csv_value(sub, field) for field in fields],
+                sub.submitted_at.strftime('%Y-%m-%d %H:%M'),
+            ])
+
+        logger.info(
+            "[collect] export csv request_id=%s user=%s submission_count=%s",
+            collection_req.id,
+            request.user.username,
+            submissions.count(),
+        )
+        return _apply_sensitive_cache_headers(response)
+
     writer.writerow(['번호', '이름', '소속', '유형', '파일명/링크/내용', '제출시간'])
 
     for idx, sub in enumerate(submissions, 1):
@@ -1006,16 +1227,8 @@ def submit_process(request, request_id):
             reason='이 요청은 현재 제출 가능한 유형이 없습니다.',
         )
 
-    # 이름: 직접 입력 > 셀렉트 > 일반 입력
-    contributor_name = request.POST.get('contributor_name_custom', '').strip()
-    if not contributor_name:
-        selected = request.POST.get('contributor_name_select', '').strip()
-        if selected and selected != '__custom__':
-            contributor_name = selected
-    if not contributor_name:
-        contributor_name = request.POST.get('contributor_name', '').strip()
-    contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
-    submission_type = request.POST.get('submission_type', '')
+    contributor_name, contributor_affiliation = _extract_contributor_identity(request)
+    submission_type = "fields" if collection_req.is_fields_mode else request.POST.get('submission_type', '')
 
     if not contributor_name:
         return _render_submit_error(
@@ -1048,7 +1261,26 @@ def submit_process(request, request_id):
         submission_type=submission_type,
     )
 
-    if submission_type == 'file':
+    if submission_type == 'fields':
+        field_answers, uploaded_file, field_error = _extract_fields_submission_data(
+            collection_req,
+            request.POST,
+            request.FILES,
+        )
+        if field_error:
+            return _render_submit_error(
+                request,
+                collection_req,
+                field_error,
+                submission_type=submission_type,
+            )
+        submission.field_answers = field_answers
+        if uploaded_file:
+            submission.file = uploaded_file
+            submission.original_filename = uploaded_file.name
+            submission.file_size = uploaded_file.size
+
+    elif submission_type == 'file':
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
             return _render_submit_error(
@@ -1142,14 +1374,7 @@ def submission_edit(request, management_id):
     # UUID 기반으로 동작하므로 세션 체크 생략 (링크를 가진 사람이 권한자)
         
     if request.method == 'POST':
-        contributor_name = request.POST.get('contributor_name_custom', '').strip()
-        if not contributor_name:
-            selected = request.POST.get('contributor_name_select', '').strip()
-            if selected and selected != '__custom__':
-                contributor_name = selected
-        if not contributor_name:
-            contributor_name = request.POST.get('contributor_name', '').strip()
-        contributor_affiliation = request.POST.get('contributor_affiliation', '').strip()
+        contributor_name, contributor_affiliation = _extract_contributor_identity(request)
 
         if not contributor_name:
             return _render_submit_error(
@@ -1164,7 +1389,29 @@ def submission_edit(request, management_id):
         submission.contributor_name = contributor_name
         submission.contributor_affiliation = contributor_affiliation
 
-        if submission.submission_type == 'file':
+        if submission.submission_type == 'fields':
+            field_answers, uploaded_file, field_error = _extract_fields_submission_data(
+                submission.collection_request,
+                request.POST,
+                request.FILES,
+                submission=submission,
+            )
+            if field_error:
+                return _render_submit_error(
+                    request,
+                    submission.collection_request,
+                    field_error,
+                    submission_type=submission.submission_type,
+                    is_edit=True,
+                    submission=submission,
+                )
+            submission.field_answers = field_answers
+            if uploaded_file:
+                submission.file = uploaded_file
+                submission.original_filename = uploaded_file.name
+                submission.file_size = uploaded_file.size
+
+        elif submission.submission_type == 'file':
             uploaded_file = request.FILES.get('file')
             if uploaded_file:
                 max_size = submission.collection_request.max_file_size_mb * 1024 * 1024

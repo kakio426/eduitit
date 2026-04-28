@@ -52,17 +52,29 @@
                                 {% if submission.submission_type == 'file' %}<i class="fa-solid fa-file"></i>
                                 {% elif submission.submission_type == 'link' %}<i class="fa-solid fa-link"></i>
                                 {% elif submission.submission_type == 'choice' %}<i class="fa-solid fa-list-check"></i>
+                                {% elif submission.submission_type == 'fields' %}<i class="fa-solid fa-clipboard-list"></i>
                                 {% else %}<i class="fa-solid fa-align-left"></i>{% endif %}
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="text-xs text-gray-400">제출 내용 ({{ submission.get_submission_type_display }})
                                 </p>
+                                {% if submission.submission_type == 'fields' %}
+                                <div class="mt-2 space-y-2">
+                                    {% for item in submission.field_summary_items %}
+                                    <div class="rounded-lg bg-white/70 px-3 py-2">
+                                        <p class="text-xs font-semibold text-gray-400">{{ item.label }}</p>
+                                        <p class="font-bold text-gray-700 break-all">{{ item.value|default:"-" }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
                                 <p class="font-bold text-gray-700 truncate">
                                     {% if submission.submission_type == 'file' %}{{ submission.original_filename }}
                                     {% elif submission.submission_type == 'link' %}{{ submission.link_url }}
                                     {% elif submission.submission_type == 'choice' %}{{ submission.choice_summary|default:"선택형 응답" }}
                                     {% else %}{{ submission.text_content|truncatechars:100 }}{% endif %}
                                 </p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

@@ -248,7 +248,7 @@
 
                     {% if show_created_banner %}
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-base md:text-lg font-semibold text-emerald-800">
-                        요청 생성 완료
+                        요청이 만들어졌어요. 이제 링크를 보내면 됩니다.
                     </div>
                     {% endif %}
                 </div>
@@ -347,7 +347,7 @@
             </div>
         </div>
 
-        {% if req.allow_choice %}
+        {% if req.allow_choice and not req.is_fields_mode %}
         <div id="choice-stats-panel" data-url="{% url 'collect:choice_stats_partial' req.id %}">
             {% include 'collect/partials/choice_stats_panel.html' %}
         </div>

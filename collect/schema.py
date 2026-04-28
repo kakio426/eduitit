@@ -5,8 +5,8 @@ from django.db.utils import OperationalError, ProgrammingError
 
 
 REQUIRED_TABLE_COLUMNS = {
-    "collect_collectionrequest": ("bti_integration_source",),
-    "collect_submission": ("integration_source", "integration_ref"),
+    "collect_collectionrequest": ("bti_integration_source", "collection_mode", "field_schema"),
+    "collect_submission": ("integration_source", "integration_ref", "field_answers"),
 }
 
 

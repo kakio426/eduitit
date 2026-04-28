@@ -1,12 +1,24 @@
+import json
+
 from django import forms
 from django.utils import timezone
 
 from handoff.models import HandoffRosterGroup
 
 from .models import CollectionRequest
+from .field_schema import (
+    CHOICE_FIELD_KINDS,
+    normalize_field_schema,
+    schema_uses_choice,
+    schema_uses_file,
+    schema_uses_link,
+    schema_uses_text,
+)
 
 
 class CollectionRequestForm(forms.ModelForm):
+    field_schema_input = forms.CharField(required=False, widget=forms.HiddenInput())
+
     shared_roster_group = forms.ModelChoiceField(
         required=False,
         queryset=HandoffRosterGroup.objects.none(),
@@ -34,6 +46,7 @@ class CollectionRequestForm(forms.ModelForm):
     class Meta:
         model = CollectionRequest
         fields = [
+            "collection_mode",
             "title",
             "description",
             "bti_integration_source",
@@ -52,6 +65,7 @@ class CollectionRequestForm(forms.ModelForm):
             "template_file",
         ]
         widgets = {
+            "collection_mode": forms.HiddenInput(),
             "title": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none text-lg",
@@ -117,6 +131,7 @@ class CollectionRequestForm(forms.ModelForm):
             ),
         }
         labels = {
+            "collection_mode": "수합 방식",
             "title": "수합 제목",
             "description": "안내사항",
             "bti_integration_source": "BTI 연동",
@@ -150,15 +165,26 @@ class CollectionRequestForm(forms.ModelForm):
         self.fields["shared_roster_group"].label_from_instance = lambda group: group.name
 
         if self.instance and self.instance.pk and not self.is_bound:
+            self.initial["collection_mode"] = self.instance.collection_mode
+            self.initial["field_schema_input"] = json.dumps(
+                self.instance.normalized_field_schema,
+                ensure_ascii=False,
+            )
             self.initial["choice_options_text"] = "\n".join(self.instance.normalized_choice_options)
             if self.instance.deadline:
                 self.initial["deadline"] = timezone.localtime(self.instance.deadline).strftime("%Y-%m-%dT%H:%M")
+        elif not self.is_bound:
+            self.initial["collection_mode"] = "fields"
         self.fields["deadline"].input_formats = [
             "%Y-%m-%dT%H:%M",
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%d %H:%M",
         ]
         self.fields["bti_integration_source"].required = False
+        self.fields["collection_mode"].required = False
+        self.fields["choice_mode"].required = False
+        self.fields["choice_min_selections"].required = False
+        self.fields["choice_max_selections"].required = False
         self.fields["bti_integration_source"].initial = (
             self.initial.get("bti_integration_source")
             or getattr(self.instance, "bti_integration_source", "")
@@ -166,9 +192,46 @@ class CollectionRequestForm(forms.ModelForm):
         )
         self.fields["allow_choice"].widget.attrs.update({"x-model": "allowChoice"})
         self._parsed_choice_options = []
+        self._parsed_field_schema = []
 
     def clean(self):
         cleaned_data = super().clean()
+
+        collection_mode = cleaned_data.get("collection_mode")
+        if collection_mode not in {"legacy", "fields"}:
+            if self.instance and self.instance.pk:
+                collection_mode = self.instance.collection_mode
+            else:
+                collection_mode = "legacy"
+
+        raw_schema = cleaned_data.get("field_schema_input", "")
+        parsed_schema = normalize_field_schema(raw_schema)
+        self._parsed_field_schema = parsed_schema
+        cleaned_data["collection_mode"] = collection_mode
+
+        if collection_mode == "fields":
+            if not parsed_schema:
+                self.add_error("field_schema_input", "받을 항목을 1개 이상 추가해주세요.")
+
+            file_field_count = sum(1 for item in parsed_schema if item.get("kind") == "file")
+            if file_field_count > 1:
+                self.add_error("field_schema_input", "파일 항목은 1개만 사용할 수 있습니다.")
+
+            for item in parsed_schema:
+                if item.get("kind") in CHOICE_FIELD_KINDS and len(item.get("options", [])) < 2:
+                    self.add_error("field_schema_input", f"{item.get('label', '선택 항목')} 보기는 2개 이상 필요합니다.")
+
+            cleaned_data["allow_file"] = schema_uses_file(parsed_schema)
+            cleaned_data["allow_link"] = schema_uses_link(parsed_schema)
+            cleaned_data["allow_text"] = schema_uses_text(parsed_schema)
+            cleaned_data["allow_choice"] = schema_uses_choice(parsed_schema)
+            cleaned_data["choice_mode"] = "single"
+            cleaned_data["choice_min_selections"] = 1
+            cleaned_data["choice_max_selections"] = None
+            cleaned_data["choice_allow_other"] = False
+            cleaned_data["bti_integration_source"] = cleaned_data.get("bti_integration_source") or "none"
+            self._parsed_choice_options = []
+            return cleaned_data
 
         allow_file = bool(cleaned_data.get("allow_file"))
         allow_link = bool(cleaned_data.get("allow_link"))
@@ -233,12 +296,25 @@ class CollectionRequestForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if instance.allow_choice:
+        if instance.collection_mode == "fields":
+            instance.field_schema = self._parsed_field_schema
+            instance.allow_file = schema_uses_file(instance.field_schema)
+            instance.allow_link = schema_uses_link(instance.field_schema)
+            instance.allow_text = schema_uses_text(instance.field_schema)
+            instance.allow_choice = schema_uses_choice(instance.field_schema)
+            instance.choice_mode = "single"
+            instance.choice_options = []
+            instance.choice_min_selections = 1
+            instance.choice_max_selections = None
+            instance.choice_allow_other = False
+        elif instance.allow_choice:
+            instance.field_schema = []
             instance.choice_options = self._parsed_choice_options
             if instance.choice_mode == "single":
                 instance.choice_min_selections = 1
                 instance.choice_max_selections = 1
         else:
+            instance.field_schema = []
             instance.choice_mode = "single"
             instance.choice_options = []
             instance.choice_min_selections = 1

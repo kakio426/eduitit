@@ -23,6 +23,7 @@
             {% if sub.submission_type == 'link' %}<span class="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-md font-bold">링크</span>{% endif %}
             {% if sub.submission_type == 'text' %}<span class="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-md font-bold">텍스트</span>{% endif %}
             {% if sub.submission_type == 'choice' %}<span class="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md font-bold">선택형</span>{% endif %}
+            {% if sub.submission_type == 'fields' %}<span class="px-2 py-0.5 bg-sky-100 text-sky-600 rounded-md font-bold">항목</span>{% endif %}
         </div>
         <div class="mt-2 text-lg text-gray-700 break-all">
             {% if sub.submission_type == 'file' %}
@@ -33,11 +34,17 @@
             {% if sub.link_description %}<p class="text-base text-gray-500 mt-1">{{ sub.link_description }}</p>{% endif %}
             {% elif sub.submission_type == 'choice' %}
             {{ sub.choice_summary|truncatechars:90 }}
+            {% elif sub.submission_type == 'fields' %}
+            <div class="space-y-1">
+                {% for item in sub.field_summary_items %}
+                <p><span class="font-bold text-gray-500">{{ item.label }}</span>: {{ item.value|default:"-" }}</p>
+                {% endfor %}
+            </div>
             {% else %}
             {{ sub.text_content|truncatechars:90 }}
             {% endif %}
         </div>
-        {% if sub.submission_type == 'file' and sub.file %}
+        {% if sub.file %}
         <div class="mt-2">
             <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-base font-bold">
                 <i class="fa-solid fa-download"></i>다운로드 (새 탭)
@@ -71,6 +78,7 @@
                     {% if sub.submission_type == 'link' %}<span class="px-2 py-1 bg-purple-100 text-purple-600 rounded-lg text-base font-bold">링크</span>{% endif %}
                     {% if sub.submission_type == 'text' %}<span class="px-2 py-1 bg-amber-100 text-amber-600 rounded-lg text-base font-bold">텍스트</span>{% endif %}
                     {% if sub.submission_type == 'choice' %}<span class="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-base font-bold">선택형</span>{% endif %}
+                    {% if sub.submission_type == 'fields' %}<span class="px-2 py-1 bg-sky-100 text-sky-600 rounded-lg text-base font-bold">항목</span>{% endif %}
                 </td>
                 <td class="py-3 pr-3 text-gray-700 max-w-[360px]">
                     {% if sub.submission_type == 'file' %}
@@ -81,13 +89,19 @@
                     {% if sub.link_description %}<div class="text-base text-gray-500 mt-1">{{ sub.link_description }}</div>{% endif %}
                     {% elif sub.submission_type == 'choice' %}
                     {{ sub.choice_summary|truncatechars:80 }}
+                    {% elif sub.submission_type == 'fields' %}
+                    <div class="space-y-1">
+                        {% for item in sub.field_summary_items %}
+                        <div><span class="font-bold text-gray-500">{{ item.label }}</span>: {{ item.value|default:"-" }}</div>
+                        {% endfor %}
+                    </div>
                     {% else %}
                     {{ sub.text_content|truncatechars:80 }}
                     {% endif %}
                 </td>
                 <td class="py-3 pr-3 text-gray-600">{{ sub.submitted_at|date:"Y-m-d H:i" }}</td>
                 <td class="py-3 text-right">
-                    {% if sub.submission_type == 'file' and sub.file %}
+                    {% if sub.file %}
                     <a href="{% url 'collect:submission_download' sub.id %}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-base font-bold hover:bg-emerald-200 transition">
                         <i class="fa-solid fa-download"></i>
                     </a>

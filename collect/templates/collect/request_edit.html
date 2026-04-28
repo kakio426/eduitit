@@ -34,6 +34,8 @@
 
             <form action="{% url 'collect:request_edit' req.id %}" method="post" enctype="multipart/form-data" class="space-y-5">
                 {% csrf_token %}
+                {{ form.collection_mode }}
+                {{ form.field_schema_input }}
 
                 <div x-show="step===1" class="space-y-4">
                     <div>
