@@ -7725,7 +7725,7 @@ transform: none;
 .home-v6-page .home-v6-chat-empty .home-v6-agent-chat-row {
     align-items: flex-end;
     gap: 0.62rem;
-    padding: 0 1.25rem;
+    padding: 0 2rem;
 }
 
 .home-v6-chat-history-pair .home-v6-agent-chat-row--user {
@@ -7852,7 +7852,7 @@ transform: none;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.62rem 1.5rem;
+    padding: 0.62rem 2rem;
     margin: 0.25rem 0 0.5rem;
     color: #64748b;
     font-size: 0.75rem;
@@ -7992,9 +7992,9 @@ transform: none;
 .home-v6-page .home-v6-agent-composer-dock {
     width: 100%;
     gap: 0.55rem;
-    padding: 0.88rem 1rem;
-    border-top: 1px solid var(--home-v6-ai-ref-line);
-    background: var(--home-v6-ai-ref-surface);
+    padding: 0.45rem 2rem 1rem;
+    border-top: 0;
+    background: var(--home-v6-ai-ref-panel);
 }
 
 .home-v6-page .home-v6-agent-ai-queued--shell {
@@ -8209,7 +8209,7 @@ transform: none;
 /* AI assistant comfort pass: keep the dashboard layout, tighten only the chat reading lane. */
 .home-v6-page [data-home-v6-agent-workspace="true"],
 .home-v6-page .home-v6-mobile-agent-section {
-    --home-v6-ai-readable-width: min(100%, 56rem);
+    --home-v6-ai-readable-width: min(100%, 72rem);
     --home-v6-ai-compact-stage-min: clamp(16rem, 34vh, 24rem);
     --home-v6-ai-compact-stage-max: min(46vh, 30rem);
 }
