@@ -23,6 +23,12 @@
         event.detail.shouldSwap = true;
         event.detail.isError = false;
     });
+    document.body.addEventListener('bambooPromptFlushed', function () {
+        var field = document.getElementById('id_raw_text');
+        if (field) {
+            field.value = '';
+        }
+    });
 </script>
 
 <section class="service-shell service-shell--compact min-h-screen bg-gradient-to-b from-emerald-50 via-white to-teal-50 px-4 pb-20 md:px-6">

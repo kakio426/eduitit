@@ -8,21 +8,35 @@
         <div class="flex flex-col gap-4">
             <div class="flex items-center justify-between gap-3">
                 <p class="text-sm font-black text-emerald-700">교사 대나무숲</p>
-                <a href="{% url 'bamboo:feed' %}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-50">
-                    <i class="ph ph-list-bullets text-base"></i>
-                    목록
-                </a>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    {% if story.user_can_manage %}
+                    <form method="post" action="{% url 'bamboo:delete' story.uuid %}" onsubmit="return confirm('이 우화를 삭제할까요?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="source" value="post">
+                        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-black text-red-600 shadow-sm transition hover:bg-red-50">
+                            <i class="ph ph-trash text-base"></i>
+                            삭제
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'bamboo:feed' %}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-50">
+                        <i class="ph ph-list-bullets text-base"></i>
+                        목록
+                    </a>
+                </div>
             </div>
-            <header class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm md:p-6">
+            <header class="min-w-0 overflow-hidden rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm md:p-6">
                 <div class="mb-3 flex flex-wrap items-center gap-2 text-sm font-bold text-slate-400">
                     <span class="font-black text-emerald-700">{{ story.anon_handle }}</span>
                     <span>·</span>
                     <time>{{ story.created_at|date:"m.d H:i" }}</time>
                 </div>
-                <h1 class="font-title text-3xl font-black leading-tight text-slate-950 md:text-5xl">
-                    <i class="ph-fill ph-fire text-2xl text-rose-500 md:text-3xl"></i>
-                    {{ story.display_title }}
-                </h1>
+                <div class="flex min-w-0 items-start gap-2">
+                    <i class="ph-fill ph-fire mt-1 shrink-0 text-xl text-rose-500 sm:text-2xl"></i>
+                    <h1 class="min-w-0 flex-1 whitespace-normal font-title text-2xl font-black leading-snug text-slate-950 sm:text-3xl md:text-4xl" style="overflow-wrap: anywhere; word-break: break-all;">
+                        {{ story.display_title }}
+                    </h1>
+                </div>
                 <div class="mt-5">
                     {% include "bamboo/partials/story_actions.html" %}
                 </div>
@@ -33,7 +47,7 @@
         <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">신고 검토 중</div>
         {% endif %}
 
-        <article class="rounded-2xl border border-emerald-100 bg-white px-5 py-5 text-base leading-8 text-slate-800 shadow-sm whitespace-pre-line md:px-6">{{ story.fable_body }}</article>
+        <article class="min-w-0 overflow-hidden break-words whitespace-pre-line rounded-2xl border border-emerald-100 bg-white px-5 py-5 text-base leading-8 text-slate-800 shadow-sm md:px-6" style="overflow-wrap: anywhere; word-break: break-all;">{{ story.fable_body }}</article>
 
         <div id="comments">
             {% include "bamboo/partials/comments.html" %}

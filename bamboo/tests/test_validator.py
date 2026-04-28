@@ -1,5 +1,6 @@
 from django.test import SimpleTestCase
 
+from bamboo.utils.quality import validate_fable_quality
 from bamboo.utils.validator import extract_fable_title, validate_fable_output, validate_fable_title
 
 
@@ -20,6 +21,7 @@ class BambooValidatorTest(SimpleTestCase):
 
         self.assertTrue(result.is_valid)
         self.assertEqual(extract_fable_title(SAFE_FABLE), "허세 공작새의 빈 깃털 우화")
+        self.assertTrue(validate_fable_quality(SAFE_FABLE).is_valid)
 
     def test_rejects_school_name(self):
         result = validate_fable_output(
@@ -42,6 +44,37 @@ class BambooValidatorTest(SimpleTestCase):
 
         self.assertFalse(result.is_valid)
         self.assertIn("threat_pattern", result.reasons)
+
+    def test_rejects_llm_apology_preamble(self):
+        result = validate_fable_output(
+            "죄송합니다. 이전 출력에 문제가 있었습니다. 지시를 정확히 반영하여 다시 쓰겠습니다.\n\n"
+            + SAFE_FABLE
+        )
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("preamble", result.reasons)
+        self.assertIn("meta_artifact", result.reasons)
+
+    def test_rejects_adult_or_strong_profanity_output(self):
+        result = validate_fable_output(SAFE_FABLE.replace("빈 깃털 우화", "야동 부엉이 우화"))
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("unsafe_expression", result.reasons)
+
+    def test_quality_rejects_sudden_or_too_short_fable(self):
+        weak_fable = """## 제목: <뜬금없는 바위 우화>
+
+어느 깊은 숲에 바위가 있었습니다.
+다람쥐가 지나갔고 바람이 불었습니다.
+갑자기 모든 문제가 해결되었습니다.
+
+> 숲의 속삭임: 오늘도 버텼어요."""
+
+        result = validate_fable_quality(weak_fable)
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("too_few_sentences", result.reasons)
+        self.assertIn("sudden_or_lazy_ending", result.reasons)
 
     def test_rejects_unsafe_title(self):
         result = validate_fable_title("김철수 선생님의 참교육 우화")

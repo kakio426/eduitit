@@ -1,4 +1,4 @@
-<div id="bamboo-story-actions" class="flex flex-wrap items-center gap-3">
+<div id="bamboo-story-actions" class="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
     {% if story.was_reported_now or story.is_hidden_by_report %}
     <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-black text-amber-800">
         <i class="ph ph-flag"></i>
@@ -9,18 +9,18 @@
         {% csrf_token %}
         <input type="hidden" name="source" value="post">
         <input type="hidden" name="next" value="{{ request.path }}">
-        <button type="submit" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-black transition {% if story.user_has_liked %}border-rose-200 bg-rose-50 text-rose-600{% else %}border-slate-200 bg-white text-slate-500 hover:text-rose-600{% endif %}">
+        <button type="submit" class="inline-flex min-w-[5.75rem] items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-sm font-black transition sm:px-4 {% if story.user_has_liked %}border-rose-200 bg-rose-50 text-rose-600{% else %}border-slate-200 bg-white text-slate-500 hover:text-rose-600{% endif %}">
             <i class="{% if story.user_has_liked %}ph-fill{% else %}ph{% endif %} ph-heart"></i>
-            {{ story.like_count }}
+            <span class="whitespace-nowrap">좋아요 {{ story.like_count }}</span>
         </button>
     </form>
-    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500">
+    <span class="inline-flex min-w-[5.75rem] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-500 sm:px-4">
         <i class="ph ph-chat-circle"></i>
-        {{ story.comment_count }}
+        <span class="whitespace-nowrap">댓글 {{ story.comment_count }}</span>
     </span>
-    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-500">
+    <span class="inline-flex min-w-[5.75rem] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-500 sm:px-4">
         <i class="ph ph-eye"></i>
-        {{ story.view_count }}
+        <span class="whitespace-nowrap">조회 {{ story.view_count }}</span>
     </span>
     {% if story.user_can_report %}
     <form method="post" action="{% url 'bamboo:report' story.uuid %}" hx-post="{% url 'bamboo:report' story.uuid %}" hx-target="#bamboo-story-actions" hx-swap="outerHTML" hx-disabled-elt="find button">

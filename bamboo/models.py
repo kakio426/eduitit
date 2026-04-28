@@ -24,7 +24,7 @@ class BambooStory(models.Model):
     author_guest_key = models.CharField(max_length=64, blank=True, db_index=True)
     anon_handle = models.CharField(max_length=20)
     title = models.CharField(max_length=100, default="이름 없는 숲의 우화")
-    input_masked = models.TextField()
+    input_masked = models.TextField(blank=True, default="")
     fable_output = models.TextField()
     is_public = models.BooleanField(default=True)
     is_hidden_by_report = models.BooleanField(default=False)
@@ -217,5 +217,8 @@ class BambooConsent(models.Model):
 
 
 def _strip_fable_title(text: str) -> str:
-    body = re.sub(r"^\s*##\s*제목\s*:\s*[^\n]+\n*", "", str(text or ""), count=1)
-    return body.strip()
+    raw_text = str(text or "")
+    title_match = re.search(r"##\s*제목\s*:\s*[^\n]+\n*", raw_text)
+    if title_match:
+        return raw_text[title_match.end() :].strip()
+    return raw_text.strip()

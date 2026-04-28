@@ -2,6 +2,7 @@ from django.test import SimpleTestCase
 
 from bamboo.utils.comments import sanitize_comment_body
 from bamboo.utils.sanitizer import MASK_TOKEN, sanitize_input
+from bamboo.utils.safety import SAFE_EXPRESSION_TOKEN
 
 
 class BambooSanitizerTest(SimpleTestCase):
@@ -28,3 +29,16 @@ class BambooSanitizerTest(SimpleTestCase):
 
         self.assertFalse(result.is_valid)
         self.assertIn("identifier", result.reasons)
+
+    def test_story_input_masks_strong_profanity_and_adult_expression(self):
+        result = sanitize_input("씨발 야동 같은 농담을 해서 너무 불쾌했다.")
+
+        self.assertIn(SAFE_EXPRESSION_TOKEN, result.masked_text)
+        self.assertNotIn("씨발", result.masked_text)
+        self.assertNotIn("야동", result.masked_text)
+
+    def test_comment_blocks_strong_profanity(self):
+        result = sanitize_comment_body("씨발 이거 진짜 웃기네")
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("direct_insult", result.reasons)

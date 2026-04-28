@@ -24,8 +24,9 @@ class BambooStoryAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = ("is_public", "is_hidden_by_report", "created_at")
-    search_fields = ("title", "anon_handle", "input_masked", "fable_output", "author__username")
+    search_fields = ("title", "anon_handle", "fable_output", "author__username")
     readonly_fields = ("uuid", "created_at")
+    exclude = ("input_masked",)
 
 
 @admin.register(BambooLike)

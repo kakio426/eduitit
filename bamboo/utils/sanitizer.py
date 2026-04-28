@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .safety import mask_public_unsafe_expressions
+
 MASK_TOKEN = "[●●●]"
 
 
@@ -55,6 +57,9 @@ def sanitize_input(text: str) -> SanitizedText:
 
     for pattern in PATTERNS:
         masked_text = pattern.sub(lambda match: _mask_match(match, redacted), masked_text)
+
+    masked_text, unsafe_values = mask_public_unsafe_expressions(masked_text)
+    redacted.extend(unsafe_values)
 
     masked_text = re.sub(rf"(?:\s*{re.escape(MASK_TOKEN)}\s*)+", f" {MASK_TOKEN} ", masked_text)
     masked_text = re.sub(r"\s+", " ", masked_text).strip()

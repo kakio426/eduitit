@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 
 from django.contrib import messages
@@ -23,7 +24,8 @@ from products.models import Product
 
 from .forms import BambooCommentForm, BambooStoryForm
 from .models import BambooComment, BambooCommentReport, BambooLike, BambooReport, BambooStory
-from .utils.llm import BambooLlmError, generate_bamboo_fable
+from .utils.llm import BambooLlmError, generate_bamboo_fable, review_bamboo_fable_quality
+from .utils.quality import validate_fable_quality
 from .utils.comments import comment_error_message, sanitize_comment_body
 from .utils.sanitizer import sanitize_input
 from .utils.validator import extract_fable_title, validate_fable_output
@@ -35,6 +37,9 @@ BAMBOO_GUEST_SESSION_KEY = "bamboo_guest_key"
 LIMIT_MESSAGE = "오늘은 충분히 쏟아내셨어요. 내일 다시 숲을 찾아주세요."
 GUEST_LIMIT_MESSAGE = "오늘 비회원 체험을 모두 썼어요."
 SAFETY_FALLBACK_MESSAGE = "이번에는 우화로 풀기 어려운 사연이에요. 조금 더 일반적으로 다시 적어주세요."
+PROMPT_FLUSH_EVENT = "bambooPromptFlushed"
+
+logger = logging.getLogger(__name__)
 
 
 def _service():
@@ -169,6 +174,12 @@ def delete_story(request, story_uuid):
     if not _is_story_owner(story, request):
         return HttpResponseForbidden("삭제 권한이 없습니다.")
     story.delete()
+    if request.headers.get("HX-Request") == "true" and request.POST.get("source") == "result":
+        return _private(render(request, "bamboo/partials/result.html", {"success_message": "삭제됨"}))
+    if request.headers.get("HX-Request") == "true" and request.POST.get("source") == "post":
+        response = HttpResponse("")
+        response["HX-Redirect"] = reverse("bamboo:feed")
+        return _private(response)
     if request.headers.get("HX-Request") == "true":
         return _private(HttpResponse(""))
     messages.success(request, "삭제됨")
@@ -256,8 +267,9 @@ def _handle_write_post(request):
         title, fable_output = _generate_validated_fable(sanitized)
     except BambooLlmError:
         return _render_write_result(request, {"error_message": "잠시 후 다시 시도해주세요."}, status=503)
-    except ValueError:
-        return _render_write_result(request, {"error_message": SAFETY_FALLBACK_MESSAGE}, status=422)
+    except ValueError as exc:
+        logger.warning("[Bamboo] fable generation rejected after retries: %s", exc)
+        return _render_write_result(request, {"error_message": SAFETY_FALLBACK_MESSAGE, "flush_prompt": True}, status=200)
 
     if _charge_usage_limit(request):
         return _render_write_result(request, _limit_payload(request), status=429)
@@ -266,23 +278,23 @@ def _handle_write_post(request):
         **_actor_fields(request, user_field="author", guest_field="author_guest_key"),
         anon_handle=_new_anon_handle(),
         title=title,
-        input_masked=sanitized.masked_text,
+        input_masked="",
         fable_output=fable_output,
     )
 
     if request.headers.get("HX-Request") == "true":
         _prepare_stories([story], request)
-        return _private(
-            render(
-                request,
-                "bamboo/partials/result.html",
-                {
-                    "story": story,
-                    "usage": _usage_context(request),
-                    "result_url": reverse("bamboo:result", kwargs={"story_uuid": story.uuid}),
-                },
-            )
+        response = render(
+            request,
+            "bamboo/partials/result.html",
+            {
+                "story": story,
+                "usage": _usage_context(request),
+                "result_url": reverse("bamboo:result", kwargs={"story_uuid": story.uuid}),
+            },
         )
+        response["HX-Trigger"] = PROMPT_FLUSH_EVENT
+        return _private(response)
     return redirect("bamboo:result", story_uuid=story.uuid)
 
 
@@ -298,13 +310,35 @@ def _generate_validated_fable(sanitized):
             redacted_values=sanitized.redacted_values,
         )
         if result.is_valid:
-            return extract_fable_title(output), output
+            local_quality = validate_fable_quality(output)
+            if not local_quality.is_valid:
+                last_reasons = local_quality.reasons
+                retry_instruction = _quality_retry_instruction(last_reasons)
+                continue
+
+            llm_quality = review_bamboo_fable_quality(sanitized.masked_text, output)
+            if llm_quality.is_valid:
+                return extract_fable_title(output), output
+            last_reasons = llm_quality.reasons or ("quality_review_failed",)
+            retry_instruction = _quality_retry_instruction(last_reasons)
+            continue
         last_reasons = result.reasons
         retry_instruction = (
             "이전 출력에 식별 가능 정보 또는 금지 표현이 있었습니다. "
-            "실제 사람·학교·지역·날짜·숫자를 모두 버리고 더 추상적인 동물 우화로 다시 쓰세요."
+            "사과나 해명 없이 제목부터 시작하고, 실제 사람·학교·지역·날짜·숫자를 모두 버려 "
+            "더 추상적인 동물 우화로 다시 쓰세요."
         )
     raise ValueError(",".join(last_reasons))
+
+
+def _quality_retry_instruction(reasons):
+    reason_text = ", ".join(str(reason) for reason in reasons if reason)
+    return (
+        "이전 우화는 이야기 흐름이나 자연스러움 검토를 통과하지 못했습니다. "
+        f"문제: {reason_text}. "
+        "사과나 해명 없이 제목부터 시작하고, 한 사건을 중심으로 캐릭터와 인과를 끝까지 유지해 "
+        "모순 없는 4~8문장 동물 우화로 다시 쓰세요."
+    )
 
 
 def _get_story_for_user(story_uuid, request):
@@ -518,16 +552,19 @@ def _render_write_result(request, context, *, status=200):
         "error_message": context.get("error_message", ""),
         "usage": _usage_context(request),
         "show_guest_signup_modal": bool(context.get("show_guest_signup_modal")),
+        "flush_prompt": bool(context.get("flush_prompt", True)),
     }
     if request.headers.get("HX-Request") == "true":
         response = render(request, "bamboo/partials/result.html", payload, status=status)
         if status >= 400:
             response["HX-Bamboo-Error"] = "true"
+        if payload["flush_prompt"]:
+            response["HX-Trigger"] = PROMPT_FLUSH_EVENT
         return _private(response)
 
     page_context = {
         "service": _service(),
-        "form": payload["form"] or BambooStoryForm(request.POST),
+        "form": BambooStoryForm(),
         "usage": payload["usage"],
         "error_message": payload["error_message"],
         "show_guest_signup_modal": payload["show_guest_signup_modal"],

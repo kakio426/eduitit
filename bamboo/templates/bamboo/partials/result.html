@@ -1,4 +1,9 @@
 <section class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm md:p-6">
+    {% if success_message %}
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+        {{ success_message }}
+    </div>
+    {% endif %}
     {% if error_message %}
     <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
         <i class="ph ph-warning-circle text-base"></i>
@@ -9,9 +14,9 @@
     {% endif %}
     {% elif story %}
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div class="min-w-0">
             <p class="text-xs font-black text-emerald-700">{{ story.anon_handle }}</p>
-            <h2 class="mt-1 text-2xl font-black text-slate-950">{{ story.display_title }}</h2>
+            <h2 class="mt-1 max-w-full break-words text-2xl font-black leading-snug text-slate-950" style="overflow-wrap: anywhere; word-break: break-all;">{{ story.display_title }}</h2>
         </div>
         <div class="flex flex-wrap gap-2">
             {% if story.user_can_manage %}
@@ -34,6 +39,24 @@
                 <i class="ph ph-arrow-clockwise"></i>
                 다시 쓰기
             </a>
+            {% if story.user_can_manage %}
+            <form
+                method="post"
+                action="{% url 'bamboo:delete' story.uuid %}"
+                hx-post="{% url 'bamboo:delete' story.uuid %}"
+                hx-target="#bamboo-result"
+                hx-swap="innerHTML"
+                hx-disabled-elt="find button"
+                onsubmit="return confirm('이 우화를 삭제할까요?');"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="source" value="result">
+                <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 transition hover:bg-red-50">
+                    <i class="ph ph-trash"></i>
+                    삭제
+                </button>
+            </form>
+            {% endif %}
         </div>
     </div>
 
@@ -41,7 +64,7 @@
     <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">신고 검토 중</div>
     {% endif %}
 
-    <article class="rounded-2xl border border-emerald-100 bg-emerald-50/50 px-4 py-4 text-base leading-8 text-slate-800 whitespace-pre-line md:px-5">{{ story.fable_body }}</article>
+    <article class="min-w-0 overflow-hidden break-words whitespace-pre-line rounded-2xl border border-emerald-100 bg-emerald-50/50 px-4 py-4 text-base leading-8 text-slate-800 md:px-5" style="overflow-wrap: anywhere; word-break: break-all;">{{ story.fable_body }}</article>
 
     <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <textarea id="bamboo-copy-{{ story.uuid }}" class="hidden">{{ story.fable_output }}</textarea>
@@ -62,7 +85,7 @@
             <span>공유</span>
         </button>
     </div>
-    {% else %}
+    {% elif not success_message %}
     <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-6 text-center">
         <p class="font-black text-slate-900">사연을 쓰면 여기에 우화가 나옵니다.</p>
     </div>
