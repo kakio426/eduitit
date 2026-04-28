@@ -9,7 +9,7 @@
             <p class="text-xs font-black text-emerald-700">{{ story.anon_handle }}</p>
             <time class="text-xs font-semibold text-slate-400">{{ story.created_at|date:"m.d H:i" }}</time>
         </div>
-        {% if story.author_id == request.user.id or request.user.is_staff %}
+        {% if story.user_can_manage %}
         <form method="post" action="{% url 'bamboo:delete' story.uuid %}" hx-post="{% url 'bamboo:delete' story.uuid %}" hx-target="closest [data-bamboo-story-root]" hx-swap="outerHTML">
             {% csrf_token %}
             <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600" aria-label="삭제">
@@ -43,7 +43,7 @@
             <i class="ph ph-eye"></i>
             {{ story.view_count }}
         </span>
-        {% if story.author_id != request.user.id %}
+        {% if story.user_can_report %}
         <form method="post" action="{% url 'bamboo:report' story.uuid %}" hx-post="{% url 'bamboo:report' story.uuid %}" hx-target="closest [data-bamboo-story-root]" hx-swap="outerHTML" hx-disabled-elt="find button">
             {% csrf_token %}
             <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-black text-slate-400 transition hover:text-amber-600">

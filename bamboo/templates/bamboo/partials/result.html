@@ -4,6 +4,9 @@
         <i class="ph ph-warning-circle text-base"></i>
         {{ error_message }}
     </div>
+    {% if show_guest_signup_modal %}
+    {% include "bamboo/partials/guest_signup_modal.html" %}
+    {% endif %}
     {% elif story %}
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -11,7 +14,7 @@
             <h2 class="mt-1 text-2xl font-black text-slate-950">{{ story.display_title }}</h2>
         </div>
         <div class="flex flex-wrap gap-2">
-            {% if story.author_id == request.user.id %}
+            {% if story.user_can_manage %}
             <form method="post" action="{% url 'bamboo:visibility' story.uuid %}">
                 {% csrf_token %}
                 <input type="hidden" name="is_public" value="{% if story.is_public %}0{% else %}1{% endif %}">

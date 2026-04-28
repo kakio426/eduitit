@@ -1,7 +1,7 @@
+import hashlib
 import secrets
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import F
@@ -22,15 +22,18 @@ from core.ai_usage_limits import (
 from products.models import Product
 
 from .forms import BambooCommentForm, BambooStoryForm
-from .models import BambooComment, BambooCommentReport, BambooConsent, BambooLike, BambooReport, BambooStory
+from .models import BambooComment, BambooCommentReport, BambooLike, BambooReport, BambooStory
 from .utils.llm import BambooLlmError, generate_bamboo_fable
 from .utils.comments import comment_error_message, sanitize_comment_body
 from .utils.sanitizer import sanitize_input
 from .utils.validator import extract_fable_title, validate_fable_output
 
 BAMBOO_USAGE_BUCKET = "bamboo:generate"
-BAMBOO_USAGE_LIMITS = ((3600, 2), (86400, 5))
+BAMBOO_MEMBER_USAGE_LIMITS = ((86400, 5),)
+BAMBOO_GUEST_USAGE_LIMITS = ((86400, 2),)
+BAMBOO_GUEST_SESSION_KEY = "bamboo_guest_key"
 LIMIT_MESSAGE = "오늘은 충분히 쏟아내셨어요. 내일 다시 숲을 찾아주세요."
+GUEST_LIMIT_MESSAGE = "오늘 비회원 체험을 모두 썼어요."
 SAFETY_FALLBACK_MESSAGE = "이번에는 우화로 풀기 어려운 사연이에요. 조금 더 일반적으로 다시 적어주세요."
 
 
@@ -41,7 +44,6 @@ def _service():
     )
 
 
-@login_required
 def feed(request):
     sort = request.GET.get("sort") or "latest"
     if sort not in {"latest", "popular", "comments"}:
@@ -59,59 +61,56 @@ def feed(request):
         stories = stories.order_by("-created_at")
     paginator = Paginator(stories, 10)
     page_obj = paginator.get_page(request.GET.get("page"))
-    _mark_liked(page_obj.object_list, request.user)
+    page_stories = _prepare_stories(page_obj.object_list, request)
+    page_obj.object_list = page_stories
 
     context = {
         "service": _service(),
-        "stories": page_obj.object_list,
+        "stories": page_stories,
         "page_obj": page_obj,
         "sort": sort,
-        "usage": _usage_context(request.user),
+        "usage": _usage_context(request),
     }
     context.update(_sns_context(request))
     return _private(render(request, "bamboo/feed.html", context))
 
 
-@login_required
 def write(request):
-    has_consent = BambooConsent.objects.filter(user=request.user).exists()
     if request.method == "POST":
-        return _handle_write_post(request, has_consent=has_consent)
+        return _handle_write_post(request)
 
     context = {
         "service": _service(),
         "form": BambooStoryForm(),
-        "has_consent": has_consent,
-        "usage": _usage_context(request.user),
+        "usage": _usage_context(request),
     }
     return _private(render(request, "bamboo/write.html", context))
 
 
-@login_required
 def result(request, story_uuid):
-    story = _get_story_for_user(story_uuid, request.user)
-    _mark_liked([story], request.user)
+    story = _get_story_for_user(story_uuid, request)
+    _prepare_stories([story], request)
     return _private(render(request, "bamboo/result.html", {"service": _service(), "story": story}))
 
 
-@login_required
 def post(request, story_uuid):
-    story = _get_story_for_user(story_uuid, request.user)
+    story = _get_story_for_user(story_uuid, request)
     _count_view_once(request, story)
-    _mark_liked([story], request.user)
+    _prepare_stories([story], request)
     context = {
         "service": _service(),
         "story": story,
         "comment_form": BambooCommentForm(),
     }
-    context.update(_comments_context(story))
+    context.update(_comments_context(story, request))
     return _private(render(request, "bamboo/post.html", context))
 
 
-@login_required
 @require_POST
 def update_visibility(request, story_uuid):
-    story = get_object_or_404(BambooStory, uuid=story_uuid, author=request.user)
+    story = get_object_or_404(BambooStory, uuid=story_uuid)
+    if not _is_story_owner(story, request):
+        return HttpResponseForbidden("공개 설정 권한이 없습니다.")
     if story.is_hidden_by_report:
         messages.warning(request, "신고 검토 중")
         return redirect("bamboo:result", story_uuid=story.uuid)
@@ -122,18 +121,17 @@ def update_visibility(request, story_uuid):
     return redirect("bamboo:result", story_uuid=story.uuid)
 
 
-@login_required
 @require_POST
 def like_story(request, story_uuid):
     story = get_object_or_404(BambooStory.objects.visible(), uuid=story_uuid)
-    like = BambooLike.objects.filter(user=request.user, story=story).first()
+    like = _like_queryset(request, story).first()
     if like:
         like.delete()
     else:
-        BambooLike.objects.create(user=request.user, story=story)
+        BambooLike.objects.create(story=story, **_actor_fields(request))
     story.like_count = BambooLike.objects.filter(story=story).count()
     story.save(update_fields=["like_count"])
-    _mark_liked([story], request.user)
+    _prepare_stories([story], request)
     if request.headers.get("HX-Request") == "true" and request.POST.get("source") == "post":
         return _private(render(request, "bamboo/partials/story_actions.html", {"story": story}))
     if request.headers.get("HX-Request") != "true":
@@ -141,18 +139,18 @@ def like_story(request, story_uuid):
     return _private(render(request, "bamboo/partials/story_card.html", {"story": story}))
 
 
-@login_required
 @require_POST
 def report_story(request, story_uuid):
     story = get_object_or_404(BambooStory, uuid=story_uuid)
-    if story.author_id == request.user.id:
+    if _is_story_owner(story, request):
         return HttpResponseForbidden("본인 글은 신고할 수 없습니다.")
 
     with transaction.atomic():
+        report_fields = _actor_fields(request)
         BambooReport.objects.get_or_create(
-            user=request.user,
             story=story,
             defaults={"reason": str(request.POST.get("reason") or "").strip()[:120]},
+            **report_fields,
         )
         BambooStory.objects.filter(pk=story.pk).update(is_hidden_by_report=True, is_public=False)
     story.refresh_from_db()
@@ -165,11 +163,10 @@ def report_story(request, story_uuid):
     return _private(render(request, "bamboo/partials/story_card.html", {"story": story}))
 
 
-@login_required
 @require_POST
 def delete_story(request, story_uuid):
     story = get_object_or_404(BambooStory, uuid=story_uuid)
-    if story.author_id != request.user.id and not request.user.is_staff:
+    if not _is_story_owner(story, request):
         return HttpResponseForbidden("삭제 권한이 없습니다.")
     story.delete()
     if request.headers.get("HX-Request") == "true":
@@ -178,7 +175,6 @@ def delete_story(request, story_uuid):
     return redirect("bamboo:feed")
 
 
-@login_required
 @require_POST
 def create_comment(request, story_uuid):
     story = get_object_or_404(BambooStory.objects.visible(), uuid=story_uuid)
@@ -188,9 +184,9 @@ def create_comment(request, story_uuid):
         if safety.is_valid:
             BambooComment.objects.create(
                 story=story,
-                author=request.user,
-                anon_handle=_comment_anon_handle(story, request.user),
+                anon_handle=_comment_anon_handle(story, request),
                 body_masked=safety.sanitized.masked_text,
+                **_actor_fields(request, user_field="author", guest_field="author_guest_key"),
             )
             _sync_comment_count(story)
             form = BambooCommentForm()
@@ -205,12 +201,11 @@ def create_comment(request, story_uuid):
     return redirect("bamboo:post", story_uuid=story.uuid)
 
 
-@login_required
 @require_POST
 def delete_comment(request, story_uuid, comment_id):
     story = get_object_or_404(BambooStory, uuid=story_uuid)
     comment = get_object_or_404(BambooComment, pk=comment_id, story=story)
-    if comment.author_id != request.user.id and not request.user.is_staff:
+    if not _is_comment_owner(comment, request):
         return HttpResponseForbidden("삭제 권한이 없습니다.")
     comment.delete()
     _sync_comment_count(story)
@@ -220,19 +215,19 @@ def delete_comment(request, story_uuid, comment_id):
     return redirect("bamboo:post", story_uuid=story.uuid)
 
 
-@login_required
 @require_POST
 def report_comment(request, story_uuid, comment_id):
     story = get_object_or_404(BambooStory.objects.visible(), uuid=story_uuid)
     comment = get_object_or_404(BambooComment, pk=comment_id, story=story)
-    if comment.author_id == request.user.id:
+    if _is_comment_owner(comment, request):
         return HttpResponseForbidden("본인 댓글은 신고할 수 없습니다.")
 
     with transaction.atomic():
+        report_fields = _actor_fields(request)
         BambooCommentReport.objects.get_or_create(
-            user=request.user,
             comment=comment,
             defaults={"reason": str(request.POST.get("reason") or "").strip()[:120]},
+            **report_fields,
         )
         BambooComment.objects.filter(pk=comment.pk).update(is_hidden_by_report=True)
     _sync_comment_count(story)
@@ -243,19 +238,16 @@ def report_comment(request, story_uuid, comment_id):
     return redirect("bamboo:post", story_uuid=story.uuid)
 
 
-@ratelimit(key="user", rate="10/h", method="POST", block=False, group="bamboo_generate")
-def _handle_write_post(request, *, has_consent: bool):
+@ratelimit(key="ip", rate="10/h", method="POST", block=False, group="bamboo_generate")
+def _handle_write_post(request):
     form = BambooStoryForm(request.POST)
     if getattr(request, "limited", False):
-        return _render_write_result(request, {"error_message": LIMIT_MESSAGE}, status=429)
+        return _render_write_result(request, _limit_payload(request), status=429)
     if not form.is_valid():
         return _render_write_result(request, {"form": form, "error_message": _first_form_error(form)}, status=400)
-    if not has_consent and not form.cleaned_data.get("consent_accepted"):
-        form.add_error("consent_accepted", "약속이 필요합니다.")
-        return _render_write_result(request, {"form": form, "error_message": "약속이 필요합니다."}, status=400)
 
-    if _is_usage_limit_exceeded(request.user):
-        return _render_write_result(request, {"error_message": LIMIT_MESSAGE}, status=429)
+    if _is_usage_limit_exceeded(request):
+        return _render_write_result(request, _limit_payload(request), status=429)
 
     raw_text = form.cleaned_data["raw_text"]
     sanitized = sanitize_input(raw_text)
@@ -267,14 +259,11 @@ def _handle_write_post(request, *, has_consent: bool):
     except ValueError:
         return _render_write_result(request, {"error_message": SAFETY_FALLBACK_MESSAGE}, status=422)
 
-    if _charge_usage_limit(request.user):
-        return _render_write_result(request, {"error_message": LIMIT_MESSAGE}, status=429)
-
-    if not has_consent:
-        BambooConsent.objects.get_or_create(user=request.user)
+    if _charge_usage_limit(request):
+        return _render_write_result(request, _limit_payload(request), status=429)
 
     story = BambooStory.objects.create(
-        author=request.user,
+        **_actor_fields(request, user_field="author", guest_field="author_guest_key"),
         anon_handle=_new_anon_handle(),
         title=title,
         input_masked=sanitized.masked_text,
@@ -282,14 +271,14 @@ def _handle_write_post(request, *, has_consent: bool):
     )
 
     if request.headers.get("HX-Request") == "true":
-        _mark_liked([story], request.user)
+        _prepare_stories([story], request)
         return _private(
             render(
                 request,
                 "bamboo/partials/result.html",
                 {
                     "story": story,
-                    "usage": _usage_context(request.user),
+                    "usage": _usage_context(request),
                     "result_url": reverse("bamboo:result", kwargs={"story_uuid": story.uuid}),
                 },
             )
@@ -318,17 +307,17 @@ def _generate_validated_fable(sanitized):
     raise ValueError(",".join(last_reasons))
 
 
-def _get_story_for_user(story_uuid, user):
+def _get_story_for_user(story_uuid, request):
     story = get_object_or_404(BambooStory, uuid=story_uuid)
     if story.is_public and not story.is_hidden_by_report:
         return story
-    if story.author_id == user.id or user.is_staff:
+    if _is_story_owner(story, request):
         return story
     raise Http404
 
 
 def _count_view_once(request, story):
-    if not story.is_public or story.is_hidden_by_report or story.author_id == request.user.id:
+    if not story.is_public or story.is_hidden_by_report or _is_story_owner(story, request):
         return
     key = f"bamboo_viewed:{story.uuid}"
     if request.session.get(key):
@@ -338,10 +327,13 @@ def _count_view_once(request, story):
     story.refresh_from_db(fields=["view_count"])
 
 
-def _comments_context(story):
-    return {
-        "comments": BambooComment.objects.visible().filter(story=story).select_related("author").order_by("created_at"),
-    }
+def _comments_context(story, request):
+    comments = list(BambooComment.objects.visible().filter(story=story).select_related("author").order_by("created_at"))
+    for comment in comments:
+        comment.user_can_manage = _is_comment_owner(comment, request)
+        comment.user_can_report = not comment.user_can_manage
+        comment.is_story_author = _is_comment_from_story_author(comment, story)
+    return {"comments": comments}
 
 
 def _render_comments(request, story, *, form=None, status=200):
@@ -350,7 +342,7 @@ def _render_comments(request, story, *, form=None, status=200):
         "story": story,
         "comment_form": form or BambooCommentForm(),
     }
-    context.update(_comments_context(story))
+    context.update(_comments_context(story, request))
     return _private(render(request, "bamboo/partials/comments.html", context, status=status))
 
 
@@ -360,25 +352,46 @@ def _sync_comment_count(story):
     story.comment_count = count
 
 
-def _comment_anon_handle(story, user):
-    if story.author_id == user.id:
+def _comment_anon_handle(story, request):
+    if _is_story_owner(story, request):
         return story.anon_handle
-    existing = (
-        BambooComment.objects.filter(story=story, author=user)
-        .order_by("created_at")
-        .values_list("anon_handle", flat=True)
-        .first()
-    )
+    comments = BambooComment.objects.filter(story=story)
+    if _is_authenticated(request):
+        comments = comments.filter(author=request.user)
+    else:
+        comments = comments.filter(author_guest_key=_guest_key(request))
+    existing = comments.order_by("created_at").values_list("anon_handle", flat=True).first()
     return existing or _new_anon_handle()
 
 
-def _mark_liked(stories, user):
+def _prepare_stories(stories, request):
+    stories = list(stories)
+    _mark_liked(stories, request)
+    for story in stories:
+        story.user_can_manage = _is_story_owner(story, request)
+        story.user_can_report = not story.user_can_manage
+    return stories
+
+
+def _mark_liked(stories, request):
     story_ids = [story.id for story in stories]
-    liked_ids = set(
-        BambooLike.objects.filter(user=user, story_id__in=story_ids).values_list("story_id", flat=True)
-    )
+    if not story_ids:
+        return
+    likes = BambooLike.objects.filter(story_id__in=story_ids)
+    if _is_authenticated(request):
+        likes = likes.filter(user=request.user)
+    else:
+        likes = likes.filter(guest_key=_guest_key(request))
+    liked_ids = set(likes.values_list("story_id", flat=True))
     for story in stories:
         story.user_has_liked = story.id in liked_ids
+
+
+def _like_queryset(request, story):
+    likes = BambooLike.objects.filter(story=story)
+    if _is_authenticated(request):
+        return likes.filter(user=request.user)
+    return likes.filter(guest_key=_guest_key(request))
 
 
 def _new_anon_handle():
@@ -392,34 +405,94 @@ def _safe_bamboo_next(value):
     return ""
 
 
-def _subject(user):
-    return user_usage_subject(user)
+def _is_authenticated(request):
+    return bool(getattr(request.user, "is_authenticated", False))
 
 
-def _usage_context(user):
-    limits = _normalized_usage_limits()
-    counts = _usage_counts(user)
-    hourly_limit = dict(limits).get(3600, 2)
-    daily_limit = dict(limits).get(86400, 5)
+def _is_staff(request):
+    return _is_authenticated(request) and bool(getattr(request.user, "is_staff", False))
+
+
+def _guest_key(request):
+    raw_key = request.session.get(BAMBOO_GUEST_SESSION_KEY)
+    if not raw_key:
+        raw_key = secrets.token_urlsafe(32)
+        request.session[BAMBOO_GUEST_SESSION_KEY] = raw_key
+        request.session.modified = True
+    return hashlib.sha256(str(raw_key).encode("utf-8")).hexdigest()
+
+
+def _actor_fields(request, *, user_field="user", guest_field="guest_key"):
+    if _is_authenticated(request):
+        return {user_field: request.user}
+    return {guest_field: _guest_key(request)}
+
+
+def _is_story_owner(story, request):
+    if _is_staff(request):
+        return True
+    if _is_authenticated(request):
+        return story.author_id == request.user.id
+    guest_key = getattr(story, "author_guest_key", "")
+    return bool(guest_key and guest_key == _guest_key(request))
+
+
+def _is_comment_owner(comment, request):
+    if _is_staff(request):
+        return True
+    if _is_authenticated(request):
+        return comment.author_id == request.user.id
+    guest_key = getattr(comment, "author_guest_key", "")
+    return bool(guest_key and guest_key == _guest_key(request))
+
+
+def _is_comment_from_story_author(comment, story):
+    if story.author_id and comment.author_id:
+        return story.author_id == comment.author_id
+    if story.author_guest_key and comment.author_guest_key:
+        return story.author_guest_key == comment.author_guest_key
+    return False
+
+
+def _limit_payload(request):
+    if _is_authenticated(request):
+        return {"error_message": LIMIT_MESSAGE}
     return {
-        "hourly_limit": hourly_limit,
-        "daily_limit": daily_limit,
-        "hourly_remaining": max(hourly_limit - counts.get(3600, 0), 0),
-        "daily_remaining": max(daily_limit - counts.get(86400, 0), 0),
+        "error_message": GUEST_LIMIT_MESSAGE,
+        "show_guest_signup_modal": True,
     }
 
 
-def _normalized_usage_limits():
-    return _normalize_limits(BAMBOO_USAGE_LIMITS)
+def _subject(request):
+    if _is_authenticated(request):
+        return user_usage_subject(request.user)
+    return f"guest:{_guest_key(request)}"
 
 
-def _usage_counts(user):
+def _usage_context(request):
+    limits = _normalized_usage_limits(request)
+    counts = _usage_counts(request)
+    daily_limit = dict(limits).get(86400, 0)
+    daily_remaining = max(daily_limit - counts.get(86400, 0), 0)
+    return {
+        "daily_limit": daily_limit,
+        "daily_remaining": daily_remaining,
+        "is_available": daily_remaining > 0,
+        "is_guest": not _is_authenticated(request),
+    }
+
+
+def _normalized_usage_limits(request):
+    return _normalize_limits(BAMBOO_MEMBER_USAGE_LIMITS if _is_authenticated(request) else BAMBOO_GUEST_USAGE_LIMITS)
+
+
+def _usage_counts(request):
     now = timezone.now()
     counts = {}
-    for window_seconds, _max_count in _normalized_usage_limits():
+    for window_seconds, _max_count in _normalized_usage_limits(request):
         cache_key = _cache_key(
             bucket=BAMBOO_USAGE_BUCKET,
-            subject=_subject(user),
+            subject=_subject(request),
             window_seconds=window_seconds,
             now=now,
         )
@@ -427,23 +500,24 @@ def _usage_counts(user):
     return counts
 
 
-def _is_usage_limit_exceeded(user):
-    counts = _usage_counts(user)
-    for window_seconds, max_count in _normalized_usage_limits():
+def _is_usage_limit_exceeded(request):
+    counts = _usage_counts(request)
+    for window_seconds, max_count in _normalized_usage_limits(request):
         if counts.get(window_seconds, 0) >= max_count:
             return True
     return False
 
 
-def _charge_usage_limit(user):
-    return consume_ai_usage_limit(BAMBOO_USAGE_BUCKET, _subject(user), BAMBOO_USAGE_LIMITS)
+def _charge_usage_limit(request):
+    return consume_ai_usage_limit(BAMBOO_USAGE_BUCKET, _subject(request), _normalized_usage_limits(request))
 
 
 def _render_write_result(request, context, *, status=200):
     payload = {
         "form": context.get("form"),
         "error_message": context.get("error_message", ""),
-        "usage": _usage_context(request.user),
+        "usage": _usage_context(request),
+        "show_guest_signup_modal": bool(context.get("show_guest_signup_modal")),
     }
     if request.headers.get("HX-Request") == "true":
         response = render(request, "bamboo/partials/result.html", payload, status=status)
@@ -454,9 +528,9 @@ def _render_write_result(request, context, *, status=200):
     page_context = {
         "service": _service(),
         "form": payload["form"] or BambooStoryForm(request.POST),
-        "has_consent": BambooConsent.objects.filter(user=request.user).exists(),
         "usage": payload["usage"],
         "error_message": payload["error_message"],
+        "show_guest_signup_modal": payload["show_guest_signup_modal"],
     }
     return _private(render(request, "bamboo/write.html", page_context, status=status))
 

@@ -16,6 +16,7 @@ class EnsureBambooCommandTest(TestCase):
         self.assertEqual(Product.objects.filter(title="교사 대나무숲").count(), 1)
         self.assertEqual(product.launch_route_name, "bamboo:feed")
         self.assertEqual(product.service_type, "counsel")
+        self.assertTrue(product.is_guest_allowed)
         self.assertEqual(reverse(product.launch_route_name), "/bamboo/")
         self.assertTrue(manual.is_published)
         self.assertGreaterEqual(ManualSection.objects.filter(manual=manual).count(), 3)

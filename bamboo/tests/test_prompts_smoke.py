@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from bamboo.utils.prompts import FEW_SHOT_MESSAGES, build_messages
+from bamboo.utils.prompts import FEW_SHOT_MESSAGES, SYSTEM_PROMPT, build_messages
 from bamboo.utils.validator import validate_fable_output
 
 
@@ -12,6 +12,11 @@ class BambooPromptSmokeTest(SimpleTestCase):
         self.assertEqual(messages[0]["role"], "system")
         self.assertEqual(FEW_SHOT_MESSAGES[0]["role"], "user")
         self.assertIn("[●●●] 때문에 화난다.", messages[-1]["content"])
+
+    def test_system_prompt_uses_indirect_satire_without_targeting_regions(self):
+        self.assertIn("충청도식 완곡어법", SYSTEM_PROMPT)
+        self.assertIn("능청스럽게 돌려 말", SYSTEM_PROMPT)
+        self.assertIn("실제 지역명이나 지역 사람을 소재로 삼지 않는다", SYSTEM_PROMPT)
 
     def test_fixture_output_passes_validator_without_llm(self):
         fixture = """## 제목: <시끄러운 까마귀의 빈 둥지 우화>

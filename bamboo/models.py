@@ -3,6 +3,7 @@ import re
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -15,9 +16,12 @@ class BambooStory(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="bamboo_stories",
     )
+    author_guest_key = models.CharField(max_length=64, blank=True, db_index=True)
     anon_handle = models.CharField(max_length=20)
     title = models.CharField(max_length=100, default="이름 없는 숲의 우화")
     input_masked = models.TextField()
@@ -39,6 +43,7 @@ class BambooStory(models.Model):
             models.Index(fields=["-comment_count", "-created_at"]),
             models.Index(fields=["is_public", "is_hidden_by_report", "-created_at"]),
             models.Index(fields=["author", "-created_at"]),
+            models.Index(fields=["author_guest_key", "-created_at"]),
         ]
 
     def __str__(self):
@@ -58,16 +63,28 @@ class BambooLike(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="bamboo_likes",
     )
+    guest_key = models.CharField(max_length=64, blank=True)
     story = models.ForeignKey(BambooStory, on_delete=models.CASCADE, related_name="likes")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user", "story"], name="unique_bamboo_like"),
+            models.UniqueConstraint(
+                fields=["user", "story"],
+                condition=Q(user__isnull=False),
+                name="unique_bamboo_like_user",
+            ),
+            models.UniqueConstraint(
+                fields=["guest_key", "story"],
+                condition=~Q(guest_key=""),
+                name="unique_bamboo_like_guest",
+            ),
         ]
-        indexes = [models.Index(fields=["story", "user"])]
+        indexes = [models.Index(fields=["story", "user"]), models.Index(fields=["story", "guest_key"])]
 
     def __str__(self):
         return f"{self.user_id} likes {self.story_id}"
@@ -77,8 +94,11 @@ class BambooReport(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="bamboo_reports",
     )
+    guest_key = models.CharField(max_length=64, blank=True)
     story = models.ForeignKey(BambooStory, on_delete=models.CASCADE, related_name="reports")
     reason = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -93,7 +113,16 @@ class BambooReport(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user", "story"], name="unique_bamboo_report"),
+            models.UniqueConstraint(
+                fields=["user", "story"],
+                condition=Q(user__isnull=False),
+                name="unique_bamboo_report_user",
+            ),
+            models.UniqueConstraint(
+                fields=["guest_key", "story"],
+                condition=~Q(guest_key=""),
+                name="unique_bamboo_report_guest",
+            ),
         ]
         indexes = [models.Index(fields=["story", "-created_at"])]
 
@@ -111,8 +140,11 @@ class BambooComment(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="bamboo_comments",
     )
+    author_guest_key = models.CharField(max_length=64, blank=True, db_index=True)
     anon_handle = models.CharField(max_length=20)
     body_masked = models.TextField()
     is_hidden_by_report = models.BooleanField(default=False)
@@ -125,6 +157,7 @@ class BambooComment(models.Model):
         indexes = [
             models.Index(fields=["story", "is_hidden_by_report", "created_at"]),
             models.Index(fields=["author", "-created_at"]),
+            models.Index(fields=["author_guest_key", "-created_at"]),
         ]
 
     def __str__(self):
@@ -135,8 +168,11 @@ class BambooCommentReport(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="bamboo_comment_reports",
     )
+    guest_key = models.CharField(max_length=64, blank=True)
     comment = models.ForeignKey(BambooComment, on_delete=models.CASCADE, related_name="reports")
     reason = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -151,7 +187,16 @@ class BambooCommentReport(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["user", "comment"], name="unique_bamboo_comment_report"),
+            models.UniqueConstraint(
+                fields=["user", "comment"],
+                condition=Q(user__isnull=False),
+                name="unique_bamboo_comment_report_user",
+            ),
+            models.UniqueConstraint(
+                fields=["guest_key", "comment"],
+                condition=~Q(guest_key=""),
+                name="unique_bamboo_comment_report_guest",
+            ),
         ]
         indexes = [models.Index(fields=["comment", "-created_at"])]
 

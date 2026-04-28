@@ -22,7 +22,7 @@
         <i class="ph ph-eye"></i>
         {{ story.view_count }}
     </span>
-    {% if story.author_id != request.user.id %}
+    {% if story.user_can_report %}
     <form method="post" action="{% url 'bamboo:report' story.uuid %}" hx-post="{% url 'bamboo:report' story.uuid %}" hx-target="#bamboo-story-actions" hx-swap="outerHTML" hx-disabled-elt="find button">
         {% csrf_token %}
         <input type="hidden" name="source" value="post">

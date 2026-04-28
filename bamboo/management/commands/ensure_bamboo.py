@@ -20,7 +20,7 @@ class Command(BaseCommand):
             "price": 0.00,
             "is_active": True,
             "is_featured": False,
-            "is_guest_allowed": False,
+            "is_guest_allowed": True,
             "icon": "🎋",
             "color_theme": "green",
             "card_size": "small",

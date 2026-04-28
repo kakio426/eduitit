@@ -25,18 +25,18 @@
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-black text-emerald-700">{{ comment.anon_handle }}</span>
-                    {% if comment.author_id == story.author_id %}
+                    {% if comment.is_story_author %}
                     <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-black text-emerald-700">글쓴이</span>
                     {% endif %}
                     <time class="text-xs font-semibold text-slate-400">{{ comment.created_at|date:"m.d H:i" }}</time>
                 </div>
                 <div class="flex items-center gap-2">
-                    {% if comment.author_id == request.user.id or request.user.is_staff %}
+                    {% if comment.user_can_manage %}
                     <form method="post" action="{% url 'bamboo:comment_delete' story.uuid comment.id %}" hx-post="{% url 'bamboo:comment_delete' story.uuid comment.id %}" hx-target="#bamboo-comments" hx-swap="outerHTML" hx-disabled-elt="find button">
                         {% csrf_token %}
                         <button type="submit" class="text-xs font-black text-slate-400 transition hover:text-red-600">삭제</button>
                     </form>
-                    {% elif not comment.is_hidden_by_report %}
+                    {% elif comment.user_can_report %}
                     <form method="post" action="{% url 'bamboo:comment_report' story.uuid comment.id %}" hx-post="{% url 'bamboo:comment_report' story.uuid comment.id %}" hx-target="#bamboo-comments" hx-swap="outerHTML" hx-disabled-elt="find button">
                         {% csrf_token %}
                         <button type="submit" class="text-xs font-black text-slate-400 transition hover:text-amber-700">신고</button>

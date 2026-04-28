@@ -46,7 +46,7 @@
                         <p class="mt-1 text-sm text-slate-500">200자까지</p>
                     </div>
                     <div class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
-                        오늘 {{ usage.daily_remaining }} / {{ usage.daily_limit }}
+                        {% if usage.is_available %}오늘 가능{% else %}오늘 마감{% endif %}
                     </div>
                 </div>
 
@@ -74,17 +74,6 @@
                         <p class="mt-2 text-sm font-bold text-red-600">{{ form.raw_text.errors.0 }}</p>
                         {% endif %}
                     </div>
-
-                    {% if not has_consent %}
-                    <label class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-                        <input type="checkbox" name="consent_accepted" value="1" class="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-400" {% if form.consent_accepted.value %}checked{% endif %}>
-                        <span>특정인·학교를 알아볼 수 있게 쓰지 않겠습니다.</span>
-                    </label>
-                    {% if form.consent_accepted.errors %}
-                    <p class="text-sm font-bold text-red-600">{{ form.consent_accepted.errors.0 }}</p>
-                    {% endif %}
-                    {% include "bamboo/partials/consent_modal.html" %}
-                    {% endif %}
 
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-base font-black text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700">
                         <span class="bamboo-submit-ready inline-flex items-center gap-2">

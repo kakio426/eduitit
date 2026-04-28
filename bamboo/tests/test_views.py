@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -23,6 +24,7 @@ SAFE_FABLE = """## 제목: <허세 공작새의 빈 깃털 우화>
 
 class BambooViewTest(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = self._user("teacher")
         self.other = self._user("other")
 
@@ -41,21 +43,26 @@ class BambooViewTest(TestCase):
         )
         return user
 
-    def test_write_requires_bamboo_consent(self):
+    @patch("bamboo.views._is_usage_limit_exceeded", return_value=False)
+    @patch("bamboo.views._charge_usage_limit", return_value=False)
+    @patch("bamboo.views.generate_bamboo_fable", return_value=SAFE_FABLE)
+    def test_write_does_not_require_consent_and_masks_identifiers(self, _mock_llm, _mock_charge, _mock_limit):
         self.client.force_login(self.user)
 
         response = self.client.post(
             reverse("bamboo:write"),
-            {"raw_text": "관리자가 내 공을 빼앗아서 화난다."},
+            {"raw_text": "김철수 선생님이 서울새싹초등학교 5학년 3반에서 내 공을 빼앗았다."},
             HTTP_HX_REQUEST="true",
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "약속이 필요합니다.", status_code=400)
-        self.assertEqual(BambooStory.objects.count(), 0)
+        self.assertEqual(response.status_code, 200)
+        story = BambooStory.objects.get()
+        self.assertFalse(BambooConsent.objects.filter(user=self.user).exists())
+        self.assertIn("[●●●]", story.input_masked)
+        self.assertNotIn("김철수", story.input_masked)
+        self.assertNotIn("서울새싹초등학교", story.input_masked)
 
     def test_feed_and_write_pages_render(self):
-        BambooConsent.objects.create(user=self.user)
         self.client.force_login(self.user)
 
         feed_response = self.client.get(reverse("bamboo:feed"))
@@ -65,6 +72,28 @@ class BambooViewTest(TestCase):
         self.assertContains(feed_response, "우화 게시판")
         self.assertEqual(write_response.status_code, 200)
         self.assertContains(write_response, "오늘 털어놓기")
+        self.assertNotContains(write_response, "특정인·학교")
+        self.assertNotContains(write_response, "쓰기 전 약속")
+
+    def test_guest_feed_and_write_pages_render_without_signup(self):
+        feed_response = self.client.get(reverse("bamboo:feed"))
+        write_response = self.client.get(reverse("bamboo:write"))
+
+        self.assertEqual(feed_response.status_code, 200)
+        self.assertEqual(write_response.status_code, 200)
+        self.assertContains(write_response, "오늘 가능")
+        self.assertNotContains(write_response, "2 / 2")
+        self.assertEqual(write_response.context["usage"]["daily_limit"], 2)
+
+    def test_member_write_page_uses_member_limit_without_count_text(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("bamboo:write"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "오늘 가능")
+        self.assertNotContains(response, "5 / 5")
+        self.assertEqual(response.context["usage"]["daily_limit"], 5)
 
     @patch("bamboo.views._is_usage_limit_exceeded", return_value=False)
     @patch("bamboo.views._charge_usage_limit", return_value=False)
@@ -76,23 +105,41 @@ class BambooViewTest(TestCase):
             reverse("bamboo:write"),
             {
                 "raw_text": "김철수 선생님이 서울새싹초등학교 5학년 3반에서 내 공을 빼앗았다.",
-                "consent_accepted": "1",
             },
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
         story = BambooStory.objects.get()
-        self.assertTrue(BambooConsent.objects.filter(user=self.user).exists())
+        self.assertFalse(BambooConsent.objects.filter(user=self.user).exists())
         self.assertIn("[●●●]", story.input_masked)
         self.assertNotIn("김철수", story.input_masked)
         self.assertNotIn("서울새싹초등학교", story.input_masked)
         self.assertEqual(story.title, "허세 공작새의 빈 깃털 우화")
         self.assertEqual(story.fable_output, SAFE_FABLE)
 
+    @patch("bamboo.views._is_usage_limit_exceeded", return_value=False)
+    @patch("bamboo.views._charge_usage_limit", return_value=False)
+    @patch("bamboo.views.generate_bamboo_fable", return_value=SAFE_FABLE)
+    def test_guest_write_stores_guest_key_without_consent_step(self, _mock_llm, _mock_charge, _mock_limit):
+        response = self.client.post(
+            reverse("bamboo:write"),
+            {
+                "raw_text": "회의 때 내 일을 자기 공처럼 말해서 화난다.",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        story = BambooStory.objects.get()
+        self.assertIsNone(story.author)
+        self.assertTrue(story.author_guest_key)
+        self.assertEqual(story.title, "허세 공작새의 빈 깃털 우화")
+        self.assertEqual(BambooConsent.objects.count(), 0)
+        self.assertNotIn("bamboo_guest_consent_accepted", self.client.session)
+
     @patch("bamboo.views._is_usage_limit_exceeded", return_value=True)
     def test_usage_limit_blocks_generation(self, _mock_limit):
-        BambooConsent.objects.create(user=self.user)
         self.client.force_login(self.user)
 
         response = self.client.post(
@@ -104,6 +151,70 @@ class BambooViewTest(TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, "오늘은 충분히", status_code=429)
         self.assertEqual(BambooStory.objects.count(), 0)
+
+    @patch("bamboo.views._is_usage_limit_exceeded", return_value=True)
+    def test_guest_usage_limit_shows_signup_modal_without_explicit_counts(self, _mock_limit):
+        response = self.client.post(
+            reverse("bamboo:write"),
+            {"raw_text": "관리자가 너무하다."},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "오늘 비회원 체험을 모두 썼어요.", status_code=429)
+        self.assertContains(response, "회원가입하면 오늘 더 쓸 수 있어요.", status_code=429)
+        self.assertContains(response, "회원가입", status_code=429)
+        self.assertNotContains(response, "2회", status_code=429)
+        self.assertNotContains(response, "2번", status_code=429)
+        self.assertNotContains(response, "5회", status_code=429)
+        self.assertNotContains(response, "5번", status_code=429)
+        self.assertEqual(BambooStory.objects.count(), 0)
+
+    @patch("bamboo.views.generate_bamboo_fable", return_value=SAFE_FABLE)
+    def test_guest_generation_limit_blocks_after_guest_allowance(self, mock_llm):
+        cache.clear()
+
+        for index in range(2):
+            response = self.client.post(
+                reverse("bamboo:write"),
+                {"raw_text": f"관리자가 내 일을 자기 공처럼 말한다 {index}"},
+            )
+            self.assertEqual(response.status_code, 302)
+
+        blocked = self.client.post(
+            reverse("bamboo:write"),
+            {"raw_text": "관리자가 또 내 일을 자기 공처럼 말한다."},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(blocked.status_code, 429)
+        self.assertContains(blocked, "회원가입하면 오늘 더 쓸 수 있어요.", status_code=429)
+        self.assertEqual(BambooStory.objects.count(), 2)
+        self.assertEqual(mock_llm.call_count, 2)
+
+    @patch("bamboo.views.generate_bamboo_fable", return_value=SAFE_FABLE)
+    def test_member_generation_limit_blocks_after_member_allowance(self, mock_llm):
+        cache.clear()
+        self.client.force_login(self.user)
+
+        for index in range(5):
+            response = self.client.post(
+                reverse("bamboo:write"),
+                {"raw_text": f"관리자가 내 일을 자기 공처럼 말한다 {index}"},
+            )
+            self.assertEqual(response.status_code, 302)
+
+        blocked = self.client.post(
+            reverse("bamboo:write"),
+            {"raw_text": "관리자가 또 내 일을 자기 공처럼 말한다."},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(blocked.status_code, 429)
+        self.assertContains(blocked, "오늘은 충분히", status_code=429)
+        self.assertNotContains(blocked, "회원가입하면 오늘 더 쓸 수 있어요.", status_code=429)
+        self.assertEqual(BambooStory.objects.count(), 5)
+        self.assertEqual(mock_llm.call_count, 5)
 
     def test_report_one_hides_story(self):
         story = BambooStory.objects.create(
@@ -143,7 +254,6 @@ class BambooViewTest(TestCase):
         self.assertFalse(BambooStory.objects.filter(pk=story.pk).exists())
 
     def test_successful_submit_final_result_get_200_and_invalid_input_no_500(self):
-        BambooConsent.objects.create(user=self.user)
         self.client.force_login(self.user)
 
         with patch("bamboo.views._is_usage_limit_exceeded", return_value=False), patch(
@@ -163,7 +273,6 @@ class BambooViewTest(TestCase):
         self.assertContains(invalid_response, "사연을 적어주세요.", status_code=400)
 
     def test_feed_sorts_latest_popular_and_comments(self):
-        BambooConsent.objects.create(user=self.user)
         older = BambooStory.objects.create(
             author=self.user,
             anon_handle="나무111",
@@ -248,6 +357,32 @@ class BambooViewTest(TestCase):
         self.assertEqual(comment.body_masked, "빈 깃털 표현 진짜 웃기다")
         story.refresh_from_db()
         self.assertEqual(story.comment_count, 1)
+
+    def test_guest_comment_can_delete_own_comment_only_by_same_session(self):
+        story = BambooStory.objects.create(
+            author=self.user,
+            anon_handle="나무123",
+            title="허세 공작새의 빈 깃털 우화",
+            input_masked="관리자가 너무하다.",
+            fable_output=SAFE_FABLE,
+        )
+
+        created = self.client.post(
+            reverse("bamboo:comment_create", args=[story.uuid]),
+            {"body": "숲이 다 봤다"},
+            HTTP_HX_REQUEST="true",
+        )
+        comment = BambooComment.objects.get()
+        other_client = self.client_class()
+        denied = other_client.post(reverse("bamboo:comment_delete", args=[story.uuid, comment.id]), HTTP_HX_REQUEST="true")
+        deleted = self.client.post(reverse("bamboo:comment_delete", args=[story.uuid, comment.id]), HTTP_HX_REQUEST="true")
+
+        self.assertEqual(created.status_code, 200)
+        self.assertIsNone(comment.author)
+        self.assertTrue(comment.author_guest_key)
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(deleted.status_code, 200)
+        self.assertFalse(BambooComment.objects.filter(pk=comment.pk).exists())
 
     def test_comment_delete_authorization_and_report_hides_immediately(self):
         story = BambooStory.objects.create(

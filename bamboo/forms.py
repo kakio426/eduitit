@@ -12,8 +12,6 @@ class BambooStoryForm(forms.Form):
             "min_length": "조금만 더 적어주세요.",
         },
     )
-    consent_accepted = forms.BooleanField(required=False)
-
     def clean_raw_text(self):
         value = (self.cleaned_data.get("raw_text") or "").strip()
         if not value:
