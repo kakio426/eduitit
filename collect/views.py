@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django_ratelimit.decorators import ratelimit
 from asgiref.sync import sync_to_async
 from urllib.parse import urlencode
@@ -1600,6 +1601,7 @@ def submission_download(request, submission_id):
 
 
 @ratelimit(key=_collect_public_ratelimit_key, rate="60/10m", method="GET", block=True, group="collect_template_download")
+@xframe_options_sameorigin
 def template_download(request, request_id):
     """참고 자료 미리보기/다운로드"""
     collection_req = get_object_or_404(CollectionRequest, id=request_id)

@@ -47,12 +47,16 @@
                 data-file-name="{{ req.template_file_display_name }}"
                 data-max-width="860"
                 {% if req.template_file_is_pdf %}data-fetch-as-bytes="true"{% endif %}
+                {% if req.template_file_is_pdf %}data-native-pdf-fallback="true"{% endif %}
             >
                 <div class="overflow-auto rounded-xl border border-amber-100 bg-white p-3">
                     <div data-preview-stage class="relative mx-auto w-fit max-w-full">
                         <p data-preview-placeholder class="flex min-h-[260px] items-center justify-center rounded-lg bg-amber-50 px-6 text-center text-sm font-semibold leading-6 text-amber-700">참고 자료를 불러오는 중입니다.</p>
                         <canvas data-preview-canvas class="hidden rounded-lg shadow-sm"></canvas>
                         <img data-preview-image class="hidden max-h-[520px] max-w-full rounded-lg object-contain shadow-sm" alt="참고 자료 미리보기">
+                        {% if req.template_file_is_pdf %}
+                        <iframe data-preview-pdf-frame class="hidden h-[520px] w-[820px] max-w-full rounded-lg border-0 bg-white shadow-sm" title="참고 자료 PDF 미리보기"></iframe>
+                        {% endif %}
                         <canvas data-preview-overlay class="pointer-events-none absolute left-0 top-0 hidden"></canvas>
                     </div>
                 </div>

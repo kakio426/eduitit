@@ -24,6 +24,7 @@ function getElements(root) {
     placeholder: root.querySelector("[data-preview-placeholder]"),
     canvas: root.querySelector("[data-preview-canvas]"),
     image: root.querySelector("[data-preview-image]"),
+    pdfFrame: root.querySelector("[data-preview-pdf-frame]"),
     overlay: root.querySelector("[data-preview-overlay]"),
     status: root.querySelector("[data-preview-status]"),
     meta: root.querySelector("[data-preview-meta]"),
@@ -97,7 +98,7 @@ function resetPdfState(root) {
 }
 
 function showPlaceholder(root, text) {
-  const { placeholder, canvas, image, overlay } = getElements(root);
+  const { placeholder, canvas, image, pdfFrame, overlay } = getElements(root);
   resetPdfState(root);
   if (placeholder) {
     placeholder.textContent = text;
@@ -113,6 +114,10 @@ function showPlaceholder(root, text) {
   if (image) {
     image.classList.add("hidden");
     image.removeAttribute("src");
+  }
+  if (pdfFrame) {
+    pdfFrame.classList.add("hidden");
+    pdfFrame.removeAttribute("src");
   }
   if (overlay) {
     overlay.classList.add("hidden");
@@ -471,7 +476,7 @@ function bindPagination(root) {
 
 async function renderPdfPage(root, pageNumber) {
   const state = getPreviewState(root);
-  const { placeholder, canvas, image } = getElements(root);
+  const { placeholder, canvas, image, pdfFrame } = getElements(root);
   if (!canvas || !state.pdf) {
     return null;
   }
@@ -519,6 +524,10 @@ async function renderPdfPage(root, pageNumber) {
   if (image) {
     image.classList.add("hidden");
   }
+  if (pdfFrame) {
+    pdfFrame.classList.add("hidden");
+    pdfFrame.removeAttribute("src");
+  }
   canvas.classList.remove("hidden");
 
   state.currentPage = safePage;
@@ -548,7 +557,7 @@ async function loadPdfPreview(root, sourceUrl, kind) {
 }
 
 async function renderImage(root, sourceUrl, altText) {
-  const { placeholder, canvas, image } = getElements(root);
+  const { placeholder, canvas, image, pdfFrame } = getElements(root);
   resetPdfState(root);
   if (!image) {
     return;
@@ -565,8 +574,38 @@ async function renderImage(root, sourceUrl, altText) {
   if (canvas) {
     canvas.classList.add("hidden");
   }
+  if (pdfFrame) {
+    pdfFrame.classList.add("hidden");
+    pdfFrame.removeAttribute("src");
+  }
   image.classList.remove("hidden");
   await renderPreviewOverlay(root);
+}
+
+function renderNativePdfFallback(root, sourceUrl, fileName) {
+  const { placeholder, canvas, image, pdfFrame, overlay } = getElements(root);
+  resetPdfState(root);
+  if (!pdfFrame) {
+    throw new Error("Native PDF fallback frame is missing");
+  }
+  if (placeholder) {
+    placeholder.classList.add("hidden");
+  }
+  if (canvas) {
+    canvas.classList.add("hidden");
+  }
+  if (image) {
+    image.classList.add("hidden");
+    image.removeAttribute("src");
+  }
+  if (overlay) {
+    overlay.classList.add("hidden");
+  }
+  pdfFrame.src = sourceUrl;
+  pdfFrame.title = fileName || "PDF 미리보기";
+  pdfFrame.classList.remove("hidden");
+  setPagination(root, { visible: false });
+  setStatus(root, "PDF 미리보기");
 }
 
 async function renderRemotePreview(root) {
@@ -593,6 +632,14 @@ async function renderRemotePreview(root) {
     await renderImage(root, sourceUrl, fileName);
     setStatus(root, "이미지 문서를 표시했습니다.");
   } catch (error) {
+    if (isPdf(fileType, fileName) && root.dataset.nativePdfFallback === "true") {
+      try {
+        renderNativePdfFallback(root, sourceUrl, fileName);
+        return;
+      } catch (fallbackError) {
+        console.warn("consent-native-pdf-fallback-failed", fallbackError);
+      }
+    }
     console.warn("consent-remote-preview-failed", error);
     showPlaceholder(root, "문서를 불러오지 못했습니다.");
     setStatus(root, "문서 확인");

@@ -165,6 +165,7 @@ class CollectFlowTest(TestCase):
         self.assertContains(submit_response, "data-preview-image")
         self.assertContains(submit_response, "<img", html=False)
         self.assertNotContains(submit_response, "data-fetch-as-bytes=\"true\"")
+        self.assertNotContains(submit_response, "data-native-pdf-fallback=\"true\"")
 
         image_response = self.client.get(reverse("collect:template_download", args=[req.id]))
 
@@ -203,6 +204,8 @@ class CollectFlowTest(TestCase):
         self.assertContains(submit_response, "data-consent-document-preview")
         self.assertContains(submit_response, "data-file-type=\"pdf\"")
         self.assertContains(submit_response, "data-fetch-as-bytes=\"true\"")
+        self.assertContains(submit_response, "data-native-pdf-fallback=\"true\"")
+        self.assertContains(submit_response, "data-preview-pdf-frame")
         self.assertContains(submit_response, "data-preview-pagination")
         self.assertContains(submit_response, "consent/pdf_preview.js")
         self.assertContains(submit_response, f"{reverse('collect:template_download', args=[req.id])}?download=1")
@@ -211,6 +214,7 @@ class CollectFlowTest(TestCase):
 
         self.assertEqual(preview_response.status_code, 200)
         self.assertIn("inline;", preview_response["Content-Disposition"])
+        self.assertEqual(preview_response["X-Frame-Options"], "SAMEORIGIN")
         self.assertEqual(preview_response["Cache-Control"], "no-store, private")
 
         download_response = self.client.get(reverse("collect:template_download", args=[req.id]), data={"download": "1"})
