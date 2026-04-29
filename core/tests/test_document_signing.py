@@ -4,6 +4,7 @@ import io
 import base64
 from unittest.mock import Mock, patch
 
+import requests
 from django.test import SimpleTestCase, override_settings
 
 from core.document_signing import (
@@ -16,6 +17,15 @@ from core.document_signing import (
 class _CloudinaryPdfFieldStub:
     name = "media/docsign/source/2026/04/13/sample_pdf_asset"
     url = "https://res.cloudinary.com/demo/image/upload/v1/media/docsign/source/2026/04/13/sample_pdf_asset"
+    storage = type("CloudinaryStorageStub", (), {"__module__": "cloudinary_storage.storage"})()
+
+    def open(self, mode="rb"):
+        raise RuntimeError("401 Client Error: Unauthorized for url")
+
+
+class _CloudinaryRawPdfFieldStub:
+    name = "collect/templates/private-guide.pdf"
+    url = "https://res.cloudinary.com/demo/raw/upload/v1/media/collect/templates/private-guide.pdf"
     storage = type("CloudinaryStorageStub", (), {"__module__": "cloudinary_storage.storage"})()
 
     def open(self, mode="rb"):
@@ -47,6 +57,37 @@ class DocumentSigningFallbackTests(SimpleTestCase):
             type="upload",
         )
         requests_get_mock.assert_called_once_with("https://signed.example.com/image-upload.pdf", timeout=(5, 30))
+
+    @patch("core.document_signing.requests.get")
+    @patch("cloudinary.utils.private_download_url")
+    def test_pdf_bytes_try_cloudinary_public_id_from_file_url_when_name_differs(self, private_download_url_mock, requests_get_mock):
+        def signed_url(public_id, requested_format, *, resource_type, type):
+            format_segment = requested_format or "original"
+            return f"https://signed.example.com/{resource_type}/{format_segment}/{public_id}"
+
+        def fetch_signed(url, *args, **kwargs):
+            response = Mock()
+            response.close.return_value = None
+            if "/raw/original/media/collect/templates/private-guide.pdf" in url:
+                response.content = b"%PDF-1.4 media public id"
+                response.raise_for_status.return_value = None
+            else:
+                response.raise_for_status.side_effect = requests.HTTPError("not found")
+            return response
+
+        private_download_url_mock.side_effect = signed_url
+        requests_get_mock.side_effect = fetch_signed
+
+        payload = get_pdf_bytes_from_file_field(_CloudinaryRawPdfFieldStub(), file_type="pdf")
+
+        self.assertEqual(payload, b"%PDF-1.4 media public id")
+        private_download_url_mock.assert_any_call(
+            "media/collect/templates/private-guide.pdf",
+            "",
+            resource_type="raw",
+            type="upload",
+        )
+        self.assertTrue(any("media/collect/templates/private-guide.pdf" in call.args[0] for call in requests_get_mock.call_args_list))
 
     def test_normalize_pdf_bytes_flattens_page_rotation(self):
         try:

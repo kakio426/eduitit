@@ -4,6 +4,7 @@ import base64
 import hashlib
 import io
 import os
+from urllib.parse import unquote, urlsplit
 
 import requests
 from django.conf import settings
@@ -120,12 +121,60 @@ def _is_cloudinary_file_field(file_field) -> bool:
         return False
 
 
+def _cloudinary_public_id_from_url(file_url: str) -> str:
+    try:
+        parsed = urlsplit(file_url or "")
+    except Exception:
+        return ""
+    if "res.cloudinary.com" not in (parsed.netloc or "").lower():
+        return ""
+
+    segments = [unquote(segment) for segment in parsed.path.split("/") if segment]
+    if len(segments) < 4:
+        return ""
+
+    # /<cloud>/<resource_type>/<type>/v123/<public_id>
+    remainder = segments[3:]
+    for index, segment in enumerate(remainder):
+        if segment.startswith("v") and segment[1:].isdigit():
+            remainder = remainder[index + 1 :]
+            break
+    return "/".join(part for part in remainder if part)
+
+
+def _cloudinary_public_id_candidates(file_field) -> list[str]:
+    candidates = []
+    seen = set()
+
+    def add(value):
+        value = (value or "").lstrip("/")
+        if not value or value in seen:
+            return
+        seen.add(value)
+        candidates.append(value)
+
+    add(getattr(file_field, "name", ""))
+    try:
+        add(_cloudinary_public_id_from_url(file_field.url or ""))
+    except Exception:
+        pass
+    return candidates
+
+
+def _cloudinary_requested_formats(public_id: str, *, normalized_type: str, resource_type: str) -> list[str]:
+    if normalized_type != PDF_FILE_TYPE:
+        return [""]
+    if resource_type == "raw" and public_id.lower().endswith(".pdf"):
+        return ["", "pdf"]
+    return ["pdf"]
+
+
 def _cloudinary_private_download_urls(file_field, *, file_type: str = "", filename_hint: str = "") -> list[str]:
     if not getattr(settings, "USE_CLOUDINARY", False):
         return []
 
-    public_id = (getattr(file_field, "name", "") or "").lstrip("/")
-    if not public_id:
+    public_ids = _cloudinary_public_id_candidates(file_field)
+    if not public_ids:
         return []
 
     try:
@@ -134,23 +183,29 @@ def _cloudinary_private_download_urls(file_field, *, file_type: str = "", filena
         return []
 
     normalized_type = _resolve_file_type(file_field, file_type=file_type, filename_hint=filename_hint)
-    requested_format = "pdf" if normalized_type == PDF_FILE_TYPE else ""
     urls = []
     seen = set()
-    for resource_type in ("image", "raw"):
-        try:
-            url = private_download_url(
+    for public_id in public_ids:
+        for resource_type in ("image", "raw"):
+            formats = _cloudinary_requested_formats(
                 public_id,
-                requested_format,
+                normalized_type=normalized_type,
                 resource_type=resource_type,
-                type="upload",
             )
-        except Exception:
-            continue
-        if not url or url in seen:
-            continue
-        seen.add(url)
-        urls.append(url)
+            for requested_format in formats:
+                try:
+                    url = private_download_url(
+                        public_id,
+                        requested_format,
+                        resource_type=resource_type,
+                        type="upload",
+                    )
+                except Exception:
+                    continue
+                if not url or url in seen:
+                    continue
+                seen.add(url)
+                urls.append(url)
     return urls
 
 

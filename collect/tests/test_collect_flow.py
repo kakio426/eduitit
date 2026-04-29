@@ -259,6 +259,43 @@ class CollectFlowTest(TestCase):
         self.assertEqual(response["Cache-Control"], "no-store, private")
         mock_get.assert_called_once_with("https://storage.example/guide.pdf", timeout=(5, 60))
 
+    def test_reference_pdf_preview_uses_signed_storage_bytes_before_unsigned_url(self):
+        remote_pdf = b"%PDF-1.4\n% signed cloudinary collect reference\n"
+
+        class CloudinaryOnlyFile:
+            name = "collect/templates/private-guide.pdf"
+            url = "https://res.cloudinary.com/demo/raw/upload/v1/media/collect/templates/private-guide.pdf"
+            storage = type("CloudinaryStorageStub", (), {"__module__": "cloudinary_storage.storage"})()
+
+            def open(self, *_args, **_kwargs):
+                raise OSError("cloudinary private resource")
+
+        with (
+            patch("collect.views.get_file_field_bytes", return_value=remote_pdf) as mock_bytes,
+            patch("collect.views.requests.get") as mock_get,
+        ):
+            preview_response = _build_download_response(
+                CloudinaryOnlyFile(),
+                filename="참고자료.pdf",
+                as_attachment=False,
+                buffer_remote=True,
+            )
+            download_response = _build_download_response(
+                CloudinaryOnlyFile(),
+                filename="참고자료.pdf",
+                as_attachment=True,
+            )
+
+        self.assertEqual(preview_response.status_code, 200)
+        self.assertEqual(preview_response.content, remote_pdf)
+        self.assertEqual(preview_response["Content-Length"], str(len(remote_pdf)))
+        self.assertIn("inline;", preview_response["Content-Disposition"])
+        self.assertEqual(download_response.status_code, 200)
+        self.assertEqual(download_response.content, remote_pdf)
+        self.assertIn("attachment;", download_response["Content-Disposition"])
+        self.assertEqual(mock_bytes.call_count, 2)
+        mock_get.assert_not_called()
+
     def test_public_submit_page_uses_sensitive_cache_headers(self):
         req = CollectionRequest.objects.create(
             creator=self.teacher,

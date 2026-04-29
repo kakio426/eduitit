@@ -8,7 +8,7 @@ import uuid
 from collections import Counter, defaultdict
 from datetime import timedelta
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import qrcode
 from django.contrib.auth import get_user_model
@@ -24,6 +24,7 @@ from django.utils.text import get_valid_filename
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from handoff.models import HandoffRosterGroup
+from core.document_signing import get_file_field_bytes
 from core.teacher_activity import ACTIVITY_CATEGORY_REQUEST_SENT, award_teacher_activity
 from .models import (
     SIGNATURE_ATTACHMENT_MAX_FILES,
@@ -259,12 +260,24 @@ def _build_attachment_download_response(attachment):
     try:
         file_obj = attachment.file.open("rb")
     except Exception as exc:
-        logger.exception(
-            "[signatures] attachment open failed session_uuid=%s attachment_id=%s",
-            attachment.training_session.uuid,
-            attachment.id,
-        )
-        raise Http404("첨부 파일을 찾을 수 없습니다.") from exc
+        try:
+            content = get_file_field_bytes(
+                attachment.file,
+                file_type="pdf" if download_name.lower().endswith(".pdf") else "",
+                filename_hint=download_name,
+            )
+        except Exception:
+            logger.exception(
+                "[signatures] attachment open failed session_uuid=%s attachment_id=%s",
+                attachment.training_session.uuid,
+                attachment.id,
+            )
+            raise Http404("첨부 파일을 찾을 수 없습니다.") from exc
+
+        response = HttpResponse(content, content_type=content_type)
+        response["Content-Length"] = str(len(content))
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(download_name)}"
+        return _apply_sensitive_cache_headers(response)
 
     response = FileResponse(
         file_obj,

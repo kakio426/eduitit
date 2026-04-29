@@ -24,6 +24,7 @@ import logging
 import requests
 from urllib.parse import quote
 
+from core.document_signing import get_file_field_bytes
 from core.seo import build_product_route_page_seo, build_public_service_landing_seo, build_route_page_seo
 from .models import CollectionRequest, Submission
 from .forms import CollectionRequestForm
@@ -133,6 +134,18 @@ def _remote_file_bytes(file_url):
         return resp.content
 
 
+def _bytes_download_response(content, *, content_type, disposition, filename):
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Length"] = str(len(content))
+    response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(filename)}"
+    return _apply_sensitive_cache_headers(response)
+
+
+def _stored_file_bytes(file_field, *, filename):
+    file_type = "pdf" if (filename or "").lower().endswith(".pdf") else ""
+    return get_file_field_bytes(file_field, file_type=file_type, filename_hint=filename)
+
+
 def _build_download_response(file_field, *, filename, as_attachment=True, buffer_remote=False):
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     disposition = "attachment" if as_attachment else "inline"
@@ -143,12 +156,25 @@ def _build_download_response(file_field, *, filename, as_attachment=True, buffer
         file_url = getattr(file_field, "url", "")
         if not file_url or not str(file_url).startswith("http"):
             raise
+        try:
+            content = _stored_file_bytes(file_field, filename=filename)
+        except Exception:
+            content = None
+        if content:
+            return _bytes_download_response(
+                content,
+                content_type=content_type,
+                disposition=disposition,
+                filename=filename,
+            )
         if buffer_remote:
             content = _remote_file_bytes(file_url)
-            response = HttpResponse(content, content_type=content_type)
-            response["Content-Length"] = str(len(content))
-            response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(filename)}"
-            return _apply_sensitive_cache_headers(response)
+            return _bytes_download_response(
+                content,
+                content_type=content_type,
+                disposition=disposition,
+                filename=filename,
+            )
         response = StreamingHttpResponse(
             _async_wrap_sync_iterable(_remote_file_chunks(file_url)),
             content_type=content_type,

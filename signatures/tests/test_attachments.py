@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -207,6 +208,31 @@ class SignatureAttachmentTests(TestCase):
         teacher_download_response = self.client.get(teacher_download_url)
         self.assertEqual(teacher_download_response.status_code, 200)
         self.assertIn("meeting-pack.hwpx", teacher_download_response["Content-Disposition"])
+
+    @patch("signatures.views.get_file_field_bytes", return_value=b"%PDF-1.4 signed attachment")
+    def test_attachment_download_uses_signed_storage_bytes_when_open_fails(self, file_bytes_mock):
+        session = self._create_session(is_active=True)
+        attachment = TrainingSessionAttachment.objects.create(
+            training_session=session,
+            file=self._make_file("meeting-pack.pdf", size=300, content_type="application/pdf"),
+            original_name="meeting-pack.pdf",
+        )
+        public_download_url = reverse(
+            "signatures:sign_attachment_download",
+            kwargs={"uuid": session.uuid, "attachment_id": attachment.id},
+        )
+
+        with patch("django.db.models.fields.files.FieldFile.open", side_effect=OSError("private storage")):
+            response = self.client.get(public_download_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"%PDF-1.4 signed attachment")
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(response["Content-Length"], str(len(b"%PDF-1.4 signed attachment")))
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertIn("meeting-pack.pdf", response["Content-Disposition"])
+        file_bytes_mock.assert_called_once()
 
     def test_deleting_session_removes_attachment_files_from_storage(self):
         session = self._create_session()
