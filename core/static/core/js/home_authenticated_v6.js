@@ -780,6 +780,10 @@
             messageSaveCommitResult: {},
             teacherLawLastQuestion: '',
             teacherLawFollowupContext: {},
+            reservationAvailabilityPayload: {},
+            reservationAvailabilityLoading: false,
+            reservationAvailabilityErrorText: '',
+            reservationAvailabilityRequestKey: '',
             chatHistory: [],
             activeChatHistoryEntryId: '',
             isSavingMessageSave: false,
@@ -1011,6 +1015,10 @@
                 var text = trimLine(payload.text || '');
                 if (trimLine(payload.action) === 'daily_notice_recommendation') {
                     this.runDailyNoticeRecommendation(payload);
+                    return;
+                }
+                if (trimLine(this.activeModeKey) === 'reservation' && trimLine(payload.kind) === 'room') {
+                    this.runReservationStarter(payload);
                     return;
                 }
                 if (this.aiMessengerIsFlow('direct-send')) {
@@ -1347,6 +1355,10 @@
                     messageSaveCommitResult: this.messageSaveCommitResult,
                     teacherLawLastQuestion: this.teacherLawLastQuestion,
                     teacherLawFollowupContext: this.teacherLawFollowupContext,
+                    reservationAvailabilityPayload: this.reservationAvailabilityPayload,
+                    reservationAvailabilityLoading: this.reservationAvailabilityLoading,
+                    reservationAvailabilityErrorText: this.reservationAvailabilityErrorText,
+                    reservationAvailabilityRequestKey: this.reservationAvailabilityRequestKey,
                 }, overrides || {}));
             },
 
@@ -1384,6 +1396,10 @@
                     this.messageSaveCommitResult = context.messageSaveCommitResult;
                     this.teacherLawLastQuestion = context.teacherLawLastQuestion;
                     this.teacherLawFollowupContext = context.teacherLawFollowupContext;
+                    this.reservationAvailabilityPayload = context.reservationAvailabilityPayload;
+                    this.reservationAvailabilityLoading = context.reservationAvailabilityLoading;
+                    this.reservationAvailabilityErrorText = context.reservationAvailabilityErrorText;
+                    this.reservationAvailabilityRequestKey = context.reservationAvailabilityRequestKey;
                     this.agentModeStateMap[modeKey] = this.normalizeModeState(context);
                 }
                 if (entry.id) {
@@ -1493,9 +1509,6 @@
                 }
 
                 if (activeModeKey === 'reservation') {
-                    if (execution && execution.kind === 'reservation') {
-                        pushAction({ kind: 'execute', label: '예약', busyLabel: '예약 중' });
-                    }
                     if (openHref) {
                         pushAction({ kind: 'link', label: openLabel || '예약 화면', href: openHref });
                     }
@@ -1762,7 +1775,7 @@
                     'teacher-law': this.teacherLawHasButtonChoices()
                         ? '사실 선택'
                         : (this.teacherLawHasFollowupContext() ? '법률 대화 이어가기' : '대응 순서 정리'),
-                    reservation: '예약 값 정리',
+                    reservation: '빈 시간 확인',
                     quickdrop: '텍스트 전송',
                     tts: '방송 문구 정리',
                     'message-save': '메시지 보관',
@@ -4728,6 +4741,10 @@
                     messageSaveCommitResult: {},
                     teacherLawLastQuestion: '',
                     teacherLawFollowupContext: {},
+                    reservationAvailabilityPayload: {},
+                    reservationAvailabilityLoading: false,
+                    reservationAvailabilityErrorText: '',
+                    reservationAvailabilityRequestKey: '',
                 }, overrides || {});
             },
 
@@ -4768,6 +4785,12 @@
                     teacherLawFollowupContext: source.teacherLawFollowupContext && typeof source.teacherLawFollowupContext === 'object'
                         ? this.clonePayload(source.teacherLawFollowupContext)
                         : {},
+                    reservationAvailabilityPayload: source.reservationAvailabilityPayload && typeof source.reservationAvailabilityPayload === 'object'
+                        ? this.clonePayload(source.reservationAvailabilityPayload)
+                        : {},
+                    reservationAvailabilityLoading: Boolean(source.reservationAvailabilityLoading),
+                    reservationAvailabilityErrorText: trimLine(source.reservationAvailabilityErrorText),
+                    reservationAvailabilityRequestKey: trimLine(source.reservationAvailabilityRequestKey),
                 });
             },
 
@@ -4794,6 +4817,10 @@
                     messageSaveCommitResult: this.messageSaveCommitResult,
                     teacherLawLastQuestion: this.teacherLawLastQuestion,
                     teacherLawFollowupContext: this.teacherLawFollowupContext,
+                    reservationAvailabilityPayload: this.reservationAvailabilityPayload,
+                    reservationAvailabilityLoading: this.reservationAvailabilityLoading,
+                    reservationAvailabilityErrorText: this.reservationAvailabilityErrorText,
+                    reservationAvailabilityRequestKey: this.reservationAvailabilityRequestKey,
                 });
             },
 
@@ -4817,12 +4844,22 @@
                 this.messageSaveCommitResult = nextState.messageSaveCommitResult;
                 this.teacherLawLastQuestion = nextState.teacherLawLastQuestion;
                 this.teacherLawFollowupContext = nextState.teacherLawFollowupContext;
+                this.reservationAvailabilityPayload = nextState.reservationAvailabilityPayload;
+                this.reservationAvailabilityLoading = nextState.reservationAvailabilityLoading;
+                this.reservationAvailabilityErrorText = nextState.reservationAvailabilityErrorText;
+                this.reservationAvailabilityRequestKey = nextState.reservationAvailabilityRequestKey;
             },
 
             clearExecution: function () {
                 this.agentExecution = null;
                 this.agentExecutionDraft = {};
                 this.agentExecutionFieldErrors = {};
+                if (trimLine(this.activeModeKey) === 'reservation') {
+                    this.reservationAvailabilityPayload = {};
+                    this.reservationAvailabilityLoading = false;
+                    this.reservationAvailabilityErrorText = '';
+                    this.reservationAvailabilityRequestKey = '';
+                }
             },
 
             clearMessageSaveState: function () {
@@ -4941,6 +4978,7 @@
                             slug: trimLine(school.slug),
                             name: trimLine(school.name),
                             reservationUrl: trimLine(school.reservation_url),
+                            availabilityUrl: trimLine(school.availability_url),
                             rooms: Array.isArray(school.rooms) ? school.rooms.map(function (room) {
                                 return {
                                     id: String(room && room.id ? room.id : ''),
@@ -4954,6 +4992,7 @@
                                     id: String(period && period.id ? period.id : ''),
                                     label: trimLine(period && period.label ? period.label : ''),
                                     displayLabel: trimLine(period && period.display_label ? period.display_label : ''),
+                                    time: trimLine(period && period.time ? period.time : ''),
                                 };
                             }).filter(function (period) {
                                 return period.id;
@@ -5015,6 +5054,9 @@
                     return;
                 }
                 this.normalizeExecutionDraft();
+                if (normalized.kind === 'reservation' && trimLine(this.agentExecutionDraft.room_id || '')) {
+                    this.loadReservationAvailability();
+                }
             },
 
             selectScheduleExecutionChoice: function (choiceId, executionOverride) {
@@ -5062,6 +5104,57 @@
             reservationPeriodOptions: function () {
                 var school = this.selectedReservationSchool();
                 return school && Array.isArray(school.periods) ? school.periods : [];
+            },
+
+            reservationAvailabilityDates: function () {
+                var payload = this.reservationAvailabilityPayload && typeof this.reservationAvailabilityPayload === 'object'
+                    ? this.reservationAvailabilityPayload
+                    : {};
+                return Array.isArray(payload.dates) ? payload.dates : [];
+            },
+
+            reservationAvailabilitySlots: function () {
+                var payload = this.reservationAvailabilityPayload && typeof this.reservationAvailabilityPayload === 'object'
+                    ? this.reservationAvailabilityPayload
+                    : {};
+                return Array.isArray(payload.slots) ? payload.slots : [];
+            },
+
+            selectedReservationDateLongLabel: function () {
+                var selectedDate = trimLine(this.agentExecutionDraft && this.agentExecutionDraft.date);
+                var dateOption = this.reservationAvailabilityDates().find(function (item) {
+                    return trimLine(item && item.iso) === selectedDate;
+                });
+                return trimLine(dateOption && dateOption.long_label) || this.reservationDateLabel();
+            },
+
+            reservationSlotOptions: function () {
+                var selectedDate = trimLine(this.agentExecutionDraft && this.agentExecutionDraft.date);
+                var selectedRoomId = String(this.agentExecutionDraft && this.agentExecutionDraft.room_id ? this.agentExecutionDraft.room_id : '');
+                var periodMap = {};
+                this.reservationPeriodOptions().forEach(function (period) {
+                    periodMap[String(period.id)] = period;
+                });
+                if (!selectedDate || !selectedRoomId) {
+                    return [];
+                }
+                return this.reservationAvailabilitySlots().filter(function (slot) {
+                    return String(slot && slot.room_id || '') === selectedRoomId
+                        && trimLine(slot && slot.date) === selectedDate;
+                }).map(function (slot) {
+                    var period = periodMap[String(slot.period)] || {};
+                    return {
+                        roomId: String(slot.room_id || ''),
+                        date: trimLine(slot.date),
+                        period: String(slot.period || ''),
+                        state: trimLine(slot.state || 'closed'),
+                        stateLabel: trimLine(slot.state_label || ''),
+                        selectable: Boolean(slot.selectable),
+                        grade: slot.grade === null || typeof slot.grade === 'undefined' ? '' : String(slot.grade),
+                        label: trimLine(period.displayLabel || period.label || (String(slot.period || '') + '교시')),
+                        time: trimLine(period.time || ''),
+                    };
+                });
             },
 
             teacherLawIncidentOptions: function () {
@@ -6973,6 +7066,116 @@
                 }
             },
 
+            reservationUiOptions: function () {
+                return this.activeMode && this.activeMode.ui_options && typeof this.activeMode.ui_options === 'object'
+                    ? this.activeMode.ui_options
+                    : {};
+            },
+
+            reservationModeSchoolOptions: function () {
+                var uiOptions = this.reservationUiOptions();
+                var schools = Array.isArray(uiOptions.schools) ? uiOptions.schools : [];
+                return schools.map(function (school) {
+                    var source = school && typeof school === 'object' ? school : {};
+                    return {
+                        slug: trimLine(source.slug),
+                        name: trimLine(source.name),
+                        reservation_url: trimLine(source.reservation_url || source.reservationUrl),
+                        availability_url: trimLine(source.availability_url || source.availabilityUrl),
+                        rooms: Array.isArray(source.rooms) ? source.rooms.map(function (room) {
+                            return {
+                                id: String(room && room.id ? room.id : ''),
+                                name: trimLine(room && room.name ? room.name : ''),
+                            };
+                        }).filter(function (room) {
+                            return room.id && room.name;
+                        }) : [],
+                        periods: Array.isArray(source.periods) ? source.periods : [],
+                    };
+                }).filter(function (school) {
+                    return school.slug && school.name;
+                });
+            },
+
+            reservationDefaultDraft: function (overrides) {
+                var uiOptions = this.reservationUiOptions();
+                var defaults = uiOptions.default_draft && typeof uiOptions.default_draft === 'object'
+                    ? this.clonePayload(uiOptions.default_draft)
+                    : {};
+                return Object.assign({
+                    school_slug: '',
+                    room_id: '',
+                    date: '',
+                    period: '',
+                    owner_type: 'class',
+                    grade: '',
+                    class_no: '',
+                    target_label: '',
+                    name: '',
+                    memo: '',
+                    edit_code: this.reservationGenerateEditCode(),
+                    override_grade_lock: false,
+                }, defaults, overrides || {});
+            },
+
+            reservationGenerateEditCode: function () {
+                return String(Math.floor(1000 + Math.random() * 9000));
+            },
+
+            ensureReservationExecution: function (overrides) {
+                var currentDraft = this.agentExecution && this.agentExecution.kind === 'reservation'
+                    ? this.clonePayload(this.agentExecutionDraft)
+                    : {};
+                var schools = this.reservationModeSchoolOptions();
+                var draft = this.reservationDefaultDraft(Object.assign({}, currentDraft, overrides || {}));
+                if (!draft.school_slug && schools.length) {
+                    draft.school_slug = schools[0].slug;
+                }
+                if (!draft.edit_code) {
+                    draft.edit_code = this.reservationGenerateEditCode();
+                }
+                this.setExecution({
+                    kind: 'reservation',
+                    title: '예약 확인',
+                    submit_label: '예약',
+                    draft: draft,
+                    school_options: schools,
+                    warnings: [],
+                });
+                this.agentPreview = this.buildIdlePreview();
+                this.agentPreviewMeta = {
+                    source: '',
+                    provider: '',
+                    model: '',
+                    providerLabel: '',
+                };
+            },
+
+            runReservationStarter: function (item) {
+                var payload = item && typeof item === 'object' ? item : {};
+                var schoolSlug = trimLine(payload.school_slug);
+                var roomId = String(payload.room_id || '');
+                if (!schoolSlug || !roomId) {
+                    showFeedback('특별실을 확인하지 못했습니다.', 'error');
+                    return;
+                }
+                this.workspaceInput = '';
+                this.activeChatHistoryEntryId = '';
+                this.chatHistory = [];
+                this.reservationAvailabilityPayload = {};
+                this.reservationAvailabilityErrorText = '';
+                this.ensureReservationExecution({
+                    school_slug: schoolSlug,
+                    room_id: roomId,
+                    date: '',
+                    period: '',
+                });
+                this.clearExecutionFieldError('school_slug');
+                this.clearExecutionFieldError('room_id');
+                this.clearExecutionFieldError('date');
+                this.clearExecutionFieldError('period');
+            },
+
             reservationUserBubbleText: function () {
                 return trimLine(this.workspaceInput);
             },
@@ -7028,6 +7231,139 @@
                 return (Array.isArray(uiOptions.room_names) ? uiOptions.room_names : []).map(function (name) {
                     return trimLine(name);
                 }).filter(Boolean);
+            },
+
+            reservationAvailabilityUrl: function () {
+                var school = this.selectedReservationSchool();
+                return school ? trimLine(school.availabilityUrl || school.availability_url) : '';
+            },
+
+            syncReservationAvailabilityPayload: function (payload) {
+                var data = payload && typeof payload === 'object' ? payload : {};
+                var school = this.selectedReservationSchool();
+                if (!school) {
+                    return;
+                }
+                if (Array.isArray(data.rooms)) {
+                    school.rooms = data.rooms.map(function (room) {
+                        return {
+                            id: String(room && room.id ? room.id : ''),
+                            name: trimLine(room && room.name ? room.name : ''),
+                        };
+                    }).filter(function (room) {
+                        return room.id && room.name;
+                    });
+                }
+                if (Array.isArray(data.periods)) {
+                    school.periods = data.periods.map(function (period) {
+                        return {
+                            id: String(period && period.id ? period.id : ''),
+                            label: trimLine(period && period.label ? period.label : ''),
+                            displayLabel: trimLine(period && period.display_label ? period.display_label : ''),
+                            time: trimLine(period && period.time ? period.time : ''),
+                        };
+                    }).filter(function (period) {
+                        return period.id;
+                    });
+                }
+            },
+
+            loadReservationAvailability: async function () {
+                if (!this.reservationHasExecution()) {
+                    return;
+                }
+                var roomId = String(this.agentExecutionDraft.room_id || '');
+                var availabilityUrl = this.reservationAvailabilityUrl();
+                if (!roomId || !availabilityUrl) {
+                    return;
+                }
+                var requestKey = [availabilityUrl, roomId].join('|');
+                this.reservationAvailabilityRequestKey = requestKey;
+                this.reservationAvailabilityLoading = true;
+                this.reservationAvailabilityErrorText = '';
+                try {
+                    var separator = availabilityUrl.indexOf('?') >= 0 ? '&' : '?';
+                    var response = await fetch(availabilityUrl + separator + new URLSearchParams({
+                        room_id: roomId,
+                        days: '7',
+                    }).toString(), {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        credentials: 'same-origin',
+                    });
+                    var payload = await response.json().catch(function () {
+                        return {};
+                    });
+                    if (requestKey !== this.reservationAvailabilityRequestKey) {
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error(payload.error || '빈 시간을 불러오지 못했습니다.');
+                    }
+                    this.reservationAvailabilityPayload = payload;
+                    this.syncReservationAvailabilityPayload(payload);
+                } catch (error) {
+                    if (requestKey !== this.reservationAvailabilityRequestKey) {
+                        return;
+                    }
+                    this.reservationAvailabilityPayload = {};
+                    this.reservationAvailabilityErrorText = error && error.message ? error.message : '빈 시간을 불러오지 못했습니다.';
+                    showFeedback(this.reservationAvailabilityErrorText, 'error');
+                } finally {
+                    if (requestKey === this.reservationAvailabilityRequestKey) {
+                        this.reservationAvailabilityLoading = false;
+                    }
+                }
+            },
+
+            reservationSlotStateLabel: function (slot) {
+                var state = trimLine(slot && slot.state);
+                var labels = {
+                    available: '가능',
+                    reserved: '예약됨',
+                    recurring: '고정',
+                    grade_locked: '학년 고정',
+                    blackout: '불가',
+                    closed: '닫힘',
+                };
+                return trimLine(slot && slot.stateLabel) || labels[state] || '확인';
+            },
+
+            reservationSlotClass: function (slot) {
+                var state = trimLine(slot && slot.state);
+                return 'is-' + (state || 'closed').replace(/_/g, '-');
+            },
+
+            reservationReadyForOwner: function () {
+                return Boolean(
+                    this.reservationHasExecution()
+                    && trimLine(this.agentExecutionDraft.school_slug)
+                    && trimLine(this.agentExecutionDraft.room_id)
+                    && trimLine(this.agentExecutionDraft.date)
+                    && trimLine(this.agentExecutionDraft.period)
+                );
+            },
+
+            reservationSubmitFinal: function () {
+                if (!this.reservationReadyForOwner()) {
+                    showFeedback('날짜와 교시를 먼저 골라 주세요.', 'info');
+                    return;
+                }
+                this.agentExecutionDraft.override_grade_lock = false;
+                this.executeAgentService();
+            },
+
+            reservationSubmitGradeLockOverride: function () {
+                if (!this.reservationReadyForOwner()) {
+                    showFeedback('날짜와 교시를 먼저 골라 주세요.', 'info');
+                    return;
+                }
+                this.agentExecutionDraft.override_grade_lock = true;
+                this.clearExecutionFieldError('override_grade_lock');
+                this.executeAgentService();
             },
 
             reservationBoardLabel: function () {
@@ -7091,18 +7427,23 @@
 
             reservationSetSchool: function (schoolSlug) {
                 if (!this.reservationHasExecution()) {
-                    return;
+                    this.ensureReservationExecution({
+                        school_slug: trimLine(schoolSlug),
+                    });
                 }
                 var hadRoom = trimLine(this.agentExecutionDraft.room_id || '');
                 var hadPeriod = trimLine(this.agentExecutionDraft.period || '');
                 this.agentExecutionDraft.school_slug = trimLine(schoolSlug);
                 if (hadRoom || hadPeriod) {
                     this.agentExecutionDraft.room_id = '';
+                    this.agentExecutionDraft.date = '';
                     this.agentExecutionDraft.period = '';
-                    showFeedback('학교 변경으로 특별실과 교시를 다시 선택해 주세요.', 'info');
+                    this.reservationAvailabilityPayload = {};
+                    this.reservationAvailabilityErrorText = '';
                 }
                 this.clearExecutionFieldError('school_slug');
                 this.clearExecutionFieldError('room_id');
+                this.clearExecutionFieldError('date');
                 this.clearExecutionFieldError('period');
                 this.normalizeExecutionDraft();
             },
@@ -7112,16 +7453,46 @@
                     return;
                 }
                 this.agentExecutionDraft.room_id = String(roomId || '');
+                this.agentExecutionDraft.date = '';
+                this.agentExecutionDraft.period = '';
+                this.reservationAvailabilityPayload = {};
+                this.reservationAvailabilityErrorText = '';
                 this.clearExecutionFieldError('room_id');
+                this.clearExecutionFieldError('date');
+                this.clearExecutionFieldError('period');
+                this.loadReservationAvailability();
             },
 
-            reservationSetPeriod: function (periodId) {
+            reservationSetDate: function (dateValue) {
                 if (!this.reservationHasExecution()) {
                     return;
                 }
+                this.agentExecutionDraft.date = trimLine(dateValue);
+                this.agentExecutionDraft.period = '';
+                this.clearExecutionFieldError('date');
+                this.clearExecutionFieldError('period');
+            },
+
+            reservationSetPeriod: function (periodId, slot) {
+                if (!this.reservationHasExecution()) {
+                    return;
+                }
+                if (slot && !slot.selectable) {
+                    showFeedback(this.reservationSlotStateLabel(slot), 'info');
+                    return;
+                }
                 this.agentExecutionDraft.period = String(periodId || '');
+                this.agentExecutionDraft.override_grade_lock = false;
                 this.clearExecutionFieldError('period');
                 this.clearExecutionFieldError('override_grade_lock');
+            },
+
+            reservationClearOwnerFieldError: function (fieldName) {
+                this.clearExecutionFieldError(fieldName);
+                this.clearExecutionFieldError('override_grade_lock');
+                if (this.agentExecutionDraft) {
+                    this.agentExecutionDraft.override_grade_lock = false;
+                }
             },
 
             reservationSetOwnerType: function (ownerType) {

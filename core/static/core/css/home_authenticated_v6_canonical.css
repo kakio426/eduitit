@@ -1832,6 +1832,127 @@ gap: 0.2rem;
     padding: 0.14rem 0;
 }
 
+.home-v6-page .home-v6-agent-reservation-picker {
+    margin: 0.75rem 1rem 0;
+    padding: 0.85rem;
+    border: 1px solid rgba(203, 213, 225, 0.85);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.home-v6-page .home-v6-agent-reservation-section {
+    display: grid;
+    gap: 0.48rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-chip-list,
+.home-v6-page .home-v6-agent-reservation-date-list,
+.home-v6-page .home-v6-agent-reservation-slot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.44rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-chip,
+.home-v6-page .home-v6-agent-reservation-date-chip,
+.home-v6-page .home-v6-agent-reservation-slot {
+    min-height: 2.25rem;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(51, 65, 85, 0.98);
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.2;
+    transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.home-v6-page .home-v6-agent-reservation-chip {
+    padding: 0.54rem 0.72rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-date-chip,
+.home-v6-page .home-v6-agent-reservation-slot {
+    display: inline-grid;
+    gap: 0.16rem;
+    justify-items: center;
+    min-width: 4.4rem;
+    padding: 0.48rem 0.62rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-date-chip small,
+.home-v6-page .home-v6-agent-reservation-slot small {
+    color: rgba(100, 116, 139, 0.92);
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-agent-reservation-chip:hover,
+.home-v6-page .home-v6-agent-reservation-chip:focus-visible,
+.home-v6-page .home-v6-agent-reservation-date-chip:hover,
+.home-v6-page .home-v6-agent-reservation-date-chip:focus-visible,
+.home-v6-page .home-v6-agent-reservation-slot:hover,
+.home-v6-page .home-v6-agent-reservation-slot:focus-visible {
+    border-color: rgba(99, 102, 241, 0.48);
+    background: rgba(238, 242, 255, 0.78);
+}
+
+.home-v6-page .home-v6-agent-reservation-chip.is-active,
+.home-v6-page .home-v6-agent-reservation-date-chip.is-active,
+.home-v6-page .home-v6-agent-reservation-slot.is-active {
+    border-color: rgba(79, 70, 229, 0.74);
+    background: rgba(224, 231, 255, 0.88);
+    color: rgba(49, 46, 129, 0.98);
+}
+
+.home-v6-page .home-v6-agent-reservation-slot.is-reserved,
+.home-v6-page .home-v6-agent-reservation-slot.is-recurring,
+.home-v6-page .home-v6-agent-reservation-slot.is-blackout,
+.home-v6-page .home-v6-agent-reservation-slot.is-closed,
+.home-v6-page .home-v6-agent-reservation-slot.is-disabled {
+    cursor: not-allowed;
+    border-color: rgba(226, 232, 240, 0.95);
+    background: rgba(248, 250, 252, 0.92);
+    color: rgba(100, 116, 139, 0.82);
+}
+
+.home-v6-page .home-v6-agent-reservation-slot.is-grade-locked:not(.is-disabled) {
+    border-color: rgba(245, 158, 11, 0.46);
+    background: rgba(255, 251, 235, 0.9);
+    color: rgba(146, 64, 14, 0.96);
+}
+
+.home-v6-page .home-v6-agent-reservation-slot.is-available small {
+    color: rgba(22, 101, 52, 0.9);
+}
+
+.home-v6-page .home-v6-agent-reservation-slot.is-grade-locked:not(.is-disabled) small {
+    color: rgba(180, 83, 9, 0.9);
+}
+
+.home-v6-page .home-v6-agent-reservation-override {
+    display: grid;
+    gap: 0.5rem;
+    border: 1px solid rgba(245, 158, 11, 0.42);
+    border-radius: 0.9rem;
+    background: rgba(255, 251, 235, 0.9);
+    padding: 0.72rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-override p {
+    margin: 0;
+    color: rgba(146, 64, 14, 0.96);
+    font-size: 0.78rem;
+    font-weight: 850;
+}
+
+.home-v6-page .home-v6-agent-reservation-status {
+    margin: 0;
+    color: rgba(71, 85, 105, 0.95);
+    font-size: 0.76rem;
+    font-weight: 850;
+}
+
 .home-v6-page .home-v6-agent-reservation-board,
 .home-v6-page .home-v6-agent-reservation-date,
 .home-v6-page .home-v6-agent-reservation-time,
@@ -3631,6 +3752,12 @@ grid-template-columns: minmax(0, 1fr);
     padding: 0 0.86rem;
     border-radius: 999px;
     font-size: 0.79rem;
+}
+
+.home-v6-page .home-v6-agent-reservation-picker .home-v6-agent-reservation-chip {
+    min-height: 2.25rem;
+    padding: 0.54rem 0.72rem;
+    border-radius: 0.75rem;
 }
 
 .home-v6-page .home-v6-agent-input {

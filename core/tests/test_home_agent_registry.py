@@ -65,6 +65,8 @@ class HomeAgentRegistryTests(TestCase):
         SpecialRoom.objects.create(school=school_one, name='과학실')
         SpecialRoom.objects.create(school=school_two, name='과학실')
         SpecialRoom.objects.create(school=school_one, name='음악실')
+        SpecialRoom.objects.create(school=school_one, name='미술실')
+        SpecialRoom.objects.create(school=school_one, name='도서실')
 
         definition = get_home_agent_service_definition('reservation')
         starter_items = resolve_home_agent_starter_items(definition, request=self._request())
@@ -74,7 +76,14 @@ class HomeAgentRegistryTests(TestCase):
         self.assertIn('한빛초 과학실', labels)
         self.assertIn('가람초 과학실', labels)
         self.assertIn('음악실', labels)
-        self.assertTrue(all('예약해줘' in text for text in texts))
+        self.assertIn('미술실', labels)
+        self.assertIn('도서실', labels)
+        self.assertEqual(len(starter_items), 5)
+        self.assertTrue(all(text == '' for text in texts))
+        self.assertTrue(all(item['kind'] == 'room' for item in starter_items))
+        self.assertTrue(all('예약해줘' not in str(item) for item in starter_items))
+        self.assertTrue(all(item['school_slug'] for item in starter_items))
+        self.assertTrue(all(item['room_id'] for item in starter_items))
 
         ui_options = resolve_home_agent_ui_options(definition, request=self._request())
         self.assertIn('room_names', ui_options)
@@ -83,6 +92,13 @@ class HomeAgentRegistryTests(TestCase):
         self.assertIn('school_names', ui_options)
         self.assertIn('한빛초', ui_options['school_names'])
         self.assertIn('가람초', ui_options['school_names'])
+        self.assertIn('schools', ui_options)
+        self.assertEqual(len(ui_options['schools']), 2)
+        self.assertTrue(all(school['availability_url'] for school in ui_options['schools']))
+        self.assertEqual(
+            sum(len(school['rooms']) for school in ui_options['schools']),
+            5,
+        )
 
     def test_teacher_law_provider_supplies_quick_questions_and_ui_options(self):
         definition = get_home_agent_service_definition('teacher-law')

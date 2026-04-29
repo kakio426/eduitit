@@ -508,6 +508,7 @@ def _generate_reservation_preview(*, request, mode_spec: dict, text: str, select
                 "slug": school.slug,
                 "name": school.name,
                 "reservation_url": entry.get("reservation_url", ""),
+                "availability_url": _safe_reverse_reservation_availability(school.slug),
                 "rooms": school_rooms,
                 "periods": [
                     {
@@ -1292,6 +1293,15 @@ def _format_reservation_iso_label(value: str) -> str:
     except (TypeError, ValueError):
         return "날짜 확인"
     return f"{parsed.month}월 {parsed.day}일"
+
+
+def _safe_reverse_reservation_availability(school_slug: str) -> str:
+    from django.urls import reverse
+
+    try:
+        return reverse("reservations:reservation_availability", kwargs={"school_slug": school_slug})
+    except Exception:
+        return ""
 
 
 def _is_truthy(value) -> bool:

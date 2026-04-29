@@ -1248,6 +1248,92 @@ class ReservationsViewTest(TestCase):
         self.assertContains(response, "09:00-09:40")
         self.assertContains(response, "09:50-10:30")
 
+    def test_availability_api_returns_slot_states(self):
+        self.config.period_labels = "1교시,2교시,3교시,4교시"
+        self.config.period_times = "09:00-09:40,09:50-10:30,10:40-11:20,11:30-12:10"
+        self.config.save()
+        tomorrow = self.target_date + timedelta(days=1)
+        Reservation.objects.create(
+            room=self.room,
+            date=self.target_date,
+            period=1,
+            grade=3,
+            class_no=2,
+            name='Alpha',
+        )
+        RecurringSchedule.objects.create(
+            room=self.room,
+            day_of_week=self.target_date.weekday(),
+            period=2,
+            name='고정 수업',
+        )
+        GradeRecurringLock.objects.create(
+            room=self.room,
+            day_of_week=self.target_date.weekday(),
+            period=3,
+            grade=4,
+        )
+        BlackoutDate.objects.create(
+            school=self.school,
+            start_date=tomorrow,
+            end_date=tomorrow,
+            reason='점검',
+        )
+
+        response = self.client.get(
+            reverse('reservations:reservation_availability', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'start': self.target_date.strftime('%Y-%m-%d'),
+                'days': 2,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['rooms'][0]['name'], 'Science Room')
+        self.assertEqual(payload['periods'][0]['display_label'], '1교시 (09:00-09:40)')
+        slot_map = {
+            (slot['date'], slot['period']): slot
+            for slot in payload['slots']
+            if slot['room_id'] == str(self.room.id)
+        }
+        today_key = self.target_date.strftime('%Y-%m-%d')
+        tomorrow_key = tomorrow.strftime('%Y-%m-%d')
+        self.assertEqual(slot_map[(today_key, 1)]['state'], 'reserved')
+        self.assertEqual(slot_map[(today_key, 2)]['state'], 'recurring')
+        self.assertEqual(slot_map[(today_key, 3)]['state'], 'grade_locked')
+        self.assertTrue(slot_map[(today_key, 3)]['selectable'])
+        self.assertEqual(slot_map[(today_key, 3)]['grade'], 4)
+        self.assertEqual(slot_map[(today_key, 4)]['state'], 'available')
+        self.assertTrue(slot_map[(today_key, 4)]['selectable'])
+        self.assertEqual(slot_map[(tomorrow_key, 1)]['state'], 'blackout')
+
+    def test_availability_api_closes_dates_outside_public_booking_window(self):
+        self.config.weekly_opening_mode = True
+        self.config.save(update_fields=['weekly_opening_mode'])
+        max_date = get_max_booking_date(self.school)
+        outside_date = max_date + timedelta(days=1)
+        self.client.logout()
+
+        response = self.client.get(
+            reverse('reservations:reservation_availability', args=[self.school.slug]),
+            {
+                'room_id': self.room.id,
+                'start': outside_date.strftime('%Y-%m-%d'),
+                'days': 1,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['dates'][0]['iso'], outside_date.strftime('%Y-%m-%d'))
+        self.assertTrue(payload['dates'][0]['closed'])
+        states = {slot['state'] for slot in payload['slots']}
+        self.assertEqual(states, {'closed'})
+
     def test_update_config_saves_optional_period_times(self):
         self.client.force_login(self.user)
         url = reverse('reservations:update_config', args=[self.school.slug])

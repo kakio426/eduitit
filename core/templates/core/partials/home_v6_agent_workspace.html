@@ -707,7 +707,7 @@
                                 </div>
                                 <p class="home-v6-agent-chat-draft-line" x-text="workspaceShellPrompt()"></p>
                                 <div class="home-v6-cmd-starter-list home-v6-cmd-starter-list--chat" x-cloak x-show="activeAiHasStarterChips()">
-                                    <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + item.text">
+                                    <template x-for="item in activeAiStarterItems()" :key="'shell-starter-' + activeModeKey + '-' + item.label + '-' + (item.room_id || item.text)">
                                         <button
                                             type="button"
                                             class="home-v6-cmd-starter-chip"
@@ -720,6 +720,151 @@
                         </div>
                     </div>
                 </div>
+
+                <section class="home-v6-agent-reservation-card home-v6-agent-reservation-picker" x-cloak x-show="activeModeKey === 'reservation' && reservationHasExecution()">
+                    <div class="home-v6-agent-reservation-section" x-cloak x-show="reservationSchoolOptions().length > 1">
+                        <p class="home-v6-agent-reservation-field-label">학교</p>
+                        <div class="home-v6-agent-reservation-chip-list">
+                            <template x-for="school in reservationSchoolOptions()" :key="'reservation-school-' + school.slug">
+                                <button
+                                    type="button"
+                                    class="home-v6-agent-reservation-chip"
+                                    :class="{ 'is-active': selectedReservationSchool() && selectedReservationSchool().slug === school.slug }"
+                                    @click="reservationSetSchool(school.slug)"
+                                    x-text="school.name"
+                                ></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="home-v6-agent-reservation-section">
+                        <p class="home-v6-agent-reservation-field-label">특별실</p>
+                        <div class="home-v6-agent-reservation-chip-list">
+                            <template x-for="room in reservationRoomOptions()" :key="'reservation-room-' + room.id">
+                                <button
+                                    type="button"
+                                    class="home-v6-agent-reservation-chip"
+                                    :class="{ 'is-active': selectedReservationRoom() && String(selectedReservationRoom().id) === String(room.id) }"
+                                    data-home-v6-agent-field="room_id"
+                                    @click="reservationSetRoom(room.id)"
+                                    x-text="room.name"
+                                ></button>
+                            </template>
+                        </div>
+                        <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('room_id')" x-text="executionFieldError('room_id')"></p>
+                    </div>
+
+                    <p class="home-v6-agent-reservation-status" x-cloak x-show="reservationAvailabilityLoading">확인 중</p>
+                    <p class="home-v6-agent-field-error" x-cloak x-show="reservationAvailabilityErrorText" x-text="reservationAvailabilityErrorText"></p>
+
+                    <div class="home-v6-agent-reservation-section" x-cloak x-show="reservationAvailabilityDates().length">
+                        <p class="home-v6-agent-reservation-field-label">날짜</p>
+                        <div class="home-v6-agent-reservation-date-list">
+                            <template x-for="dateOption in reservationAvailabilityDates()" :key="'reservation-date-' + dateOption.iso">
+                                <button
+                                    type="button"
+                                    class="home-v6-agent-reservation-date-chip"
+                                    :class="{ 'is-active': agentExecutionDraft.date === dateOption.iso }"
+                                    data-home-v6-agent-field="date"
+                                    @click="reservationSetDate(dateOption.iso)"
+                                >
+                                    <span x-text="dateOption.label"></span>
+                                    <small x-text="dateOption.weekday"></small>
+                                </button>
+                            </template>
+                        </div>
+                        <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('date')" x-text="executionFieldError('date')"></p>
+                    </div>
+
+                    <div class="home-v6-agent-reservation-section" x-cloak x-show="agentExecutionDraft.date">
+                        <p class="home-v6-agent-reservation-field-label" x-text="selectedReservationDateLongLabel()"></p>
+                        <div class="home-v6-agent-reservation-slot-grid">
+                            <template x-for="slot in reservationSlotOptions()" :key="'reservation-slot-' + slot.date + '-' + slot.period">
+                                <button
+                                    type="button"
+                                    class="home-v6-agent-reservation-slot"
+                                    :class="[reservationSlotClass(slot), { 'is-active': String(agentExecutionDraft.period || '') === String(slot.period), 'is-disabled': !slot.selectable }]"
+                                    :aria-disabled="slot.selectable ? 'false' : 'true'"
+                                    data-home-v6-agent-field="period"
+                                    @click="reservationSetPeriod(slot.period, slot)"
+                                >
+                                    <span x-text="slot.label"></span>
+                                    <small x-text="reservationSlotStateLabel(slot)"></small>
+                                </button>
+                            </template>
+                        </div>
+                        <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('period')" x-text="executionFieldError('period')"></p>
+                    </div>
+
+                    <div class="home-v6-agent-reservation-summary" x-cloak x-show="reservationReadyForOwner()">
+                        <p class="home-v6-agent-reservation-board" x-text="reservationBoardLabel()"></p>
+                        <p class="home-v6-agent-reservation-room" x-text="reservationRoomLabel()"></p>
+                        <p class="home-v6-agent-reservation-date" x-text="reservationDateLabel()"></p>
+                        <p class="home-v6-agent-reservation-time" x-text="reservationTimeLabel()"></p>
+                    </div>
+
+                    <div class="home-v6-agent-reservation-section" x-cloak x-show="reservationReadyForOwner()">
+                        <div class="home-v6-agent-reservation-chip-list">
+                            <button type="button" class="home-v6-agent-reservation-chip" :class="{ 'is-active': reservationIsClassOwner() }" @click="reservationSetOwnerType('class')">학급</button>
+                            <button type="button" class="home-v6-agent-reservation-chip" :class="{ 'is-active': !reservationIsClassOwner() }" @click="reservationSetOwnerType('custom')">기타</button>
+                        </div>
+                        <div class="home-v6-agent-reservation-grid home-v6-agent-reservation-grid--split" x-cloak x-show="reservationIsClassOwner()">
+                            <label class="home-v6-agent-reservation-field">
+                                <span class="home-v6-agent-reservation-field-label">학년</span>
+                                <input type="number" min="1" max="6" class="home-v6-agent-form-input" data-home-v6-agent-field="grade" x-model="agentExecutionDraft.grade" @input="reservationClearOwnerFieldError('grade')">
+                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('grade')" x-text="executionFieldError('grade')"></p>
+                            </label>
+                            <label class="home-v6-agent-reservation-field">
+                                <span class="home-v6-agent-reservation-field-label">반</span>
+                                <input type="number" min="1" max="20" class="home-v6-agent-form-input" data-home-v6-agent-field="class_no" x-model="agentExecutionDraft.class_no" @input="reservationClearOwnerFieldError('class_no')">
+                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('class_no')" x-text="executionFieldError('class_no')"></p>
+                            </label>
+                        </div>
+                        <label class="home-v6-agent-reservation-field" x-cloak x-show="!reservationIsClassOwner()">
+                            <span class="home-v6-agent-reservation-field-label">대상</span>
+                            <input type="text" class="home-v6-agent-form-input" data-home-v6-agent-field="target_label" x-model="agentExecutionDraft.target_label" @input="reservationClearOwnerFieldError('target_label')">
+                            <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('target_label')" x-text="executionFieldError('target_label')"></p>
+                        </label>
+                        <div class="home-v6-agent-reservation-grid home-v6-agent-reservation-grid--split">
+                            <label class="home-v6-agent-reservation-field">
+                                <span class="home-v6-agent-reservation-field-label">이름</span>
+                                <input type="text" class="home-v6-agent-form-input" data-home-v6-agent-field="name" x-model="agentExecutionDraft.name" @input="clearExecutionFieldError('name')">
+                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('name')" x-text="executionFieldError('name')"></p>
+                            </label>
+                            <label class="home-v6-agent-reservation-field">
+                                <span class="home-v6-agent-reservation-field-label">수정코드</span>
+                                <input type="text" inputmode="numeric" maxlength="4" class="home-v6-agent-form-input" data-home-v6-agent-field="edit_code" x-model="agentExecutionDraft.edit_code" @input="clearExecutionFieldError('edit_code')">
+                                <p class="home-v6-agent-field-error" x-cloak x-show="executionFieldError('edit_code')" x-text="executionFieldError('edit_code')"></p>
+                            </label>
+                        </div>
+                        <label class="home-v6-agent-reservation-field">
+                            <span class="home-v6-agent-reservation-field-label">메모</span>
+                            <input type="text" class="home-v6-agent-form-input" x-model="agentExecutionDraft.memo">
+                        </label>
+                        <div class="home-v6-agent-reservation-override" x-cloak x-show="executionFieldError('override_grade_lock')">
+                            <p x-text="executionFieldError('override_grade_lock')"></p>
+                            <button
+                                type="button"
+                                class="home-v6-agent-chat-action"
+                                data-home-v6-agent-field="override_grade_lock"
+                                :disabled="isAgentExecuting"
+                                @click="reservationSubmitGradeLockOverride()"
+                                x-text="isAgentExecuting ? '예약 중' : '예외 예약'"
+                            ></button>
+                        </div>
+                        <div class="home-v6-agent-action-row home-v6-agent-action-row--reservation">
+                            <button
+                                type="button"
+                                class="home-v6-agent-chat-action"
+                                x-cloak
+                                x-show="!executionFieldError('override_grade_lock')"
+                                :disabled="isAgentExecuting"
+                                @click="reservationSubmitFinal()"
+                                x-text="isAgentExecuting ? '예약 중' : '예약'"
+                            ></button>
+                        </div>
+                    </div>
+                </section>
 
             </div>
 

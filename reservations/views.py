@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.contrib import messages
 from django.urls import reverse
 from django.utils.text import slugify
@@ -1093,6 +1093,163 @@ def room_overview(request, school_slug):
     }
     response = render(request, 'reservations/room_overview.html', context)
     return _apply_workspace_cache_headers(response)
+
+
+@require_GET
+def reservation_availability(request, school_slug):
+    """
+    예약 가능 날짜/교시 조회.
+    홈 AI 교무비서가 임의 예약 문장을 만들지 않고 빈 시간을 먼저 보여주기 위한 JSON API.
+    """
+    school, access, access_response = _get_school_or_share_required(request, school_slug)
+    if access_response is not None:
+        return JsonResponse({"error": "예약판을 열 권한이 없습니다."}, status=403)
+
+    config, _ = SchoolConfig.objects.get_or_create(school=school)
+    today = timezone.localdate()
+    start_raw = request.GET.get("start")
+    days_raw = request.GET.get("days", "7")
+    room_id_raw = str(request.GET.get("room_id") or "").strip()
+
+    try:
+        start_date = datetime.strptime(start_raw, "%Y-%m-%d").date() if start_raw else today
+    except (TypeError, ValueError):
+        start_date = today
+
+    if not access["can_manage"] and start_date < today:
+        start_date = today
+
+    try:
+        days = int(days_raw)
+    except (TypeError, ValueError):
+        days = 7
+    days = max(1, min(days, 14))
+    end_date = start_date + timedelta(days=days - 1)
+
+    rooms = list(school.specialroom_set.all().order_by("name", "id"))
+    if room_id_raw:
+        try:
+            selected_room_id = int(room_id_raw)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "특별실을 확인해 주세요."}, status=400)
+        if not any(room.id == selected_room_id for room in rooms):
+            return JsonResponse({"error": "특별실을 확인해 주세요."}, status=400)
+
+    period_slots = config.get_period_slots()
+    period_ids = [slot["id"] for slot in period_slots]
+    target_dates = [start_date + timedelta(days=offset) for offset in range(days)]
+    weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
+
+    reservations = {
+        (reservation.room_id, reservation.date, reservation.period): reservation
+        for reservation in Reservation.objects.filter(
+            room__school=school,
+            date__range=(start_date, end_date),
+        ).select_related("room")
+    }
+    recurring = {
+        (schedule.room_id, schedule.day_of_week, schedule.period): schedule
+        for schedule in RecurringSchedule.objects.filter(
+            room__school=school,
+            day_of_week__in={target_date.weekday() for target_date in target_dates},
+        )
+    }
+    grade_locks = {
+        (lock.room_id, lock.day_of_week, lock.period): lock
+        for lock in GradeRecurringLock.objects.filter(
+            room__school=school,
+            day_of_week__in={target_date.weekday() for target_date in target_dates},
+        )
+    }
+    blackouts = list(
+        BlackoutDate.objects.filter(
+            school=school,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+        )
+    )
+    max_date = get_max_booking_date(school)
+
+    def date_is_blackout(target_date):
+        return any(blackout.start_date <= target_date <= blackout.end_date for blackout in blackouts)
+
+    slots = []
+    for target_date in target_dates:
+        closed = False
+        if not access["can_manage"]:
+            closed = target_date < today or bool(max_date and target_date > max_date)
+        blackout = date_is_blackout(target_date)
+        for room in rooms:
+            for period_id in period_ids:
+                reservation = reservations.get((room.id, target_date, period_id))
+                recurring_schedule = recurring.get((room.id, target_date.weekday(), period_id))
+                grade_lock = grade_locks.get((room.id, target_date.weekday(), period_id))
+                state = "available"
+                state_label = "가능"
+                if closed:
+                    state = "closed"
+                    state_label = "예약 전" if max_date and target_date > max_date else "닫힘"
+                elif blackout:
+                    state = "blackout"
+                    state_label = "예약 불가"
+                elif recurring_schedule:
+                    state = "recurring"
+                    state_label = recurring_schedule.name or "고정 수업"
+                elif reservation:
+                    state = "reserved"
+                    state_label = "예약됨"
+                elif grade_lock:
+                    state = "grade_locked"
+                    state_label = f"{grade_lock.grade}학년 고정"
+
+                slots.append({
+                    "room_id": str(room.id),
+                    "date": target_date.strftime("%Y-%m-%d"),
+                    "period": period_id,
+                    "state": state,
+                    "state_label": state_label,
+                    "selectable": bool(access["can_edit"]) and state in {"available", "grade_locked"},
+                    "grade": grade_lock.grade if grade_lock else None,
+                })
+
+    payload = {
+        "school": {
+            "slug": school.slug,
+            "name": school.name,
+            "can_edit": bool(access["can_edit"]),
+            "can_manage": bool(access["can_manage"]),
+        },
+        "rooms": [
+            {
+                "id": str(room.id),
+                "name": room.name,
+                "icon": room.icon,
+            }
+            for room in rooms
+        ],
+        "dates": [
+            {
+                "iso": target_date.strftime("%Y-%m-%d"),
+                "label": "오늘" if target_date == today else f"{target_date.month}/{target_date.day}",
+                "long_label": f"{target_date.month}월 {target_date.day}일 {weekday_names[target_date.weekday()]}요일",
+                "weekday": weekday_names[target_date.weekday()],
+                "closed": (not access["can_manage"]) and bool(max_date and target_date > max_date),
+            }
+            for target_date in target_dates
+        ],
+        "periods": [
+            {
+                "id": slot["id"],
+                "label": slot["label"],
+                "time": slot["time"],
+                "display_label": slot["display_label"],
+            }
+            for slot in period_slots
+        ],
+        "slots": slots,
+        "max_date": max_date.strftime("%Y-%m-%d") if max_date else "",
+    }
+    return _apply_workspace_cache_headers(JsonResponse(payload))
 
 
 @login_required

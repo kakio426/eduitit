@@ -21,6 +21,7 @@ urlpatterns = [
     # Public Reservation Views
     path('go/<int:school_id>/', views.short_url_redirect, name='short_url'),
     path('<str:school_slug>/rooms/overview/', views.room_overview, name='room_overview'),
+    path('<str:school_slug>/availability/', views.reservation_availability, name='reservation_availability'),
     path('<str:school_slug>/', views.reservation_index, name='reservation_index'),
     path('<str:school_slug>/create/', views.create_reservation, name='create_reservation'),
     path('<str:school_slug>/claim/<int:reservation_id>/', views.claim_reservation_access, name='claim_reservation_access'),

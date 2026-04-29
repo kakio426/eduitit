@@ -5,6 +5,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Callable
 
+from django.urls import reverse
+
 
 MESSAGE_CAPTURE_PLACEHOLDER = "__capture_id__"
 MESSAGE_CAPTURE_REVERSE_SEED = "00000000-0000-0000-0000-000000000000"
@@ -261,7 +263,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         renderer_key="reservation",
         adapter_key="reservation",
         preview_strategy="service",
-        selector_hint="예약 값 정리",
+        selector_hint="빈 시간 확인",
         tool_key="reservation",
         aliases=("특별실 예약", "특별실", "예약"),
         icon_class="fa-regular fa-clock",
@@ -277,14 +279,14 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         messenger_ui={
             "flow_variant": "reservation",
             "execution_variant": "reservation",
-            "assistant_title": "예약 요청 후보",
+            "assistant_title": "빈 시간 확인",
             "reset_label": "새로 쓰기",
         },
         copy={
             "service_label": "예약 화면 열기",
             "submit_label": "예약 확인",
             "confirm_label": "예약 화면",
-            "helper": "예약 후보",
+            "helper": "빈 시간",
             "usage_hint": "예약할 내용을 적으면 날짜와 시간, 장소를 정리합니다.",
             "placeholder": "예약할 내용을 적으세요.",
         },
@@ -304,7 +306,7 @@ HOME_AGENT_SERVICE_DEFINITIONS = (
         },
         runtime_spec={
             "badge": "특별실 예약",
-            "default_title": "예약 요청 후보",
+            "default_title": "예약 확인",
             "default_note": "예약 저장 전 장소와 시간을 한 번 더 확인하면 됩니다.",
             "section_titles": ("예약 값", "확인"),
             "instruction": (
@@ -702,34 +704,67 @@ def _build_reservation_ui_options(*, definition: HomeAgentServiceDefinition, req
     if not rooms:
         return {}
 
+    rooms_by_school_id: dict[int, list] = {school_id: [] for school_id in school_by_id}
+    for room in rooms:
+        rooms_by_school_id.setdefault(room.school_id, []).append(room)
+
     room_names = []
     room_labels = []
     school_names = []
+    school_options = []
     seen_room_names = set()
     seen_room_labels = set()
     seen_school_names = set()
 
-    for room in rooms:
-        room_name = str(room.name or "").strip()
-        school = school_by_id.get(room.school_id)
+    for entry in schools:
+        school = entry["school"]
         school_name = str(getattr(school, "name", "") or "").strip()
-        if not room_name:
-            continue
-        if room_name not in seen_room_names:
-            seen_room_names.add(room_name)
-            room_names.append(room_name)
-        label = f"{school_name} {room_name}".strip() if school_name else room_name
-        if label not in seen_room_labels:
-            seen_room_labels.add(label)
-            room_labels.append(label)
         if school_name and school_name not in seen_school_names:
             seen_school_names.add(school_name)
             school_names.append(school_name)
+        school_rooms = []
+        for room in rooms_by_school_id.get(school.id, []):
+            room_name = str(room.name or "").strip()
+            if not room_name:
+                continue
+            if room_name not in seen_room_names:
+                seen_room_names.add(room_name)
+                room_names.append(room_name)
+            label = f"{school_name} {room_name}".strip() if school_name else room_name
+            if label not in seen_room_labels:
+                seen_room_labels.add(label)
+                room_labels.append(label)
+            school_rooms.append({
+                "id": str(room.id),
+                "name": room_name,
+            })
+        school_options.append({
+            "slug": school.slug,
+            "name": school.name,
+            "reservation_url": entry.get("reservation_url", ""),
+            "availability_url": reverse("reservations:reservation_availability", kwargs={"school_slug": school.slug}),
+            "rooms": school_rooms,
+        })
+
+    default_name = ""
+    if hasattr(request.user, "get_full_name"):
+        default_name = str(request.user.get_full_name() or "").strip()
+    if not default_name:
+        default_name = str(getattr(request.user, "username", "") or "").strip()
 
     return {
         "room_names": room_names,
         "room_labels": room_labels,
         "school_names": school_names,
+        "schools": school_options,
+        "default_draft": {
+            "owner_type": "class",
+            "grade": "",
+            "class_no": "",
+            "target_label": "",
+            "name": default_name,
+            "memo": "",
+        },
     }
 
 
@@ -918,13 +953,14 @@ def _build_reservation_starter_items(*, request=None) -> list[dict]:
         if label in seen_labels:
             continue
         seen_labels.add(label)
-        text_room_name = label if name_counts.get(room_name, 0) > 1 else room_name
         starter_items.append(
             {
                 "label": label,
-                "text": f"다음 주 화요일 3교시에 {text_room_name} 예약해줘.",
+                "text": "",
+                "kind": "room",
+                "school_slug": school.slug if school else "",
+                "room_id": str(room.id),
+                "room_name": room_name,
             }
         )
-        if len(starter_items) >= 4:
-            break
     return starter_items

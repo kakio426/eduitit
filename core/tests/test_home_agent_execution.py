@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from classcalendar.models import CalendarEvent
 from core.home_agent_service_bridge import generate_service_preview
-from reservations.models import Reservation, School, SchoolConfig, SpecialRoom
+from reservations.models import GradeRecurringLock, Reservation, School, SchoolConfig, SpecialRoom
 from teacher_law.models import LegalChatMessage
 
 
@@ -51,6 +51,27 @@ class HomeAgentExecutionTests(TestCase):
         self.assertEqual(result["execution"]["draft"]["school_slug"], school.slug)
         self.assertEqual(result["execution"]["draft"]["room_id"], str(room.id))
         self.assertEqual(result["execution"]["draft"]["period"], "3")
+
+    def test_reservation_preview_room_only_does_not_make_up_date_or_period(self):
+        school = School.objects.create(name="우리학교", owner=self.user)
+        SchoolConfig.objects.get_or_create(school=school)
+        room = SpecialRoom.objects.create(school=school, name="미술실")
+
+        result = generate_service_preview(
+            request=self._request(),
+            mode_key="reservation",
+            mode_spec={"badge": "특별실 예약", "default_title": "예약 요청 후보"},
+            text="미술실",
+        )
+
+        self.assertEqual(result["provider"], "reservations")
+        self.assertEqual(result["execution"]["kind"], "reservation")
+        self.assertEqual(result["execution"]["draft"]["school_slug"], school.slug)
+        self.assertEqual(result["execution"]["draft"]["room_id"], str(room.id))
+        self.assertEqual(result["execution"]["draft"]["date"], "")
+        self.assertEqual(result["execution"]["draft"]["period"], "")
+        self.assertIn("날짜를 확인해 주세요.", result["execution"]["warnings"])
+        self.assertIn("교시를 선택해 주세요.", result["execution"]["warnings"])
 
     def test_home_agent_execute_creates_calendar_event(self):
         response = self.client.post(
@@ -117,6 +138,109 @@ class HomeAgentExecutionTests(TestCase):
         self.assertEqual(reservation.grade, 3)
         self.assertEqual(reservation.class_no, 2)
         self.assertEqual(reservation.name, "담임")
+
+    def test_home_agent_execute_allows_matching_grade_locked_slot(self):
+        target_date = date(2026, 4, 22)
+        school = School.objects.create(name="미래초", owner=self.user)
+        SchoolConfig.objects.get_or_create(school=school)
+        room = SpecialRoom.objects.create(school=school, name="과학실")
+        GradeRecurringLock.objects.create(
+            room=room,
+            day_of_week=target_date.weekday(),
+            period=3,
+            grade=4,
+        )
+
+        response = self.client.post(
+            reverse("home_agent_execute"),
+            data=json.dumps(
+                {
+                    "mode_key": "reservation",
+                    "data": {
+                        "school_slug": school.slug,
+                        "room_id": str(room.id),
+                        "date": target_date.strftime("%Y-%m-%d"),
+                        "period": "3",
+                        "owner_type": "class",
+                        "grade": "4",
+                        "class_no": "2",
+                        "name": "담임",
+                        "edit_code": "1234",
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+        self.assertTrue(Reservation.objects.filter(room=room, date=target_date, period=3).exists())
+
+    def test_home_agent_execute_returns_grade_lock_override_warning(self):
+        target_date = date(2026, 4, 22)
+        school = School.objects.create(name="미래초", owner=self.user)
+        SchoolConfig.objects.get_or_create(school=school)
+        room = SpecialRoom.objects.create(school=school, name="과학실")
+        GradeRecurringLock.objects.create(
+            room=room,
+            day_of_week=target_date.weekday(),
+            period=3,
+            grade=4,
+        )
+
+        response = self.client.post(
+            reverse("home_agent_execute"),
+            data=json.dumps(
+                {
+                    "mode_key": "reservation",
+                    "data": {
+                        "school_slug": school.slug,
+                        "room_id": str(room.id),
+                        "date": target_date.strftime("%Y-%m-%d"),
+                        "period": "3",
+                        "owner_type": "class",
+                        "grade": "5",
+                        "class_no": "2",
+                        "name": "담임",
+                        "edit_code": "1234",
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("override_grade_lock", response.json()["field_errors"])
+        self.assertEqual(Reservation.objects.count(), 0)
+
+        override_response = self.client.post(
+            reverse("home_agent_execute"),
+            data=json.dumps(
+                {
+                    "mode_key": "reservation",
+                    "data": {
+                        "school_slug": school.slug,
+                        "room_id": str(room.id),
+                        "date": target_date.strftime("%Y-%m-%d"),
+                        "period": "3",
+                        "owner_type": "class",
+                        "grade": "5",
+                        "class_no": "2",
+                        "name": "담임",
+                        "edit_code": "1234",
+                        "override_grade_lock": True,
+                    },
+                }
+            ),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(override_response.status_code, 200)
+        self.assertEqual(override_response.json()["status"], "ok")
+        self.assertTrue(Reservation.objects.filter(room=room, date=target_date, period=3).exists())
 
     @patch(
         "teacher_law.views.answer_legal_question",
