@@ -164,6 +164,7 @@ class CollectFlowTest(TestCase):
         self.assertContains(submit_response, "data-consent-document-preview")
         self.assertContains(submit_response, "data-preview-image")
         self.assertContains(submit_response, "<img", html=False)
+        self.assertNotContains(submit_response, "data-fetch-as-bytes=\"true\"")
 
         image_response = self.client.get(reverse("collect:template_download", args=[req.id]))
 
@@ -201,6 +202,7 @@ class CollectFlowTest(TestCase):
         self.assertContains(submit_response, "다운로드")
         self.assertContains(submit_response, "data-consent-document-preview")
         self.assertContains(submit_response, "data-file-type=\"pdf\"")
+        self.assertContains(submit_response, "data-fetch-as-bytes=\"true\"")
         self.assertContains(submit_response, "data-preview-pagination")
         self.assertContains(submit_response, "consent/pdf_preview.js")
         self.assertContains(submit_response, f"{reverse('collect:template_download', args=[req.id])}?download=1")

@@ -46,6 +46,7 @@
                 data-file-type="{{ req.template_file_preview_type }}"
                 data-file-name="{{ req.template_file_display_name }}"
                 data-max-width="860"
+                {% if req.template_file_is_pdf %}data-fetch-as-bytes="true"{% endif %}
             >
                 <div class="overflow-auto rounded-xl border border-amber-100 bg-white p-3">
                     <div data-preview-stage class="relative mx-auto w-fit max-w-full">

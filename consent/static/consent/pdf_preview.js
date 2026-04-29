@@ -137,6 +137,21 @@ async function loadPdfJs() {
   return pdfjsPromise;
 }
 
+async function fetchPdfBytes(sourceUrl) {
+  const response = await fetch(sourceUrl, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`PDF fetch failed (${response.status})`);
+  }
+  const buffer = await response.arrayBuffer();
+  if (!buffer.byteLength) {
+    throw new Error("PDF fetch returned empty body");
+  }
+  return new Uint8Array(buffer);
+}
+
 function buildReadyStatus(kind, currentPage, totalPages) {
   if (kind === "upload") {
     return `업로드 전 확인 완료 · ${currentPage} / ${totalPages}쪽`;
@@ -522,7 +537,10 @@ async function loadPdfPreview(root, sourceUrl, kind) {
   const state = getPreviewState(root);
   state.kind = kind;
   const pdfjsLib = await loadPdfJs();
-  state.pdf = await pdfjsLib.getDocument(sourceUrl).promise;
+  const documentSource = root.dataset.fetchAsBytes === "true"
+    ? { data: await fetchPdfBytes(sourceUrl) }
+    : sourceUrl;
+  state.pdf = await pdfjsLib.getDocument(documentSource).promise;
   state.totalPages = state.pdf.numPages;
   state.currentPage = 1;
   bindPagination(root);
