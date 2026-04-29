@@ -294,6 +294,9 @@ def build_developer_chat_home_card_context(user):
         "is_admin": False,
         "unread_count": 0,
         "unread_thread_count": 0,
+        "notification_count": 0,
+        "notification_label": "",
+        "notification_aria_label": "문의",
     }
     if not card["enabled"]:
         return card
@@ -313,6 +316,11 @@ def build_developer_chat_home_card_context(user):
     card["preview_threads"] = serialized_unread_threads[:HOME_PREVIEW_THREAD_LIMIT]
     card["unread_count"] = unread_count
     card["unread_thread_count"] = unread_thread_count
+    card["notification_count"] = unread_thread_count or unread_count
+
+    if unread_count:
+        card["notification_label"] = "새 문의" if is_admin_view else "새 답장"
+        card["notification_aria_label"] = f"문의, {card['notification_label']} {card['notification_count']}건"
 
     if is_admin_view:
         if unread_thread_count:

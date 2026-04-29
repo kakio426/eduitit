@@ -3063,65 +3063,31 @@ class HomeV4ViewTest(TestCase):
         self.assertLess(messagebox_index, mobile_quickdrop_index)
         self.assertLess(mobile_quickdrop_index, sns_index)
 
-    def test_v4_home_places_developer_chat_card_under_menu_and_moves_mobile_card_to_bottom(self):
+    def test_v4_home_moves_developer_chat_entry_to_topbar_contact_button(self):
         self._login('v4devchatcard')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-developer-chat-card="desktop"', content)
+        self.assertIn('data-home-contact-link="desktop"', content)
+        self.assertIn('data-home-contact-link="tablet"', content)
+        self.assertIn('data-home-contact-link="mobile"', content)
         self.assertIn(f'href="{reverse("messagebox:developer_chat")}"', content)
+        self.assertNotIn('data-home-contact-unread-badge=', content)
+        self.assertNotIn('data-home-v6-developer-chat-card="desktop"', content)
+        self.assertNotIn('data-home-v6-developer-chat-card="mobile"', content)
 
-        desktop_menu_index = content.index('data-home-v6-nav="desktop"')
-        desktop_card_index = content.index('data-home-v6-developer-chat-card="desktop"')
-        calendar_index = content.index('data-home-v6-calendar-panel="desktop"')
-
-        self.assertLess(desktop_menu_index, desktop_card_index)
-        self.assertLess(desktop_card_index, calendar_index)
-
-    def test_v4_home_developer_chat_card_renders_two_line_title(self):
-        self._login('v4devchattitle')
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertContains(response, 'data-home-v6-developer-chat-title="two-line"', html=False)
-        self.assertIn('<span class="home-v6-developer-chat-title-line">개발자야</span>', content)
-        self.assertIn('<span class="home-v6-developer-chat-title-line">도와줘</span>', content)
-
-    def test_v4_admin_home_developer_chat_card_shows_recent_thread_preview(self):
-        admin = _create_onboarded_user('v4devadmin', nickname='홈관리자')
-        admin.is_staff = True
-        admin.save(update_fields=['is_staff'])
-        UserPolicyConsent.objects.create(
-            user=admin,
-            provider='direct',
-            terms_version=TERMS_VERSION,
-            privacy_version=PRIVACY_VERSION,
-            agreed_at=timezone.now(),
-            agreement_source='required_gate',
-        )
-        self.client.login(username='v4devadmin', password='pass1234')
-
-        teacher = _create_onboarded_user('v4devteacher', nickname='문의교사')
+    def test_v4_admin_home_contact_button_shows_unread_inquiry_badge(self):
+        teacher = _create_onboarded_user('v4devchatteacher', nickname='문의교사')
         thread = get_or_create_developer_chat_thread(teacher)
         DeveloperChatMessage.objects.create(
             thread=thread,
             sender=teacher,
             sender_role=DeveloperChatMessage.SenderRole.USER,
-            body='알림장 수정이 필요합니다.',
+            body='새 문의가 있습니다.',
         )
-
-        response = self.client.get(reverse('home'))
-        content = response.content.decode('utf-8')
-
-        self.assertIn('문의교사', content)
-        self.assertIn('알림장 수정이 필요합니다.', content)
-        self.assertIn('안읽음 1건', content)
-
-    def test_v4_admin_home_developer_chat_card_hides_read_replied_threads(self):
-        admin = _create_onboarded_user('v4devadminread', nickname='홈관리자')
+        admin = _create_onboarded_user('v4devchatadmin', nickname='운영관리자')
         admin.is_staff = True
         admin.save(update_fields=['is_staff'])
         UserPolicyConsent.objects.create(
@@ -3132,30 +3098,74 @@ class HomeV4ViewTest(TestCase):
             agreed_at=timezone.now(),
             agreement_source='required_gate',
         )
-        self.client.login(username='v4devadminread', password='pass1234')
+        self.client.login(username='v4devchatadmin', password='pass1234')
 
-        teacher = _create_onboarded_user('v4devteacherread', nickname='응답완료교사')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.context['developer_chat_home_card']['notification_count'], 1)
+        self.assertEqual(response.context['developer_chat_home_card']['notification_label'], '새 문의')
+        self.assertIn('aria-label="문의, 새 문의 1건"', content)
+        self.assertIn('data-home-contact-unread-badge="desktop"', content)
+        self.assertIn('data-home-contact-unread-badge="tablet"', content)
+        self.assertIn('data-home-contact-unread-badge="mobile"', content)
+
+    def test_v4_admin_home_contact_button_hides_badge_after_reading_inquiry(self):
+        teacher = _create_onboarded_user('v4devchatreadteacher', nickname='확인교사')
         thread = get_or_create_developer_chat_thread(teacher)
-        DeveloperChatMessage.objects.create(
+        message = DeveloperChatMessage.objects.create(
             thread=thread,
             sender=teacher,
             sender_role=DeveloperChatMessage.SenderRole.USER,
             body='이미 확인한 문의입니다.',
         )
-        mark_thread_as_read(thread, admin)
-        DeveloperChatMessage.objects.create(
-            thread=thread,
-            sender=admin,
-            sender_role=DeveloperChatMessage.SenderRole.ADMIN,
-            body='답변을 마쳤습니다.',
+        admin = _create_onboarded_user('v4devchatreadadmin', nickname='읽음관리자')
+        admin.is_staff = True
+        admin.save(update_fields=['is_staff'])
+        UserPolicyConsent.objects.create(
+            user=admin,
+            provider='direct',
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source='required_gate',
         )
+        mark_thread_as_read(thread, admin, read_at=message.created_at)
+        self.client.login(username='v4devchatreadadmin', password='pass1234')
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
 
-        self.assertNotIn('응답완료교사', content)
-        self.assertNotIn('답변을 마쳤습니다.', content)
-        self.assertIn('새 문의 없음', content)
+        self.assertEqual(response.context['developer_chat_home_card']['notification_count'], 0)
+        self.assertNotIn('data-home-contact-unread-badge=', content)
+        self.assertIn('aria-label="문의"', content)
+
+    def test_v4_public_home_does_not_show_topbar_contact_button(self):
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self._assert_public_home_uses_v6(response, content)
+        self.assertNotIn('data-home-contact-link=', content)
+
+    def test_v4_home_settings_menu_removes_developer_chat_link(self):
+        self._login('v4devchatmenu')
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+
+        self.assertNotIn('settings-support', content)
+        self.assertNotIn('개발자 채팅', content)
+        self.assertIn('프로필 · 메이트 · 명부', content)
+
+    def test_v4_settings_page_removes_support_chat_card(self):
+        self._login('v4settingssupport')
+        response = self.client.get(reverse('settings'))
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('data-settings-support-card="true"', content)
+        self.assertNotIn('문의 · 채팅', content)
+        self.assertNotIn('developer_chat_home_card', response.context)
+        self.assertIn('공용 명부 허브', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
     def test_v4_mobile_calendar_first_flag_swaps_hamburger_for_quick_tools(self):
@@ -3659,7 +3669,8 @@ class HomeV5ViewTest(TestCase):
         self.assertIn("core/partials/home_v6_teacher_buddy_panel_mobile.html", template)
         self.assertIn("core/partials/home_v6_teacher_buddy_panel_rail.html", template)
         self.assertIn("core/partials/home_v6_schoolcomm_card.html", template)
-        self.assertIn("core/partials/home_v6_developer_chat_card.html", template)
+        self.assertNotIn("core/partials/home_v6_developer_chat_card.html", template)
+        self.assertNotIn("core/partials/home_v4_developer_chat_card.html", template)
         self.assertIn("core/partials/home_v6_sns_mobile_preview_panel.html", template)
         self.assertIn("core/partials/home_v6_sns_widget.html", template)
         self.assertIn('json_script:"home-frontend-config"', template)
@@ -3699,7 +3710,8 @@ class HomeV5ViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         _assert_authenticated_home_context_contract(self, response, design_version='v6')
         self.assertEqual(response.context['developer_chat_home_card']['title'], '개발자야 도와줘')
-        self.assertIn('data-home-v6-developer-chat-card="desktop"', content)
+        self.assertIn('data-home-contact-link="desktop"', content)
+        self.assertNotIn('data-home-v6-developer-chat-card="desktop"', content)
         self.assertNotIn('data-home-v4-developer-chat-card="desktop"', content)
 
     @patch('classcalendar.views.build_calendar_surface_context', side_effect=RuntimeError('calendar boom'))

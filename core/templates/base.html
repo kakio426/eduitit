@@ -199,6 +199,24 @@
                             <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
                         </a>
                         {% endif %}
+                    {% if current_view == 'home' and user.is_authenticated %}
+                    <a
+                        href="{% url 'messagebox:developer_chat' %}"
+                        class="shell-utility-button shell-utility-button--subtle relative"
+                        data-home-contact-link="desktop"
+                        aria-label="{{ developer_chat_home_card.notification_aria_label|default:'문의' }}"
+                    >
+                        <i class="fa-regular fa-comments text-sm"></i>
+                        <span>문의</span>
+                        {% if developer_chat_home_card.notification_count %}
+                        <span
+                            class="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-black leading-none text-white shadow-sm"
+                            data-home-contact-unread-badge="desktop"
+                            title="{{ developer_chat_home_card.notification_label }}"
+                        >{{ developer_chat_home_card.notification_count }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
                     {% if user.is_authenticated %}
 
                     {% if has_hs_classrooms %}
@@ -354,6 +372,24 @@
                         <span data-home-agent-limit-chip-label="true">{{ home_agent_limit_nav_action.label }}</span>
                     </a>
                     {% endif %}
+                    {% if current_view == 'home' and user.is_authenticated %}
+                    <a
+                        href="{% url 'messagebox:developer_chat' %}"
+                        class="relative inline-flex items-center gap-2 rounded-full shell-pill px-3 py-2 text-sm font-bold shadow-clay"
+                        data-home-contact-link="tablet"
+                        aria-label="{{ developer_chat_home_card.notification_aria_label|default:'문의' }}"
+                    >
+                        <i class="fa-regular fa-comments text-xs"></i>
+                        <span>문의</span>
+                        {% if developer_chat_home_card.notification_count %}
+                        <span
+                            class="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-black leading-none text-white shadow-sm"
+                            data-home-contact-unread-badge="tablet"
+                            title="{{ developer_chat_home_card.notification_label }}"
+                        >{{ developer_chat_home_card.notification_count }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
                     {% if user.is_authenticated %}
                     <div class="inline-flex items-center gap-2 rounded-full shell-pill shell-pill--strong px-3 py-2 shadow-clay-inner text-sm font-bold">
                         <span class="flex h-8 w-8 items-center justify-center rounded-full shell-avatar">
@@ -382,6 +418,24 @@
                     <i class="fa-solid fa-magnifying-glass text-base"></i>
                 </button>
                 {% endif %}
+                {% endif %}
+                {% if current_view == 'home' and user.is_authenticated %}
+                <a
+                    href="{% url 'messagebox:developer_chat' %}"
+                    class="relative md:hidden lg:hidden h-10 rounded-xl shell-icon-button shadow-clay-inner flex items-center justify-center gap-1.5 px-2.5 transition"
+                    data-home-contact-link="mobile"
+                    aria-label="{{ developer_chat_home_card.notification_aria_label|default:'문의' }}"
+                    title="{{ developer_chat_home_card.notification_label|default:'문의' }}"
+                >
+                    <i class="fa-regular fa-comments text-sm"></i>
+                    <span class="text-sm font-bold leading-none">문의</span>
+                    {% if developer_chat_home_card.notification_count %}
+                    <span
+                        class="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-black leading-none text-white shadow-sm"
+                        data-home-contact-unread-badge="mobile"
+                    >{{ developer_chat_home_card.notification_count }}</span>
+                    {% endif %}
+                </a>
                 {% endif %}
 
                 <!-- Mobile Hamburger Button -->

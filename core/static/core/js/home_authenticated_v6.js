@@ -848,9 +848,9 @@
                 var payload = quotaPayload && typeof quotaPayload === 'object' ? quotaPayload : {};
                 this.homeAgentLimitModal = {
                     title: trimLine(payload.title || '오늘 AI 한도 끝'),
-                    message: trimLine(payload.message || fallbackMessage || '개발자 채팅으로 요청을 남길 수 있어요.'),
+                    message: trimLine(payload.message || fallbackMessage || '문의로 요청을 남길 수 있어요.'),
                     statusText: trimLine(payload.status_text || ''),
-                    actionLabel: trimLine(payload.action_label || '개발자 채팅'),
+                    actionLabel: trimLine(payload.action_label || '문의'),
                     actionHref: trimLine(payload.action_href || ''),
                     dismissUrl: trimLine(payload.dismiss_url || ''),
                     chipLabel: trimLine(payload.chip_label || '한도 요청'),

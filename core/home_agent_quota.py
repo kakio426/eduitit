@@ -17,7 +17,7 @@ LIMIT_REACHED_ERROR_CODE = "home_agent_quota_exceeded"
 LIMIT_REQUEST_LABEL = "한도 요청"
 LIMIT_MODAL_TITLE = "오늘 AI 한도 끝"
 LIMIT_MODAL_MESSAGE = (
-    "인디스쿨 함께 사용하기에 홍보글을 올린 뒤 캡처를 개발자 채팅으로 보내주시면, "
+    "인디스쿨 함께 사용하기에 홍보글을 올린 뒤 캡처를 문의로 보내주시면, "
     "감사의 의미로 2주 동안 하루 30회까지 추가로 이용하실 수 있도록 열어드릴게요."
 )
 LIMIT_PREFILL_TEXT = (
@@ -175,7 +175,7 @@ def build_home_agent_limit_response_payload(user):
             "title": LIMIT_MODAL_TITLE,
             "message": LIMIT_MODAL_MESSAGE,
             "status_text": f"오늘 {snapshot['used_count']} / {snapshot['daily_limit']}회 사용",
-            "action_label": "개발자 채팅",
+            "action_label": "문의",
             "action_href": snapshot["request_url"],
             "dismiss_url": reverse("home_agent_quota_dismiss"),
             "chip_label": LIMIT_REQUEST_LABEL,
