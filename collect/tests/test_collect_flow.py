@@ -1,9 +1,12 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from collect.models import CollectionRequest, Submission
+from collect.views import _build_download_response
 
 
 class CollectFlowTest(TestCase):
@@ -212,6 +215,43 @@ class CollectFlowTest(TestCase):
 
         self.assertEqual(download_response.status_code, 200)
         self.assertIn("attachment;", download_response["Content-Disposition"])
+
+    def test_reference_pdf_preview_buffers_remote_file_for_pdfjs(self):
+        remote_pdf = b"%PDF-1.4\n% remote collect reference\n"
+
+        class RemoteOnlyFile:
+            url = "https://storage.example/guide.pdf"
+
+            def open(self, *_args, **_kwargs):
+                raise OSError("remote only")
+
+        class FakeRemoteResponse:
+            content = remote_pdf
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def raise_for_status(self):
+                return None
+
+        with patch("collect.views.requests.get", return_value=FakeRemoteResponse()) as mock_get:
+            response = _build_download_response(
+                RemoteOnlyFile(),
+                filename="참고자료.pdf",
+                as_attachment=False,
+                buffer_remote=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, remote_pdf)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(response["Content-Length"], str(len(remote_pdf)))
+        self.assertIn("inline;", response["Content-Disposition"])
+        self.assertEqual(response["Cache-Control"], "no-store, private")
+        mock_get.assert_called_once_with("https://storage.example/guide.pdf", timeout=(5, 60))
 
     def test_public_submit_page_uses_sensitive_cache_headers(self):
         req = CollectionRequest.objects.create(

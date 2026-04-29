@@ -126,7 +126,13 @@ def _remote_file_chunks(file_url, chunk_size=8192):
                 yield chunk
 
 
-def _build_download_response(file_field, *, filename, as_attachment=True):
+def _remote_file_bytes(file_url):
+    with requests.get(file_url, timeout=(5, 60)) as resp:
+        resp.raise_for_status()
+        return resp.content
+
+
+def _build_download_response(file_field, *, filename, as_attachment=True, buffer_remote=False):
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     disposition = "attachment" if as_attachment else "inline"
 
@@ -136,6 +142,12 @@ def _build_download_response(file_field, *, filename, as_attachment=True):
         file_url = getattr(file_field, "url", "")
         if not file_url or not str(file_url).startswith("http"):
             raise
+        if buffer_remote:
+            content = _remote_file_bytes(file_url)
+            response = HttpResponse(content, content_type=content_type)
+            response["Content-Length"] = str(len(content))
+            response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(filename)}"
+            return _apply_sensitive_cache_headers(response)
         response = StreamingHttpResponse(
             _async_wrap_sync_iterable(_remote_file_chunks(file_url)),
             content_type=content_type,
@@ -1601,8 +1613,10 @@ def template_download(request, request_id):
         collection_req.id,
         _request_client_ip(request),
     )
+    inline_preview = not force_download and collection_req.template_file_is_previewable
     return _build_download_response(
         collection_req.template_file,
         filename=download_name,
-        as_attachment=force_download or not collection_req.template_file_is_previewable,
+        as_attachment=not inline_preview,
+        buffer_remote=inline_preview and collection_req.template_file_is_pdf,
     )
