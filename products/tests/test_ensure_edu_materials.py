@@ -1,6 +1,13 @@
 from django.core.management import call_command
 from django.test import TestCase
 
+from core.models import UserProfile
+from edu_materials.models import EduMaterial
+from products.management.commands.ensure_edu_materials import (
+    CURRICULUM_LAB_OWNER_NICKNAME,
+    CURRICULUM_LAB_OWNER_USERNAME,
+    CURRICULUM_LAB_SPECS,
+)
 from products.models import Product, ProductFeature
 
 
@@ -36,3 +43,58 @@ class EnsureEduMaterialsCommandTests(TestCase):
             ProductFeature.objects.filter(product=product).values_list("icon", flat=True)
         )
         self.assertSetEqual(feature_icons, {"🧪", "🛡️", "📎"})
+
+    def test_command_seeds_curriculum_lab_materials_idempotently(self):
+        call_command("ensure_edu_materials")
+
+        materials = EduMaterial.objects.filter(
+            teacher__username=CURRICULUM_LAB_OWNER_USERNAME,
+            title__in=[spec["title"] for spec in CURRICULUM_LAB_SPECS],
+            is_published=True,
+        )
+
+        self.assertEqual(materials.count(), len(CURRICULUM_LAB_SPECS))
+        self.assertEqual(
+            set(materials.values_list("subject", flat=True)),
+            {"MATH", "SCIENCE"},
+        )
+        self.assertTrue(
+            materials.filter(grade="초등학교 3~4학년").exists()
+        )
+        self.assertTrue(
+            materials.filter(grade="초등학교 5~6학년").exists()
+        )
+        self.assertTrue(
+            materials.filter(html_content__contains="const config =").exists()
+        )
+        self.assertTrue(
+            UserProfile.objects.filter(
+                user__username=CURRICULUM_LAB_OWNER_USERNAME,
+                nickname=CURRICULUM_LAB_OWNER_NICKNAME,
+            ).exists()
+        )
+
+        call_command("ensure_edu_materials")
+
+        self.assertEqual(
+            EduMaterial.objects.filter(
+                teacher__username=CURRICULUM_LAB_OWNER_USERNAME,
+                title__in=[spec["title"] for spec in CURRICULUM_LAB_SPECS],
+            ).count(),
+            len(CURRICULUM_LAB_SPECS),
+        )
+
+    def test_seeded_curriculum_lab_material_opens_detail_and_run_pages(self):
+        call_command("ensure_edu_materials")
+        material = EduMaterial.objects.get(title="분모가 달라도 같은 크기 실험실")
+
+        list_response = self.client.get("/edu-materials/?q=분모")
+        detail_response = self.client.get(f"/edu-materials/{material.id}/")
+        run_response = self.client.get(f"/edu-materials/{material.id}/run/")
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, material.title)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, material.title)
+        self.assertEqual(run_response.status_code, 200)
+        self.assertContains(run_response, material.title)
