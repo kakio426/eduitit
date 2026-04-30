@@ -127,13 +127,13 @@ CURRICULUM_LAB_SPECS = [
         "grade": "초등학교 3~4학년",
         "unit_title": "자석의 이용",
         "material_type": EduMaterial.MaterialType.GAME,
-        "summary": "두 자석의 극과 거리를 바꾸며 끌어당김과 밀어냄을 확인합니다.",
+        "summary": "오른쪽 자석을 직접 끌고 극을 바꾸며 끌어당김과 밀어냄을 확인합니다.",
         "tags": ["자석", "극", "힘", "거리", "2022개정"],
         "mode": "magnet",
         "question": "같은 극과 다른 극은 왜 서로 다른 방향으로 힘을 줄까요?",
         "controls": [
-            {"id": "distance", "label": "자석 사이 거리", "min": 60, "max": 230, "value": 130},
-            {"id": "flip", "label": "오른쪽 자석 극", "min": 0, "max": 1, "value": 0},
+            {"id": "distance", "label": "자석 사이 거리", "min": 30, "max": 300, "value": 120},
+            {"id": "flip", "label": "오른쪽 왼쪽 끝 극", "min": 0, "max": 1, "value": 0},
         ],
     },
     {
@@ -426,7 +426,7 @@ def _build_event_values(spec):
         "volume": {"length": 4, "depth": 3, "height": 3},
         "state": {"temp": 100},
         "shadow": {"sun": 20, "object": 120},
-        "magnet": {"distance": 80, "flip": 1},
+        "magnet": {"distance": 55, "flip": 0},
         "circuit": {"cells": 2, "switch_on": 1},
         "combustion": {"oxygen": 20, "fuel": 85, "heat": 90},
     }
@@ -763,6 +763,8 @@ const speedLabel = document.getElementById("speedLabel");
 let isPlaying = false;
 let lastTick = 0;
 let rafId = null;
+let dragTarget = null;
+let dragOffsetX = 0;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const round = (value, digits = 2) => Number(value).toFixed(digits).replace(/\\.0+$/, "").replace(/(\\.\\d*?)0+$/, "$1");
@@ -787,6 +789,11 @@ function drawText(x, y, text, size = 20, fill = "#102033", weight = 800) {{
   svg.appendChild(svgNode("text", {{x, y, "font-size": size, fill, "font-weight": weight, "font-family": "system-ui, sans-serif"}}, text));
 }}
 
+function formatControlValue(control, value) {{
+  if (config.mode === "magnet" && control.id === "flip") return Number(value) === 0 ? "N" : "S";
+  return value;
+}}
+
 function renderLessonText() {{
   teacherLine.textContent = config.teacherLine;
   learningQuestions.innerHTML = config.questions.map((question) => `<li>${{question}}</li>`).join("");
@@ -801,7 +808,7 @@ function renderControls() {{
     wrap.innerHTML = `
       <div class="control-row">
         <span>${{control.label}}</span>
-        <output id="${{outputId}}">${{state[control.id]}}</output>
+        <output id="${{outputId}}">${{formatControlValue(control, state[control.id])}}</output>
       </div>
       <input type="range" data-control-id="${{control.id}}" min="${{control.min}}" max="${{control.max}}" value="${{state[control.id]}}" step="${{control.step || 1}}">
     `;
@@ -809,8 +816,8 @@ function renderControls() {{
     const output = wrap.querySelector("output");
     range.addEventListener("input", () => {{
       state[control.id] = Number(range.value);
-      output.value = state[control.id];
-      output.textContent = state[control.id];
+      output.value = formatControlValue(control, state[control.id]);
+      output.textContent = formatControlValue(control, state[control.id]);
       render();
     }});
     controlsRoot.appendChild(wrap);
@@ -820,10 +827,11 @@ function renderControls() {{
 function syncControlValues() {{
   controlsRoot.querySelectorAll("input[data-control-id]").forEach((range) => {{
     const id = range.dataset.controlId;
+    const control = config.controls.find((item) => item.id === id);
     const output = range.closest(".control").querySelector("output");
     range.value = state[id];
-    output.value = state[id];
-    output.textContent = state[id];
+    output.value = formatControlValue(control, state[id]);
+    output.textContent = formatControlValue(control, state[id]);
   }});
 }}
 
@@ -996,26 +1004,70 @@ function renderDecimal() {{
 function renderVolume() {{
   const l = state.length, d = state.depth, h = state.height;
   const volume = l * d * h;
+  const base = l * d;
   setMetrics([
     {{label: "부피", value: `${{volume}}개`}},
-    {{label: "한 층", value: `${{l * d}}개`}},
+    {{label: "한 층", value: `${{base}}개`}},
     {{label: "층수", value: `${{h}}층`}},
   ]);
   clearSvg();
-  const sx = 250, sy = 310, size = 34;
-  for (let z = 0; z < h; z += 1) {{
-    for (let y = 0; y < d; y += 1) {{
-      for (let x = 0; x < l; x += 1) {{
-        const px = sx + x * size + y * 14;
-        const py = sy - z * 30 - y * 14;
-        svg.appendChild(svgNode("rect", {{x: px, y: py, width: size, height: size, rx: 4, fill: "#c7d2fe", stroke: "#6366f1", opacity: .88}}));
-      }}
+  drawText(70, 64, `${{l}} × ${{d}} × ${{h}} = ${{volume}}`, 42, color("purple"), 950);
+  drawText(70, 106, `바닥 한 층 ${{l}}×${{d}} = ${{base}}개, 그 층을 ${{h}}번 쌓기`, 23, color("slate"), 850);
+
+  const cell = Math.min(38, Math.floor(250 / Math.max(l, d)));
+  const floorX = 86, floorY = 150;
+  svg.appendChild(svgNode("rect", {{x: floorX - 12, y: floorY - 36, width: l * cell + 24, height: d * cell + 70, rx: 14, fill: "#f8fafc", stroke: "#dbe4ef", "stroke-width": 3}}));
+  drawText(floorX, floorY - 12, "바닥 한 층", 24, color("blue"), 950);
+  for (let row = 0; row < d; row += 1) {{
+    for (let col = 0; col < l; col += 1) {{
+      svg.appendChild(svgNode("rect", {{
+        x: floorX + col * cell,
+        y: floorY + row * cell,
+        width: cell - 3,
+        height: cell - 3,
+        rx: 5,
+        fill: "#dbeafe",
+        stroke: "#2563eb",
+        "stroke-width": 2,
+      }}));
     }}
   }}
-  drawText(90, 80, `${{l}} × ${{d}} × ${{h}} = ${{volume}}`, 42, color("purple"), 950);
-  drawText(90, 128, `바닥 ${{l * d}}개를 ${{h}}층 쌓기`, 24, color("slate"));
-  caption.textContent = "부피는 단위 정육면체가 몇 개 들어가는지 세는 양입니다.";
-  return "먼저 한 층을 세고, 그 층이 몇 번 쌓였는지 보면 곱셈 구조가 보입니다.";
+  drawText(floorX, floorY + d * cell + 38, `${{base}}개`, 28, color("blue"), 950);
+
+  const stackX = 476, stackBaseY = 326;
+  const slabW = 58 + l * 32;
+  const slabD = 26 + d * 10;
+  const slabH = 24;
+  const layerRise = 33;
+  const drawSlab = (index) => {{
+    const x = stackX;
+    const y = stackBaseY - index * layerRise;
+    const fillTop = index % 2 === 0 ? "#ddd6fe" : "#ede9fe";
+    svg.appendChild(svgNode("polygon", {{
+      points: `${{x}},${{y}} ${{x + slabW}},${{y - slabD}} ${{x + slabW + slabD}},${{y}} ${{x + slabD}},${{y + slabD}}`,
+      fill: fillTop,
+      stroke: "#7c3aed",
+      "stroke-width": 3,
+    }}));
+    svg.appendChild(svgNode("polygon", {{
+      points: `${{x + slabD}},${{y + slabD}} ${{x + slabW + slabD}},${{y}} ${{x + slabW + slabD}},${{y + slabH}} ${{x + slabD}},${{y + slabD + slabH}}`,
+      fill: "#c4b5fd",
+      stroke: "#7c3aed",
+      "stroke-width": 3,
+    }}));
+    svg.appendChild(svgNode("polygon", {{
+      points: `${{x}},${{y}} ${{x + slabD}},${{y + slabD}} ${{x + slabD}},${{y + slabD + slabH}} ${{x}},${{y + slabH}}`,
+      fill: "#a78bfa",
+      stroke: "#7c3aed",
+      "stroke-width": 3,
+    }}));
+    drawText(x + slabW + slabD + 16, y + 15, `${{index + 1}}층`, 18, color("purple"), 850);
+  }};
+  for (let z = 0; z < h; z += 1) drawSlab(z);
+  drawText(520, 88, "층으로 쌓기", 28, color("purple"), 950);
+  drawText(520, 122, `${{base}}개짜리 한 층 × ${{h}}층`, 23, color("slate"), 850);
+  caption.textContent = "왼쪽에서 바닥 한 층의 단위 정육면체 수를 세고, 오른쪽에서 그 층이 몇 번 쌓였는지 확인합니다.";
+  return "부피는 바닥 한 층의 개수에 층수를 곱하면 됩니다.";
 }}
 
 function renderState() {{
@@ -1065,31 +1117,107 @@ function renderShadow() {{
   return "그림자는 빛이 물체에 막혀 생긴 어두운 자리입니다.";
 }}
 
+function getMagnetDistanceControl() {{
+  return config.controls.find((control) => control.id === "distance");
+}}
+
+function getMagnetLayout() {{
+  return {{leftX: 130, y: 158, width: 150, height: 86}};
+}}
+
+function svgClientX(event) {{
+  const rect = svg.getBoundingClientRect();
+  return (event.clientX - rect.left) * (900 / rect.width);
+}}
+
+function setMagnetDistanceFromPointer(event) {{
+  const control = getMagnetDistanceControl();
+  const layout = getMagnetLayout();
+  const rawGap = Math.round(svgClientX(event) - dragOffsetX - (layout.leftX + layout.width));
+  state.distance = clamp(rawGap, Number(control.min), Number(control.max));
+  syncControlValues();
+  render();
+}}
+
+function beginMagnetDrag(event) {{
+  if (config.mode !== "magnet") return;
+  setPlaying(false);
+  dragTarget = "right-magnet";
+  const layout = getMagnetLayout();
+  const control = getMagnetDistanceControl();
+  const gap = clamp(state.distance, Number(control.min), Number(control.max));
+  dragOffsetX = svgClientX(event) - (layout.leftX + layout.width + gap);
+  if (svg.setPointerCapture) svg.setPointerCapture(event.pointerId);
+  setMagnetDistanceFromPointer(event);
+  event.preventDefault();
+}}
+
+function handleMagnetDragMove(event) {{
+  if (dragTarget !== "right-magnet") return;
+  setMagnetDistanceFromPointer(event);
+  event.preventDefault();
+}}
+
+function endMagnetDrag(event) {{
+  if (dragTarget !== "right-magnet") return;
+  dragTarget = null;
+  dragOffsetX = 0;
+  if (svg.releasePointerCapture) {{
+    try {{ svg.releasePointerCapture(event.pointerId); }} catch (error) {{}}
+  }}
+}}
+
 function renderMagnet() {{
-  const distance = state.distance;
-  const same = state.flip === 0;
-  const force = Math.max(1, Math.round(240 / distance * 10));
+  const control = getMagnetDistanceControl();
+  const gap = clamp(state.distance, Number(control.min), Number(control.max));
+  state.distance = gap;
+  const rightFacingPole = state.flip === 0 ? "N" : "S";
+  const leftFacingPole = "S";
+  const attracts = leftFacingPole !== rightFacingPole;
+  const force = Math.max(1, Math.round(900 / Math.max(gap, 30)));
   setMetrics([
-    {{label: "극 조합", value: same ? "N-N" : "N-S"}},
-    {{label: "거리", value: distance}},
+    {{label: "마주 보는 극", value: `${{leftFacingPole}}-${{rightFacingPole}}`}},
+    {{label: "힘 방향", value: attracts ? "끌어당김" : "밀어냄"}},
     {{label: "힘 느낌", value: force}},
   ]);
   clearSvg();
-  const leftX = 240, rightX = leftX + distance;
-  const y = 180;
-  svg.appendChild(svgNode("rect", {{x: leftX, y, width: 130, height: 80, rx: 10, fill: "#ef4444"}}));
-  svg.appendChild(svgNode("rect", {{x: leftX + 65, y, width: 65, height: 80, rx: 10, fill: "#2563eb"}}));
-  svg.appendChild(svgNode("rect", {{x: rightX, y, width: 130, height: 80, rx: 10, fill: same ? "#ef4444" : "#2563eb"}}));
-  svg.appendChild(svgNode("rect", {{x: rightX + 65, y, width: 65, height: 80, rx: 10, fill: same ? "#2563eb" : "#ef4444"}}));
-  drawText(leftX + 22, y + 50, "N", 32, "#fff", 950);
-  drawText(leftX + 88, y + 50, "S", 32, "#fff", 950);
-  drawText(rightX + 22, y + 50, same ? "N" : "S", 32, "#fff", 950);
-  drawText(rightX + 88, y + 50, same ? "S" : "N", 32, "#fff", 950);
-  const arrow = same ? "←   →" : "→   ←";
-  drawText(390, 330, same ? "서로 밀어냄" : "서로 끌어당김", 36, same ? color("red") : color("green"), 950);
-  drawText(405, 128, arrow, 40, color("slate"), 950);
-  caption.textContent = "자석은 극의 조합과 거리에 따라 힘의 방향과 세기가 달라집니다.";
-  return same ? "같은 극끼리는 서로 밀어냅니다." : "다른 극끼리는 서로 끌어당깁니다.";
+  const layout = getMagnetLayout();
+  const leftX = layout.leftX, y = layout.y, w = layout.width, h = layout.height;
+  const rightX = leftX + w + gap;
+  const centerGap = leftX + w + gap / 2;
+  const poleFill = (pole) => pole === "N" ? "#ef4444" : "#2563eb";
+  const drawMagnet = (x, leftPole, rightPole, draggable = false) => {{
+    const group = svgNode("g", {{
+      "data-drag-target": draggable ? "right-magnet" : "fixed-magnet",
+      tabindex: draggable ? "0" : "-1",
+      role: draggable ? "slider" : "img",
+      "aria-label": draggable ? "오른쪽 자석을 좌우로 끌어 거리 조절" : "왼쪽 기준 자석",
+    }});
+    if (draggable) {{
+      group.style.cursor = "grab";
+      group.addEventListener("pointerdown", beginMagnetDrag);
+    }}
+    group.appendChild(svgNode("rect", {{x, y: y - 18, width: w, height: h + 36, rx: 14, fill: "transparent"}}));
+    group.appendChild(svgNode("rect", {{x, y, width: w / 2, height: h, rx: 12, fill: poleFill(leftPole)}}));
+    group.appendChild(svgNode("rect", {{x: x + w / 2, y, width: w / 2, height: h, rx: 12, fill: poleFill(rightPole)}}));
+    group.appendChild(svgNode("line", {{x1: x + w / 2, y1: y, x2: x + w / 2, y2: y + h, stroke: "#fff", "stroke-width": 3, opacity: .85}}));
+    group.appendChild(svgNode("rect", {{x, y, width: w, height: h, rx: 12, fill: "none", stroke: "#102033", "stroke-width": 4}}));
+    group.appendChild(svgNode("text", {{x: x + 31, y: y + 54, "font-size": 34, fill: "#fff", "font-weight": 950, "font-family": "system-ui, sans-serif"}}, leftPole));
+    group.appendChild(svgNode("text", {{x: x + 106, y: y + 54, "font-size": 34, fill: "#fff", "font-weight": 950, "font-family": "system-ui, sans-serif"}}, rightPole));
+    svg.appendChild(group);
+  }};
+  drawMagnet(leftX, "N", "S", false);
+  drawMagnet(rightX, rightFacingPole, rightFacingPole === "N" ? "S" : "N", true);
+  svg.appendChild(svgNode("line", {{x1: leftX + w, y1: y + h + 40, x2: rightX, y2: y + h + 40, stroke: "#64748b", "stroke-width": 4, "stroke-dasharray": "8 8"}}));
+  svg.appendChild(svgNode("line", {{x1: leftX + w, y1: y + h + 28, x2: leftX + w, y2: y + h + 52, stroke: "#64748b", "stroke-width": 4}}));
+  svg.appendChild(svgNode("line", {{x1: rightX, y1: y + h + 28, x2: rightX, y2: y + h + 52, stroke: "#64748b", "stroke-width": 4}}));
+  drawText(centerGap - 50, y + h + 82, `${{gap}} 거리`, 22, color("slate"), 850);
+  drawText(290, 96, `마주 보는 극 ${{leftFacingPole}}-${{rightFacingPole}}`, 30, color("slate"), 950);
+  drawText(342, 320, attracts ? "서로 끌어당김" : "서로 밀어냄", 38, attracts ? color("green") : color("red"), 950);
+  drawText(390, 134, attracts ? "→   ←" : "←   →", 46, attracts ? color("green") : color("red"), 950);
+  drawText(rightX + 6, y - 28, "직접 드래그", 20, color("amber"), 950);
+  caption.textContent = "오른쪽 자석을 직접 끌어 거리를 바꾸고, 오른쪽 왼쪽 끝 극을 N/S로 바꿔 보세요.";
+  return attracts ? "다른 극끼리는 서로 끌어당깁니다." : "같은 극끼리는 서로 밀어냅니다.";
 }}
 
 function renderCircuit() {{
@@ -1162,6 +1290,12 @@ eventButton.addEventListener("click", triggerKeyMoment);
 speedRange.addEventListener("input", () => {{
   speedLabel.textContent = `배속 ${{speedRange.value}}x`;
 }});
+svg.addEventListener("pointermove", handleMagnetDragMove);
+svg.addEventListener("pointerup", endMagnetDrag);
+svg.addEventListener("pointercancel", endMagnetDrag);
+window.addEventListener("pointermove", handleMagnetDragMove);
+window.addEventListener("pointerup", endMagnetDrag);
+window.addEventListener("pointercancel", endMagnetDrag);
 renderLessonText();
 renderControls();
 render();

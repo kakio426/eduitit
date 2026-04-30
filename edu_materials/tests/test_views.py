@@ -11,7 +11,10 @@ from django.core.management import call_command
 from django.db import connection
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
 from edu_materials.classification import EduMaterialClassificationError, apply_auto_metadata, extract_visible_text
 from edu_materials.models import EduMaterial
 from edu_materials.runtime import build_runtime_html
@@ -699,6 +702,87 @@ class EduMaterialViewTests(TestCase):
         self.assertContains(response, "전체화면 공유판 열기")
         self.assertContains(response, reverse("edu_materials:share_board", args=[material.id]))
         self.assertNotContains(response, "자료 삭제하기")
+
+    @patch("edu_materials.views._apply_auto_metadata_with_feedback")
+    def test_admin_can_manage_curriculum_lab_material(self, mock_metadata):
+        mock_metadata.return_value = None
+        lab_user = User.objects.create_user(
+            username="eduitit_curriculum_lab",
+            email="curriculum-lab@example.com",
+            password="pw123456",
+        )
+        material = EduMaterial.objects.create(
+            teacher=lab_user,
+            title="수업연구소 자료",
+            html_content="<html><body>before</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+        admin_user = User.objects.create_superuser(
+            username="site-admin",
+            email="admin@example.com",
+            password="pw123456",
+        )
+        UserPolicyConsent.objects.create(
+            user=admin_user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=timezone.now(),
+            agreement_source="required_gate",
+        )
+        admin_user.userprofile.nickname = "관리자"
+        admin_user.userprofile.save(update_fields=["nickname"])
+        self.client.force_login(admin_user)
+
+        detail_response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "자료 내용 바꾸기")
+        self.assertContains(detail_response, "자료 삭제하기")
+        self.assertNotContains(detail_response, "내 자료로 복사해 수정하기")
+
+        update_response = self.client.post(
+            reverse("edu_materials:update", args=[material.id]),
+            {
+                "title": "관리자가 고친 자료",
+                "html_content": "<html><body>after</body></html>",
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 302)
+        material.refresh_from_db()
+        self.assertEqual(material.title, "관리자가 고친 자료")
+        self.assertIn("after", material.html_content)
+
+        delete_response = self.client.post(reverse("edu_materials:delete", args=[material.id]))
+
+        self.assertEqual(delete_response.status_code, 302)
+        self.assertFalse(EduMaterial.objects.filter(id=material.id).exists())
+
+    def test_regular_teacher_cannot_manage_curriculum_lab_material(self):
+        lab_user = User.objects.create_user(
+            username="eduitit_curriculum_lab",
+            email="curriculum-lab@example.com",
+            password="pw123456",
+        )
+        material = EduMaterial.objects.create(
+            teacher=lab_user,
+            title="수업연구소 공개 자료",
+            html_content="<html><body>lab</body></html>",
+            is_published=True,
+            subject="SCIENCE",
+            material_type=EduMaterial.MaterialType.PRACTICE,
+        )
+
+        detail_response = self.client.get(reverse("edu_materials:detail", args=[material.id]))
+        delete_response = self.client.post(reverse("edu_materials:delete", args=[material.id]))
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "내 자료로 복사해 수정하기")
+        self.assertNotContains(detail_response, "자료 삭제하기")
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(EduMaterial.objects.filter(id=material.id).exists())
 
     def test_detail_view_links_existing_copy_for_logged_in_teacher(self):
         other_user = self._create_other_user()

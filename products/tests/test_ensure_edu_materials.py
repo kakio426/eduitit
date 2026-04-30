@@ -7,6 +7,7 @@ from products.management.commands.ensure_edu_materials import (
     CURRICULUM_LAB_OWNER_NICKNAME,
     CURRICULUM_LAB_OWNER_USERNAME,
     CURRICULUM_LAB_SPECS,
+    _build_curriculum_lab_html,
 )
 from products.models import Product, ProductFeature
 
@@ -98,3 +99,24 @@ class EnsureEduMaterialsCommandTests(TestCase):
         self.assertContains(detail_response, material.title)
         self.assertEqual(run_response.status_code, 200)
         self.assertContains(run_response, material.title)
+
+    def test_seeded_magnet_material_uses_facing_poles_and_drag(self):
+        spec = next(item for item in CURRICULUM_LAB_SPECS if item["mode"] == "magnet")
+        html = _build_curriculum_lab_html(spec)
+
+        self.assertIn("오른쪽 자석을 직접 끌고", spec["summary"])
+        self.assertIn("오른쪽 왼쪽 끝 극", html)
+        self.assertIn('const leftFacingPole = "S"', html)
+        self.assertIn("const attracts = leftFacingPole !== rightFacingPole", html)
+        self.assertIn("addEventListener(\"pointerdown\", beginMagnetDrag)", html)
+        self.assertIn("dragOffsetX", html)
+        self.assertIn("오른쪽 자석을 좌우로 끌어 거리 조절", html)
+
+    def test_seeded_volume_material_uses_layered_stack_visual(self):
+        spec = next(item for item in CURRICULUM_LAB_SPECS if item["mode"] == "volume")
+        html = _build_curriculum_lab_html(spec)
+
+        self.assertIn("바닥 한 층", html)
+        self.assertIn("층으로 쌓기", html)
+        self.assertIn("drawSlab", html)
+        self.assertIn("부피는 바닥 한 층의 개수에 층수를 곱하면 됩니다.", html)

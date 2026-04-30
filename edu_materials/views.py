@@ -32,6 +32,7 @@ SORT_CHOICES = (
 )
 MY_PAGE_SIZE = 8
 SHARED_PAGE_SIZE = 10
+CURRICULUM_LAB_OWNER_USERNAME = "eduitit_curriculum_lab"
 
 
 def _resolve_teacher_display_name(user):
@@ -49,6 +50,26 @@ def _resolve_teacher_display_name(user):
 
     username = (getattr(user, "username", "") or "").strip()
     return username or "익명의 선생님"
+
+
+def _is_curriculum_lab_material(material):
+    teacher = getattr(material, "teacher", None)
+    return (getattr(teacher, "username", "") or "") == CURRICULUM_LAB_OWNER_USERNAME
+
+
+def _can_manage_material(user, material):
+    if not user or not user.is_authenticated:
+        return False
+    if material.teacher_id == user.id:
+        return True
+    return (user.is_staff or user.is_superuser) and _is_curriculum_lab_material(material)
+
+
+def _get_manageable_material_or_404(user, material_id):
+    material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=material_id)
+    if not _can_manage_material(user, material):
+        raise Http404()
+    return material
 
 
 def _build_preview_context():
@@ -400,7 +421,7 @@ def clone_material(request, material_id):
 @login_required
 @require_POST
 def update_material(request, material_id):
-    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    material = _get_manageable_material_or_404(request.user, material_id)
     title = (request.POST.get("title") or "").strip()
     html_content = request.POST.get("html_content", "")
 
@@ -436,10 +457,11 @@ def update_material(request, material_id):
 def material_detail(request, pk):
     material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=pk)
     is_owner = request.user.is_authenticated and material.teacher_id == request.user.id
-    if not is_owner and not material.is_published:
+    can_manage = _can_manage_material(request.user, material)
+    if not can_manage and not material.is_published:
         raise Http404()
     existing_clone = None
-    if request.user.is_authenticated and not is_owner:
+    if request.user.is_authenticated and not can_manage:
         existing_clone = _get_existing_clone(request.user, material)
 
     public_url = request.build_absolute_uri(reverse("edu_materials:run", args=[material.id]))
@@ -453,8 +475,8 @@ def material_detail(request, pk):
             "service": get_service(),
             "material": material,
             "is_owner": is_owner,
-            "can_manage": is_owner,
-            "can_clone": request.user.is_authenticated and not is_owner and existing_clone is None,
+            "can_manage": can_manage,
+            "can_clone": request.user.is_authenticated and not can_manage and existing_clone is None,
             "existing_clone": existing_clone,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "material_frame_src": build_runtime_data_url(material.html_content),
@@ -506,7 +528,8 @@ def join_material(request):
 def share_board(request, pk):
     material = get_object_or_404(EduMaterial.objects.select_related("teacher"), id=pk)
     is_owner = request.user.is_authenticated and material.teacher_id == request.user.id
-    if not material.is_published and not is_owner:
+    can_manage = _can_manage_material(request.user, material)
+    if not material.is_published and not can_manage:
         raise Http404()
 
     student_join_display = f"{request.get_host()}{reverse('edu_materials:join_short')}"
@@ -518,6 +541,7 @@ def share_board(request, pk):
             "material": material,
             "hide_navbar": True,
             "is_owner": is_owner,
+            "can_manage": can_manage,
             "teacher_display_name": _resolve_teacher_display_name(material.teacher),
             "student_join_display": student_join_display,
             "public_qr_data_url": build_material_qr_data_url(public_url),
@@ -528,7 +552,7 @@ def share_board(request, pk):
 @login_required
 @require_POST
 def update_material_metadata(request, material_id):
-    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    material = _get_manageable_material_or_404(request.user, material_id)
     apply_manual_metadata(
         material,
         subject=request.POST.get("subject"),
@@ -546,7 +570,7 @@ def update_material_metadata(request, material_id):
 @login_required
 @require_POST
 def reclassify_material(request, material_id):
-    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    material = _get_manageable_material_or_404(request.user, material_id)
     metadata = _apply_auto_metadata_with_feedback(request, material)
     if metadata is not None:
         messages.success(request, "현재 자료 내용으로 자동 분류를 다시 계산했습니다.")
@@ -556,7 +580,7 @@ def reclassify_material(request, material_id):
 @login_required
 @require_POST
 def delete_material(request, material_id):
-    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    material = _get_manageable_material_or_404(request.user, material_id)
     title = material.title
     material.delete()
     messages.success(request, f'"{title}" 자료를 삭제했습니다.')
@@ -566,7 +590,7 @@ def delete_material(request, material_id):
 @login_required
 @require_POST
 def toggle_material_publish(request, material_id):
-    material = get_object_or_404(EduMaterial, id=material_id, teacher=request.user)
+    material = _get_manageable_material_or_404(request.user, material_id)
     if not material.is_published:
         material.is_published = True
         material.save(update_fields=["is_published", "updated_at"])
@@ -598,8 +622,8 @@ def run_material(request, pk):
 
 def render_material(request, pk):
     material = get_object_or_404(EduMaterial, id=pk)
-    is_teacher_preview = request.user.is_authenticated and material.teacher_id == request.user.id
-    if not material.is_published and not is_teacher_preview:
+    can_manage = _can_manage_material(request.user, material)
+    if not material.is_published and not can_manage:
         raise Http404()
 
     response = HttpResponse(build_runtime_html(material.html_content), content_type="text/html; charset=utf-8")
