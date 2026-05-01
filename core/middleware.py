@@ -6,6 +6,7 @@ import time
 import uuid
 from urllib.parse import quote
 
+from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -40,6 +41,10 @@ REQUEST_CACHE_MISS = object()
 VISITOR_IDENTITY_SESSION_KEY = "visitor_identity"
 VISITOR_IDENTITY_COOKIE_NAME = "eduitit_visitor"
 VISITOR_IDENTITY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def is_visitor_tracking_enabled():
+    return bool(getattr(settings, "VISITOR_TRACKING_ENABLED", True))
 
 
 class SeoMetaFallbackMiddleware:
@@ -383,6 +388,9 @@ class VisitorTrackingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if not is_visitor_tracking_enabled():
+            return self.get_response(request)
+
         # Consent public signer flow: do not store IP/User-Agent in visitor logs.
         if request.path.startswith('/consent/public/') or is_lightweight_bypass_path(request.path):
             return self.get_response(request)

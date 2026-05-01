@@ -74,3 +74,67 @@ class DatabaseConfigTest(TestCase):
             from config import settings_production
             engine = settings_production.DATABASES['default']['ENGINE']
             self.assertIn('postgresql', engine)
+
+
+class ProductionCostControlSettingsTest(TestCase):
+    def _settings_snapshot_with_env(self, env):
+        from config import settings_production
+
+        try:
+            with patch.dict(os.environ, {"SECRET_KEY": "test-secret-key", **env}, clear=True):
+                reloaded = importlib.reload(settings_production)
+                return {
+                    "VISITOR_TRACKING_ENABLED": reloaded.VISITOR_TRACKING_ENABLED,
+                    "CACHES_DEFAULT": dict(reloaded.CACHES["default"]),
+                }
+        finally:
+            importlib.reload(settings_production)
+
+    def test_visitor_tracking_is_disabled_by_default(self):
+        snapshot = self._settings_snapshot_with_env({})
+
+        self.assertFalse(snapshot["VISITOR_TRACKING_ENABLED"])
+
+    def test_visitor_tracking_can_be_reenabled_by_environment(self):
+        snapshot = self._settings_snapshot_with_env({"VISITOR_TRACKING_ENABLED": "true"})
+
+        self.assertTrue(snapshot["VISITOR_TRACKING_ENABLED"])
+
+    def test_auto_cache_uses_redis_when_redis_url_is_set(self):
+        snapshot = self._settings_snapshot_with_env({
+            "CACHE_BACKEND": "auto",
+            "REDIS_URL": "redis://localhost:6379/0",
+        })
+
+        self.assertEqual(
+            snapshot["CACHES_DEFAULT"]["BACKEND"],
+            "django.core.cache.backends.redis.RedisCache",
+        )
+        self.assertEqual(snapshot["CACHES_DEFAULT"]["LOCATION"], "redis://localhost:6379/0")
+
+    def test_auto_cache_uses_locmem_without_redis_url(self):
+        snapshot = self._settings_snapshot_with_env({"CACHE_BACKEND": "auto"})
+
+        self.assertEqual(
+            snapshot["CACHES_DEFAULT"]["BACKEND"],
+            "django.core.cache.backends.locmem.LocMemCache",
+        )
+
+    def test_locmem_cache_override_ignores_redis_url(self):
+        snapshot = self._settings_snapshot_with_env({
+            "CACHE_BACKEND": "locmem",
+            "REDIS_URL": "redis://localhost:6379/0",
+        })
+
+        self.assertEqual(
+            snapshot["CACHES_DEFAULT"]["BACKEND"],
+            "django.core.cache.backends.locmem.LocMemCache",
+        )
+
+    def test_database_cache_override_keeps_last_resort_rollback_path(self):
+        snapshot = self._settings_snapshot_with_env({"CACHE_BACKEND": "database"})
+
+        self.assertEqual(
+            snapshot["CACHES_DEFAULT"]["BACKEND"],
+            "django.core.cache.backends.db.DatabaseCache",
+        )

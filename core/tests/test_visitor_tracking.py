@@ -5,9 +5,11 @@ from types import SimpleNamespace
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.db import connection
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from core.context_processors import visitor_counts
@@ -22,6 +24,7 @@ def _attach_session(request):
     request.session.save()
 
 
+@override_settings(VISITOR_TRACKING_ENABLED=True)
 class VisitorTrackingMiddlewareTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -29,15 +32,55 @@ class VisitorTrackingMiddlewareTest(TestCase):
         self.ip_address = "203.0.113.10"
         self.user_agent = "Mozilla/5.0"
 
-    def _build_request(self, user=None, ip_address=None):
+    def _build_request(self, user=None, ip_address=None, user_agent=None):
         request = self.factory.get(
             "/",
             REMOTE_ADDR=ip_address or self.ip_address,
-            HTTP_USER_AGENT=self.user_agent,
+            HTTP_USER_AGENT=user_agent or self.user_agent,
         )
         request.user = user or AnonymousUser()
         _attach_session(request)
         return request
+
+    @override_settings(VISITOR_TRACKING_ENABLED=False)
+    def test_disabled_tracking_skips_anonymous_visitor_writes(self):
+        request = self._build_request()
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.middleware(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(ctx), 0)
+        self.assertEqual(VisitorLog.objects.count(), 0)
+        self.assertEqual(PageViewLog.objects.count(), 0)
+        self.assertNotIn(VISITOR_IDENTITY_COOKIE_NAME, response.cookies)
+
+    @override_settings(VISITOR_TRACKING_ENABLED=False)
+    def test_disabled_tracking_skips_bot_visitor_writes(self):
+        request = self._build_request(user_agent="Googlebot/2.1")
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.middleware(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(ctx), 0)
+        self.assertEqual(VisitorLog.objects.count(), 0)
+        self.assertEqual(PageViewLog.objects.count(), 0)
+        self.assertNotIn(VISITOR_IDENTITY_COOKIE_NAME, response.cookies)
+
+    @override_settings(VISITOR_TRACKING_ENABLED=False)
+    def test_disabled_tracking_skips_authenticated_visitor_writes(self):
+        user = User.objects.create_user(username="tracked-off", password="password123")
+        request = self._build_request(user=user)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.middleware(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(ctx), 0)
+        self.assertEqual(VisitorLog.objects.count(), 0)
+        self.assertEqual(PageViewLog.objects.count(), 0)
+        self.assertNotIn(VISITOR_IDENTITY_COOKIE_NAME, response.cookies)
 
     def test_same_session_same_day_is_counted_once(self):
         request = self._build_request()

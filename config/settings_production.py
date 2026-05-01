@@ -23,6 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 TESTING = 'test' in sys.argv
 
+
+def _env_bool(name, default='False'):
+    return str(os.environ.get(name, default)).strip().lower() in ('true', '1', 'yes', 'on')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
@@ -252,14 +256,37 @@ else:
 DISABLE_SERVER_SIDE_CURSORS = True
 
 # =============================================================================
-# CACHE - Django DB Cache (worker간 공유, Redis 불필요)
+# CACHE - avoid waking Postgres for cache traffic by default
 # =============================================================================
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "django_cache_table",
+CACHE_BACKEND = os.environ.get("CACHE_BACKEND", "auto").strip().lower() or "auto"
+if CACHE_BACKEND not in {"auto", "redis", "locmem", "database"}:
+    CACHE_BACKEND = "auto"
+
+if CACHE_BACKEND == "database":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache_table",
+        }
     }
-}
+elif REDIS_URL and CACHE_BACKEND in {"auto", "redis"}:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "eduitit-production-cache",
+        }
+    }
+
+# Disable visitor analytics in production by default. This avoids DB writes for
+# anonymous, bot, and authenticated page visits unless explicitly re-enabled.
+VISITOR_TRACKING_ENABLED = _env_bool("VISITOR_TRACKING_ENABLED", "False")
 
 # =============================================================================
 # PASSWORD VALIDATION
