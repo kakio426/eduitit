@@ -35,6 +35,7 @@ from core.views import (
     _build_home_representative_slots,
     _home_public_v6,
 )
+from edu_materials.models import EduMaterial
 from messagebox.developer_chat import get_or_create_developer_chat_thread, mark_thread_as_read
 from messagebox.models import DeveloperChatMessage
 from products.models import Product
@@ -113,6 +114,7 @@ AUTHENTICATED_HOME_CONTEXT_KEYS = (
     'home_v7_tacit_registry',
     'home_v7_workflow_registry',
     'home_v7_agent_workspace',
+    'home_edu_materials_preview',
     'home_v2_frontend_config',
     'home_design_version',
     'community_summary',
@@ -1512,6 +1514,62 @@ class HomeV2ViewTest(TestCase):
         self.assertIn('__capture_id__', message_save_mode['commit_template'])
         self.assertFalse(message_save_mode['messenger_capabilities']['starter_chips'])
         self.assertTrue(message_save_mode['capabilities']['message_pipeline'])
+
+    def test_v6_home_places_edu_materials_preview_below_agent_workspace(self):
+        teacher = _create_onboarded_user('homematerialteacher')
+        for index in range(7):
+            EduMaterial.objects.create(
+                teacher=teacher,
+                title=f'홈 자료 {index + 1}',
+                html_content=f'<html><body>material {index + 1}</body></html>',
+                is_published=True,
+                subject='SCIENCE',
+                material_type=EduMaterial.MaterialType.REFERENCE,
+                view_count=index,
+            )
+        self._login('homematerialviewer')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        preview = response.context['home_edu_materials_preview']
+
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertLess(
+            content.index('data-home-v6-agent-workspace="true"'),
+            content.index('data-home-v6-edu-materials-preview="desktop"'),
+        )
+        self.assertLess(
+            content.index('data-home-v6-mobile-agent-workspace="true"'),
+            content.index('data-home-v6-edu-materials-preview="mobile"'),
+        )
+        self.assertEqual(len(preview['cards']), 6)
+        self.assertContains(response, 'data-home-v6-edu-material-card="desktop"', count=6)
+        self.assertContains(response, 'data-home-v6-edu-material-card="mobile"', count=6)
+        self.assertContains(response, 'AI 수업자료')
+        self.assertContains(response, f'{reverse("edu_materials:main")}?tab=create')
+        self.assertContains(response, f'{reverse("edu_materials:main")}?tab=shared')
+        self.assertContains(response, reverse('edu_materials:detail', args=[preview['cards'][0]['id']]))
+        self.assertContains(response, reverse('edu_materials:render', args=[preview['cards'][0]['id']]))
+        self.assertEqual(preview['cards'][0]['title'], '홈 자료 7')
+        self.assertNotContains(response, '홈 자료 1')
+
+    def test_v6_home_edu_materials_preview_empty_state_is_compact(self):
+        self._login('homematerialempty')
+
+        response = self.client.get(reverse('home'))
+        content = response.content.decode('utf-8')
+        preview = response.context['home_edu_materials_preview']
+
+        self._assert_authenticated_home_uses_v6(response, content)
+        self.assertEqual(preview['cards'], [])
+        self.assertContains(response, 'data-home-v6-edu-materials-preview="desktop"')
+        self.assertContains(response, 'data-home-v6-edu-materials-preview="mobile"')
+        self.assertContains(response, 'data-home-v6-edu-materials-empty="desktop"')
+        self.assertContains(response, 'data-home-v6-edu-materials-empty="mobile"')
+        self.assertContains(response, '공개 자료 없음')
+        self.assertContains(response, f'{reverse("edu_materials:main")}?tab=create')
+        self.assertNotContains(response, 'data-home-v6-edu-material-card="desktop"')
+        self.assertNotContains(response, 'data-home-v6-edu-material-card="mobile"')
 
     @patch(
         'core.views._build_home_v7_agent_conversations',

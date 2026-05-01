@@ -3264,6 +3264,10 @@ width: 100%;
 display: none !important;
 }
 
+.home-v6-page [data-home-v6-edu-materials-preview="mobile"] {
+display: none !important;
+}
+
 .home-v6-developer-chat-card--desktop {
 display: grid;
 }
@@ -6107,6 +6111,203 @@ transform: none;
     z-index: 18;
 }
 
+.home-v6-page [data-home-v6-edu-materials-preview] {
+    display: grid;
+    gap: 0.82rem;
+    width: 100%;
+    min-width: 0;
+    margin-top: var(--home-v6-panel-gap);
+}
+
+.home-v6-page .home-v6-edu-materials-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.home-v6-page .home-v6-edu-materials-title {
+    margin: 0;
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.home-v6-page .home-v6-edu-materials-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+}
+
+.home-v6-page .home-v6-edu-materials-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0 0.78rem;
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 850;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.home-v6-page .home-v6-edu-materials-action:hover,
+.home-v6-page .home-v6-edu-materials-action:focus-visible {
+    border-color: rgba(16, 185, 129, 0.42);
+    background: rgba(236, 253, 245, 0.98);
+    color: #065f46;
+}
+
+.home-v6-page .home-v6-edu-materials-action--primary {
+    border-color: #059669;
+    background: #059669;
+    color: #ffffff;
+}
+
+.home-v6-page .home-v6-edu-materials-action--primary:hover,
+.home-v6-page .home-v6-edu-materials-action--primary:focus-visible {
+    border-color: #047857;
+    background: #047857;
+    color: #ffffff;
+}
+
+.home-v6-page .home-v6-edu-materials-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.home-v6-page .home-v6-edu-material-card {
+    display: grid;
+    grid-template-rows: auto minmax(3.1rem, auto);
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(226, 232, 240, 0.94);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.98);
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+    transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.home-v6-page .home-v6-edu-material-card:hover,
+.home-v6-page .home-v6-edu-material-card:focus-visible {
+    border-color: rgba(16, 185, 129, 0.44);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.home-v6-page .home-v6-edu-material-thumb {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 9;
+    max-height: 11rem;
+    overflow: hidden;
+    background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+}
+
+.home-v6-page .home-v6-edu-material-thumb iframe {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: block;
+    width: 400%;
+    height: 400%;
+    border: 0;
+    background: #ffffff;
+    pointer-events: none;
+    transform: scale(0.25);
+    transform-origin: top left;
+}
+
+.home-v6-page .home-v6-edu-material-copy {
+    display: grid;
+    gap: 0.38rem;
+    align-content: start;
+    min-width: 0;
+    padding: 0.64rem 0.72rem 0.72rem;
+}
+
+.home-v6-page .home-v6-edu-material-title {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    color: #111827;
+    font-size: 0.86rem;
+    font-weight: 900;
+    line-height: 1.28;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-v6-page .home-v6-edu-material-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+.home-v6-page .home-v6-edu-material-meta span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-v6-page .home-v6-edu-material-meta span + span::before {
+    content: "";
+    display: inline-block;
+    width: 0.24rem;
+    height: 0.24rem;
+    margin: 0 0.35rem 0.08rem 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    vertical-align: middle;
+}
+
+.home-v6-page .home-v6-edu-materials-empty {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 4rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 0.5rem;
+    background: rgba(248, 250, 252, 0.96);
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.home-v6-page .home-v6-edu-materials-empty a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0 0.8rem;
+    border-radius: 999px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 850;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
 .home-v6-page .home-v6-agent-card {
     grid-template-columns: minmax(0, 1fr) !important;
     padding: 0;
@@ -8414,9 +8615,33 @@ transform: none;
         min-height: var(--home-v6-ai-compact-stage-min);
         max-height: var(--home-v6-ai-compact-stage-max);
     }
+
+    .home-v6-page [data-home-v6-edu-materials-preview] {
+        gap: 0.72rem;
+    }
+
+    .home-v6-page .home-v6-edu-materials-grid {
+        gap: 0.58rem;
+    }
+
+    .home-v6-page .home-v6-edu-material-copy {
+        padding: 0.54rem 0.58rem 0.62rem;
+    }
+
+    .home-v6-page .home-v6-edu-material-title {
+        font-size: 0.78rem;
+    }
+
+    .home-v6-page .home-v6-edu-material-meta {
+        font-size: 0.66rem;
+    }
 }
 
 @media (max-width: 1099px) {
+    .home-v6-page [data-home-v6-edu-materials-preview="desktop"] {
+        display: none !important;
+    }
+
     .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
         min-height: 0;
     }

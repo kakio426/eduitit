@@ -1781,6 +1781,56 @@ def _build_home_v7_context_router_preview(
     }
 
 
+def build_home_edu_materials_preview(request, *, limit=6):
+    try:
+        from edu_materials.models import EduMaterial
+    except Exception:
+        logger.exception("[home edu materials] failed to import EduMaterial")
+        return {
+            "title": "AI 수업자료",
+            "cards": [],
+            "create_url": "",
+            "more_url": "",
+        }
+
+    try:
+        base_url = reverse("edu_materials:main")
+        materials = list(
+            EduMaterial.objects.filter(is_published=True, source_material__isnull=True)
+            .order_by("-view_count", "-updated_at", "-created_at")[:limit]
+        )
+        cards = []
+        for material in materials:
+            cards.append(
+                {
+                    "id": str(material.id),
+                    "title": material.title,
+                    "subject_label": material.get_subject_display(),
+                    "material_type_label": material.get_material_type_display(),
+                    "detail_url": reverse("edu_materials:detail", args=[material.id]),
+                    "render_url": reverse("edu_materials:render", args=[material.id]),
+                    "view_count": material.view_count,
+                }
+            )
+        return {
+            "title": "AI 수업자료",
+            "cards": cards,
+            "create_url": f"{base_url}?tab=create",
+            "more_url": f"{base_url}?tab=shared",
+        }
+    except Exception:
+        logger.exception(
+            "[home edu materials] failed to build preview user_id=%s",
+            getattr(getattr(request, "user", None), "id", None),
+        )
+        return {
+            "title": "AI 수업자료",
+            "cards": [],
+            "create_url": "",
+            "more_url": "",
+        }
+
+
 def _build_home_schoolcomm_card(user, favorite_products, product_list):
     try:
         from schoolcomm.services import build_home_card
@@ -5554,6 +5604,17 @@ def build_home_surface_context(
         tacit_registry=home_v7_tacit_registry,
         workflow_registry=home_v7_workflow_registry,
     )
+    home_edu_materials_preview = _build_home_surface_safe_value(
+        request,
+        label='edu materials home preview',
+        fallback_factory=lambda: {
+            'title': 'AI 수업자료',
+            'cards': [],
+            'create_url': '',
+            'more_url': '',
+        },
+        builder=lambda: build_home_edu_materials_preview(request, limit=6),
+    )
     home_mobile_section_order = HOME_MOBILE_SECTION_ORDER
     slots = build_home_surface_slots(
         home_nav_sections=home_nav_sections,
@@ -5632,6 +5693,7 @@ def build_home_surface_context(
         'home_v7_tacit_registry': home_v7_tacit_registry,
         'home_v7_workflow_registry': home_v7_workflow_registry,
         'home_v7_agent_workspace': home_v7_agent_workspace,
+        'home_edu_materials_preview': home_edu_materials_preview,
     })
     template_context.update(
         _build_home_surface_safe_value(

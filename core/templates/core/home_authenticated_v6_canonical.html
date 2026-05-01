@@ -206,6 +206,7 @@
                     <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
                         {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
                     </section>
+                    {% include 'core/partials/home_v6_edu_materials_preview.html' with preview=home_edu_materials_preview surface='mobile' %}
                     {% elif mobile_section == 'quickdrop' %}
                     {% if quickdrop_home_card %}
                     {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
@@ -312,6 +313,8 @@
                             </section>
 
                             {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace %}
+
+                            {% include 'core/partials/home_v6_edu_materials_preview.html' with preview=home_edu_materials_preview surface='desktop' %}
 
                         </div>
 

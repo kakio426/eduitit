@@ -1,0 +1,49 @@
+{% if preview %}
+{% with surface_key=surface|default:'desktop' %}
+<section class="home-v6-edu-materials-preview" data-home-v6-edu-materials-preview="{{ surface_key }}">
+    <div class="home-v6-edu-materials-head">
+        <h2 class="home-v6-edu-materials-title">{{ preview.title|default:'AI 수업자료' }}</h2>
+        <div class="home-v6-edu-materials-actions">
+            {% if preview.create_url %}
+            <a class="home-v6-edu-materials-action home-v6-edu-materials-action--primary" href="{{ preview.create_url }}">새 자료</a>
+            {% endif %}
+            {% if preview.more_url %}
+            <a class="home-v6-edu-materials-action" href="{{ preview.more_url }}">더보기</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if preview.cards %}
+    <div class="home-v6-edu-materials-grid">
+        {% for card in preview.cards %}
+        <a class="home-v6-edu-material-card" href="{{ card.detail_url }}" data-home-v6-edu-material-card="{{ surface_key }}">
+            <span class="home-v6-edu-material-thumb" aria-hidden="true">
+                <iframe
+                    title="{{ card.title }} 미리보기"
+                    src="{{ card.render_url }}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    tabindex="-1"
+                ></iframe>
+            </span>
+            <span class="home-v6-edu-material-copy">
+                <span class="home-v6-edu-material-title">{{ card.title }}</span>
+                <span class="home-v6-edu-material-meta">
+                    <span>{{ card.subject_label }}</span>
+                    <span>{{ card.material_type_label }}</span>
+                </span>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="home-v6-edu-materials-empty" data-home-v6-edu-materials-empty="{{ surface_key }}">
+        <span>공개 자료 없음</span>
+        {% if preview.create_url %}
+        <a href="{{ preview.create_url }}">새 자료</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endwith %}
+{% endif %}
