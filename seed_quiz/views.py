@@ -73,6 +73,46 @@ def _build_qr_data_url(raw_text: str) -> str:
         encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
+
+def _build_today_quiz_context(
+    request,
+    classroom: HSClassroom,
+    *,
+    target_date=None,
+    today_quiz_oob: bool = False,
+) -> dict:
+    target_date = target_date or timezone.localdate()
+    today_sets = SQQuizSet.objects.filter(
+        classroom=classroom,
+        target_date=target_date,
+    ).exclude(status="archived").order_by("-created_at")
+    current_published_set = (
+        today_sets.filter(status="published")
+        .order_by("-published_at", "-updated_at", "-created_at")
+        .first()
+    )
+    latest_draft_set = (
+        today_sets.filter(status="draft")
+        .order_by("-updated_at", "-created_at")
+        .first()
+    )
+    student_url = ""
+    student_qr_data_url = ""
+    if current_published_set:
+        student_url = request.build_absolute_uri(
+            reverse("seed_quiz:student_gate", kwargs={"class_slug": classroom.slug})
+        )
+        student_qr_data_url = _build_qr_data_url(student_url)
+    return {
+        "today_sets": today_sets,
+        "current_published_set": current_published_set,
+        "latest_draft_set": latest_draft_set,
+        "student_url": student_url,
+        "student_qr_data_url": student_qr_data_url,
+        "today_quiz_oob": today_quiz_oob,
+    }
+
+
 CSV_PREVIEW_PAYLOAD_KEY = "sq_csv_preview_payload"
 CSV_PREVIEW_TOKEN_KEY = "sq_csv_preview_token"
 CSV_ERROR_REPORT_TOKEN_KEY = "sq_csv_error_report_token"
@@ -577,40 +617,38 @@ def teacher_dashboard(request, classroom_id):
     if initial_scope not in {"official", "public", "all", "mine"}:
         initial_scope = "all"
     initial_query = (request.GET.get("q") or "").strip()
-    today_sets = SQQuizSet.objects.filter(
-        classroom=classroom,
-        target_date=timezone.localdate(),
-    ).exclude(status="archived").order_by("-created_at")
+    today_quiz_context = _build_today_quiz_context(request, classroom)
     generation_preset = initial_preset or DEFAULT_TOPIC
     generation_grade = initial_grade if initial_grade is not None else 3
+    context = {
+        "classroom": classroom,
+        "preset_choices": SQQuizSet.PRESET_CHOICES,
+        "initial_preset": initial_preset,
+        "initial_grade": initial_grade,
+        "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
+        "generation_preset": generation_preset,
+        "generation_grade": str(generation_grade),
+        "initial_scope": initial_scope,
+        "initial_query": initial_query,
+        "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
+        "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
+        "csv_limits": csv_limits,
+        "csv_limits_human": {
+            "max_file": _humanize_bytes(csv_limits["max_file_bytes"]),
+            "max_rows": csv_limits["max_rows"],
+            "max_sets": csv_limits["max_sets"],
+        },
+        "text_limits": text_limits,
+        "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
+        "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
+        "csv_guide_columns": CSV_GUIDE_COLUMNS,
+        "topic_guide_rows": _get_topic_template_rows(),
+    }
+    context.update(today_quiz_context)
     return render(
         request,
         "seed_quiz/teacher_dashboard.html",
-        {
-            "classroom": classroom,
-            "today_sets": today_sets,
-            "preset_choices": SQQuizSet.PRESET_CHOICES,
-            "initial_preset": initial_preset,
-            "initial_grade": initial_grade,
-            "initial_grade_str": "all" if initial_grade is None else str(initial_grade),
-            "generation_preset": generation_preset,
-            "generation_grade": str(generation_grade),
-            "initial_scope": initial_scope,
-            "initial_query": initial_query,
-            "rag_daily_limit": max(0, int(getattr(settings, "SEED_QUIZ_RAG_DAILY_LIMIT", 1))),
-            "allow_rag": bool(getattr(settings, "SEED_QUIZ_ALLOW_RAG", False)),
-            "csv_limits": csv_limits,
-            "csv_limits_human": {
-                "max_file": _humanize_bytes(csv_limits["max_file_bytes"]),
-                "max_rows": csv_limits["max_rows"],
-                "max_sets": csv_limits["max_sets"],
-            },
-            "text_limits": text_limits,
-            "csv_headers_ko_text": ",".join(CSV_KOREAN_HEADERS),
-            "csv_headers_en_text": ",".join(CSV_CANONICAL_HEADERS),
-            "csv_guide_columns": CSV_GUIDE_COLUMNS,
-            "topic_guide_rows": _get_topic_template_rows(),
-        },
+        context,
     )
 
 
@@ -1546,7 +1584,7 @@ def htmx_text_upload(request, classroom_id):
         created_count, updated_count, shared_count = save_parsed_sets_to_bank(
             parsed_sets=parsed_sets,
             created_by=request.user,
-            share_opt_in=True,
+            share_opt_in=False,
         )
         latest_bank_id = _resolve_latest_saved_bank_id(
             parsed_sets=parsed_sets,
@@ -1576,7 +1614,7 @@ def htmx_text_upload(request, classroom_id):
                 "created_count": created_count,
                 "updated_count": updated_count,
                 "shared_count": shared_count,
-                "success_title": "문제 만들기가 완료되었습니다.",
+                "success_title": "문제 준비 완료",
                 "latest_bank_id": latest_bank_id,
                 "errors": [],
             },
@@ -1653,7 +1691,7 @@ def htmx_csv_confirm(request, classroom_id):
             status=400,
         )
 
-    share_opt_in = True
+    share_opt_in = False
     created_count, updated_count, shared_count = save_parsed_sets_to_bank(
         parsed_sets=parsed_sets,
         created_by=request.user,
@@ -2038,42 +2076,51 @@ def htmx_set_update(request, classroom_id, set_id):
 @require_POST
 def htmx_publish(request, classroom_id, set_id):
     classroom = get_object_or_404(HSClassroom, id=classroom_id, teacher=request.user)
-    quiz_set = get_object_or_404(
-        SQQuizSet, id=set_id, classroom=classroom, status="draft"
-    )
+    quiz_set_ref = get_object_or_404(SQQuizSet, id=set_id, classroom=classroom)
     force_replace = (request.POST.get("force_replace") or "").lower() in {"1", "true", "yes", "on"}
-    existing_published = (
-        SQQuizSet.objects.filter(
-            classroom=classroom,
-            target_date=quiz_set.target_date,
-            preset_type=quiz_set.preset_type,
-            status="published",
-        )
-        .exclude(id=quiz_set.id)
-        .order_by("-published_at", "-updated_at")
-        .first()
-    )
-    if existing_published and not force_replace:
-        return render(
-            request,
-            "seed_quiz/partials/teacher_publish_confirm_replace.html",
-            {
-                "classroom": classroom,
-                "quiz_set": quiz_set,
-                "existing_published": existing_published,
-            },
-        )
 
     with transaction.atomic():
+        same_day_sets = list(
+            SQQuizSet.objects.select_for_update()
+            .filter(classroom=classroom, target_date=quiz_set_ref.target_date)
+            .order_by("id")
+        )
+        quiz_set = next((item for item in same_day_sets if item.id == quiz_set_ref.id), None)
+        if not quiz_set or quiz_set.status != "draft":
+            return HttpResponse(
+                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+                "배포 불가. 세트 상태가 변경되었습니다.</div>",
+                status=409,
+            )
+        existing_published = (
+            SQQuizSet.objects.filter(
+                classroom=classroom,
+                target_date=quiz_set.target_date,
+                status="published",
+            )
+            .exclude(id=quiz_set.id)
+            .order_by("-published_at", "-updated_at")
+            .first()
+        )
+        if existing_published and not force_replace:
+            return render(
+                request,
+                "seed_quiz/partials/teacher_publish_confirm_replace.html",
+                {
+                    "classroom": classroom,
+                    "quiz_set": quiz_set,
+                    "existing_published": existing_published,
+                },
+            )
+
         replaced_set_id = None
         if existing_published:
             replaced_set_id = existing_published.id
 
-        # 기존 published → closed
+        # 오늘 운영 중인 퀴즈는 한 반에 하나만 유지한다.
         SQQuizSet.objects.filter(
             classroom=classroom,
             target_date=quiz_set.target_date,
-            preset_type=quiz_set.preset_type,
             status="published",
         ).exclude(id=quiz_set.id).update(status="closed")
 
@@ -2109,24 +2156,23 @@ def htmx_publish(request, classroom_id, set_id):
                 },
             )
 
-    student_url = request.build_absolute_uri(
-        reverse(
-            "seed_quiz:student_gate",
-            kwargs={"class_slug": classroom.slug},
-        )
+    today_quiz_context = _build_today_quiz_context(
+        request,
+        classroom,
+        target_date=quiz_set.target_date,
+        today_quiz_oob=True,
     )
-    student_qr_data_url = _build_qr_data_url(student_url)
+    context = {
+        "classroom": classroom,
+        "quiz_set": quiz_set,
+        "rollback_restore_set_id": str(replaced_set_id) if replaced_set_id else "",
+        "rollback_from_set_id": str(quiz_set.id),
+    }
+    context.update(today_quiz_context)
     return render(
         request,
         "seed_quiz/partials/teacher_published.html",
-        {
-            "classroom": classroom,
-            "quiz_set": quiz_set,
-            "student_url": student_url,
-            "student_qr_data_url": student_qr_data_url,
-            "rollback_restore_set_id": str(replaced_set_id) if replaced_set_id else "",
-            "rollback_from_set_id": str(quiz_set.id),
-        },
+        context,
     )
 
 
@@ -2188,34 +2234,35 @@ def htmx_publish_rollback(request, classroom_id):
             status=400,
         )
 
-    restore_set = get_object_or_404(
-        SQQuizSet,
-        id=restore_set_id,
-        classroom=classroom,
-        status="closed",
-    )
+    restore_set_ref = get_object_or_404(SQQuizSet, id=restore_set_id, classroom=classroom)
 
     with transaction.atomic():
-        current_set = (
+        same_day_sets = list(
             SQQuizSet.objects.select_for_update()
-            .filter(
-                classroom=classroom,
-                target_date=restore_set.target_date,
-                preset_type=restore_set.preset_type,
-                status="published",
-            )
-            .first()
+            .filter(classroom=classroom, target_date=restore_set_ref.target_date)
+            .order_by("id")
         )
+        restore_set = next((item for item in same_day_sets if item.id == restore_set_ref.id), None)
+        if not restore_set or restore_set.status != "closed":
+            return HttpResponse(
+                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
+                "되돌림 불가. 세트 상태가 변경되었습니다.</div>",
+                status=409,
+            )
+        current_qs = SQQuizSet.objects.select_for_update().filter(
+            classroom=classroom,
+            target_date=restore_set.target_date,
+            status="published",
+        )
+        if current_set_id:
+            current_qs = current_qs.filter(id=current_set_id)
+        else:
+            current_qs = current_qs.order_by("-published_at", "-updated_at")
+        current_set = current_qs.first()
         if not current_set:
             return HttpResponse(
                 '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
                 "현재 배포 중인 세트를 찾을 수 없습니다. 이미 변경되었을 수 있습니다.</div>",
-                status=409,
-            )
-        if current_set_id and str(current_set.id) != current_set_id:
-            return HttpResponse(
-                '<div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">'
-                "배포 상태가 변경되어 되돌리기를 중단했습니다. 화면을 새로고침해 주세요.</div>",
                 status=409,
             )
         if current_set.id == restore_set.id:
@@ -2225,7 +2272,11 @@ def htmx_publish_rollback(request, classroom_id):
                 status=409,
             )
 
-        SQQuizSet.objects.filter(id=current_set.id).update(status="closed")
+        SQQuizSet.objects.filter(
+            classroom=classroom,
+            target_date=restore_set.target_date,
+            status="published",
+        ).exclude(id=restore_set.id).update(status="closed")
         restore_set.status = "published"
         restore_set.published_at = timezone.now()
         restore_set.published_by = request.user
@@ -2245,23 +2296,22 @@ def htmx_publish_rollback(request, classroom_id):
             },
         )
 
-    student_url = request.build_absolute_uri(
-        reverse(
-            "seed_quiz:student_gate",
-            kwargs={"class_slug": classroom.slug},
-        )
+    today_quiz_context = _build_today_quiz_context(
+        request,
+        classroom,
+        target_date=restore_set.target_date,
+        today_quiz_oob=True,
     )
-    student_qr_data_url = _build_qr_data_url(student_url)
+    context = {
+        "classroom": classroom,
+        "quiz_set": restore_set,
+        "rollback_done": True,
+    }
+    context.update(today_quiz_context)
     return render(
         request,
         "seed_quiz/partials/teacher_published.html",
-        {
-            "classroom": classroom,
-            "quiz_set": restore_set,
-            "student_url": student_url,
-            "student_qr_data_url": student_qr_data_url,
-            "rollback_done": True,
-        },
+        context,
     )
 
 

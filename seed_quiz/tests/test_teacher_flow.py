@@ -137,15 +137,18 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "문제 가져오기")
+        self.assertContains(resp, "오늘 퀴즈")
+        self.assertContains(resp, "배포 전")
+        self.assertContains(resp, "문제 준비")
+        self.assertContains(resp, "붙여넣기")
+        self.assertContains(resp, "파일")
+        self.assertContains(resp, "더보기")
         self.assertContains(resp, "요청문 복사")
         self.assertContains(resp, 'id="csv-client-check"')
         self.assertContains(resp, "문제는 1~200개")
         self.assertContains(resp, "제작 가이드 보기")
-        self.assertContains(resp, "방법 하나만 고르세요")
-        self.assertContains(resp, "방법 A. 붙여넣기 (권장)")
-        self.assertContains(resp, "방법 B. 파일 올리기")
-        self.assertContains(resp, "실시간 게임 시작")
+        self.assertContains(resp, "실시간 게임")
+        self.assertNotContains(resp, "실시간 게임 시작")
         self.assertNotContains(resp, "랜덤 1세트 선택")
 
     def test_dashboard_shows_new_tab_navigation_labels(self):
@@ -155,9 +158,12 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "운영 화면 열기 (새 탭)")
-        self.assertContains(resp, "학생 대시보드 (새 탭)")
-        self.assertContains(resp, "정답 분석 (새 탭)")
+        self.assertContains(resp, "이동")
+        self.assertContains(resp, "수업 화면")
+        self.assertContains(resp, "결과")
+        self.assertNotContains(resp, "운영 화면 열기 (새 탭)")
+        self.assertNotContains(resp, "학생 대시보드 (새 탭)")
+        self.assertNotContains(resp, "정답 분석 (새 탭)")
 
     def test_dashboard_default_filters_are_all(self):
         url = reverse(
@@ -199,9 +205,9 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "학생 대시보드")
-        self.assertContains(resp, "학생 접속 주소")
-        self.assertContains(resp, "정답 분석 열기 (새 탭)")
+        self.assertContains(resp, "수업 화면")
+        self.assertContains(resp, "입장 링크")
+        self.assertContains(resp, "결과")
 
     def test_teacher_result_analysis_returns_200(self):
         published = SQQuizSet.objects.create(
@@ -230,9 +236,9 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(url, {"set_id": str(published.id)})
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "정답 결과 분석")
+        self.assertContains(resp, "결과")
         self.assertContains(resp, "문항별 정답률")
-        self.assertContains(resp, "학생 대시보드 열기 (새 탭)")
+        self.assertContains(resp, "수업 화면")
 
     def test_teacher_result_analysis_includes_wrong_items_per_student(self):
         published = SQQuizSet.objects.create(
@@ -641,15 +647,15 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.post(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "2) 저장된 문제 확인")
+        self.assertContains(resp, "확인")
         draft = SQQuizSet.objects.filter(classroom=self.classroom, status="draft").first()
         self.assertIsNotNone(draft)
         self.assertEqual(draft.source, "bank")
         self.assertEqual(draft.items.count(), 3)
-        self.assertContains(resp, "학생에게 배포하기")
-        self.assertContains(resp, "문항 수정하기")
-        self.assertContains(resp, "다른 세트 고르기")
-        self.assertContains(resp, "세트 보관(숨김)")
+        self.assertContains(resp, "배포")
+        self.assertContains(resp, "수정")
+        self.assertContains(resp, "다른 문제")
+        self.assertContains(resp, "보관")
         self.assertContains(resp, "data-seed-quiz-publish-button")
 
     def test_set_preview_returns_existing_draft_preview(self):
@@ -667,8 +673,8 @@ class TeacherFlowTest(TestCase):
         )
         resp = self.client.get(preview_url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "2) 저장된 문제 확인")
-        self.assertContains(resp, "다른 세트 고르기")
+        self.assertContains(resp, "확인")
+        self.assertContains(resp, "다른 문제")
 
     def test_set_edit_returns_form_for_draft(self):
         select_url = reverse(
@@ -838,7 +844,7 @@ class TeacherFlowTest(TestCase):
         )
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
-        self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
+        self.assertContains(confirm_resp, "문제 준비 완료")
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertTrue(bank.title.startswith("CSV-orthography-G3-"))
         self.assertEqual(bank.items.count(), 4)
@@ -923,7 +929,7 @@ class TeacherFlowTest(TestCase):
         )
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
-        self.assertContains(confirm_resp, "CSV 저장이 완료되었습니다")
+        self.assertContains(confirm_resp, "문제 준비 완료")
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertEqual(bank.items.count(), 3)
 
@@ -943,8 +949,8 @@ class TeacherFlowTest(TestCase):
             {"pasted_text": pasted_text, "submit_mode": "save"},
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "문제 만들기가 완료되었습니다")
-        self.assertContains(resp, "방금 만든 세트 열기")
+        self.assertContains(resp, "문제 준비 완료")
+        self.assertContains(resp, "확인")
         self.assertContains(resp, "data-open-latest-preview")
         bank = SQQuizBank.objects.get(source="csv", created_by=self.teacher)
         self.assertEqual(bank.items.count(), 3)
@@ -1110,7 +1116,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "CSV 파일 용량이 제한을 초과했습니다.", status_code=400)
 
-    def test_csv_confirm_auto_shares_as_public_approved(self):
+    def test_csv_confirm_saves_as_private_approved(self):
         csv_text = (
             "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
             "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
@@ -1139,9 +1145,10 @@ class TeacherFlowTest(TestCase):
         )
         confirm_resp = self.client.post(confirm_url, {"preview_token": token})
         self.assertEqual(confirm_resp.status_code, 200)
-        self.assertContains(confirm_resp, "공유 완료")
+        self.assertContains(confirm_resp, "문제 준비 완료")
         self.assertContains(confirm_resp, 'data-seed-quiz-success="true"')
-        self.assertContains(confirm_resp, "방금 만든 세트 열기")
+        self.assertNotContains(confirm_resp, "공유 완료")
+        self.assertContains(confirm_resp, "확인")
         self.assertContains(confirm_resp, "data-open-latest-preview")
         bank = SQQuizBank.objects.get(
             source="csv",
@@ -1149,13 +1156,14 @@ class TeacherFlowTest(TestCase):
         )
         self.assertTrue(bank.title.startswith("CSV-orthography-G3-"))
         self.assertEqual(bank.quality_status, "approved")
-        self.assertTrue(bank.is_public)
-        self.assertTrue(bank.share_opt_in)
+        self.assertFalse(bank.is_public)
+        self.assertFalse(bank.share_opt_in)
         self.assertTrue(
             SQGenerationLog.objects.filter(
                 code="CSV_UPLOAD_CONFIRM_SUCCESS",
                 payload__classroom_id=str(self.classroom.id),
                 payload__teacher_id=self.teacher.id,
+                payload__share_opt_in=False,
             ).exists()
         )
 
@@ -1265,9 +1273,15 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         quiz_set.refresh_from_db()
         self.assertEqual(quiz_set.status, "published")
-        self.assertContains(resp, "학생 대시보드 열기 (새 탭)")
-        self.assertContains(resp, "정답 결과 분석 보기 (새 탭)")
-        self.assertContains(resp, "QR 전체화면")
+        self.assertContains(resp, "배포 완료")
+        self.assertContains(resp, "수업 화면")
+        self.assertContains(resp, "결과")
+        self.assertContains(resp, "크게 보기")
+        self.assertContains(resp, 'id="today-quiz-panel"')
+        self.assertContains(resp, 'hx-swap-oob="outerHTML"')
+        self.assertContains(resp, "수업 중")
+        self.assertContains(resp, "htmx/progress/")
+        self.assertContains(resp, f"set_id={quiz_set.id}")
 
     @patch("seed_quiz.services.generation._call_ai")
     def test_publish_requires_force_and_closes_existing_published(self, mock_ai):
@@ -1300,7 +1314,7 @@ class TeacherFlowTest(TestCase):
         )
         first_resp = self.client.post(pub_url2)
         self.assertEqual(first_resp.status_code, 200)
-        self.assertContains(first_resp, "이미 배포 중인 퀴즈가 있습니다.")
+        self.assertContains(first_resp, "이미 배포 중")
         preview_url = reverse(
             "seed_quiz:htmx_set_preview",
             kwargs={"classroom_id": self.classroom.id, "set_id": qs2.id},
@@ -1319,6 +1333,76 @@ class TeacherFlowTest(TestCase):
         qs2.refresh_from_db()
         self.assertEqual(qs1.status, "closed")
         self.assertEqual(qs2.status, "published")
+
+    def test_publish_replaces_today_quiz_across_topics(self):
+        old_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="오늘 맞춤법",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        new_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="vocabulary",
+            grade=3,
+            title="오늘 어휘",
+            status="draft",
+            created_by=self.teacher,
+        )
+        pub_url = reverse(
+            "seed_quiz:htmx_publish",
+            kwargs={"classroom_id": self.classroom.id, "set_id": new_set.id},
+        )
+
+        first_resp = self.client.post(pub_url)
+        self.assertEqual(first_resp.status_code, 200)
+        self.assertContains(first_resp, "이미 배포 중")
+        old_set.refresh_from_db()
+        new_set.refresh_from_db()
+        self.assertEqual(old_set.status, "published")
+        self.assertEqual(new_set.status, "draft")
+
+        force_resp = self.client.post(pub_url, {"force_replace": "1"})
+        self.assertEqual(force_resp.status_code, 200)
+        self.assertContains(force_resp, 'hx-swap-oob="outerHTML"')
+        self.assertContains(force_resp, "htmx/progress/")
+        old_set.refresh_from_db()
+        new_set.refresh_from_db()
+        self.assertEqual(old_set.status, "closed")
+        self.assertEqual(new_set.status, "published")
+
+    def test_publish_rejects_non_draft_set(self):
+        published_set = SQQuizSet.objects.create(
+            classroom=self.classroom,
+            target_date=timezone.localdate(),
+            preset_type="orthography",
+            grade=3,
+            title="이미 배포됨",
+            status="published",
+            created_by=self.teacher,
+            published_by=self.teacher,
+            published_at=timezone.now(),
+        )
+        pub_url = reverse(
+            "seed_quiz:htmx_publish",
+            kwargs={"classroom_id": self.classroom.id, "set_id": published_set.id},
+        )
+
+        resp = self.client.post(pub_url)
+        self.assertEqual(resp.status_code, 409)
+        self.assertContains(resp, "배포 불가", status_code=409)
+
+        published_set.status = "closed"
+        published_set.save(update_fields=["status"])
+        closed_resp = self.client.post(pub_url)
+        self.assertEqual(closed_resp.status_code, 409)
+        self.assertContains(closed_resp, "배포 불가", status_code=409)
 
     @patch("seed_quiz.services.generation._call_ai")
     def test_publish_rollback_restores_previous_set(self, mock_ai):
@@ -1363,7 +1447,11 @@ class TeacherFlowTest(TestCase):
             {"restore_set_id": str(old_set.id), "current_set_id": str(new_set.id)},
         )
         self.assertEqual(rollback_resp.status_code, 200)
-        self.assertContains(rollback_resp, "직전 배포로 되돌렸습니다.")
+        self.assertContains(rollback_resp, "되돌림 완료")
+        self.assertContains(rollback_resp, 'hx-swap-oob="outerHTML"')
+        self.assertContains(rollback_resp, "수업 중")
+        self.assertContains(rollback_resp, "htmx/progress/")
+        self.assertContains(rollback_resp, f"set_id={old_set.id}")
         old_set.refresh_from_db()
         new_set.refresh_from_db()
         self.assertEqual(old_set.status, "published")

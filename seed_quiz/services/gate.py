@@ -13,7 +13,7 @@ def get_today_published_set(classroom) -> SQQuizSet | None:
         classroom=classroom,
         target_date=timezone.localdate(),
         status="published",
-    ).first()
+    ).order_by("-published_at", "-updated_at").first()
 
 
 def find_or_create_attempt(quiz_set: SQQuizSet, student) -> SQAttempt:

@@ -4,13 +4,13 @@
 
 {% block content %}
 <section class="service-shell pb-20 px-4 min-h-screen">
-<div class="max-w-4xl mx-auto">
+<div class="max-w-5xl mx-auto">
 
     <!-- 헤더 -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
             <a href="{% url 'happy_seed:classroom_detail' classroom_id=classroom.id %}" class="text-sm text-gray-400 hover:text-gray-600">&larr; 교실로 돌아가기</a>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">📝 씨앗 퀴즈</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mt-1">씨앗 퀴즈</h1>
             <p class="text-sm text-gray-500">{{ classroom.name }} &middot; {{ classroom.school_name }}</p>
         </div>
         <div class="w-full sm:w-auto">
@@ -19,18 +19,18 @@
                    target="_blank"
                    rel="noopener"
                    class="px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors whitespace-nowrap">
-                    학생 대시보드 ↗
+                    수업 화면
                 </a>
                 <a href="{% url 'seed_quiz:teacher_result_analysis' classroom_id=classroom.id %}"
                    target="_blank"
                    rel="noopener"
                    class="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors whitespace-nowrap">
-                    정답 분석 ↗
+                    결과
                 </a>
             </div>
             <details class="sm:hidden relative">
                 <summary class="list-none cursor-pointer inline-flex items-center justify-between w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-bold">
-                    운영 화면 열기 (새 탭)
+                    이동
                     <span class="text-xs text-gray-400">▼</span>
                 </summary>
                 <div class="absolute right-0 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg p-2 z-20">
@@ -38,46 +38,36 @@
                        target="_blank"
                        rel="noopener"
                        class="block px-3 py-2 rounded-lg text-xs font-bold text-indigo-700 hover:bg-indigo-50">
-                        학생 대시보드 (새 탭)
+                        수업 화면
                     </a>
                     <a href="{% url 'seed_quiz:teacher_result_analysis' classroom_id=classroom.id %}"
                        target="_blank"
                        rel="noopener"
                        class="block px-3 py-2 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-50">
-                        정답 분석 (새 탭)
+                        결과
                     </a>
                 </div>
             </details>
         </div>
     </div>
 
-    <div class="rounded-3xl border border-amber-200 bg-[linear-gradient(135deg,_rgba(251,191,36,0.16),_rgba(255,255,255,0.92))] px-5 py-5 mb-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-                <p class="text-xs font-bold text-amber-700">실시간 게임</p>
-                <h2 class="mt-1 text-xl font-black text-gray-900">학생이 문제를 만들고 바로 겨룹니다.</h2>
-                <p class="mt-1 text-sm text-gray-600">코드 입장 → 문제 만들기 → 서로 풀기 → 순위 확인</p>
-            </div>
-            <a href="{% url 'seed_quiz:teacher_game_create' classroom_id=classroom.id %}"
-               class="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-black text-white hover:bg-amber-600 whitespace-nowrap">
-                실시간 게임 시작
-            </a>
-        </div>
-    </div>
+    {% include 'seed_quiz/partials/today_quiz_panel.html' %}
+
+    <section id="prepare-panel" class="scroll-mt-24">
 
     <!-- 입력 방식 선택 -->
     <div class="clay-card p-5 rounded-2xl mb-4 border border-violet-200 bg-violet-50/60">
-        <p class="text-sm font-bold text-violet-800">A) 새 문제 만들기 · 방법 하나만 고르세요.</p>
+        <p class="text-sm font-bold text-violet-800">문제 준비</p>
         <div class="mt-3 flex flex-col sm:flex-row gap-2">
             <button type="button"
                     data-input-method="paste"
                     class="w-full sm:w-auto px-4 py-2 rounded-lg text-sm text-center font-bold transition-colors bg-violet-600 text-white whitespace-nowrap">
-                방법 A. 붙여넣기 (권장)
+                붙여넣기
             </button>
             <button type="button"
                     data-input-method="file"
                     class="w-full sm:w-auto px-4 py-2 rounded-lg text-sm text-center font-bold transition-colors bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 whitespace-nowrap">
-                방법 B. 파일 올리기
+                파일
             </button>
         </div>
     </div>
@@ -85,7 +75,7 @@
     <!-- 파일 업로드 -->
     <div id="input-method-file" class="clay-card p-6 rounded-2xl mb-6 hidden">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-gray-700">방법 B) 문제 파일 올리기</h2>
+            <h2 class="font-bold text-gray-700">파일</h2>
             <div class="flex flex-wrap items-center justify-end gap-2">
                 <a href="{% url 'seed_quiz:download_csv_guide' classroom_id=classroom.id %}"
                    class="w-full sm:w-auto text-center px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors whitespace-nowrap">
@@ -145,7 +135,7 @@
     <!-- 텍스트 붙여넣기 업로드 -->
     <div id="input-method-paste" class="clay-card p-6 rounded-2xl mb-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <h2 class="font-bold text-gray-700">방법 A) AI 답변 표 붙여넣기 (권장)</h2>
+            <h2 class="font-bold text-gray-700">붙여넣기</h2>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button type="button"
                         id="copy-seed-quiz-prompt"
@@ -179,13 +169,13 @@
                         name="submit_mode"
                         value="save"
                         class="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg text-sm text-center font-bold hover:shadow-md transition-all whitespace-nowrap">
-                    문제 만들기(바로 저장)
+                    확인
                 </button>
                 <button type="submit"
                         name="submit_mode"
                         value="preview"
                         class="w-full sm:w-auto px-4 py-2 bg-white border border-violet-200 text-violet-700 rounded-lg text-sm text-center font-bold hover:bg-violet-50 transition-colors whitespace-nowrap">
-                    형식만 확인
+                    미리보기
                 </button>
                 <span id="text-upload-indicator" class="htmx-indicator text-xs text-violet-600 font-bold sm:ml-1">
                     처리 중...
@@ -196,10 +186,39 @@
     </div>
 
     <div id="csv-upload-result" class="mb-6"></div>
+    </section>
+
+    <!-- 미리보기 영역 -->
+    <div id="preview-area" class="mb-6"></div>
+
+    <details id="secondary-tools" class="clay-card p-5 sm:p-6 rounded-2xl mb-6 border border-gray-100 bg-white">
+        <summary class="list-none cursor-pointer">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-black text-gray-800">더보기</h2>
+                    <p class="mt-1 text-xs text-gray-500">문제은행 · 실시간 게임 · 보조 도구</p>
+                </div>
+                <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-500">열기</span>
+            </div>
+        </summary>
+
+        <div class="mt-5 space-y-5">
+            <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 sm:p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="font-bold text-amber-900">실시간 게임</h2>
+                        <p class="mt-1 text-xs text-amber-800">학생이 문제를 내는 활동</p>
+                    </div>
+                    <a href="{% url 'seed_quiz:teacher_game_create' classroom_id=classroom.id %}"
+                       class="inline-flex w-full items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-700 sm:w-auto">
+                        열기
+                    </a>
+                </div>
+            </div>
 
     {% if allow_rag %}
     <!-- 제한형 RAG -->
-    <div class="clay-card p-6 rounded-2xl mb-6">
+    <div class="rounded-2xl border border-gray-100 bg-white p-5">
         <h2 class="font-bold text-gray-700 mb-2">지문 기반 맞춤 생성</h2>
         <p class="text-xs text-gray-500 mb-4">교실당 하루 {{ rag_daily_limit }}회 제한</p>
         <form hx-post="{% url 'seed_quiz:htmx_rag_generate' classroom_id=classroom.id %}"
@@ -241,10 +260,8 @@
     {% endif %}
 
     <!-- 문제 가져오기 + 은행 목록 -->
-    <div class="clay-card p-6 rounded-2xl mb-6">
-        <h2 class="font-bold text-gray-700 mb-2">B) 기존 문제 가져오기 · 퀴즈 은행 목록</h2>
-        <p class="text-sm text-gray-500 mb-1">저장된 세트를 찾고 바로 아래 목록에서 적용하세요.</p>
-        <p class="text-xs text-gray-400 mb-4">전체 보기에서도 내가 만든 최신 세트가 먼저 보이도록 정렬됩니다.</p>
+    <div class="rounded-2xl border border-gray-100 bg-white p-5">
+        <h2 class="font-bold text-gray-700 mb-4">문제은행</h2>
         <form id="bank-filter-form"
               hx-get="{% url 'seed_quiz:htmx_bank_browse' classroom_id=classroom.id %}"
               hx-target="#bank-area"
@@ -307,16 +324,15 @@
         </div>
     </div>
 
-    <!-- 미리보기 영역 -->
-    <div id="preview-area" class="mb-6"></div>
-
     <!-- 주제별 운영 요약 -->
-    <div class="clay-card p-6 rounded-2xl mb-6"
+    <div class="rounded-2xl border border-gray-100 bg-white p-5"
          hx-get="{% url 'seed_quiz:htmx_topic_summary' classroom_id=classroom.id %}"
          hx-trigger="load, every 30s"
          hx-swap="innerHTML">
         <p class="text-sm text-gray-400">주제별 요약 불러오는 중...</p>
     </div>
+        </div>
+    </details>
 
 </div>
 </section>
@@ -360,6 +376,25 @@
     });
 
     setMode('paste');
+})();
+
+(function () {
+    document.addEventListener('click', async function (event) {
+        const copyButton = event.target.closest('[data-seed-quiz-dashboard-copy-url]');
+        if (!copyButton) {
+            return;
+        }
+        const targetUrl = copyButton.dataset.copyUrl || '';
+        if (!targetUrl) {
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(targetUrl);
+            window.alert('복사되었습니다.');
+        } catch (_error) {
+            window.alert('복사에 실패했습니다.');
+        }
+    });
 })();
 
 (function () {
@@ -827,6 +862,7 @@
     const bankForm = document.getElementById('bank-filter-form');
     const bankArea = document.getElementById('bank-area');
     const feedback = document.getElementById('bank-query-feedback');
+    const secondaryTools = document.getElementById('secondary-tools');
     if (!bankForm || !bankArea || !feedback) {
         return;
     }
@@ -881,6 +917,9 @@
         const fromBankFilter = isBankFormRequestElement(requestElement);
         if (!fromBankFilter && !openBankRequest) {
             return;
+        }
+        if (openBankRequest && secondaryTools) {
+            secondaryTools.open = true;
         }
         shouldScrollToResult = true;
         shouldFocusFirstApply = openBankRequest;
@@ -962,7 +1001,7 @@
             .map(function (node) { return String(node.textContent || '').trim(); })
             .filter(Boolean);
         if (!lines.length) {
-            window.alert('문제 만들기에 실패했습니다. 화면의 오류 내용을 확인해 주세요.');
+            window.alert('문제 준비 실패. 오류 내용을 확인해 주세요.');
             return;
         }
         const totalRaw = Number(errorBox.dataset.errorTotal || lines.length);
@@ -970,7 +1009,7 @@
         const preview = lines.slice(0, 3).join('\n');
         const restCount = Math.max(0, totalCount - 3);
         const rest = restCount > 0 ? '\n외 ' + restCount + '건' : '';
-        window.alert('문제 만들기에 실패했습니다.\n아래 항목을 수정 후 다시 시도해 주세요.\n\n' + preview + rest);
+        window.alert('문제 준비 실패.\n아래 항목을 수정 후 다시 시도해 주세요.\n\n' + preview + rest);
     }
 
     function openLatestPreviewFromResultArea() {
@@ -1007,7 +1046,7 @@
         }
         const successBox = resultArea.querySelector('[data-seed-quiz-success="true"]');
         if (successBox) {
-            const title = successBox.dataset.successTitle || '문제 만들기가 완료되었습니다.';
+            const title = successBox.dataset.successTitle || '문제 준비 완료';
             const created = successBox.dataset.createdCount || '0';
             const updated = successBox.dataset.updatedCount || '0';
             window.alert(title + '\n신규 생성 ' + created + '개 / 기존 갱신 ' + updated + '개');

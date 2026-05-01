@@ -1,0 +1,90 @@
+<section id="today-quiz-panel"
+         class="clay-card p-5 sm:p-6 rounded-2xl mb-6 border border-emerald-100 bg-white"
+         {% if today_quiz_oob %}hx-swap-oob="outerHTML"{% endif %}>
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-emerald-700">오늘 퀴즈</p>
+            {% if current_published_set %}
+            <h2 class="mt-1 text-2xl font-black text-gray-900">수업 중</h2>
+            <p class="mt-1 text-sm text-gray-500 break-words">{{ current_published_set.title }}</p>
+            {% elif latest_draft_set %}
+            <h2 class="mt-1 text-2xl font-black text-gray-900">확인 대기</h2>
+            <p class="mt-1 text-sm text-gray-500 break-words">{{ latest_draft_set.title }}</p>
+            {% else %}
+            <h2 class="mt-1 text-2xl font-black text-gray-900">배포 전</h2>
+            <p class="mt-1 text-sm text-gray-500">오늘 쓸 문제를 준비합니다.</p>
+            {% endif %}
+        </div>
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {% if current_published_set %}
+            <a href="{% url 'seed_quiz:teacher_result_analysis' classroom_id=classroom.id %}?set_id={{ current_published_set.id }}"
+               class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700">
+                결과
+            </a>
+            <a href="#prepare-panel"
+               class="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50">
+                다른 문제
+            </a>
+            {% elif latest_draft_set %}
+            <form hx-get="{% url 'seed_quiz:htmx_set_preview' classroom_id=classroom.id set_id=latest_draft_set.id %}"
+                  hx-target="#preview-area"
+                  hx-swap="innerHTML"
+                  class="w-full sm:w-auto">
+                <button type="submit"
+                        class="inline-flex w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-100">
+                    확인
+                </button>
+            </form>
+            <form hx-post="{% url 'seed_quiz:htmx_publish' classroom_id=classroom.id set_id=latest_draft_set.id %}"
+                  hx-target="#preview-area"
+                  hx-swap="innerHTML"
+                  class="w-full sm:w-auto">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700">
+                    배포
+                </button>
+            </form>
+            {% else %}
+            <a href="#prepare-panel"
+               class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700">
+                문제 준비
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if current_published_set %}
+    <div class="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div class="flex items-center justify-center">
+                {% if student_qr_data_url %}
+                <img src="{{ student_qr_data_url }}" alt="학생 접속 QR" class="h-56 w-56 rounded-xl bg-white p-2">
+                {% else %}
+                <p class="text-sm text-gray-400">QR 준비 중</p>
+                {% endif %}
+            </div>
+            <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button type="button"
+                        data-seed-quiz-dashboard-copy-url
+                        data-copy-url="{{ student_url }}"
+                        class="inline-flex flex-1 items-center justify-center rounded-xl bg-purple-100 px-3 py-2 text-xs font-bold text-purple-700 hover:bg-purple-200">
+                    링크 복사
+                </button>
+                <a href="{% url 'seed_quiz:teacher_student_dashboard' classroom_id=classroom.id %}?set_id={{ current_published_set.id }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="inline-flex flex-1 items-center justify-center rounded-xl bg-indigo-100 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-200">
+                    수업 화면
+                </a>
+            </div>
+        </div>
+        <div class="rounded-2xl border border-gray-100 bg-white p-4"
+             hx-get="{% url 'seed_quiz:htmx_progress' classroom_id=classroom.id %}?set_id={{ current_published_set.id }}"
+             hx-trigger="load, every 10s"
+             hx-swap="innerHTML">
+            <p class="text-sm text-gray-400">현황 불러오는 중...</p>
+        </div>
+    </div>
+    {% endif %}
+</section>
