@@ -7233,6 +7233,18 @@
                 }).filter(Boolean);
             },
 
+            reservationBoardHref: function () {
+                var selectedSchool = this.selectedReservationSchool();
+                var selectedHref = selectedSchool
+                    ? trimLine(selectedSchool.reservationUrl || selectedSchool.reservation_url)
+                    : '';
+                var schools = this.reservationModeSchoolOptions();
+                var firstSchoolHref = schools.length === 1
+                    ? trimLine(schools[0].reservation_url || schools[0].reservationUrl)
+                    : '';
+                return selectedHref || firstSchoolHref || trimLine(this.activeMode && this.activeMode.service_href);
+            },
+
             reservationAvailabilityUrl: function () {
                 var school = this.selectedReservationSchool();
                 return school ? trimLine(school.availabilityUrl || school.availability_url) : '';

@@ -241,7 +241,7 @@
                         <a
                             class="home-v6-inline-secondary-action home-v6-inline-secondary-action--pill home-v6-agent-context-link"
                             x-cloak
-                            x-show="activeHeaderPrimaryHref() && activeHeaderPrimaryLabel()"
+                            x-show="activeModeKey !== 'reservation' && activeHeaderPrimaryHref() && activeHeaderPrimaryLabel()"
                             :href="activeHeaderPrimaryHref() || '#'"
                             x-text="activeHeaderPrimaryLabel() || ''"
                         ></a>
@@ -720,6 +720,21 @@
                         </div>
                     </div>
                 </div>
+
+                <section
+                    class="home-v6-agent-reservation-entry"
+                    x-cloak
+                    x-show="activeModeKey === 'reservation' && reservationBoardHref()"
+                >
+                    <a
+                        class="home-v6-agent-reservation-entry-button"
+                        :href="reservationBoardHref() || '#'"
+                        aria-label="예약판 열기"
+                    >
+                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                        <span>예약판 열기</span>
+                    </a>
+                </section>
 
                 <section class="home-v6-agent-reservation-card home-v6-agent-reservation-picker" x-cloak x-show="activeModeKey === 'reservation' && reservationHasExecution()">
                     <div class="home-v6-agent-reservation-section" x-cloak x-show="reservationSchoolOptions().length > 1">

@@ -1840,6 +1840,45 @@ gap: 0.2rem;
     background: rgba(255, 255, 255, 0.82);
 }
 
+.home-v6-page .home-v6-agent-reservation-entry {
+    display: flex;
+    justify-content: flex-start;
+    margin: 0.75rem 1rem 0;
+}
+
+.home-v6-page .home-v6-agent-reservation-entry-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-height: 2.35rem;
+    max-width: 100%;
+    padding: 0 0.86rem;
+    border: 1px solid rgba(37, 99, 235, 0.24);
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.94);
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+    transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.home-v6-page .home-v6-agent-reservation-entry-button:hover,
+.home-v6-page .home-v6-agent-reservation-entry-button:focus-visible {
+    border-color: rgba(37, 99, 235, 0.42);
+    background: rgba(239, 246, 255, 0.96);
+    color: #1e40af;
+    transform: translateY(-1px);
+}
+
+.home-v6-page .home-v6-agent-reservation-entry-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .home-v6-page .home-v6-agent-reservation-section {
     display: grid;
     gap: 0.48rem;
