@@ -176,13 +176,11 @@ if (documentForm) {
       throw new Error("다시 시도");
     } catch (error) {
       submitLocked = false;
-      const message = error instanceof Error ? error.message : "다시 시도";
       setDocumentStatus(error?.status === 429 ? "오늘 한도" : "다시 시도", true);
       if (error?.status !== 429) {
         submitButton?.removeAttribute("disabled");
       }
       submitButton?.removeAttribute("aria-busy");
-      window.alert(message);
     }
   });
 

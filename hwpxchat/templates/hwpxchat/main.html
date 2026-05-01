@@ -12,7 +12,29 @@
 
     #hwpx-chat-loading.htmx-request {
         display: flex;
-        pointer-events: auto;
+        pointer-events: none;
+    }
+
+    .hwpx-inline-status {
+        min-height: 1.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 0.82rem;
+        font-weight: 900;
+    }
+
+    .hwpx-inline-status[data-empty="true"] {
+        display: none;
+    }
+
+    .hwpx-inline-status[data-state="error"] {
+        background: #fef2f2;
+        color: #b91c1c;
     }
 
     .hwpx-shell {
@@ -732,6 +754,7 @@
                 </a>
                 <div class="mt-5 space-y-3">
                     <h1 class="text-4xl md:text-5xl font-black text-slate-950 leading-tight">공문을 오늘 할 일로 바로 정리하기</h1>
+                    <p class="max-w-3xl text-base font-bold leading-7 text-slate-600">공문이나 한글 문서를 올리면 해야 할 일, 기한, 전달 대상을 카드로 정리해 드려요.</p>
                 </div>
             </div>
         </div>
@@ -747,8 +770,11 @@
                     hx-target="#hwpx-chat-result"
                     hx-swap="innerHTML"
                     hx-indicator="#hwpx-chat-loading"
+                    hx-disabled-elt=".hwpx-submit-button"
                     enctype="multipart/form-data"
                     class="hwpx-upload-form"
+                    onsubmit="return validateHwpxUploadForm(event)"
+                    @submit="beforeSubmit($event)"
                 >
                     {% csrf_token %}
 
@@ -768,7 +794,7 @@
                                 id="hwpx-file-input"
                                 type="file"
                                 name="hwpx_file"
-                                required
+                                aria-required="true"
                                 accept=".hwpx,.hwp"
                                 x-ref="hwpxFileInput"
                                 @change="handleFileSelection($event)"
@@ -784,6 +810,11 @@
                         <i class="fa-solid fa-file-arrow-up"></i>
                         문서 올리기
                     </button>
+                    <div id="hwpx-chat-loading" class="hwpx-inline-status htmx-indicator" aria-live="polite">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        문서 정리 중
+                    </div>
+                    <div id="hwpx-upload-status" class="hwpx-inline-status" data-empty="true" aria-live="polite"></div>
                 </form>
 
                 <div class="hwpx-note hwpx-note--warn">
@@ -808,6 +839,7 @@
                     <div>
                         <p class="hwpx-stage-label">2단계 작업 공간</p>
                         <h2 class="hwpx-stage-title">업무 카드</h2>
+                        <div id="hwpx-copy-status" class="hwpx-inline-status mt-3" data-empty="true" aria-live="polite"></div>
                     </div>
                     {% if current_document %}
                     <div class="hwpx-stage-actions">
@@ -836,55 +868,84 @@
     </div>
 </section>
 
-<div id="hwpx-chat-loading" class="htmx-indicator fixed inset-0 z-[120] flex items-center justify-center bg-white/55 backdrop-blur-sm">
-    <div class="hwpx-panel px-6 py-5 flex items-center gap-3">
-        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-500"></i>
-        <span class="text-slate-700 font-bold">문서 정리 중...</span>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function setHwpxInlineStatus(id, message, isError) {
+        const element = document.getElementById(id);
+        if (!element) {
+            return;
+        }
+        const text = String(message || "").trim();
+        element.textContent = text;
+        element.dataset.empty = text ? "false" : "true";
+        element.dataset.state = isError ? "error" : "default";
+    }
+
+    function setHwpxUploadStatus(message, isError) {
+        setHwpxInlineStatus("hwpx-upload-status", message, isError);
+    }
+
+    function setHwpxCopyStatus(message, isError) {
+        setHwpxInlineStatus("hwpx-copy-status", message, isError);
+    }
+
+    function validateHwpxUploadForm(event) {
+        const form = event && event.target;
+        const input = form ? form.querySelector("#hwpx-file-input") : document.getElementById("hwpx-file-input");
+        const file = input && input.files && input.files.length ? input.files[0] : null;
+        if (!file) {
+            if (event) {
+                event.preventDefault();
+            }
+            setHwpxUploadStatus("파일 확인", true);
+            return false;
+        }
+        return true;
+    }
+
+    async function readHwpxJsonResponse(response) {
+        const text = await response.text();
+        if (!text) {
+            return {};
+        }
+        try {
+            return JSON.parse(text);
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    function renderHwpxQuestionStatus(resultBox, message, isError) {
+        if (!resultBox) {
+            return;
+        }
+        const className = isError ? "hwpx-alert hwpx-alert--error" : "hwpx-alert hwpx-alert--info";
+        resultBox.innerHTML = `<div class="${className}">${escapeHwpxHtml(message)}</div>`;
+    }
+
     function hwpxChatPage() {
         return {
             isDragActive: false,
             selectedFileName: "",
             validateHwpxFile(file, input) {
                 if (!file) {
+                    setHwpxUploadStatus("파일 확인", true);
                     return false;
                 }
 
                 const name = (file.name || "").toLowerCase();
                 if (name.endsWith(".hwp")) {
-                    if (input) {
-                        input.value = "";
-                    }
-                    this.selectedFileName = "";
-                    Swal.fire({
-                        icon: "warning",
-                        title: "HWP 파일은 업로드할 수 없습니다",
-                        html: "HWP 문서를 <b>다른 이름으로 저장 → HWPX</b>로 바꾼 뒤 업로드해 주세요.",
-                        confirmButtonText: "확인",
-                        confirmButtonColor: "#10b981"
-                    });
+                    this.selectedFileName = file.name || "";
+                    setHwpxUploadStatus("HWPX로 저장", true);
                     return false;
                 }
 
                 if ((file.size || 0) > 15 * 1024 * 1024) {
-                    if (input) {
-                        input.value = "";
-                    }
-                    this.selectedFileName = "";
-                    Swal.fire({
-                        icon: "warning",
-                        title: "파일이 너무 큽니다",
-                        text: "15MB 이하 HWPX만 올릴 수 있어요.",
-                        confirmButtonText: "확인",
-                        confirmButtonColor: "#10b981"
-                    });
+                    this.selectedFileName = file.name || "";
+                    setHwpxUploadStatus("파일 확인", true);
                     return false;
                 }
 
+                setHwpxUploadStatus("업로드 가능", false);
                 return true;
             },
             handleFileSelection(event) {
@@ -901,6 +962,18 @@
                 }
 
                 this.selectedFileName = file.name || "";
+            },
+            beforeSubmit(event) {
+                const input = this.$refs.hwpxFileInput;
+                const file = input && input.files && input.files.length ? input.files[0] : null;
+                if (!this.validateHwpxFile(file, input)) {
+                    if (event) {
+                        event.preventDefault();
+                    }
+                    return false;
+                }
+                setHwpxUploadStatus("문서 정리 중", false);
+                return true;
             },
             onDragEnter() {
                 this.isDragActive = true;
@@ -933,13 +1006,7 @@
                 }
 
                 if (!input) {
-                    Swal.fire({
-                        icon: "error",
-                        title: "파일 입력창을 찾을 수 없습니다",
-                        text: "페이지를 새로고침한 뒤 다시 시도해 주세요.",
-                        confirmButtonText: "확인",
-                        confirmButtonColor: "#10b981"
-                    });
+                    setHwpxUploadStatus("다시 시도", true);
                     return;
                 }
 
@@ -948,13 +1015,7 @@
                     dt.items.add(file);
                     input.files = dt.files;
                 } catch (error) {
-                    Swal.fire({
-                        icon: "error",
-                        title: "드래그앤드롭에 실패했습니다",
-                        text: "파일 선택 버튼으로 다시 시도해 주세요.",
-                        confirmButtonText: "확인",
-                        confirmButtonColor: "#10b981"
-                    });
+                    setHwpxUploadStatus("파일 확인", true);
                     return;
                 }
 
@@ -980,30 +1041,16 @@
 
         const text = textarea.value || "";
         if (!text.trim()) {
-            Swal.fire({
-                icon: "warning",
-                title: "복사할 내용이 없습니다",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxCopyStatus("복사할 내용 없음", true);
             return;
         }
 
         navigator.clipboard.writeText(text).then(() => {
-            Swal.fire({
-                icon: "success",
-                title: "원문을 복사했습니다",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxCopyStatus("복사 완료", false);
         }).catch(() => {
-            Swal.fire({
-                icon: "error",
-                title: "복사에 실패했습니다",
-                text: "텍스트를 직접 선택해서 복사해 주세요.",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            textarea.focus();
+            textarea.select();
+            setHwpxCopyStatus("직접 복사", true);
         });
     }
 
@@ -1063,30 +1110,14 @@
     function copyHwpxWorkItems() {
         const text = collectHwpxWorkItemsText();
         if (!text.trim()) {
-            Swal.fire({
-                icon: "warning",
-                title: "복사할 카드가 없습니다",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxCopyStatus("복사할 카드 없음", true);
             return;
         }
 
         navigator.clipboard.writeText(text).then(() => {
-            Swal.fire({
-                icon: "success",
-                title: "업무 카드를 복사했습니다",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxCopyStatus("복사 완료", false);
         }).catch(() => {
-            Swal.fire({
-                icon: "error",
-                title: "복사에 실패했습니다",
-                text: "카드를 직접 선택해서 복사해 주세요.",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxCopyStatus("직접 복사", true);
         });
     }
 
@@ -1147,12 +1178,10 @@
         const formData = new FormData(form);
         const question = (formData.get("question") || "").toString().trim();
         if (!question) {
-            Swal.fire({
-                icon: "warning",
-                title: "질문을 입력해 주세요",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            renderHwpxQuestionStatus(resultBox, "질문 필요", true);
+            if (textarea) {
+                textarea.focus();
+            }
             return false;
         }
 
@@ -1181,16 +1210,10 @@
                 },
                 body: formData,
             });
-            const payload = await response.json().catch(() => null);
+            const payload = await readHwpxJsonResponse(response);
             if (!response.ok) {
-                Swal.fire({
-                    icon: "error",
-                    title: (payload && payload.message) || "질문 처리 중 오류가 발생했습니다.",
-                    confirmButtonText: "확인",
-                    confirmButtonColor: "#10b981"
-                });
                 if (resultBox) {
-                    resultBox.innerHTML = "";
+                    renderHwpxQuestionStatus(resultBox, (payload && payload.message) || "다시 시도", true);
                 }
                 return false;
             }
@@ -1200,15 +1223,8 @@
                 textarea.focus();
             }
         } catch (error) {
-            Swal.fire({
-                icon: "error",
-                title: "질문 처리 중 오류가 발생했습니다",
-                text: "잠시 후 다시 시도해 주세요.",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
             if (resultBox) {
-                resultBox.innerHTML = "";
+                renderHwpxQuestionStatus(resultBox, "다시 시도", true);
             }
         } finally {
             if (button) {
@@ -1269,6 +1285,20 @@
     }
 
     function bindHwpxUploadHtmxLifecycle() {
+        document.body.addEventListener("htmx:beforeRequest", function (event) {
+            if (!event.target || event.target.id !== "hwpx-chat-upload-form") {
+                return;
+            }
+            const input = event.target.querySelector("#hwpx-file-input");
+            const file = input && input.files && input.files.length ? input.files[0] : null;
+            if (!file) {
+                event.preventDefault();
+                setHwpxUploadStatus("파일 확인", true);
+                return;
+            }
+            setHwpxUploadStatus("문서 정리 중", false);
+        });
+
         document.body.addEventListener("htmx:beforeSwap", function (event) {
             const detail = event.detail || {};
             const target = resolveHwpxHtmxTarget(detail);
@@ -1289,6 +1319,7 @@
             }
 
             applyMobileCardEditingState();
+            setHwpxUploadStatus("", false);
             event.target.scrollIntoView({ behavior: "smooth", block: "start" });
         });
 
@@ -1303,18 +1334,13 @@
             if (xhr.responseText) {
                 target.innerHTML = xhr.responseText;
                 applyMobileCardEditingState();
+                setHwpxUploadStatus("다시 시도", true);
                 target.scrollIntoView({ behavior: "smooth", block: "start" });
                 return;
             }
 
             renderHwpxUploadFallbackError("문서 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
-            Swal.fire({
-                icon: "error",
-                title: "문서 처리 중 오류가 발생했습니다",
-                text: "잠시 후 다시 시도해 주세요.",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxUploadStatus("다시 시도", true);
         });
 
         document.body.addEventListener("htmx:sendError", function (event) {
@@ -1325,13 +1351,7 @@
             }
 
             renderHwpxUploadFallbackError("네트워크 문제로 문서를 보내지 못했습니다. 연결 상태를 확인해 주세요.");
-            Swal.fire({
-                icon: "error",
-                title: "네트워크 문제로 문서를 보내지 못했습니다",
-                text: "연결 상태를 확인해 주세요.",
-                confirmButtonText: "확인",
-                confirmButtonColor: "#10b981"
-            });
+            setHwpxUploadStatus("다시 시도", true);
         });
     }
 

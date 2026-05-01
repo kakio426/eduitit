@@ -10,7 +10,13 @@
     }
 
     #ocrdesk-loading.htmx-request {
-        display: flex;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    [data-ocrdesk-inline-error="true"] {
+        color: rgb(185 28 28);
     }
 
     #ocrdesk-dropzone[data-dragging="true"] {
@@ -133,6 +139,10 @@
                                 </button>
                             </div>
                         </div>
+                        <div id="ocrdesk-loading" class="htmx-indicator mt-3 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-black text-sky-700" aria-live="polite">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            읽는 중
+                        </div>
                     </div>
                 </section>
             </form>
@@ -143,13 +153,6 @@
         </div>
     </div>
 </section>
-
-<div id="ocrdesk-loading" class="htmx-indicator fixed inset-0 z-[120] items-center justify-center bg-slate-950/20 backdrop-blur-sm">
-    <div class="rounded-[26px] bg-white px-6 py-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p class="text-sm font-black text-sky-700">읽는 중</p>
-        <p class="mt-2 text-sm text-slate-600">잠시만</p>
-    </div>
-</div>
 
 <script src="{% static 'ocrdesk/main.js' %}?v=20260323a"></script>
 {% endblock %}

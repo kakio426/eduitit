@@ -10,6 +10,17 @@
       return;
     }
     element.textContent = text || "";
+    if (element.id === "ocrdesk-preview-alert") {
+      element.dataset.ocrdeskInlineError = "";
+    }
+  }
+
+  function setInlineError(element, text) {
+    if (!element) {
+      return;
+    }
+    element.textContent = text || "";
+    element.dataset.ocrdeskInlineError = text ? "true" : "";
   }
 
   function getState() {
@@ -71,6 +82,17 @@
       return;
     }
     state.submitButton.disabled = !(state.input.files && state.input.files.length);
+  }
+
+  function isSupportedImage(file) {
+    if (!file) {
+      return false;
+    }
+
+    var name = String(file.name || "").toLowerCase();
+    var hasImageType = String(file.type || "").toLowerCase().indexOf("image/") === 0;
+    var hasAllowedName = /\.(jpe?g|png|webp)$/i.test(name);
+    return hasImageType && hasAllowedName;
   }
 
   function focusResultPanel() {
@@ -136,7 +158,21 @@
       setElementText(state.previewAlert, "");
       setDropzoneState({ hasFile: false, dragging: false });
       syncSubmitState();
-      return;
+      return false;
+    }
+
+    if (!isSupportedImage(file)) {
+      if (state.input) {
+        state.input.value = "";
+      }
+      state.image.src = "";
+      state.image.classList.add("hidden");
+      state.emptyState.classList.remove("hidden");
+      setElementText(state.fileName, "사진 없음");
+      setDropzoneState({ hasFile: false, dragging: false });
+      syncSubmitState();
+      setInlineError(state.previewAlert, "사진 확인");
+      return false;
     }
 
     setElementText(state.fileName, file.name || "사진 1장 선택됨");
@@ -149,7 +185,7 @@
       state.image.src = "";
       state.image.classList.add("hidden");
       state.emptyState.classList.remove("hidden");
-      return;
+      return true;
     }
 
     var reader = new FileReader();
@@ -166,6 +202,7 @@
       setElementText(state.previewAlert, "미리보기 실패");
     };
     reader.readAsDataURL(file);
+    return true;
   }
 
   function submitForOCR() {
@@ -191,7 +228,7 @@
   function tryAssignDroppedFiles(fileList) {
     var state = getState();
     if (!state.input) {
-      window.alert("사진 입력칸 없음");
+      setInlineError(state.previewAlert, "사진 확인");
       return false;
     }
 
@@ -199,7 +236,7 @@
       state.input.files = fileList;
       return true;
     } catch (error) {
-      window.alert("사진을 불러오지 못했습니다.");
+      setInlineError(state.previewAlert, "사진 확인");
       return false;
     }
   }
@@ -212,8 +249,8 @@
 
     state.input.addEventListener("change", function () {
       var file = state.input.files && state.input.files.length ? state.input.files[0] : null;
-      updatePreview(file);
-      if (file) {
+      var isReady = updatePreview(file);
+      if (file && isReady) {
         submitForOCR();
       }
     });
@@ -261,8 +298,9 @@
         return;
       }
 
-      updatePreview(files[0]);
-      submitForOCR();
+      if (updatePreview(files[0])) {
+        submitForOCR();
+      }
     });
 
     ["dragover", "drop"].forEach(function (eventName) {
@@ -297,7 +335,6 @@
       textarea.focus();
       textarea.select();
       setElementText(status, "복사에 실패했습니다. 글자를 직접 선택해서 복사해 주세요.");
-      window.alert("복사에 실패했습니다. 글자를 직접 선택해서 복사해 주세요.");
     }
   }
 
@@ -317,7 +354,7 @@
         if (state.input) {
           state.input.click();
         } else {
-          window.alert("사진 선택 버튼을 찾지 못했습니다. 페이지를 다시 열어 주세요.");
+          setInlineError(state.previewAlert, "다시 시도");
         }
       }
     });
@@ -361,8 +398,7 @@
 
       clearBusyState();
       var state = getState();
-      setElementText(state.previewAlert, "서버 응답을 받지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
-      window.alert("사진을 읽는 요청에 실패했습니다. 잠시 뒤 다시 시도해 주세요.");
+      setInlineError(state.previewAlert, "다시 시도");
     });
 
     document.body.addEventListener("htmx:sendError", function (event) {
@@ -372,8 +408,7 @@
 
       clearBusyState();
       var state = getState();
-      setElementText(state.previewAlert, "네트워크 문제로 사진을 보내지 못했습니다.");
-      window.alert("네트워크 오류. 연결 확인 후 다시 시도해 주세요.");
+      setInlineError(state.previewAlert, "다시 시도");
     });
   }
 

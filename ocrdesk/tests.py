@@ -64,6 +64,16 @@ class OCRDeskViewTests(TestCase):
         self.assertContains(response, "지금 글자 읽기")
         self.assertEqual(response["Cache-Control"], "private, no-cache, must-revalidate")
 
+    def test_main_uses_inline_loading_without_alert_blockers(self):
+        response = self.client.get(reverse("ocrdesk:main"))
+        template = Path("ocrdesk/templates/ocrdesk/main.html").read_text(encoding="utf-8")
+        script = Path("ocrdesk/static/ocrdesk/main.js").read_text(encoding="utf-8")
+
+        self.assertContains(response, 'id="ocrdesk-loading"', html=False)
+        self.assertNotIn("fixed inset-0", template)
+        self.assertNotIn("z-[120]", template)
+        self.assertNotIn("window.alert", script)
+
     @patch("ocrdesk.views.extract_text_from_upload", return_value="숙제\n수학 익힘책 12쪽")
     def test_post_renders_editable_ocr_result(self, mocked_extract):
         response = self.client.post(

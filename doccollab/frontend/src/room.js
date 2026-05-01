@@ -521,15 +521,13 @@ class DoccollabRoom {
         body: formData,
         credentials: "same-origin",
       });
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        const message = errorPayload.message || "저장에 실패했습니다.";
+        const message = payload.message || "저장 실패";
         this.setStatus(message, true);
-        window.alert(message);
         return;
       }
 
-      const payload = await response.json();
       if (payload.revision) {
         this.lastLocalRevisionId = payload.revision.id || "";
         this.baseRevisionId = payload.revision.id || this.baseRevisionId;
@@ -548,9 +546,7 @@ class DoccollabRoom {
       this.snapshotBadge.textContent = "저장 완료";
       this.setStatus("저장 완료");
     } catch (error) {
-      const message = error?.message || "저장에 실패했습니다.";
-      this.setStatus(message, true);
-      window.alert(message);
+      this.setStatus("저장 실패", true);
     } finally {
       this.isSaving = false;
       this.saveButton?.removeAttribute("disabled");
@@ -575,19 +571,17 @@ class DoccollabRoom {
         },
         credentials: "same-origin",
       });
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.message || "AI 정리에 실패했습니다.");
+        throw new Error(payload.message || "다시 시도");
       }
-      const payload = await response.json();
       this.payload.assistantAnalysis = payload.analysis || null;
       this.renderAssistantAnalysis(this.payload.assistantAnalysis);
       this.setStatus("AI 정리 완료");
     } catch (error) {
-      const message = error?.message || "AI 정리에 실패했습니다.";
+      const message = error?.message || "다시 시도";
       this.setAssistantStatus(message, true);
       this.setStatus(message, true);
-      window.alert(message);
     } finally {
       this.assistantBusy = false;
       this.setAssistantButtonsDisabled(false);
@@ -622,16 +616,14 @@ class DoccollabRoom {
         body: JSON.stringify({ question }),
         credentials: "same-origin",
       });
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.message || "답변을 만들지 못했습니다.");
+        throw new Error(payload.message || "다시 시도");
       }
-      const payload = await response.json();
       this.renderQuestionAnswer(payload);
     } catch (error) {
-      const message = error?.message || "답변을 만들지 못했습니다.";
+      const message = error?.message || "다시 시도";
       this.renderQuestionError(message);
-      window.alert(message);
     } finally {
       this.questionBusy = false;
       if (this.questionButton) {
@@ -794,7 +786,11 @@ class DoccollabRoom {
   }
 
   handleSocketMessage(event) {
-    const message = JSON.parse(event.data || "{}");
+    const message = parseJsonObject(event.data || "{}");
+    if (!message) {
+      this.setStatus("실시간 지연", true);
+      return;
+    }
     switch (message.type) {
       case "room.snapshot":
         this.handleRoomSnapshot(message.payload || {});
@@ -1347,6 +1343,26 @@ function readCsrfToken(initialToken) {
     .map((item) => item.trim())
     .find((item) => item.startsWith("csrftoken="));
   return cookie ? cookie.split("=")[1] : "";
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+  return parseJsonObject(text) || {};
+}
+
+function parseJsonObject(value) {
+  if (value && typeof value === "object") {
+    return value;
+  }
+  try {
+    const parsed = JSON.parse(String(value || "{}"));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_error) {
+    return null;
+  }
 }
 
 function escapeHtml(value) {
