@@ -206,13 +206,6 @@
                     <section class="home-v6-mobile-agent-section" data-home-v6-mobile-agent-workspace="true">
                         {% include 'core/partials/home_v6_agent_workspace.html' with agent_workspace=home_v7_agent_workspace agent_workspace_surface='mobile' %}
                     </section>
-                    {% include 'core/partials/home_v6_edu_materials_preview.html' with preview=home_edu_materials_preview surface='mobile' %}
-                    {% elif mobile_section == 'quickdrop' %}
-                    {% if quickdrop_home_card %}
-                    {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
-                    {% include 'core/partials/home_v6_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
-                    {% endif %}
-                    {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if home_user_mode == 'authenticated' and reservation_home_card %}
                     <article class="home-v6-mobile-panel home-v6-reservations-panel{% if reservation_home_card.count == 1 %} home-v6-reservations-panel--single{% else %} home-v6-reservations-panel--stack{% endif %}" data-home-reservations-card="true" data-home-v6-reservations-panel="mobile" data-home-v6-rail-card="true" hidden aria-hidden="true">

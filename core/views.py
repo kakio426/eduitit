@@ -178,7 +178,6 @@ ADMIN_ACTIVITY_WINDOW_DAYS = 14
 HOME_MOBILE_SECTION_ORDER = (
     'workbench',
     'calendar',
-    'quickdrop',
     'reservations',
     'sns',
 )

@@ -148,12 +148,6 @@
                                 </div>
                             </section>
 
-                            {% if quickdrop_home_card %}
-                                {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
-                            {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
-                                {% endif %}
-                            {% endif %}
-
                             {% if home_v4_mobile_calendar_first_enabled %}
                             {% include 'core/partials/home_v4_mobile_quick_tools.html' %}
                             {% endif %}

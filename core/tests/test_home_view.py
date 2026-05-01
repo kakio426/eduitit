@@ -177,6 +177,23 @@ def _assert_authenticated_home_context_contract(testcase, response, *, design_ve
     )
 
 
+def _assert_mobile_quickdrop_omitted_in_favor_of_agent(testcase, response, content):
+    testcase.assertNotIn('data-home-v6-mobile-quickdrop="true"', content)
+    testcase.assertNotIn('data-home-v6-mobile-quickdrop-actions="true"', content)
+    testcase.assertNotIn('data-home-v6-mobile-quickdrop-form="true"', content)
+    testcase.assertIn('data-home-v6-mobile-agent-workspace="true"', content)
+
+    workspace = response.context.get('home_v7_agent_workspace') or {}
+    quickdrop_mode = next(
+        (mode for mode in workspace.get('modes', []) if mode.get('key') == 'quickdrop'),
+        None,
+    )
+    testcase.assertIsNotNone(quickdrop_mode)
+    testcase.assertTrue(quickdrop_mode.get('direct_url'))
+    testcase.assertTrue(quickdrop_mode.get('send_file_url'))
+    testcase.assertIn('data-home-v6-agent-quickdrop-file-input="true"', content)
+
+
 def _assert_public_home_context_contract(testcase, response, *, design_version='v6'):
     for key in PUBLIC_HOME_CONTEXT_KEYS:
         testcase.assertIn(key, response.context)
@@ -1538,13 +1555,10 @@ class HomeV2ViewTest(TestCase):
             content.index('data-home-v6-agent-workspace="true"'),
             content.index('data-home-v6-edu-materials-preview="desktop"'),
         )
-        self.assertLess(
-            content.index('data-home-v6-mobile-agent-workspace="true"'),
-            content.index('data-home-v6-edu-materials-preview="mobile"'),
-        )
         self.assertEqual(len(preview['cards']), 6)
         self.assertContains(response, 'data-home-v6-edu-material-card="desktop"', count=6)
-        self.assertContains(response, 'data-home-v6-edu-material-card="mobile"', count=6)
+        self.assertNotContains(response, 'data-home-v6-edu-material-card="mobile"')
+        self.assertNotContains(response, 'data-home-v6-edu-materials-preview="mobile"')
         self.assertContains(response, 'AI 수업자료')
         self.assertContains(response, f'{reverse("edu_materials:main")}?tab=create')
         self.assertContains(response, f'{reverse("edu_materials:main")}?tab=shared')
@@ -1552,14 +1566,14 @@ class HomeV2ViewTest(TestCase):
         self.assertContains(response, reverse('edu_materials:render', args=[preview['cards'][0]['id']]))
         self.assertEqual(preview['cards'][0]['title'], '홈 자료 7')
         self.assertNotContains(response, '홈 자료 1')
-        for surface in ('desktop', 'mobile'):
-            start = content.index(f'data-home-v6-edu-materials-preview="{surface}"')
-            end = content.index('</section>', start)
-            section_content = content[start:end]
-            self.assertEqual(section_content.count('loading="lazy"'), 6)
-            self.assertEqual(section_content.count('scrolling="no"'), 6)
-            for phrase in ('할 수 있습니다', '할 수 있어요', '먼저', '사용법', '가능합니다', '여기서', '열람', '조회'):
-                self.assertNotIn(phrase, section_content)
+        start = content.index('data-home-v6-edu-materials-preview="desktop"')
+        end = content.index('</section>', start)
+        section_content = content[start:end]
+        self.assertEqual(section_content.count('loading="lazy"'), 6)
+        self.assertEqual(section_content.count('scrolling="no"'), 6)
+        self.assertEqual(section_content.count('data-home-v6-edu-material-thumb="true"'), 6)
+        for phrase in ('할 수 있습니다', '할 수 있어요', '먼저', '사용법', '가능합니다', '여기서', '열람', '조회'):
+            self.assertNotIn(phrase, section_content)
 
     def test_v6_home_edu_materials_preview_empty_state_is_compact(self):
         self._login('homematerialempty')
@@ -1571,9 +1585,9 @@ class HomeV2ViewTest(TestCase):
         self._assert_authenticated_home_uses_v6(response, content)
         self.assertEqual(preview['cards'], [])
         self.assertContains(response, 'data-home-v6-edu-materials-preview="desktop"')
-        self.assertContains(response, 'data-home-v6-edu-materials-preview="mobile"')
+        self.assertNotContains(response, 'data-home-v6-edu-materials-preview="mobile"')
         self.assertContains(response, 'data-home-v6-edu-materials-empty="desktop"')
-        self.assertContains(response, 'data-home-v6-edu-materials-empty="mobile"')
+        self.assertNotContains(response, 'data-home-v6-edu-materials-empty="mobile"')
         self.assertContains(response, '공개 자료 없음')
         self.assertContains(response, f'{reverse("edu_materials:main")}?tab=create')
         self.assertNotContains(response, 'data-home-v6-edu-material-card="desktop"')
@@ -2936,21 +2950,12 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
 
         self._assert_authenticated_home_uses_v6(response, content)
         self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
         self.assertNotIn('data-home-v6-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
         self.assertNotIn('<h2 class="text-lg font-black text-slate-900">바로전송</h2>', content)
-        self.assertIn('aria-label="보낼 내용"', content)
-        self.assertIn('지금 보내기', content)
 
     def test_v4_home_auto_provisions_quickdrop_card_when_product_is_missing(self):
         user = self._login('v4quickdropautocreate')
@@ -2960,16 +2965,11 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertEqual(response.status_code, 200)
         self._assert_authenticated_home_uses_v6(response, content)
         self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
         self.assertTrue(Product.objects.filter(launch_route_name='quickdrop:landing', title='바로전송').exists())
 
     def test_v4_home_keeps_hidden_quickdrop_hidden(self):
@@ -2995,7 +2995,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
         self.assertFalse(QuickdropChannel.objects.filter(owner=user).exists())
 
-    def test_v4_home_quickdrop_card_shows_latest_text_summary_without_status_copy(self):
+    def test_v4_home_omits_quickdrop_summary_when_agent_mode_replaces_card(self):
         user = self._login('v4quickdropsummary')
         product = Product.objects.create(
             title='바로전송',
@@ -3023,10 +3023,10 @@ class HomeV4ViewTest(TestCase):
 
         self.assertEqual(product.launch_route_name, 'quickdrop:landing')
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn('지금 보내기', content)
-        self.assertIn('회의 안내 문자를 정리해서 다시 보내야 합니다', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
+        self.assertNotIn('data-home-v6-quickdrop-form="true"', content)
+        self.assertNotIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
+        self.assertNotIn('회의 안내 문자를 정리해서 다시 보내야 합니다', content)
         self.assertNotIn('최근 전송은', content)
         self.assertNotIn('오늘 1개가 남아 있습니다.', content)
 
@@ -3060,7 +3060,7 @@ class HomeV4ViewTest(TestCase):
         self.assertIn('data-home-v6-agent-workspace="true"', content)
         self.assertNotIn('data-home-v6-service-grid="true"', content)
 
-    def test_v4_mobile_quickdrop_stays_visible_without_calendar_first_flag(self):
+    def test_v4_mobile_omits_standalone_quickdrop_without_calendar_first_flag(self):
         user = self._login('v4mobilequickdropdefault')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         Product.objects.create(
@@ -3075,28 +3075,13 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
 
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('aria-label="보낼 내용"', content)
-        self.assertIn('지금 보내기', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
         self.assertNotIn('data-home-v4-mobile-quick-tools="true"', content)
 
-        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
-        sns_index = content.index('data-home-v6-mobile-sns="true"')
-        self.assertLess(calendar_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, sns_index)
-
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
-    def test_v4_mobile_quickdrop_moves_under_messagebox_when_capture_is_enabled(self):
+    def test_v4_mobile_omits_standalone_quickdrop_when_capture_is_enabled(self):
         user = self._login('v4mobilequickdropmessagebox')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         Product.objects.create(
@@ -3111,23 +3096,9 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
 
         self.assertIn('data-home-messagebox-card="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-placement="under-messagebox"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('지금 보내기', content)
-
-        messagebox_index = content.index('data-home-messagebox-card="true"')
-        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
-        sns_index = content.index('data-home-v6-mobile-sns="true"')
-        self.assertLess(messagebox_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, sns_index)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
 
     def test_v4_home_moves_developer_chat_entry_to_topbar_contact_button(self):
         self._login('v4devchatcard')
@@ -3275,7 +3246,7 @@ class HomeV4ViewTest(TestCase):
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
 
     @override_settings(HOME_V4_MOBILE_CALENDAR_FIRST_ENABLED=True)
-    def test_v4_mobile_calendar_first_surfaces_quickdrop_as_direct_action_card(self):
+    def test_v4_mobile_calendar_first_omits_standalone_quickdrop(self):
         user = self._login('v4mobilequickdrop')
         ProductFavorite.objects.create(user=user, product=self.p1, pin_order=1)
         Product.objects.create(
@@ -3290,25 +3261,9 @@ class HomeV4ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
 
         self._assert_authenticated_home_uses_v6(response, content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-actions="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('aria-label="보낼 내용"', content)
-        self.assertIn('지금 보내기', content)
-        self.assertIn('새 기기 추가', content)
-
-        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        mobile_quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
-        sns_index = content.index('data-home-v6-mobile-sns="true"')
-        self.assertLess(calendar_index, mobile_quickdrop_index)
-        self.assertLess(mobile_quickdrop_index, sns_index)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
 
     def test_v4_section_menu_lists_full_tool_links_without_switching_home_summary(self):
         self._login('v4section')
@@ -3679,29 +3634,23 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('data-home-v6-mobile-summary="true"', content)
         self.assertIn('data-home-v6-workbench="mobile"', content)
         self.assertIn('data-home-v6-favorites-panel="true"', content)
-        self.assertIn('data-home-v6-calendar-panel="mobile"', content)
+        self.assertNotIn('data-home-v6-calendar-panel="mobile"', content)
         self.assertIn('data-home-v6-calendar-panel="desktop"', content)
         self.assertIn('data-home-v6-mobile-sns="true"', content)
         self.assertIn('data-home-v6-mobile-sns-compact="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
         self.assertIn('sns-full-section-auth-v6', content)
         self.assertIn('data-home-v6-mobile-summary-button="true"', content)
         self.assertIn('즐겨찾기', content)
         self.assertIn('data-favorite-toggle="true"', content)
         workbench_mobile_match = re.search(r'<article[^>]*data-home-v6-workbench="mobile"[^>]*>', content)
-        calendar_mobile_match = re.search(r'<section[^>]*data-home-v6-calendar-panel="mobile"[^>]*>', content)
         agent_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-agent-workspace="true"[^>]*>', content)
-        quickdrop_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-quickdrop="true"[^>]*>', content)
         sns_mobile_match = re.search(r'<section[^>]*data-home-v6-mobile-sns="true"[^>]*>', content)
         self.assertIsNotNone(workbench_mobile_match)
-        self.assertIsNotNone(calendar_mobile_match)
         self.assertIsNotNone(agent_mobile_match)
-        self.assertIsNotNone(quickdrop_mobile_match)
         self.assertIsNotNone(sns_mobile_match)
         self.assertIn('hidden', workbench_mobile_match.group(0))
-        self.assertNotIn('hidden', calendar_mobile_match.group(0))
         self.assertNotIn('hidden', agent_mobile_match.group(0))
-        self.assertNotIn('hidden', quickdrop_mobile_match.group(0))
         self.assertIn('hidden', sns_mobile_match.group(0))
         self.assertNotIn('data-home-v4-public-shell="true"', content)
         self.assertNotIn('data-home-v4-mobile-menu-trigger="true"', content)
@@ -3730,7 +3679,7 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('home_mobile_workbench_items', template)
         self.assertIn("core/partials/home_v6_nav_sections.html", template)
         self.assertIn("core/partials/home_v6_calendar_panel.html", template)
-        self.assertIn("core/partials/home_v6_mobile_quickdrop_card.html", template)
+        self.assertNotIn("core/partials/home_v6_mobile_quickdrop_card.html", template)
         self.assertIn("core/partials/home_v6_quickdrop_panel.html", template)
         self.assertIn("core/partials/home_v6_teacher_buddy_panel_mobile.html", template)
         self.assertIn("core/partials/home_v6_teacher_buddy_panel_rail.html", template)
@@ -3888,7 +3837,7 @@ class HomeV5ViewTest(TestCase):
         self.assertIn('v5reservationcardowner 선생님', content)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
-    def test_v5_mobile_places_reservation_below_quickdrop_without_duplicate(self):
+    def test_v5_mobile_places_reservation_without_standalone_quickdrop(self):
         user = self._login('v5mobilequickdropreservation')
         quickdrop = Product.objects.create(
             title='바로전송',
@@ -3916,21 +3865,18 @@ class HomeV5ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v6-workbench="mobile"')
-        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v6-mobile-sns="true"')
-        workbench_block = content[workbench_index:calendar_index]
+        workbench_block = content[workbench_index:reservation_index]
         desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]
 
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 1)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
+        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 0)
         self.assertNotIn('data-home-v4-mobile-quickdrop="true"', mobile_block)
-        self.assertLess(workbench_index, calendar_index)
-        self.assertLess(calendar_index, quickdrop_index)
-        self.assertLess(quickdrop_index, reservation_index)
-        self.assertLess(calendar_index, sns_index)
+        self.assertLess(workbench_index, reservation_index)
+        self.assertLess(reservation_index, sns_index)
 
     def test_reservations_product_uses_smart_entry_for_authenticated_user(self):
         user = self._login('v5smartentry')
@@ -4858,7 +4804,7 @@ class HomeV6ViewTest(TestCase):
         self.assertIn('data-home-v6-rail-item="true"', content)
         self.assertIn('data-home-v6-rail-action="true"', content)
 
-    def test_v6_mobile_quickdrop_uses_direct_send_form_without_desktop_card(self):
+    def test_v6_mobile_omits_standalone_quickdrop_because_agent_handles_send(self):
         user = self._login('v6quickdropdirect')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
         Product.objects.create(
@@ -4873,33 +4819,19 @@ class HomeV6ViewTest(TestCase):
 
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
-        from quickdrop.models import QuickdropChannel
-
-        channel = QuickdropChannel.objects.get(owner=user)
-        history_url = f'{reverse("quickdrop:channel", kwargs={"slug": channel.slug})}?focus=history#history-panel'
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('data-home-v6-quickdrop-panel="true"', content)
         self.assertNotIn('data-home-v6-quickdrop-form="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop="true"', content)
-        self.assertIn('data-home-v6-mobile-quickdrop-form="true"', content)
-        self.assertIn(f'action="{reverse("quickdrop:send_text", kwargs={"slug": channel.slug})}"', content)
-        self.assertIn('aria-label="보낼 내용"', content)
-        self.assertIn('지금 보내기', content)
-        self.assertIn(f'href="{reverse("quickdrop:landing")}"', content)
-        self.assertIn('aria-label="새 기기 추가"', content)
-        self.assertIn(f'href="{history_url}"', content)
-        self.assertIn('오늘 보낸 내용', content)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
         self.assertNotIn(f'href="{reverse("quickdrop:open")}"', content)
         self.assertNotIn('data-home-v4-quickdrop-panel="true"', content)
         self.assertNotIn('data-home-v4-quickdrop-form="true"', content)
 
         mobile_css = _read_home_v6_css_bundle()
         self.assertIn('@media (max-width: 639px)', mobile_css)
-        self.assertIn('.home-v6-mobile-quickdrop-actions', mobile_css)
         self.assertIn('grid-template-columns: minmax(0, 1fr);', mobile_css)
         self.assertIn('.home-v6-quickdrop-summary', mobile_css)
-        self.assertIn('.home-v6-mobile-quickdrop-summary', mobile_css)
         self.assertIn('overflow-wrap: anywhere;', mobile_css)
         self.assertIn('box-sizing: border-box;', mobile_css)
 
@@ -4973,7 +4905,7 @@ class HomeV6ViewTest(TestCase):
         self.assertNotIn('home-v6-reservation-button--single', content)
 
     @override_settings(FEATURE_MESSAGE_CAPTURE_ENABLED=True)
-    def test_v6_mobile_places_reservation_below_quickdrop_without_duplicate(self):
+    def test_v6_mobile_places_reservation_without_standalone_quickdrop(self):
         user = self._login('v6mobilequickdropreservation')
         ProductFavorite.objects.create(user=user, product=self.favorite_product, pin_order=1)
         quickdrop = Product.objects.create(
@@ -5002,23 +4934,18 @@ class HomeV6ViewTest(TestCase):
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         workbench_index = content.index('data-home-v6-workbench="mobile"')
-        calendar_index = content.index('data-home-v6-calendar-panel="mobile"')
-        quickdrop_index = content.index('data-home-v6-mobile-quickdrop="true"')
         reservation_index = content.index('data-home-reservations-card="true"')
         sns_index = content.index('data-home-v6-mobile-sns="true"')
-        workbench_block = content[workbench_index:calendar_index]
+        workbench_block = content[workbench_index:reservation_index]
         desktop_layout_index = content.index('data-home-v6-layout="true"')
         mobile_block = content[:desktop_layout_index]
 
         self.assertEqual(response.context['home_design_version'], 'v6')
         self.assertNotIn('title="바로전송">바로전송</p>', workbench_block)
-        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 1)
-        self.assertIn('aria-label="새 기기 추가"', mobile_block)
-        self.assertIn('오늘 보낸 내용', mobile_block)
+        _assert_mobile_quickdrop_omitted_in_favor_of_agent(self, response, content)
+        self.assertEqual(mobile_block.count('data-home-v6-mobile-quickdrop="true"'), 0)
         self.assertNotIn('data-home-v4-mobile-quickdrop="true"', mobile_block)
-        self.assertLess(workbench_index, calendar_index)
-        self.assertLess(calendar_index, quickdrop_index)
-        self.assertLess(quickdrop_index, reservation_index)
+        self.assertLess(workbench_index, reservation_index)
         self.assertLess(reservation_index, sns_index)
 
     def test_v6_anonymous_home_uses_public_v6_template(self):

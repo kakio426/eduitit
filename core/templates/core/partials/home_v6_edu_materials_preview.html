@@ -17,7 +17,7 @@
     <div class="home-v6-edu-materials-grid">
         {% for card in preview.cards %}
         <a class="home-v6-edu-material-card" href="{{ card.detail_url }}" data-home-v6-edu-material-card="{{ surface_key }}">
-            <span class="home-v6-edu-material-thumb" aria-hidden="true">
+            <span class="home-v6-edu-material-thumb" data-home-v6-edu-material-thumb="true" aria-hidden="true">
                 <iframe
                     title="{{ card.title }} 미리보기"
                     src="{{ card.render_url }}"

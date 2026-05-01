@@ -168,16 +168,6 @@
                         {% include 'core/partials/home_calendar_panel.html' %}
                         {% endif %}
                     </section>
-                    {% elif mobile_section == 'quickdrop' %}
-                    {% if quickdrop_home_card %}
-                    {% if not messagebox_home_card.enabled or not messagebox_home_card.url %}
-                    {% if home_design_version == 'v6' %}
-                    {% include 'core/partials/home_v6_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
-                    {% else %}
-                    {% include 'core/partials/home_v4_mobile_quickdrop_card.html' with quickdrop_placement='' include_classcalendar_margin=False %}
-                    {% endif %}
-                    {% endif %}
-                    {% endif %}
                     {% elif mobile_section == 'reservations' %}
                     {% if reservation_home_card %}
                     <article class="home-v5-mobile-panel" data-home-reservations-card="true" data-home-v6-rail-card="true">

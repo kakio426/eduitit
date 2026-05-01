@@ -8718,6 +8718,40 @@
         window.location.href = href;
     }
 
+    function syncHomeEduMaterialThumbScale(root) {
+        if (!root) {
+            return;
+        }
+        var width = root.clientWidth || 0;
+        if (!width) {
+            return;
+        }
+        root.style.setProperty('--home-v6-edu-material-thumb-scale', Math.min(1, width / 1280).toFixed(4));
+    }
+
+    function initHomeEduMaterialThumbs() {
+        var roots = Array.prototype.slice.call(document.querySelectorAll('[data-home-v6-edu-material-thumb="true"]'));
+        if (!roots.length) {
+            return;
+        }
+        var syncAll = function () {
+            roots.forEach(syncHomeEduMaterialThumbScale);
+        };
+        syncAll();
+        if ('ResizeObserver' in window) {
+            var observer = new ResizeObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    syncHomeEduMaterialThumbScale(entry.target);
+                });
+            });
+            roots.forEach(function (root) {
+                observer.observe(root);
+            });
+        } else {
+            window.addEventListener('resize', syncAll);
+        }
+    }
+
     function initHomeV6Interactions() {
         if (window.__homeCommonInteractionsInitialized) {
             return;
@@ -8725,6 +8759,7 @@
         window.__homeCommonInteractionsInitialized = true;
 
         initHomeV6DesktopRail();
+        initHomeEduMaterialThumbs();
 
         var config = getHomeFrontendConfig();
         var favoriteIds = new Set();
