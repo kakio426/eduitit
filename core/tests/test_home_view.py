@@ -1552,6 +1552,14 @@ class HomeV2ViewTest(TestCase):
         self.assertContains(response, reverse('edu_materials:render', args=[preview['cards'][0]['id']]))
         self.assertEqual(preview['cards'][0]['title'], '홈 자료 7')
         self.assertNotContains(response, '홈 자료 1')
+        for surface in ('desktop', 'mobile'):
+            start = content.index(f'data-home-v6-edu-materials-preview="{surface}"')
+            end = content.index('</section>', start)
+            section_content = content[start:end]
+            self.assertEqual(section_content.count('loading="lazy"'), 6)
+            self.assertEqual(section_content.count('scrolling="no"'), 6)
+            for phrase in ('할 수 있습니다', '할 수 있어요', '먼저', '사용법', '가능합니다', '여기서', '열람', '조회'):
+                self.assertNotIn(phrase, section_content)
 
     def test_v6_home_edu_materials_preview_empty_state_is_compact(self):
         self._login('homematerialempty')
