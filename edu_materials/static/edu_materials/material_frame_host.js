@@ -65,6 +65,24 @@
       reload: reload,
       ready: false,
       hasError: false,
+      pendingTimer: null,
+    };
+
+    frameState.clearPendingTimer = function () {
+      if (frameState.pendingTimer) {
+        window.clearTimeout(frameState.pendingTimer);
+        frameState.pendingTimer = null;
+      }
+    };
+
+    frameState.startPendingTimer = function () {
+      frameState.clearPendingTimer();
+      frameState.pendingTimer = window.setTimeout(function () {
+        if (!frameState.ready && !frameState.hasError) {
+          frameState.hasError = true;
+          frameState.show("미리보기 실패", "다시 시도", "error");
+        }
+      }, 6500);
     };
 
     frameState.show = function (titleText, bodyText, tone) {
@@ -92,9 +110,26 @@
         frameState.ready = false;
         frameState.hasError = false;
         frameState.hide();
+        frameState.startPendingTimer();
         iframe.src = iframe.src;
       });
     }
+
+    iframe.addEventListener("load", function () {
+      if (!frameState.ready) {
+        frameState.hasError = false;
+        frameState.startPendingTimer();
+      }
+    });
+
+    iframe.addEventListener("error", function () {
+      frameState.clearPendingTimer();
+      frameState.ready = false;
+      frameState.hasError = true;
+      frameState.show("미리보기 실패", "다시 시도", "error");
+    });
+
+    frameState.startPendingTimer();
     return frameState;
   }
 
@@ -129,6 +164,7 @@
     }
 
     if (data.type === "edu-materials:runtime-ready") {
+      frameState.clearPendingTimer();
       frameState.ready = true;
       frameState.hasError = false;
       frameState.hide();
@@ -136,6 +172,7 @@
     }
 
     if (data.type === "edu-materials:runtime-error") {
+      frameState.clearPendingTimer();
       frameState.ready = false;
       frameState.hasError = true;
       frameState.show("오류 있음", describeError(data), "error");

@@ -34,16 +34,20 @@
                     {% csrf_token %}
                     <i class="fa-solid fa-thumbtack text-xs"></i> {% if card.is_pinned %}고정 해제{% else %}상단 고정{% endif %}
                 </button>
-                <button type="button"
+                <form method="post"
+                    action="{% url 'infoboard:card_delete' card_id=card.id %}"
                     hx-post="{% url 'infoboard:card_delete' card_id=card.id %}"
                     hx-target="#ibCardGrid"
                     hx-swap="innerHTML"
-                    hx-confirm="이 카드를 삭제할까요?"
-                    @click="open = false"
-                    class="ib-dropdown-item danger w-full text-left text-sm">
+                    onsubmit="return this.dataset.ibConfirmed === '1' || confirm('이 카드를 삭제할까요?')">
                     {% csrf_token %}
-                    <i class="fa-solid fa-trash text-xs"></i> 삭제
-                </button>
+                    <button type="submit"
+                        @click="open = false"
+                        class="ib-dropdown-item danger w-full text-left text-sm"
+                        data-ib-confirm="이 카드를 삭제할까요?">
+                        <i class="fa-solid fa-trash text-xs"></i> 삭제
+                    </button>
+                </form>
             </div>
         </div>
         {% endif %}

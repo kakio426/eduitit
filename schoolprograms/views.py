@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, F, IntegerField, Prefetch, Q, Value, When
-from django.http import FileResponse, Http404, HttpResponseForbidden
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -111,15 +111,31 @@ def _listing_primary_image_url(listing) -> str:
         return ""
 
 
-def _ensure_company_or_403(user):
-    if not getattr(user, "is_authenticated", False) or not _is_company_role(user):
-        return HttpResponseForbidden("업체 계정만 접근할 수 있습니다.")
+def _permission_denied_response(request):
+    return _render_schoolprograms(
+        request,
+        "schoolprograms/error.html",
+        {
+            "page_title": f"권한 없음 | {SERVICE_TITLE}",
+            "meta_description": "접근 권한이 없는 학교 프로그램 화면입니다.",
+            "message": "권한 없음",
+            "back_url": reverse("schoolprograms:landing"),
+            "back_label": "목록",
+        },
+        noindex=True,
+        status=403,
+    )
+
+
+def _ensure_company_or_403(request):
+    if not getattr(request.user, "is_authenticated", False) or not _is_company_role(request.user):
+        return _permission_denied_response(request)
     return None
 
 
-def _ensure_teacher_or_403(user):
-    if not getattr(user, "is_authenticated", False) or not _is_teacher_role(user):
-        return HttpResponseForbidden("교사 계정만 접근할 수 있습니다.")
+def _ensure_teacher_or_403(request):
+    if not getattr(request.user, "is_authenticated", False) or not _is_teacher_role(request.user):
+        return _permission_denied_response(request)
     return None
 
 
@@ -677,7 +693,7 @@ def download_listing_attachment(request, slug, attachment_id):
 
 @login_required
 def create_inquiry(request, slug):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -765,7 +781,7 @@ def provider_detail(request, slug):
             next_url = f"{reverse('schoolprograms:provider_detail', args=[provider.slug])}?activity={selected_listing.slug}"
             login_url = f"{reverse('account_login')}?next={quote(next_url)}"
             return redirect(login_url)
-        denied = _ensure_teacher_or_403(request.user)
+        denied = _ensure_teacher_or_403(request)
         if denied:
             return denied
         inquiry_form = InquiryCreateForm(request.POST)
@@ -821,7 +837,7 @@ def provider_detail(request, slug):
 
 @login_required
 def toggle_saved_listing(request, slug):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -849,7 +865,7 @@ def toggle_saved_listing(request, slug):
 
 @login_required
 def teacher_saved_listings(request):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -897,7 +913,7 @@ def teacher_saved_listings(request):
 
 @login_required
 def toggle_compare_listing(request, slug):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -931,7 +947,7 @@ def toggle_compare_listing(request, slug):
 
 @login_required
 def teacher_compare_listings(request):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -960,7 +976,7 @@ def teacher_compare_listings(request):
 
 @login_required
 def create_compare_inquiry(request, slug):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
     if request.method != "POST":
@@ -1002,7 +1018,7 @@ def create_compare_inquiry(request, slug):
 
 @login_required
 def teacher_inquiries(request):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -1033,7 +1049,7 @@ def teacher_inquiries(request):
 
 @login_required
 def teacher_inquiry_detail(request, thread_id):
-    denied = _ensure_teacher_or_403(request.user)
+    denied = _ensure_teacher_or_403(request)
     if denied:
         return denied
 
@@ -1165,7 +1181,7 @@ def teacher_inquiry_detail(request, thread_id):
 
 @login_required
 def vendor_dashboard(request):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
 
@@ -1222,7 +1238,7 @@ def vendor_dashboard(request):
 
 @login_required
 def vendor_profile_edit(request):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
 
@@ -1253,7 +1269,7 @@ def vendor_profile_edit(request):
 
 @login_required
 def vendor_listing_create(request):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
     return _vendor_listing_editor(request)
@@ -1261,7 +1277,7 @@ def vendor_listing_create(request):
 
 @login_required
 def vendor_listing_edit(request, slug):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
     provider = _get_or_create_provider(request.user)
@@ -1347,7 +1363,7 @@ def _vendor_listing_editor(request, provider=None, listing=None):
 
 @login_required
 def vendor_inquiries(request):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
 
@@ -1380,7 +1396,7 @@ def vendor_inquiries(request):
 
 @login_required
 def vendor_inquiry_detail(request, thread_id):
-    denied = _ensure_company_or_403(request.user)
+    denied = _ensure_company_or_403(request)
     if denied:
         return denied
 

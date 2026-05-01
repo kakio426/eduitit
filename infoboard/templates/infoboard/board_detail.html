@@ -90,9 +90,9 @@
             <a href="{% url 'infoboard:board_export_csv' board_id=board.id %}" class="ib-inline-button">
                 <i class="fa-solid fa-file-csv"></i> CSV
             </a>
-            <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}" onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')">
+            <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}" onsubmit="return this.dataset.ibConfirmed === '1' || confirm('이 보드와 모든 카드를 삭제할까요?')">
                 {% csrf_token %}
-                <button type="submit" class="ib-inline-button danger">
+                <button type="submit" class="ib-inline-button danger" data-ib-confirm="이 보드와 모든 카드를 삭제할까요?">
                     <i class="fa-solid fa-trash"></i> 삭제
                 </button>
             </form>

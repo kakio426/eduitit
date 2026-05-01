@@ -41,8 +41,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("[ensure_textbook_ai] Product created"))
         else:
             changed_fields = []
+            admin_managed_fields = {"is_active", "color_theme", "display_order"}
             for field_name, value in defaults.items():
-                if field_name == "is_active":
+                if field_name in admin_managed_fields:
                     continue
                 if getattr(product, field_name) != value:
                     setattr(product, field_name, value)

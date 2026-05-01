@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -62,3 +65,12 @@ class TextbooksTeacherFirstMainTests(TestCase):
         self.assertNotContains(response, "HTML 자료")
         self.assertNotContains(response, "Gemini 코드 붙여넣기")
         self.assertNotContains(response, "Sandbox Preview")
+
+    def test_live_session_script_recovers_non_json_bootstrap_and_socket_delay(self):
+        script_path = Path(settings.BASE_DIR) / "textbooks" / "static" / "textbooks" / "live_session.js"
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertIn("readJsonResponse", script)
+        self.assertIn("!payload.session || !payload.material", script)
+        self.assertIn("실시간 지연", script)
+        self.assertIn("다시 시도", script)

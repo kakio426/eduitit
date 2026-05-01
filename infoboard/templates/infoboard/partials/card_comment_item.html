@@ -28,9 +28,9 @@
             hx-post="{% url 'infoboard:comment_delete' comment_id=comment.id %}"
             hx-target="#ibCommentShell-{{ card.id }}"
             hx-swap="outerHTML"
-            hx-confirm="이 댓글을 삭제할까요?">
+            onsubmit="return this.dataset.ibConfirmed === '1' || confirm('이 댓글을 삭제할까요?')">
             {% csrf_token %}
-            <button type="submit" class="ib-comment-action-button danger">삭제</button>
+            <button type="submit" class="ib-comment-action-button danger" data-ib-confirm="이 댓글을 삭제할까요?">삭제</button>
         </form>
     </div>
     {% endif %}

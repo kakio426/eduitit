@@ -205,6 +205,51 @@ class TextbookAiViewTests(TestCase):
         self.assertContains(response, "원본 보기")
         self.assertContains(response, "광합성")
 
+    def test_pdf_view_returns_safe_errors_for_missing_or_foreign_file(self):
+        document = TextbookDocument.objects.create(
+            owner=self.user,
+            title="파일 없는 PDF",
+            subject=TextbookDocument.Subject.SCIENCE,
+            grade="5학년 1학기",
+            unit_title="광합성",
+            original_filename="missing.pdf",
+            file_sha256="c" * 64,
+            file_size_bytes=0,
+            page_count=1,
+            license_confirmed=True,
+            parse_status=TextbookDocument.ParseStatus.READY,
+        )
+
+        missing_response = self.client.get(reverse("textbook_ai:pdf", args=[document.id]))
+
+        self.assertEqual(missing_response.status_code, 404)
+        self.assertContains(missing_response, "파일 확인", status_code=404)
+
+        other_user = User.objects.create_user(
+            username="other-teacher",
+            email="other@example.com",
+            password="pw123456",
+        )
+        foreign_document = TextbookDocument.objects.create(
+            owner=other_user,
+            title="다른 교사 PDF",
+            subject=TextbookDocument.Subject.SCIENCE,
+            grade="5학년 1학기",
+            unit_title="광합성",
+            source_pdf=SimpleUploadedFile("foreign.pdf", build_pdf_bytes(["내용"]), content_type="application/pdf"),
+            original_filename="foreign.pdf",
+            file_sha256="d" * 64,
+            file_size_bytes=100,
+            page_count=1,
+            license_confirmed=True,
+            parse_status=TextbookDocument.ParseStatus.READY,
+        )
+
+        foreign_response = self.client.get(reverse("textbook_ai:pdf", args=[foreign_document.id]))
+
+        self.assertEqual(foreign_response.status_code, 403)
+        self.assertContains(foreign_response, "권한 없음", status_code=403)
+
 
 class TextbookAiEnsureCommandTests(TestCase):
     def test_ensure_command_creates_product_and_manual(self):

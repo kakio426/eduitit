@@ -20,6 +20,18 @@
         };
     }
 
+    async function readJsonResponse(response) {
+        const text = await response.text();
+        if (!text) {
+            return {};
+        }
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return {};
+        }
+    }
+
     class LiveSessionApp {
         constructor(config) {
             this.config = config;
@@ -82,7 +94,7 @@
                 this.connectSocket();
             } catch (error) {
                 console.error(error);
-                this.toast('수업 화면을 초기화하지 못했습니다.', 'error');
+                this.toast(error && error.message ? error.message : '다시 시도', 'error');
             }
         }
 
@@ -125,10 +137,14 @@
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
             });
+            const payload = await readJsonResponse(response);
             if (!response.ok) {
-                throw new Error('bootstrap failed');
+                throw new Error(payload.error || '다시 시도');
             }
-            return response.json();
+            if (!payload.session || !payload.material) {
+                throw new Error('다시 시도');
+            }
+            return payload;
         }
 
         applyBootstrap(data) {
@@ -174,13 +190,14 @@
                     this.handleSocketMessage(JSON.parse(event.data));
                 } catch (error) {
                     console.error(error);
+                    this.toast('실시간 지연', 'warn');
                 }
             });
             this.socket.addEventListener('close', () => {
                 if (this.sessionEnded || this.destroyed) {
                     return;
                 }
-                this.toast('연결이 끊겨 다시 연결합니다.', 'warn');
+                this.toast('실시간 지연', 'warn');
                 window.clearTimeout(this.reconnectTimer);
                 this.reconnectTimer = window.setTimeout(async () => {
                     try {
@@ -189,6 +206,7 @@
                         await this.renderPage(this.currentPage, { pushHistory: false });
                     } catch (error) {
                         console.error(error);
+                        this.toast('다시 시도', 'error');
                     }
                     this.connectSocket();
                 }, 1500);
@@ -270,18 +288,23 @@
             }
             if (this.endSessionBtn) {
                 this.endSessionBtn.addEventListener('click', async () => {
-                    const response = await fetch(this.config.endUrl, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': this.config.csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        credentials: 'same-origin',
-                    });
-                    if (response.ok) {
-                        this.toast('수업을 종료했습니다.', 'success');
-                    } else {
-                        this.toast('수업 종료 요청에 실패했습니다.', 'error');
+                    try {
+                        const response = await fetch(this.config.endUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': this.config.csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            credentials: 'same-origin',
+                        });
+                        if (response.ok) {
+                            this.toast('수업을 종료했습니다.', 'success');
+                        } else {
+                            this.toast('다시 시도', 'error');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        this.toast('다시 시도', 'error');
                     }
                 });
             }

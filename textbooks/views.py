@@ -185,9 +185,9 @@ def material_pdf(request, material_id):
         source_type=TextbookMaterial.SOURCE_PDF,
     )
     if not material.pdf_file:
-        return HttpResponseBadRequest("PDF 자료가 아닙니다.")
+        return HttpResponseBadRequest("파일 확인")
     if not get_pdf_access(request, material):
-        return HttpResponseForbidden("이 PDF에 접근할 권한이 없습니다.")
+        return HttpResponseForbidden("권한 없음")
     response = FileResponse(material.pdf_file.open("rb"), content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{material.original_filename or material.title}.pdf"'
     return response

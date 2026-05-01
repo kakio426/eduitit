@@ -1,5 +1,7 @@
 from unittest.mock import patch
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
@@ -44,6 +46,21 @@ class EduMaterialsNextViewTests(TestCase):
         self.assertEqual(response.context["selected_starter"]["slug"], "planet-lab")
         self.assertIn(TOPIC_PLACEHOLDER, response.context["generated_prompt_template"])
         self.assertIn("CDN 및 외부 리소스 규칙", response.context["generated_prompt"])
+
+    def test_material_frame_host_recovers_iframe_load_failure(self):
+        script_path = (
+            Path(settings.BASE_DIR)
+            / "edu_materials_next"
+            / "static"
+            / "edu_materials_next"
+            / "material_frame_host.js"
+        )
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertIn("startPendingTimer", script)
+        self.assertIn("미리보기 실패", script)
+        self.assertIn("다시 시도", script)
+        self.assertIn('iframe.addEventListener("error"', script)
 
     def test_create_material_from_learn_flow_with_starter(self):
         response = self.client.post(

@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import FileResponse, Http404
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from .forms import TextbookDocumentUploadForm
@@ -55,6 +56,19 @@ def _render_detail(request, document, *, active_tab="structure", search_query=""
         "scan_review_reason": str(summary_json.get("scan_review_reason") or ""),
     }
     return render(request, "textbook_ai/detail.html", context)
+
+
+def _render_file_error(request, message, *, status):
+    return render(
+        request,
+        "textbook_ai/error.html",
+        {
+            "service": get_service(),
+            "message": message,
+            "back_url": reverse("textbook_ai:main"),
+        },
+        status=status,
+    )
 
 
 @login_required
@@ -153,9 +167,17 @@ def document_search_view(request, document_id):
 @login_required
 @require_GET
 def document_pdf_view(request, document_id):
-    document = get_object_or_404(TextbookDocument, id=document_id, owner=request.user)
+    document = TextbookDocument.objects.filter(id=document_id).first()
+    if document is None:
+        return _render_file_error(request, "파일 확인", status=404)
+    if document.owner_id != request.user.id:
+        return _render_file_error(request, "권한 없음", status=403)
     if not document.source_pdf:
-        raise Http404()
-    response = FileResponse(document.source_pdf.open("rb"), content_type="application/pdf")
+        return _render_file_error(request, "파일 확인", status=404)
+    try:
+        file_handle = document.source_pdf.open("rb")
+    except (FileNotFoundError, OSError, ValueError):
+        return _render_file_error(request, "파일 확인", status=404)
+    response = FileResponse(file_handle, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{document.original_filename or document.title}.pdf"'
     return response

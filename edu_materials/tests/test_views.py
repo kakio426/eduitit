@@ -1,9 +1,11 @@
 import importlib
 import uuid
 from io import StringIO
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -613,6 +615,15 @@ class EduMaterialViewTests(TestCase):
         self.assertNotContains(response, "자료 실행 확인 중")
         material.refresh_from_db()
         self.assertEqual(material.view_count, 1)
+
+    def test_material_frame_host_recovers_iframe_load_failure(self):
+        script_path = Path(settings.BASE_DIR) / "edu_materials" / "static" / "edu_materials" / "material_frame_host.js"
+        script = script_path.read_text(encoding="utf-8")
+
+        self.assertIn("startPendingTimer", script)
+        self.assertIn("미리보기 실패", script)
+        self.assertIn("다시 시도", script)
+        self.assertIn('iframe.addEventListener("error"', script)
 
     def test_detail_view_renders_preview_toggle_and_metadata_form(self):
         material = EduMaterial.objects.create(

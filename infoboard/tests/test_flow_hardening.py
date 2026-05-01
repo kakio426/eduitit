@@ -643,3 +643,21 @@ class InfoBoardFlowHardeningTests(TestCase):
         self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-title', meta.og_title);", script)
         self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-desc', meta.og_description);", script)
         self.assertIn("ibAppendTextElement(textWrap, 'div', 'ib-og-preview-site', meta.og_site_name);", script)
+        self.assertIn("ibReadJsonResponse", script)
+        self.assertIn("ibOpenConfirm", script)
+
+    def test_delete_templates_use_internal_confirm_trigger(self):
+        template_root = Path(settings.BASE_DIR) / 'infoboard' / 'templates' / 'infoboard'
+        template_names = [
+            'partials/board_card.html',
+            'partials/card_item.html',
+            'partials/collection_card.html',
+            'partials/card_comment_item.html',
+            'board_detail.html',
+            'collection_detail.html',
+        ]
+
+        for template_name in template_names:
+            template = (template_root / template_name).read_text(encoding='utf-8')
+            self.assertNotIn('hx-confirm', template)
+            self.assertIn('data-ib-confirm', template)

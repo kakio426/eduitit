@@ -366,6 +366,7 @@ class SchoolProgramsInquiryTests(TestCase):
         self.client.force_login(self.company_user)
         company_response = self.client.post(reverse("schoolprograms:create_inquiry", args=[self.listing.slug]), self._inquiry_payload())
         self.assertEqual(company_response.status_code, 403)
+        self.assertContains(company_response, "권한 없음", status_code=403)
 
     def test_inquiry_category_is_locked_to_listing_even_if_post_is_tampered(self):
         self.client.force_login(self.teacher_user)
@@ -720,6 +721,7 @@ class SchoolProgramsSavedListingTests(TestCase):
         self.client.force_login(self.company_user)
         company_response = self.client.post(reverse("schoolprograms:toggle_saved_listing", args=[self.listing.slug]))
         self.assertEqual(company_response.status_code, 403)
+        self.assertContains(company_response, "권한 없음", status_code=403)
 
     def test_saved_page_supports_teacher_filters(self):
         self.client.force_login(self.teacher_user)
@@ -783,9 +785,11 @@ class SchoolProgramsSavedListingTests(TestCase):
         self.client.force_login(self.company_user)
         company_toggle = self.client.post(reverse("schoolprograms:toggle_compare_listing", args=[self.listing.slug]))
         self.assertEqual(company_toggle.status_code, 403)
+        self.assertContains(company_toggle, "권한 없음", status_code=403)
 
         company_page = self.client.get(reverse("schoolprograms:teacher_compare_listings"))
         self.assertEqual(company_page.status_code, 403)
+        self.assertContains(company_page, "권한 없음", status_code=403)
 
     def test_teacher_can_send_inquiry_directly_from_compare_page(self):
         self.client.force_login(self.teacher_user)

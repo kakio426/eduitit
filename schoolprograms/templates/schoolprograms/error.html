@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<main class="service-shell min-h-screen bg-slate-50 pb-20">
+    <section class="mx-auto max-w-3xl px-4 sm:px-6">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 text-center shadow-sm shadow-slate-100 sm:p-8">
+            <p class="text-sm font-black uppercase tracking-[0.2em] text-orange-500">학교 체험</p>
+            <h1 class="mt-3 text-2xl font-black text-slate-900">{{ message|default:"다시 시도" }}</h1>
+            <div class="mt-6 flex justify-center">
+                <a href="{{ back_url|default:'/' }}" class="inline-flex min-h-[44px] items-center rounded-full bg-slate-900 px-5 text-sm font-black text-white shadow-sm">
+                    {{ back_label|default:"목록" }}
+                </a>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}

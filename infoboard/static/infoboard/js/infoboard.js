@@ -81,6 +81,95 @@ function ibHandleSubmitSheetOverlayClick(event) {
     }
 }
 
+let ibConfirmRestoreFocus = null;
+
+function ibEnsureConfirmOverlay() {
+    let overlay = document.getElementById('ibConfirmOverlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'ibConfirmOverlay';
+    overlay.className = 'ib-modal-overlay hidden';
+    overlay.hidden = true;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) {
+            ibCloseConfirm();
+        }
+    });
+
+    const panel = document.createElement('div');
+    panel.className = 'ib-modal p-6 space-y-5';
+    panel.addEventListener('click', ibStopPropagation);
+
+    const title = document.createElement('h2');
+    title.className = 'text-xl font-black text-gray-900';
+    title.textContent = '확인';
+
+    const message = document.createElement('p');
+    message.className = 'text-sm font-bold leading-6 text-gray-600';
+    message.dataset.ibConfirmMessage = '1';
+
+    const actions = document.createElement('div');
+    actions.className = 'flex flex-wrap justify-end gap-2';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ib-inline-button';
+    cancel.textContent = '취소';
+    cancel.addEventListener('click', ibCloseConfirm);
+
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'ib-inline-button danger';
+    confirm.textContent = '삭제';
+    confirm.dataset.ibConfirmAccept = '1';
+
+    actions.appendChild(cancel);
+    actions.appendChild(confirm);
+    panel.appendChild(title);
+    panel.appendChild(message);
+    panel.appendChild(actions);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function ibCloseConfirm() {
+    const overlay = document.getElementById('ibConfirmOverlay');
+    if (overlay) {
+        ibSetOverlayHidden(overlay, true);
+        const accept = overlay.querySelector('[data-ib-confirm-accept]');
+        if (accept) accept.onclick = null;
+    }
+    if (ibConfirmRestoreFocus && typeof ibConfirmRestoreFocus.focus === 'function') {
+        ibConfirmRestoreFocus.focus({ preventScroll: true });
+    }
+    ibConfirmRestoreFocus = null;
+}
+
+function ibOpenConfirm(message, onConfirm, trigger) {
+    const overlay = ibEnsureConfirmOverlay();
+    const messageEl = overlay.querySelector('[data-ib-confirm-message]');
+    const accept = overlay.querySelector('[data-ib-confirm-accept]');
+    if (messageEl) messageEl.textContent = message || '삭제할까요?';
+    if (accept) {
+        accept.onclick = function() {
+            ibCloseConfirm();
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+    }
+    ibConfirmRestoreFocus = trigger || document.activeElement;
+    ibSetOverlayHidden(overlay, false);
+    const cancel = overlay.querySelector('button');
+    if (cancel) {
+        window.setTimeout(function() {
+            cancel.focus();
+        }, 0);
+    }
+}
+
 // Ctrl+K shortcut for InfoBoard search
 window.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -105,8 +194,41 @@ window.addEventListener('keydown', function(e) {
         if (submitSheet && !(submitSheet.hidden || submitSheet.classList.contains('hidden'))) {
             ibCloseSubmitSheet();
         }
+        const confirmOverlay = document.getElementById('ibConfirmOverlay');
+        if (confirmOverlay && !(confirmOverlay.hidden || confirmOverlay.classList.contains('hidden'))) {
+            ibCloseConfirm();
+        }
     }
 });
+
+document.addEventListener('click', function(event) {
+    const trigger = event.target.closest('[data-ib-confirm]');
+    if (!trigger || trigger.dataset.ibConfirmed === '1') {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    ibOpenConfirm(trigger.dataset.ibConfirm, function() {
+        const form = trigger.form || trigger.closest('form');
+        trigger.dataset.ibConfirmed = '1';
+        if (form) {
+            form.dataset.ibConfirmed = '1';
+        }
+        if (trigger.type === 'submit' && form && typeof form.requestSubmit === 'function') {
+            form.requestSubmit(trigger);
+        } else {
+            trigger.click();
+        }
+        window.setTimeout(function() {
+            delete trigger.dataset.ibConfirmed;
+            if (form) {
+                delete form.dataset.ibConfirmed;
+            }
+        }, 0);
+    }, trigger);
+}, true);
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchOverlay = document.getElementById('ibSearchOverlay');
@@ -296,6 +418,17 @@ function ibToast(message, tag) {
 // ── OG Meta Auto-Fetch ──
 let ibOgTimeout = null;
 
+function ibReadJsonResponse(response) {
+    return response.text().then(text => {
+        if (!text) return null;
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return null;
+        }
+    });
+}
+
 function ibFetchOgMeta(url) {
     const setPreviewMessage = function(message, tone) {
         let container = document.getElementById('ibOgPreview');
@@ -315,20 +448,15 @@ function ibFetchOgMeta(url) {
         container.appendChild(messageEl);
     };
 
-    setPreviewMessage('🔍 메타 정보 가져오는 중...', 'info');
+    setPreviewMessage('메타 확인 중', 'info');
 
     fetch(`/infoboard/api/og-meta/?url=${encodeURIComponent(url)}`)
         .then(async r => {
-            if (!r.ok) {
-                let payload = {};
-                try {
-                    payload = await r.json();
-                } catch (error) {
-                    payload = {};
-                }
-                throw new Error(payload.error || '미리보기 정보를 가져오지 못했어요.');
+            const payload = await ibReadJsonResponse(r);
+            if (!r.ok || !payload) {
+                throw new Error((payload && payload.error) || '다시 시도');
             }
-            return r.json();
+            return payload;
         })
         .then(meta => {
             const container = document.getElementById('ibOgPreview');
@@ -370,7 +498,7 @@ function ibFetchOgMeta(url) {
             container.appendChild(preview);
         })
         .catch(error => {
-            setPreviewMessage(error.message || '미리보기 정보를 가져오지 못했어요.', 'error');
+            setPreviewMessage(error.message || '다시 시도', 'error');
         });
 }
 

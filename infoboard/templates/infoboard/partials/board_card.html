@@ -33,13 +33,12 @@
                     <i class="fa-solid fa-share-nodes text-xs"></i> 공유 패널
                 </button>
                 <form method="post" action="{% url 'infoboard:board_delete' board_id=board.id %}"
-                    onsubmit="return confirm('이 보드와 모든 카드를 삭제할까요?')"
+                    onsubmit="return this.dataset.ibConfirmed === '1' || confirm('이 보드와 모든 카드를 삭제할까요?')"
                     hx-post="{% url 'infoboard:board_delete' board_id=board.id %}"
                     hx-target="#{{ board_delete_target|default:'ibBoardGrid' }}"
-                    hx-swap="innerHTML"
-                    hx-confirm="이 보드와 모든 카드를 삭제할까요?">
+                    hx-swap="innerHTML">
                     {% csrf_token %}
-                    <button type="submit" class="ib-dropdown-item danger w-full text-left">
+                    <button type="submit" class="ib-dropdown-item danger w-full text-left" data-ib-confirm="이 보드와 모든 카드를 삭제할까요?">
                         <i class="fa-solid fa-trash text-xs"></i> 삭제
                     </button>
                 </form>

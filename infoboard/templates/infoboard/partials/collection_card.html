@@ -20,9 +20,9 @@
                         hx-post="{% url 'infoboard:collection_delete' collection_id=collection.id %}"
                         hx-target="#{{ collection_delete_target|default:'ibCollectionGrid' }}"
                         hx-swap="innerHTML"
-                        hx-confirm="이 컬렉션을 삭제할까요? (보드는 유지됩니다)">
+                        onsubmit="return this.dataset.ibConfirmed === '1' || confirm('이 컬렉션을 삭제할까요? 보드는 유지됩니다.')">
                         {% csrf_token %}
-                        <button type="submit" class="ib-dropdown-item danger w-full text-left">
+                        <button type="submit" class="ib-dropdown-item danger w-full text-left" data-ib-confirm="이 컬렉션을 삭제할까요? 보드는 유지됩니다.">
                             <i class="fa-solid fa-trash text-xs"></i> 삭제
                         </button>
                     </form>
