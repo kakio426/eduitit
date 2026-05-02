@@ -343,7 +343,6 @@ def create_room(request):
         logger.exception("doccollab create_room failed for user=%s", getattr(request.user, "id", None))
         messages.error(request, "문서를 여는 중 오류가 발생했습니다. 다시 시도해 주세요.")
         return redirect("doccollab:main")
-    messages.success(request, "편집 화면을 열었습니다.")
     return redirect("doccollab:room_detail", room_id=room.id)
 
 

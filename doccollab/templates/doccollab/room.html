@@ -9,6 +9,7 @@
 <section class="service-shell service-shell--compact doccollab-shell doccollab-shell--immersive doccollab-shell--room">
     <div class="doccollab-frame doccollab-frame--instant">
         <header class="doccollab-workbar doccollab-workbar--room" aria-label="잇티한글 문서 작업">
+            <a href="/" class="doccollab-home-link" aria-label="에듀잇티 홈으로 이동">에듀잇티</a>
             <a href="{% url 'doccollab:main' %}" class="doccollab-workbar-title doccollab-workbar-title--link">
                 <strong>잇티한글</strong>
                 <span>{{ room.title }}</span>
@@ -64,7 +65,7 @@
         </header>
 
         {% if messages %}
-        <div class="doccollab-stack">
+        <div class="doccollab-stack doccollab-stack--notice">
             {% for message in messages %}
             <div class="doccollab-alert {% if message.tags %}doccollab-alert--{{ message.tags }}{% endif %}">{{ message }}</div>
             {% endfor %}

@@ -406,6 +406,7 @@ class DoccollabViewTests(TestCase):
         self.assertIn(shared_room.title, shared_card_titles)
         self.assertIn(own_room.title, today_card_titles)
         self.assertContains(response, "잇티한글")
+        self.assertContains(response, "에듀잇티 홈으로 이동")
         self.assertContains(response, "doccollab-instant-editor-app")
         self.assertContains(response, "새문서")
         self.assertContains(response, "문서함")
@@ -606,6 +607,7 @@ class DoccollabViewTests(TestCase):
             reverse("doccollab:download_source", kwargs={"room_id": room.id}),
         )
         self.assertTrue(payload["studioUrl"].endswith("/static/doccollab/rhwp-studio/index.html"))
+        self.assertContains(response, "에듀잇티 홈으로 이동")
 
     def test_room_detail_shows_assistant_actions_for_uploaded_documents(self):
         room, _revision = self._create_valid_hwpx_room(title="AI 문서")
