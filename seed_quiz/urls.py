@@ -21,6 +21,11 @@ urlpatterns = [
         name="teacher_game_room",
     ),
     path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/stage/",
+        views_game.teacher_game_stage,
+        name="teacher_game_stage",
+    ),
+    path(
         "class/<uuid:classroom_id>/game/<uuid:room_id>/panel/",
         views_game.htmx_teacher_game_panel,
         name="htmx_teacher_game_panel",
@@ -29,6 +34,11 @@ urlpatterns = [
         "class/<uuid:classroom_id>/game/<uuid:room_id>/advance/",
         views_game.htmx_teacher_game_advance,
         name="htmx_teacher_game_advance",
+    ),
+    path(
+        "class/<uuid:classroom_id>/game/<uuid:room_id>/sound/",
+        views_game.htmx_teacher_game_sound,
+        name="htmx_teacher_game_sound",
     ),
     path(
         "class/<uuid:classroom_id>/game/<uuid:room_id>/questions/<uuid:question_id>/review/",

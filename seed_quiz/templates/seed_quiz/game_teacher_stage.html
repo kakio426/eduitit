@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko" data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ room.title }} 무대</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+    <link rel="stylesheet" href="{% static 'seed_quiz/css/game_live.css' %}">
+    <script defer src="{% static 'seed_quiz/js/game_sound.js' %}"></script>
+    <script defer src="{% static 'seed_quiz/js/game_live.js' %}"></script>
+</head>
+<body class="min-h-screen bg-slate-950">
+    <script>
+    document.addEventListener('htmx:configRequest', function (event) {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+    document.body.addEventListener('htmx:responseError', function () {
+        window.alert('연결을 확인해 주세요.');
+    });
+    </script>
+
+    <main id="sqg-stage-panel"
+          hx-get="{% url 'seed_quiz:teacher_game_stage' classroom_id=classroom.id room_id=room.id %}?partial=1"
+          hx-trigger="load, every 3s"
+          hx-target="#sqg-stage-panel"
+          hx-swap="innerHTML">
+        {% include 'seed_quiz/partials/game_teacher_stage_panel.html' %}
+    </main>
+</body>
+</html>

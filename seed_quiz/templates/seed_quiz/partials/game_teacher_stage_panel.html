@@ -1,0 +1,144 @@
+{% load static %}
+<section class="sqg-stage min-h-screen overflow-hidden px-5 py-5 text-white sm:px-8 sm:py-7"
+         data-sqg-stage-scope="teacher-stage-{{ room.id }}"
+         data-sqg-stage-event="{{ room.status }}"
+         data-sqg-live-scope="teacher-stage-{{ room.id }}"
+         data-sqg-rank-scope="teacher-stage-{{ room.id }}"
+         data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}"
+         {% if room.status == 'finished' %}data-sqg-sound-event="podium"{% endif %}>
+    <div class="sqg-confetti" aria-hidden="true"></div>
+    <div class="relative z-10 mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col gap-5">
+        <header class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+                <a href="{% url 'seed_quiz:teacher_game_room' classroom_id=classroom.id room_id=room.id %}"
+                   class="sqg-live-chip border-white/20 bg-white/10 text-white/90 hover:bg-white/15">
+                    운영
+                </a>
+                <div class="min-w-0">
+                    <p class="text-xs font-black uppercase text-sky-200">SEED QUIZ STAGE</p>
+                    <h1 class="truncate text-xl font-black sm:text-2xl">{{ room.title }}</h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="sqg-live-chip bg-white text-slate-950">{{ room.get_status_display }}</span>
+                <button type="button"
+                        data-sqg-sound-toggle
+                        aria-pressed="false"
+                        class="sqg-live-chip border-white/20 bg-white/10 text-white">
+                    소리 끔
+                </button>
+            </div>
+        </header>
+
+        <div class="grid flex-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <section class="sqg-stage-card sqg-spotlight flex flex-col justify-between p-6 sm:p-8">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="sqg-seed-badge">입장 코드</span>
+                        <span class="sqg-live-chip bg-sky-200 text-slate-950">{{ classroom.name }}</span>
+                        {% if seconds_left != None %}
+                        <span class="sqg-live-chip bg-amber-300 text-slate-950" data-sqg-countdown="{{ seconds_left }}" aria-live="polite">
+                            <span data-sqg-countdown-value>{{ seconds_left }}</span>초
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="sqg-stage-code mt-5">{{ room.join_code }}</p>
+                    <p class="mt-4 max-w-3xl text-xl font-black text-white/80 sm:text-2xl">
+                        {% if room.status == 'waiting' %}친구들이 들어오는 중{% elif room.status == 'creating' %}문제를 만드는 중{% elif room.status == 'playing' %}실시간 풀이 중{% else %}결과 발표{% endif %}
+                    </p>
+                </div>
+
+                <div class="mt-8 grid gap-3 sm:grid-cols-3">
+                    <div class="sqg-stage-stat">
+                        <p>입장</p>
+                        <strong>{{ players|length }}</strong>
+                    </div>
+                    <div class="sqg-stage-stat sqg-stage-stat--hot">
+                        <p>{{ stage_done_label }}</p>
+                        <strong>{{ stage_done_count }}/{{ players|length }}</strong>
+                    </div>
+                    <div class="sqg-stage-stat">
+                        <p>접속</p>
+                        <strong>{{ connected_count }}</strong>
+                    </div>
+                </div>
+
+                <div class="mt-5 min-h-[32px] text-lg font-black text-amber-200 sm:text-2xl" aria-live="polite" data-sqg-live-toast></div>
+            </section>
+
+            <section class="grid gap-5">
+                <div class="sqg-stage-card p-5 sm:p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <h2 class="text-xl font-black">상위 5명</h2>
+                        <span class="sqg-live-chip bg-white/10 text-white/80">실시간</span>
+                    </div>
+                    <div class="space-y-3">
+                        {% for row in top_leaderboard %}
+                        <div class="sqg-stage-rank"
+                             data-sqg-rank-row
+                             data-sqg-rank-player-id="{{ row.id }}"
+                             data-sqg-rank="{{ row.rank }}">
+                            <div class="min-w-0">
+                                <p class="truncate text-xl font-black">{{ row.rank }}위 {{ row.nickname }}</p>
+                                <p class="text-sm font-bold text-white/55">출제 {{ row.create_score }} · 풀이 {{ row.solve_score }}</p>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-3">
+                                <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                                <p class="text-3xl font-black tabular-nums">{{ row.total_score }}</p>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="rounded-3xl border border-white/15 px-5 py-8 text-center text-base font-bold text-white/60">
+                            점수가 아직 없습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="sqg-stage-card p-5 sm:p-6">
+                    <div class="mb-4 flex items-center justify-between">
+                        <h2 class="text-xl font-black">참가자</h2>
+                        <span class="sqg-live-chip bg-emerald-300 text-slate-950">완료 {{ stage_done_count }}</span>
+                    </div>
+                    <div class="grid max-h-[32vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                        {% for row in live_player_rows %}
+                        <div class="sqg-stage-player {% if row.ready_state == 'done' %}sqg-stage-player--done{% endif %}"
+                             data-sqg-live-player="{{ row.player.id }}"
+                             data-sqg-live-name="{{ row.player.nickname }}"
+                             data-sqg-ready-state="{{ row.ready_state }}"
+                             data-sqg-connected="{% if row.player.is_connected %}1{% else %}0{% endif %}"
+                             data-sqg-spotlight-player="{{ row.player.id }}">
+                            <span class="truncate">{{ row.player.nickname }}</span>
+                            <small>{{ row.status_label }}</small>
+                        </div>
+                        {% empty %}
+                        <div class="rounded-3xl border border-white/15 px-5 py-8 text-center text-base font-bold text-white/60 sm:col-span-2">
+                            아직 아무도 들어오지 않았습니다.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</section>
+
+<script>
+(function () {
+    const countdown = document.querySelector('[data-sqg-countdown]');
+    if (!countdown) return;
+    if (window.__sqgStageCountdownTimer) window.clearInterval(window.__sqgStageCountdownTimer);
+    const valueTarget = countdown.querySelector('[data-sqg-countdown-value]');
+    const deadline = Date.now() + Math.max(0, Number(countdown.dataset.sqgCountdown || 0)) * 1000;
+    let lastRendered = null;
+    function renderCountdown() {
+        const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        if (remaining === lastRendered) return;
+        lastRendered = remaining;
+        if (valueTarget) valueTarget.textContent = String(remaining);
+        countdown.classList.toggle('sqg-countdown-hot', remaining > 0 && remaining <= 3);
+    }
+    renderCountdown();
+    window.__sqgStageCountdownTimer = window.setInterval(renderCountdown, 250);
+})();
+</script>

@@ -34,6 +34,8 @@ from seed_quiz.services.game_core import (
     submit_question,
     touch_player,
 )
+from seed_quiz.services.game_scoring import SOLVER_CORRECT_BASE, creator_stats
+from seed_quiz.services.game_prefilter import prefilter_question_submission
 from seed_quiz.services.limits import game_choice_limit_exceeded
 from seed_quiz.services.validator import normalize_and_check
 from seed_quiz.topics import DEFAULT_TOPIC
@@ -126,6 +128,99 @@ def _leaderboard(room: SQGameRoom, *, limit: int | None = None):
     if limit is not None:
         return players[:limit]
     return players
+
+
+def _podium_context(leaderboard):
+    winner = leaderboard[0] if leaderboard else None
+    return {
+        "podium_winner": winner,
+        "podium_runners": leaderboard[1:3],
+        "leaderboard_tail": leaderboard[3:],
+    }
+
+
+def _room_sound_enabled(room: SQGameRoom) -> bool:
+    return bool((room.settings_json or {}).get("sound_enabled"))
+
+
+def _question_feedback_context(question: SQGameQuestion) -> dict:
+    quality = question.ai_quality_json if isinstance(question.ai_quality_json, dict) else {}
+    strengths = [str(item).strip() for item in quality.get("strengths", []) if str(item).strip()]
+    improvements = [str(item).strip() for item in quality.get("improvements", []) if str(item).strip()]
+    if not strengths and question.ai_feedback:
+        strengths = [question.ai_feedback]
+    if not improvements:
+        improvements = ["선생님 확인 후 다듬어요." if question.status != "ready" else "보기 하나를 더 다듬어 보세요."]
+    return {
+        "feedback_strengths": strengths[:2],
+        "feedback_improvements": improvements[:2],
+    }
+
+
+def _form_state_from_question(room: SQGameRoom, question: SQGameQuestion) -> dict:
+    form_state = _default_form_state(room)
+    form_state.update(
+        {
+            "rewrite_question_id": str(question.id),
+            "question_type": question.question_type,
+            "question_text": question.question_text,
+            "answer_text": question.answer_text,
+            "choices": list(question.choices or []),
+            "correct_index": int(question.correct_index or 0),
+        }
+    )
+    if question.question_type == "ox":
+        form_state["correct_ox"] = "X" if int(question.correct_index or 0) == 1 else "O"
+    return form_state
+
+
+def _live_player_rows(room: SQGameRoom) -> list[dict]:
+    players = list(
+        room.players.select_related("student")
+        .annotate(
+            authored_active_count=Count(
+                "authored_questions",
+                filter=~Q(authored_questions__status="rejected"),
+                distinct=True,
+            ),
+            authored_ready_count=Count(
+                "authored_questions",
+                filter=Q(authored_questions__status="ready"),
+                distinct=True,
+            ),
+            answered_count=Count("answers", distinct=True),
+        )
+        .order_by("joined_at", "student__number", "nickname")
+    )
+    rows = []
+    create_goal = max(1, int(room.questions_per_player or 1))
+    solve_goal = max(1, int(room.solve_target_count or 1))
+    for player in players:
+        if room.status == "creating":
+            done = int(player.authored_active_count or 0) >= create_goal
+            state = "done" if done else "active"
+            label = "완료" if done else "작성 중"
+        elif room.status == "playing":
+            done = int(player.answered_count or 0) >= solve_goal
+            state = "done" if done else "active"
+            label = "완료" if done else f"{player.answered_count}/{solve_goal}"
+        elif room.status == "finished":
+            state = "done"
+            label = f"{player.rank}위" if player.rank else "완료"
+        else:
+            state = "waiting"
+            label = "대기"
+        rows.append(
+            {
+                "player": player,
+                "ready_state": state,
+                "status_label": label,
+                "created_count": int(player.authored_active_count or 0),
+                "ready_count": int(player.authored_ready_count or 0),
+                "answered_count": int(player.answered_count or 0),
+            }
+        )
+    return rows
 
 
 def _question_rows(room: SQGameRoom):
@@ -296,6 +391,7 @@ def _default_form_state(room: SQGameRoom, *, request_id: str | None = None) -> d
         "choices": [],
         "correct_index": 0,
         "choice_fallback": False,
+        "rewrite_question_id": "",
     }
 
 
@@ -316,6 +412,7 @@ def _form_state_from_post(request, room: SQGameRoom) -> dict:
             "correct_ox": (request.POST.get("correct_ox") or "O").strip().upper() or "O",
             "choices": [(request.POST.get(f"choice_{idx}") or "").strip() for idx in range(4)],
             "correct_index": correct_index,
+            "rewrite_question_id": (request.POST.get("rewrite_question_id") or "").strip(),
         }
     )
     return form_state
@@ -342,6 +439,16 @@ def _student_state_template(context: dict) -> str:
 
 def _render_student_state(request, player: SQGamePlayer, *, context: dict | None = None):
     context = context or _student_state_context(player)
+    rewrite_id = (request.GET.get("rewrite") or "").strip()
+    if rewrite_id and context["room"].status == "creating":
+        question = (
+            player.authored_questions.filter(id=rewrite_id, status__in=["needs_review", "rejected"])
+            .select_related("game")
+            .first()
+        )
+        if question:
+            context["form_state"] = _form_state_from_question(context["room"], question)
+            return render(request, "seed_quiz/partials/game_student_create.html", context)
     return render(request, _student_state_template(context), context)
 
 
@@ -411,6 +518,7 @@ def _teacher_panel_context(request, room: SQGameRoom, *, error_message: str = ""
     solve_done_count = sum(get_next_question_for_player(player) is None for player in players) if players else 0
     connected_count = sum(1 for player in players if player.is_connected)
     leaderboard = _leaderboard(room)
+    live_player_rows = _live_player_rows(room)
     play_block_message = _play_block_message(question_counts) if room.status == "creating" else ""
     join_url = request.build_absolute_uri(
         reverse("seed_quiz:student_game_join_code", kwargs={"join_code": room.join_code})
@@ -419,6 +527,7 @@ def _teacher_panel_context(request, room: SQGameRoom, *, error_message: str = ""
         "room": room,
         "classroom": room.classroom,
         "players": players,
+        "live_player_rows": live_player_rows,
         "leaderboard": leaderboard,
         "top_leaderboard": leaderboard[:5],
         "question_counts": question_counts,
@@ -438,8 +547,29 @@ def _teacher_panel_context(request, room: SQGameRoom, *, error_message: str = ""
         "winner": leaderboard[0] if leaderboard and leaderboard[0].rank else None,
         "question_rows": _question_rows(room) if room.status == "finished" else [],
         "player_rows": _player_rows(room) if room.status == "finished" else [],
+        "sound_enabled": _room_sound_enabled(room),
         "error_message": error_message,
     }
+
+
+def _teacher_stage_context(request, room: SQGameRoom):
+    context = _teacher_panel_context(request, room)
+    if room.status == "playing":
+        stage_done_count = context["solve_done_count"]
+        stage_done_label = "풀이"
+    elif room.status == "finished":
+        stage_done_count = len(context["players"])
+        stage_done_label = "완료"
+    else:
+        stage_done_count = context["create_done_count"]
+        stage_done_label = "준비"
+    context.update(
+        {
+            "stage_done_count": stage_done_count,
+            "stage_done_label": stage_done_label,
+        }
+    )
+    return context
 
 
 @login_required
@@ -490,6 +620,15 @@ def teacher_game_room(request, classroom_id, room_id):
 
 
 @login_required
+def teacher_game_stage(request, classroom_id, room_id):
+    room = _teacher_room_or_404(request, classroom_id, room_id)
+    context = _teacher_stage_context(request, room)
+    if request.GET.get("partial") == "1":
+        return render(request, "seed_quiz/partials/game_teacher_stage_panel.html", context)
+    return render(request, "seed_quiz/game_teacher_stage.html", context)
+
+
+@login_required
 def htmx_teacher_game_panel(request, classroom_id, room_id):
     room = _teacher_room_or_404(request, classroom_id, room_id)
     return render(
@@ -518,6 +657,21 @@ def htmx_teacher_game_advance(request, classroom_id, room_id):
         request,
         "seed_quiz/partials/game_teacher_panel.html",
         _teacher_panel_context(request, room, error_message=error_message),
+    )
+
+
+@login_required
+@require_POST
+def htmx_teacher_game_sound(request, classroom_id, room_id):
+    room = _teacher_room_or_404(request, classroom_id, room_id)
+    settings = dict(room.settings_json or {})
+    settings["sound_enabled"] = (request.POST.get("sound_enabled") or "").strip() == "1"
+    room.settings_json = settings
+    room.save(update_fields=["settings_json", "updated_at"])
+    return render(
+        request,
+        "seed_quiz/partials/game_teacher_panel.html",
+        _teacher_panel_context(request, room),
     )
 
 
@@ -578,18 +732,26 @@ def _student_state_context(player: SQGamePlayer):
     player = SQGamePlayer.objects.select_related("game__classroom", "student").get(id=player.id)
     touch_player(player)
     room.refresh_from_db()
+    leaderboard = _leaderboard(room, limit=None if room.status == "finished" else 5)
+    live_player_rows = _live_player_rows(room)
     context = {
         "player": player,
         "room": room,
         "classroom": room.classroom,
         "seconds_left": _phase_seconds_left(room),
-        "leaderboard": _leaderboard(room, limit=None if room.status == "finished" else 5),
-        "top_leaderboard": _leaderboard(room, limit=5),
+        "leaderboard": leaderboard,
+        "top_leaderboard": leaderboard[:5],
         "assigned_total": len(assigned_questions_for_player(player)) if room.status in {"playing", "finished"} else 0,
         "solved_count": player.answers.count(),
         "create_slots_left": create_slots_left(player),
         "create_count": create_progress_count(player),
         "ready_count": room.questions.filter(status="ready").count(),
+        "live_player_rows": live_player_rows,
+        "players": [row["player"] for row in live_player_rows],
+        "create_done_count": sum(row["ready_state"] == "done" for row in live_player_rows) if room.status == "creating" else 0,
+        "live_done_count": sum(row["ready_state"] == "done" for row in live_player_rows),
+        "connected_count": sum(1 for row in live_player_rows if row["player"].is_connected),
+        "sound_enabled": _room_sound_enabled(room),
     }
     if room.status == "creating":
         context["pending_question"] = (
@@ -608,12 +770,16 @@ def _student_state_context(player: SQGamePlayer):
     if room.status == "playing":
         context["next_question"] = get_next_question_for_player(player)
         context["all_done"] = all_connected_players_done(room)
+        if context.get("next_question"):
+            context["answer_request_id"] = str(uuid.uuid4())
         if not context.get("next_question"):
             context["waiting_state"] = "result_pending"
     if room.status == "waiting":
         context["waiting_state"] = "before_start"
     if room.status == "finished":
         context["reward"] = player.rewards.filter(game=room).first()
+        context["creator_stats"] = creator_stats(player)
+        context.update(_podium_context(leaderboard))
     return context
 
 
@@ -647,6 +813,14 @@ def htmx_student_game_generate_choices(request):
         return _render_choice_builder(request, error_message=answer_error)
     if not question_text or not answer_text:
         return _render_choice_builder(request, error_message="문제와 정답을 먼저 적어 주세요.")
+    prefilter = prefilter_question_submission(
+        player=player,
+        question_text=question_text,
+        answer_text=answer_text,
+        request_id=request.POST.get("request_id"),
+    )
+    if not prefilter["ok"]:
+        return _render_choice_builder(request, error_message=prefilter["message"])
     if game_choice_limit_exceeded(player):
         choices, correct_index, fallback_used = build_fallback_multiple_choices(
             question=question_text,
@@ -783,6 +957,29 @@ def htmx_student_game_submit_question(request):
         form_state["correct_index"] = correct_index
         answer_text = choices[correct_index]
 
+    prefilter = prefilter_question_submission(
+        player=player,
+        question_text=question_text,
+        answer_text=answer_text,
+        choices=choices,
+        request_id=form_state["request_id"],
+    )
+    if not prefilter["ok"]:
+        return _render_student_create(request, player, error_message=prefilter["message"], form_state=form_state)
+
+    rewrite_question_id = form_state.get("rewrite_question_id")
+    if rewrite_question_id:
+        old_question = (
+            player.authored_questions.filter(id=rewrite_question_id, status__in=["needs_review", "rejected"])
+            .select_related("game")
+            .first()
+        )
+        if old_question and old_question.status != "rejected":
+            old_question.status = "rejected"
+            old_question.base_points = 0
+            old_question.ai_feedback = old_question.ai_feedback or "다시 쓰는 중"
+            old_question.save(update_fields=["status", "base_points", "ai_feedback", "updated_at"])
+
     try:
         question, _ = submit_question(
             player=player,
@@ -808,6 +1005,7 @@ def htmx_student_game_submit_question(request):
         return render(request, "seed_quiz/partials/game_student_pending.html", context)
     if question.status in {"ready", "needs_review"}:
         context["evaluated_question"] = question
+        context.update(_question_feedback_context(question))
         return render(request, "seed_quiz/partials/game_student_question_result.html", context)
     return _render_student_state(request, player, context=context)
 
@@ -827,6 +1025,7 @@ def htmx_student_game_question_status(request, question_id):
         question = evaluate_pending_question(question)
     context = _student_state_context(player)
     context["evaluated_question"] = question
+    context.update(_question_feedback_context(question))
     return render(request, "seed_quiz/partials/game_student_question_result.html", context)
 
 
@@ -853,15 +1052,19 @@ def htmx_student_game_answer(request, question_id):
         return _render_student_solve(request, player, error_message="답을 다시 골라 주세요.")
     time_taken_raw = (request.POST.get("time_taken_ms") or "0").strip()
     time_taken_ms = int(time_taken_raw) if time_taken_raw.isdigit() else 0
+    request_id = _coerce_request_id(request.POST.get("request_id"))
     try:
         answer = submit_answer(
             player=player,
             question=question,
             selected_index=selected_index,
             time_taken_ms=time_taken_ms,
+            request_id=request_id,
         )
     except ValueError as exc:
         error_map = {
+            "invalid_request_id": "다시 시도해 주세요.",
+            "request_conflict": "이미 처리된 답입니다.",
             "invalid_choice": "답을 다시 골라 주세요.",
             "cannot_answer_own_question": "지금 문제부터 풀어 주세요.",
             "invalid_question": "지금 문제부터 풀어 주세요.",
@@ -879,6 +1082,8 @@ def htmx_student_game_answer(request, question_id):
             "question": question,
             "selected_choice": question.choices[answer.selected_index] if 0 <= answer.selected_index < len(question.choices) else "",
             "correct_choice": question.choices[question.correct_index] if 0 <= question.correct_index < len(question.choices) else "",
+            "base_points": SOLVER_CORRECT_BASE if answer.is_correct else 0,
+            "speed_bonus": max(0, int(answer.points_earned or 0) - SOLVER_CORRECT_BASE) if answer.is_correct else 0,
         }
     )
     return render(request, "seed_quiz/partials/game_student_feedback.html", context)

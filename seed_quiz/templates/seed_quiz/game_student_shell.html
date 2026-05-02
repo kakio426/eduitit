@@ -1,11 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-sqg-room-sound-default="{% if room.settings_json.sound_enabled %}1{% else %}0{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>{{ room.title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+    <link rel="stylesheet" href="{% static 'seed_quiz/css/game_live.css' %}">
+    <script defer src="{% static 'seed_quiz/js/game_sound.js' %}"></script>
+    <script defer src="{% static 'seed_quiz/js/game_live.js' %}"></script>
     <style>
         body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%); }
     </style>
@@ -15,17 +19,33 @@
     document.addEventListener('htmx:configRequest', function (event) {
         event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
     });
+    document.body.addEventListener('htmx:responseError', function () {
+        window.alert('연결을 확인해 주세요.');
+    });
     </script>
 
-    <div class="mx-auto max-w-xl px-4 py-6">
+    <div class="mx-auto max-w-xl px-4 py-4 sm:py-6">
+        <header class="mb-4 rounded-[28px] border border-white/70 bg-white/85 px-4 py-3 shadow-lg shadow-sky-100">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-black uppercase text-sky-700">LIVE QUIZ</p>
+                    <p class="truncate text-base font-black text-slate-950">{{ room.title }}</p>
+                </div>
+            <button type="button"
+                    data-sqg-sound-toggle
+                    aria-pressed="false"
+                    class="shrink-0 rounded-full border border-white/70 px-3 py-2 text-xs font-black shadow-sm">
+                소리 끔
+            </button>
+            </div>
+        </header>
         <div id="game-area"
              hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
              hx-trigger="load"
              hx-target="#game-area"
              hx-swap="innerHTML">
             <div class="rounded-[28px] border border-white/70 bg-white/90 p-8 text-center shadow-xl shadow-sky-100">
-                <div class="mb-4 text-5xl">🌱</div>
-                <p class="text-sm font-bold text-slate-700">게임을 불러오는 중입니다.</p>
+                <p class="text-sm font-bold text-slate-700">불러오는 중</p>
             </div>
         </div>
     </div>

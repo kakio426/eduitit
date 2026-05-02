@@ -1,6 +1,7 @@
 from django.db import transaction
+from django.db.models import Count, Q
 
-from seed_quiz.models import SQGameAnswer, SQGamePlayer, SQGameRoom
+from seed_quiz.models import SQGameAnswer, SQGamePlayer, SQGameQuestion, SQGameRoom
 
 CREATOR_CORRECT_BONUS = 10
 SOLVER_CORRECT_BASE = 100
@@ -14,6 +15,36 @@ def calculate_solver_points(*, is_correct: bool, time_taken_ms: int, time_limit_
     clamped = min(max(0, int(time_taken_ms or 0)), limit_ms)
     bonus = round(SOLVER_BONUS_MAX * (1 - (clamped / limit_ms)))
     return SOLVER_CORRECT_BASE + max(0, bonus)
+
+
+def creator_stats(player: SQGamePlayer) -> dict:
+    questions = list(
+        SQGameQuestion.objects.filter(game=player.game, author=player, status="ready")
+        .annotate(
+            answer_count=Count("answers", distinct=True),
+            correct_count=Count("answers", filter=Q(answers__is_correct=True), distinct=True),
+        )
+        .order_by("created_at", "id")
+    )
+    total_answer_count = sum(question.answer_count for question in questions)
+    total_correct_count = sum(question.correct_count for question in questions)
+    hardest_question = None
+    for question in questions:
+        if question.answer_count <= 0:
+            continue
+        question.correct_rate = round((question.correct_count / question.answer_count) * 100)
+        if hardest_question is None or question.correct_rate < hardest_question.correct_rate:
+            hardest_question = question
+
+    correct_rate = round((total_correct_count / total_answer_count) * 100) if total_answer_count else 0
+    return {
+        "question_count": len(questions),
+        "answer_count": total_answer_count,
+        "correct_count": total_correct_count,
+        "correct_rate": correct_rate,
+        "bonus_score": total_correct_count * CREATOR_CORRECT_BONUS,
+        "hardest_question": hardest_question,
+    }
 
 
 @transaction.atomic

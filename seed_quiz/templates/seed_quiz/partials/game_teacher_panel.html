@@ -2,6 +2,8 @@
      hx-trigger="every 3s"
      hx-target="#game-room-panel"
      hx-swap="innerHTML"
+     data-sqg-live-scope="teacher-{{ room.id }}"
+     data-sqg-rank-scope="teacher-{{ room.id }}"
      class="space-y-5">
 
     {% if error_message %}
@@ -10,29 +12,31 @@
     </div>
     {% endif %}
 
-    <section class="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+    <section class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:justify-between">
+                <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ room.get_status_display }}</span>
+                        <span class="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">{{ room.get_status_display }}</span>
                         <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">{{ room.get_topic_display }}</span>
                         <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">{{ room.get_question_mode_display }}</span>
                     </div>
-                    <h2 class="mt-3 text-2xl font-black text-gray-900">입장 코드 {{ room.join_code }}</h2>
-                    {% if seconds_left != None %}
-                    <p class="mt-1 text-sm text-gray-500">남은 시간 {{ seconds_left }}초</p>
-                    {% endif %}
+                    <h2 class="mt-3 text-3xl font-black tracking-normal text-gray-900">입장 코드 {{ room.join_code }}</h2>
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        {% if seconds_left != None %}
+                        <span class="rounded-full bg-sky-50 px-3 py-1.5 text-xs font-black text-sky-700">남은 {{ seconds_left }}초</span>
+                        {% endif %}
+                        <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">{{ classroom.name }}</span>
+                    </div>
                 </div>
 
-                <div class="w-full max-w-xs rounded-3xl bg-slate-50 p-4">
-                    <p class="text-xs font-bold text-slate-500">진행</p>
+                <div class="grid gap-2 sm:grid-cols-2 lg:w-80 lg:grid-cols-1">
                     {% if room.status == 'waiting' %}
                     <button hx-post="{% url 'seed_quiz:htmx_teacher_game_advance' classroom_id=classroom.id room_id=room.id %}"
                             hx-vals='{"to_status":"creating"}'
                             hx-target="#game-room-panel"
                             hx-swap="innerHTML"
-                            class="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                            class="min-h-[52px] w-full rounded-2xl bg-slate-900 px-4 py-3 text-base font-black text-white hover:bg-slate-800">
                         출제 시작
                     </button>
                     {% elif room.status == 'creating' %}
@@ -41,10 +45,10 @@
                             hx-target="#game-room-panel"
                             hx-swap="innerHTML"
                             {% if not can_start_playing %}disabled{% endif %}
-                            class="mt-3 w-full rounded-2xl px-4 py-3 text-sm font-bold text-white {% if can_start_playing %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-slate-300 cursor-not-allowed{% endif %}">
+                            class="min-h-[52px] w-full rounded-2xl px-4 py-3 text-base font-black text-white {% if can_start_playing %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-slate-300 cursor-not-allowed{% endif %}">
                         풀기 시작
                     </button>
-                    <p class="mt-2 text-xs font-bold {% if can_start_playing %}text-emerald-700{% else %}text-amber-700{% endif %}">
+                    <p class="rounded-2xl px-4 py-3 text-xs font-black {% if can_start_playing %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
                         {% if can_start_playing %}준비 완료{% else %}{{ play_block_message }}{% endif %}
                     </p>
                     {% elif room.status == 'playing' %}
@@ -52,59 +56,66 @@
                             hx-vals='{"to_status":"finished"}'
                             hx-target="#game-room-panel"
                             hx-swap="innerHTML"
-                            class="mt-3 w-full rounded-2xl bg-amber-600 px-4 py-3 text-sm font-bold text-white hover:bg-amber-700">
+                            class="min-h-[52px] w-full rounded-2xl bg-amber-600 px-4 py-3 text-base font-black text-white hover:bg-amber-700">
                         결과 보기
                     </button>
-                    <p class="mt-2 text-xs font-bold text-amber-700">수업 종료 시 결과로 넘어갑니다.</p>
                     {% else %}
                     <a href="{% url 'seed_quiz:teacher_game_create' classroom_id=classroom.id %}"
-                       class="mt-3 block w-full rounded-2xl bg-slate-900 px-4 py-3 text-center text-sm font-bold text-white hover:bg-slate-800">
+                       class="flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-base font-black text-white hover:bg-slate-800">
                         새 게임
                     </a>
-                    <p class="mt-2 text-xs font-bold text-slate-500">다음 수업용 게임을 만들 수 있습니다.</p>
                     {% endif %}
+                    <button hx-post="{% url 'seed_quiz:htmx_teacher_game_sound' classroom_id=classroom.id room_id=room.id %}"
+                            hx-vals='{"sound_enabled":"{% if sound_enabled %}0{% else %}1{% endif %}"}'
+                            hx-target="#game-room-panel"
+                            hx-swap="innerHTML"
+                            class="min-h-[48px] w-full rounded-2xl border px-4 py-3 text-sm font-black {% if sound_enabled %}border-slate-900 bg-slate-900 text-white{% else %}border-slate-200 bg-white text-slate-700{% endif %}">
+                        {% if sound_enabled %}소리 켬{% else %}소리 끔{% endif %}
+                    </button>
+                    <a href="{% url 'seed_quiz:teacher_game_stage' classroom_id=classroom.id room_id=room.id %}"
+                       target="_blank"
+                       rel="noopener"
+                       class="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-black text-violet-800 hover:bg-violet-100">
+                        무대 보기
+                    </a>
                 </div>
             </div>
 
             <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-2xl bg-slate-50 px-4 py-4">
                     <p class="text-xs font-bold text-slate-500">입장</p>
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ players|length }}</p>
-                    <p class="text-xs text-slate-500">접속 중 {{ connected_count }}</p>
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ players|length }}</p>
+                    <p class="text-xs text-slate-500">접속 {{ connected_count }}</p>
                 </div>
                 <div class="rounded-2xl bg-slate-50 px-4 py-4">
-                    <p class="text-xs font-bold text-slate-500">AI 검토</p>
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ question_counts.needs_review }}</p>
-                    <p class="text-xs text-slate-500">대기 {{ question_counts.pending }} · 준비 {{ question_counts.ready }}</p>
-                </div>
-                <div class="rounded-2xl bg-slate-50 px-4 py-4">
-                    <p class="text-xs font-bold text-slate-500">진행</p>
-                    {% if room.status == 'creating' %}
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ create_done_count }}/{{ players|length }}</p>
-                    <p class="text-xs text-slate-500">출제 완료</p>
-                    {% elif room.status == 'playing' %}
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ solve_done_count }}/{{ players|length }}</p>
-                    <p class="text-xs text-slate-500">풀이 완료</p>
+                    <p class="text-xs font-bold text-slate-500">{% if room.status == 'playing' %}풀이{% else %}출제{% endif %}</p>
+                    {% if room.status == 'playing' %}
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ solve_done_count }}/{{ players|length }}</p>
+                    <p class="text-xs text-slate-500">완료</p>
                     {% else %}
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ question_counts.ready }}</p>
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ create_done_count }}/{{ players|length }}</p>
+                    <p class="text-xs text-slate-500">완료</p>
+                    {% endif %}
+                </div>
+                <div class="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-bold text-slate-500">검토</p>
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ question_counts.needs_review }}</p>
+                    <p class="text-xs text-slate-500">AI {{ question_counts.pending }}</p>
+                </div>
+                <div class="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-bold text-slate-500">준비</p>
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ question_counts.ready }}</p>
                     <p class="text-xs text-slate-500">사용 문제</p>
-                    {% endif %}
-                </div>
-                <div class="rounded-2xl bg-slate-50 px-4 py-4">
-                    <p class="text-xs font-bold text-slate-500">결과</p>
-                    {% if winner %}
-                    <p class="mt-2 text-2xl font-black text-slate-900">{{ winner.rank }}위</p>
-                    <p class="text-xs text-slate-500">{{ winner.nickname }} · {{ winner.total_score }}점</p>
-                    {% else %}
-                    <p class="mt-2 text-2xl font-black text-slate-900">-</p>
-                    <p class="text-xs text-slate-500">아직 없음</p>
-                    {% endif %}
                 </div>
             </div>
+            <div class="mt-4 min-h-[24px] text-sm font-black text-violet-700" aria-live="polite" data-sqg-live-toast></div>
         </div>
 
         <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-            <p class="text-xs font-bold text-slate-500">학생 링크</p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-xs font-bold text-slate-500">학생 링크</p>
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">QR</span>
+            </div>
             <a href="{{ join_url }}" target="_blank" rel="noopener" class="mt-2 block break-all text-sm font-bold text-slate-900 hover:text-sky-700">{{ join_url }}</a>
             <div class="mt-4 flex items-center justify-center rounded-3xl bg-slate-50 p-4">
                 {% if join_qr_data_url %}
@@ -119,7 +130,7 @@
         <div class="mb-4 flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-black text-gray-900">AI 검토</h3>
-                <p class="text-xs text-slate-500">검토 대기 문항을 처리하면 바로 풀기로 넘어갈 수 있습니다.</p>
+                <p class="text-xs text-slate-500">검토 후 풀기 시작</p>
             </div>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">대기 {{ question_counts.needs_review }}</span>
         </div>
@@ -132,7 +143,24 @@
                     <div>
                         <p class="text-xs font-bold text-slate-500">{{ question.author.student.number }}번 {{ question.author.nickname }}</p>
                         <p class="mt-2 text-sm font-bold text-slate-900">{{ question.question_text }}</p>
-                        <p class="mt-2 text-xs text-slate-500">{{ question.ai_feedback }}</p>
+                        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                            <div class="rounded-2xl bg-white px-3 py-3">
+                                <p class="text-[11px] font-black text-emerald-700">좋은 점</p>
+                                <p class="mt-1 text-xs font-bold text-slate-700">
+                                    {% with strength=question.ai_quality_json.strengths.0 %}
+                                    {{ strength|default:question.ai_feedback|default:"문제 저장" }}
+                                    {% endwith %}
+                                </p>
+                            </div>
+                            <div class="rounded-2xl bg-white px-3 py-3">
+                                <p class="text-[11px] font-black text-amber-700">다듬을 점</p>
+                                <p class="mt-1 text-xs font-bold text-slate-700">
+                                    {% with improvement=question.ai_quality_json.improvements.0 %}
+                                    {{ improvement|default:"선생님 확인" }}
+                                    {% endwith %}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <button hx-post="{% url 'seed_quiz:htmx_teacher_game_review' classroom_id=classroom.id room_id=room.id question_id=question.id %}"
@@ -173,18 +201,27 @@
                 <p class="text-xs text-gray-500">번호 · 점수 · 상태</p>
             </div>
             <div class="space-y-3">
-                {% for player in players %}
-                <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <div>
-                        <p class="text-sm font-bold text-slate-900">{{ player.student.number }}번 {{ player.nickname }}</p>
+                {% for row in live_player_rows %}
+                <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 px-4 py-3 {% if row.ready_state == 'done' %}bg-emerald-50{% else %}bg-slate-50{% endif %}"
+                     data-sqg-live-player="{{ row.player.id }}"
+                     data-sqg-live-name="{{ row.player.nickname }}"
+                     data-sqg-ready-state="{{ row.ready_state }}"
+                     data-sqg-connected="{% if row.player.is_connected %}1{% else %}0{% endif %}">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-black text-slate-900">{{ row.player.student.number }}번 {{ row.player.nickname }}</p>
                         <p class="text-xs text-slate-500">
-                            출제 {{ player.create_score }} · 풀이 {{ player.solve_score }}
-                            {% if room.status == 'finished' %}· 최종 {{ player.rank }}위{% endif %}
+                            출제 {{ row.player.create_score }} · 풀이 {{ row.player.solve_score }}
+                            {% if room.status == 'finished' %}· 최종 {{ row.player.rank }}위{% endif %}
                         </p>
                     </div>
-                    <span class="rounded-full px-3 py-1 text-xs font-bold {% if player.is_connected %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
-                        {% if player.is_connected %}접속 중{% else %}잠시 이탈{% endif %}
-                    </span>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span class="rounded-full px-3 py-1 text-xs font-black {% if row.ready_state == 'done' %}bg-emerald-600 text-white{% else %}bg-white text-slate-700{% endif %}">
+                            {{ row.status_label }}
+                        </span>
+                        <span class="rounded-full px-3 py-1 text-xs font-bold {% if row.player.is_connected %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-600{% endif %}">
+                            {% if row.player.is_connected %}접속{% else %}이탈{% endif %}
+                        </span>
+                    </div>
                 </div>
                 {% empty %}
                 <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
@@ -201,12 +238,18 @@
             </div>
             <div class="space-y-3">
                 {% for player in top_leaderboard %}
-                <div class="flex items-center justify-between rounded-2xl border border-slate-100 px-4 py-3">
-                    <div>
-                        <p class="text-sm font-bold text-slate-900">{{ player.rank }}위 {{ player.nickname }}</p>
+                <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 px-4 py-3"
+                     data-sqg-rank-row
+                     data-sqg-rank-player-id="{{ player.id }}"
+                     data-sqg-rank="{{ player.rank }}">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-black text-slate-900">{{ player.rank }}위 {{ player.nickname }}</p>
                         <p class="text-xs text-slate-500">출제 {{ player.create_score }} · 풀이 {{ player.solve_score }}</p>
                     </div>
-                    <p class="text-xl font-black text-slate-900">{{ player.total_score }}</p>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                        <p class="text-xl font-black tabular-nums text-slate-900">{{ player.total_score }}</p>
+                    </div>
                 </div>
                 {% empty %}
                 <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">

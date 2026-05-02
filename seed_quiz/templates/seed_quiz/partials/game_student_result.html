@@ -1,45 +1,158 @@
-<section class="space-y-4">
-    <div class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
-        <div class="text-center">
-            <div class="mb-4 text-5xl">🏆</div>
-            <p class="text-xs font-bold text-sky-700">내 순위</p>
-            <h2 class="mt-1 text-3xl font-black text-slate-900">{{ player.rank }}위</h2>
-            <p class="mt-2 text-sm text-slate-500">총 {{ player.total_score }}점</p>
+{% load static %}
+<section class="space-y-4"
+         data-sqg-sound-event="podium"
+         data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}"
+         data-sqg-rank-scope="student-{{ room.id }}">
+    <div class="sqg-result-hero rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-xl shadow-sky-100 sm:p-6">
+        <div class="sqg-confetti" aria-hidden="true"></div>
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <p class="text-xs font-black text-sky-700">최종</p>
+                <div class="mt-1 flex flex-wrap items-center gap-2"
+                     data-sqg-rank-row
+                     data-sqg-rank-player-id="{{ player.id }}"
+                     data-sqg-rank="{{ player.rank }}">
+                    <h2 class="text-3xl font-black text-slate-900">{{ player.rank }}위</h2>
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                </div>
+            </div>
+            <div class="rounded-2xl bg-violet-50 px-4 py-3 text-right">
+                <p class="text-xs font-black text-violet-700">내 점수</p>
+                <p class="text-3xl font-black tabular-nums text-violet-950">{{ player.total_score }}</p>
+            </div>
         </div>
+
+        {% if podium_winner %}
+        <div class="sqg-podium mt-6">
+            <div class="sqg-podium-visual" aria-hidden="true">
+                <img src="{% static 'seed_quiz/img/game/podium-sprout.svg' %}" alt="" class="sqg-podium-asset">
+            </div>
+            {% if podium_runners.0 %}
+            <div class="sqg-podium-step sqg-podium-step--second {% if podium_runners.0.id == player.id %}sqg-podium-step--me{% endif %}">
+                <span>2위</span>
+                <strong>{{ podium_runners.0.nickname }}</strong>
+                <em>{{ podium_runners.0.total_score }}</em>
+                {% if podium_runners.0.id == player.id %}<small>내 순위</small>{% endif %}
+            </div>
+            {% endif %}
+            <div class="sqg-podium-step sqg-podium-step--first {% if podium_winner.id == player.id %}sqg-podium-step--me{% endif %}">
+                <span>1위</span>
+                <strong>{{ podium_winner.nickname }}</strong>
+                <em>{{ podium_winner.total_score }}</em>
+                {% if podium_winner.id == player.id %}<small>내 순위</small>{% endif %}
+            </div>
+            {% if podium_runners.1 %}
+            <div class="sqg-podium-step sqg-podium-step--third {% if podium_runners.1.id == player.id %}sqg-podium-step--me{% endif %}">
+                <span>3위</span>
+                <strong>{{ podium_runners.1.nickname }}</strong>
+                <em>{{ podium_runners.1.total_score }}</em>
+                {% if podium_runners.1.id == player.id %}<small>내 순위</small>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+            <div class="rounded-2xl bg-slate-950 px-3 py-3 text-white">
+                <p class="text-[11px] font-bold text-slate-300">1위 풀이</p>
+                <p class="mt-1 text-xl font-black tabular-nums">{{ podium_winner.solve_score }}</p>
+            </div>
+            <div class="rounded-2xl bg-slate-950 px-3 py-3 text-white">
+                <p class="text-[11px] font-bold text-slate-300">1위 출제</p>
+                <p class="mt-1 text-xl font-black tabular-nums">{{ podium_winner.create_score }}</p>
+            </div>
+            <div class="rounded-2xl bg-violet-50 px-3 py-3">
+                <p class="text-[11px] font-bold text-violet-700">내 출제</p>
+                <p class="mt-1 text-xl font-black tabular-nums text-violet-950">{{ player.create_score }}</p>
+            </div>
+            <div class="rounded-2xl bg-sky-50 px-3 py-3">
+                <p class="text-[11px] font-bold text-sky-700">내 풀이</p>
+                <p class="mt-1 text-xl font-black tabular-nums text-sky-950">{{ player.solve_score }}</p>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="mt-6 grid gap-3 sm:grid-cols-3">
             <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-                <p class="text-xs font-bold text-slate-500">출제 점수</p>
-                <p class="mt-2 text-2xl font-black text-slate-900">{{ player.create_score }}</p>
+                <p class="text-xs font-bold text-slate-500">출제</p>
+                <p class="mt-2 text-2xl font-black tabular-nums text-slate-900">{{ player.create_score }}</p>
             </div>
             <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-                <p class="text-xs font-bold text-slate-500">풀이 점수</p>
-                <p class="mt-2 text-2xl font-black text-slate-900">{{ player.solve_score }}</p>
+                <p class="text-xs font-bold text-slate-500">풀이</p>
+                <p class="mt-2 text-2xl font-black tabular-nums text-slate-900">{{ player.solve_score }}</p>
             </div>
             <div class="rounded-2xl {% if reward %}border border-emerald-200 bg-emerald-50{% else %}bg-slate-50{% endif %} px-4 py-4 text-center">
                 <p class="text-xs font-bold {% if reward %}text-emerald-700{% else %}text-slate-500{% endif %}">보상</p>
-                <p class="mt-2 text-2xl font-black {% if reward %}text-emerald-900{% else %}text-slate-900{% endif %}">
+                <p class="mt-2 text-2xl font-black tabular-nums {% if reward %}text-emerald-900{% else %}text-slate-900{% endif %}">
                     {% if reward %}+{{ reward.seed_amount }}{% else %}0{% endif %}
                 </p>
             </div>
         </div>
     </div>
 
+    {% if leaderboard_tail %}
     <div class="rounded-[28px] bg-slate-950 px-5 py-5 text-white shadow-xl shadow-slate-200">
         <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-bold">상위 5명</h3>
-            <span class="text-xs text-slate-300">최종</span>
+            <h3 class="text-sm font-bold">최종 순위</h3>
+            <span class="text-xs text-slate-300">4위 이하</span>
         </div>
         <div class="space-y-2">
-            {% for row in top_leaderboard %}
-            <div class="flex items-center justify-between rounded-2xl px-4 py-3 {% if row.id == player.id %}bg-emerald-500/20{% else %}bg-white/10{% endif %}">
-                <div>
-                    <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
+            {% for row in leaderboard_tail %}
+            <div class="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 {% if row.id == player.id %}bg-violet-500/25 ring-2 ring-violet-300{% else %}bg-white/10{% endif %}"
+                 data-sqg-rank-row
+                 data-sqg-rank-player-id="{{ row.id }}"
+                 data-sqg-rank="{{ row.rank }}">
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
                     <p class="text-xs text-slate-300">출제 {{ row.create_score }} · 풀이 {{ row.solve_score }}</p>
                 </div>
-                <p class="text-base font-black">{{ row.total_score }}</p>
+                <div class="flex shrink-0 items-center gap-2">
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                    <p class="text-base font-black tabular-nums">{{ row.total_score }}</p>
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
+    {% endif %}
+
+    <div class="sqg-creator-card rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-xl shadow-sky-100 sm:p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-black text-amber-700">내 문제</p>
+                <h3 class="text-xl font-black text-slate-900">친구들이 푼 기록</h3>
+            </div>
+            <span class="rounded-full bg-amber-300 px-3 py-1 text-xs font-black text-slate-950">
+                +{{ creator_stats.bonus_score }}
+            </span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 sm:gap-3">
+            <div class="rounded-2xl bg-white/70 px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">푼 사람</p>
+                <p class="mt-2 text-3xl font-black tabular-nums text-slate-900">{{ creator_stats.answer_count }}</p>
+            </div>
+            <div class="rounded-2xl bg-white/70 px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">정답률</p>
+                <p class="mt-2 text-3xl font-black tabular-nums text-slate-900">{{ creator_stats.correct_rate }}%</p>
+            </div>
+            <div class="rounded-2xl bg-white/70 px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">문제 수</p>
+                <p class="mt-2 text-3xl font-black tabular-nums text-slate-900">{{ creator_stats.question_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if creator_stats.hardest_question %}
+    <div class="rounded-[28px] border border-violet-100 bg-white/95 px-5 py-5 shadow-xl shadow-sky-100 sm:p-6">
+        <div class="mb-3 flex items-center justify-between">
+            <div>
+                <p class="text-xs font-black text-violet-700">어려운 문제</p>
+                <h3 class="text-xl font-black text-slate-900">정답률 {{ creator_stats.hardest_question.correct_rate }}%</h3>
+            </div>
+            <span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-800">내 출제</span>
+        </div>
+        <p class="line-clamp-2 rounded-2xl bg-violet-50 px-4 py-4 text-sm font-black leading-6 text-violet-950">
+            {{ creator_stats.hardest_question.question_text }}
+        </p>
+    </div>
+    {% endif %}
 </section>

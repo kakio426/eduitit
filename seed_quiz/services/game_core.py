@@ -223,6 +223,7 @@ def advance_phase(room: SQGameRoom, *, to_status: str | None = None) -> SQGameRo
 
 
 def _finalize_question(question: SQGameQuestion, quality_result: dict) -> SQGameQuestion:
+    quality_result = dict(quality_result or {})
     overall = int(quality_result.get("overall", 0) or 0)
     approved = bool(quality_result.get("approved", overall >= 40)) and overall >= 40
     needs_review = bool(quality_result.get("fallback_used")) or not approved
@@ -230,6 +231,14 @@ def _finalize_question(question: SQGameQuestion, quality_result: dict) -> SQGame
     feedback = str(quality_result.get("feedback") or "").strip()
     if needs_review and not feedback:
         feedback = "선생님 확인 후 사용할 수 있어요."
+    strengths = quality_result.get("strengths") if isinstance(quality_result.get("strengths"), list) else []
+    improvements = quality_result.get("improvements") if isinstance(quality_result.get("improvements"), list) else []
+    quality_result["strengths"] = [str(item).strip()[:80] for item in strengths if str(item).strip()][:2] or [
+        feedback or "문제는 저장됐어요."
+    ]
+    quality_result["improvements"] = [str(item).strip()[:80] for item in improvements if str(item).strip()][:2] or [
+        "선생님 확인 후 다듬어요." if needs_review else "보기 하나를 더 다듬어 보세요."
+    ]
     question.ai_quality_score = overall
     question.ai_quality_json = quality_result
     question.ai_feedback = feedback[:255]
@@ -339,9 +348,21 @@ def submit_answer(
     question: SQGameQuestion,
     selected_index: int,
     time_taken_ms: int,
+    request_id=None,
 ) -> SQGameAnswer:
     player = SQGamePlayer.objects.select_for_update().select_related("game").get(id=player.id)
     question = SQGameQuestion.objects.select_related("author", "game").get(id=question.id)
+    try:
+        request_uuid = request_id if isinstance(request_id, uuid.UUID) else uuid.UUID(str(request_id or uuid.uuid4()))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError("invalid_request_id") from exc
+
+    existing_by_request = SQGameAnswer.objects.select_for_update().filter(request_id=request_uuid).first()
+    if existing_by_request:
+        if existing_by_request.player_id != player.id or existing_by_request.question_id != question.id:
+            raise ValueError("request_conflict")
+        return existing_by_request
+
     existing = SQGameAnswer.objects.select_for_update().filter(question=question, player=player).first()
     if existing:
         return existing
@@ -366,6 +387,7 @@ def submit_answer(
         is_correct=question.correct_index == selected_index,
         time_taken_ms=max(0, int(time_taken_ms or 0)),
         points_earned=points,
+        request_id=request_uuid,
     )
     recalculate_game_scores(player.game)
     return answer

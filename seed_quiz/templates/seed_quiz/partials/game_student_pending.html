@@ -1,8 +1,9 @@
 <section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100"
          hx-get="{% url 'seed_quiz:htmx_student_game_question_status' question_id=pending_question.id %}"
-         hx-trigger="load delay:400ms, every 2s"
+         hx-trigger="load delay:400ms, every 3s"
          hx-target="#game-area"
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}">
     <div class="text-center">
         <div class="mb-4 text-5xl">🤖</div>
         <h2 class="text-2xl font-black text-slate-900">AI가 확인 중</h2>

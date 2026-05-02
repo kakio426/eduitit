@@ -1,57 +1,134 @@
-<section class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100"
+<section class="space-y-4"
          hx-get="{% url 'seed_quiz:htmx_student_game_state' %}"
          hx-trigger="every 3s"
          hx-target="#game-area"
-         hx-swap="innerHTML">
-    <div class="text-center">
-        {% if waiting_state == 'before_start' %}
-        <div class="mb-4 text-5xl">👋</div>
-        <h2 class="text-2xl font-black text-slate-900">시작 전</h2>
-        <p class="mt-2 text-sm text-slate-500">선생님이 열면 바로 시작합니다.</p>
-        {% elif waiting_state == 'needs_review' %}
-        <div class="mb-4 text-5xl">🧑‍🏫</div>
-        <h2 class="text-2xl font-black text-slate-900">선생님 확인 중</h2>
-        <p class="mt-2 text-sm text-slate-500">내 문제를 보고 있습니다.</p>
-        {% elif room.status == 'creating' %}
-        <div class="mb-4 text-5xl">🧠</div>
-        <h2 class="text-2xl font-black text-slate-900">내 문제 제출 완료</h2>
-        <p class="mt-2 text-sm text-slate-500">친구들 문제를 모으는 중</p>
-        {% elif waiting_state == 'result_pending' %}
-        <div class="mb-4 text-5xl">🏁</div>
-        <h2 class="text-2xl font-black text-slate-900">다 풀고 결과 대기</h2>
-        <p class="mt-2 text-sm text-slate-500">결과를 정리하는 중</p>
-        {% endif %}
+         hx-swap="innerHTML"
+         data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}"
+         data-sqg-live-scope="student-{{ room.id }}"
+         data-sqg-rank-scope="student-{{ room.id }}">
+    <div class="sqg-lobby-card rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-xl shadow-sky-100 sm:p-6">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                {% if waiting_state == 'before_start' %}
+                <p class="text-xs font-black text-sky-700">라이브 로비</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-900">입장 완료</h2>
+                {% elif waiting_state == 'needs_review' %}
+                <p class="text-xs font-black text-amber-700">다듬기</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-900">선생님 확인</h2>
+                {% elif room.status == 'creating' %}
+                <p class="text-xs font-black text-emerald-700">내 문제</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-900">내 문제 제출</h2>
+                {% elif waiting_state == 'result_pending' %}
+                <p class="text-xs font-black text-violet-700">결승선</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-900">결과 대기</h2>
+                {% endif %}
+            </div>
+            {% if seconds_left != None %}
+            <div class="rounded-2xl bg-slate-950 px-3 py-2 text-center text-white"
+                 data-sqg-countdown="{{ seconds_left }}"
+                 aria-live="polite">
+                <p class="text-[11px] font-black text-sky-100">남은 시간</p>
+                <p class="text-xl font-black tabular-nums"><span data-sqg-countdown-value>{{ seconds_left }}</span>초</p>
+            </div>
+            {% endif %}
+        </div>
 
-        {% if seconds_left != None %}
-        <p class="mt-4 text-xs font-bold text-sky-700">남은 시간 {{ seconds_left }}초</p>
+        <div class="mt-5 grid grid-cols-2 gap-3">
+            <div class="sqg-lobby-meter rounded-2xl px-4 py-4 text-center">
+                <p class="text-xs font-bold text-slate-500">친구들</p>
+                <p class="mt-2 text-3xl font-black tabular-nums text-slate-900">{{ players|length }}</p>
+            </div>
+            <div class="sqg-lobby-meter sqg-lobby-meter--ready rounded-2xl px-4 py-4 text-center">
+                <p class="text-xs font-bold text-emerald-700">{% if room.status == 'playing' %}풀이{% else %}준비{% endif %}</p>
+                <p class="mt-2 text-3xl font-black tabular-nums text-emerald-900">{{ live_done_count }}/{{ players|length }}</p>
+            </div>
+        </div>
+
+        <div class="mt-4 min-h-[28px] rounded-2xl bg-violet-50 px-4 py-2 text-sm font-black text-violet-700" aria-live="polite" data-sqg-live-toast>
+            {% if players %}라이브 준비 중{% else %}친구들을 기다리는 중{% endif %}
+        </div>
+        {% if needs_review_question %}
+        <button hx-get="{% url 'seed_quiz:htmx_student_game_state' %}?rewrite={{ needs_review_question.id }}"
+                hx-target="#game-area"
+                hx-swap="innerHTML"
+                class="mt-3 min-h-[52px] w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
+            다시 쓰기
+        </button>
         {% endif %}
     </div>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-2">
-        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-            <p class="text-xs font-bold text-slate-500">내 출제</p>
-            <p class="mt-2 text-2xl font-black text-slate-900">{{ create_count }}</p>
+    <div class="rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-xl shadow-sky-100">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-black text-slate-900">참가자</h3>
+            <span class="sqg-seed-badge">접속 {{ connected_count }}</span>
         </div>
-        <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-            <p class="text-xs font-bold text-slate-500">준비된 문제</p>
-            <p class="mt-2 text-2xl font-black text-slate-900">{{ ready_count }}</p>
+        <div class="grid gap-2 sm:grid-cols-2">
+            {% for row in live_player_rows %}
+            <div class="sqg-live-chip-card flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 {% if row.ready_state == 'done' %}border-emerald-100 bg-emerald-50{% else %}border-slate-100 bg-slate-50{% endif %}"
+                 data-sqg-live-player="{{ row.player.id }}"
+                 data-sqg-live-name="{{ row.player.nickname }}"
+                 data-sqg-ready-state="{{ row.ready_state }}"
+                 data-sqg-connected="{% if row.player.is_connected %}1{% else %}0{% endif %}">
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-black text-slate-900">{{ row.player.nickname }}</p>
+                    <p class="text-xs text-slate-500">{% if row.player.is_connected %}접속{% else %}잠시 이탈{% endif %}</p>
+                </div>
+                <span class="shrink-0 rounded-full px-3 py-1 text-xs font-black {% if row.ready_state == 'done' %}bg-emerald-600 text-white{% else %}bg-white text-slate-700{% endif %}">
+                    {{ row.status_label }}
+                </span>
+            </div>
+            {% empty %}
+            <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                아직 아무도 없습니다.
+            </div>
+            {% endfor %}
         </div>
     </div>
 
     {% if top_leaderboard %}
-    <div class="mt-6 rounded-3xl bg-slate-950 px-5 py-5 text-white">
+    <div class="rounded-[28px] bg-slate-950 px-5 py-5 text-white shadow-xl shadow-slate-200">
         <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold">상위 5명</h3>
             <span class="text-xs text-slate-300">실시간</span>
         </div>
         <div class="space-y-2">
             {% for row in top_leaderboard %}
-            <div class="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
-                <p class="text-base font-black">{{ row.total_score }}</p>
+            <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 {% if row.id == player.id %}ring-2 ring-violet-300{% endif %}"
+                 data-sqg-rank-row
+                 data-sqg-rank-player-id="{{ row.id }}"
+                 data-sqg-rank="{{ row.rank }}">
+                <p class="min-w-0 truncate text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
+                <div class="flex shrink-0 items-center gap-2">
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                    <p class="text-base font-black tabular-nums">{{ row.total_score }}</p>
+                </div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 </section>
+
+<script>
+(function () {
+    const countdown = document.querySelector('[data-sqg-countdown]');
+    if (!countdown) return;
+    if (window.__sqgWaitingCountdownTimer) window.clearInterval(window.__sqgWaitingCountdownTimer);
+    const valueTarget = countdown.querySelector('[data-sqg-countdown-value]');
+    const deadline = Date.now() + Math.max(0, Number(countdown.dataset.sqgCountdown || 0)) * 1000;
+    let lastRendered = null;
+    function renderCountdown() {
+        const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        if (remaining === lastRendered) return;
+        lastRendered = remaining;
+        if (valueTarget) valueTarget.textContent = String(remaining);
+        countdown.classList.toggle('sqg-countdown-hot', remaining > 0 && remaining <= 3);
+        if (remaining <= 0 && window.__sqgWaitingCountdownTimer) {
+            window.clearInterval(window.__sqgWaitingCountdownTimer);
+            window.__sqgWaitingCountdownTimer = null;
+        }
+    }
+    renderCountdown();
+    window.__sqgWaitingCountdownTimer = window.setInterval(renderCountdown, 250);
+})();
+</script>

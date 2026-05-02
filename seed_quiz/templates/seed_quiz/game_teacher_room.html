@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ room.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'seed_quiz/css/game_live.css' %}">
+{% endblock %}
 
 {% block content %}
 <section class="service-shell pb-20 px-4 min-h-screen">
@@ -22,4 +27,13 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('htmx:configRequest', function (event) {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+});
+</script>
+<script src="{% static 'seed_quiz/js/game_live.js' %}"></script>
 {% endblock %}

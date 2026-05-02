@@ -1,21 +1,55 @@
-<section class="space-y-4">
-    <div class="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-sky-100">
-        <div class="text-center">
-            <div class="mb-4 text-5xl">{% if answer.is_correct %}🎉{% else %}📘{% endif %}</div>
-            <h2 class="text-2xl font-black text-slate-900">{% if answer.is_correct %}정답{% else %}다음에 맞혀요{% endif %}</h2>
-            <p class="mt-2 text-sm text-slate-500">
-                {% if answer.is_correct %}+{{ answer.points_earned }}점{% else %}정답은 {{ correct_choice }}{% endif %}
-            </p>
+<section class="space-y-4"
+         data-sqg-sound-event="{% if answer.is_correct %}correct{% else %}wrong{% endif %}"
+         data-sqg-room-sound-default="{% if sound_enabled %}1{% else %}0{% endif %}"
+         data-sqg-rank-scope="student-{{ room.id }}">
+    <div class="rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-xl shadow-sky-100 sm:p-6">
+        <div class="{% if answer.is_correct %}sqg-pop{% else %}sqg-pop--wrong{% endif %}">
+            {% if answer.is_correct %}
+            <div class="rounded-[28px] border border-emerald-200 bg-emerald-50 px-5 py-6 text-center shadow-xl shadow-emerald-100">
+                <p class="text-sm font-black text-emerald-700">정답</p>
+                <p class="mt-2 font-black tabular-nums text-5xl text-emerald-950">+{{ answer.points_earned }}</p>
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <div class="rounded-2xl bg-white/70 px-3 py-3">
+                        <p class="text-[11px] font-bold text-emerald-700">기본</p>
+                        <p class="mt-1 text-lg font-black tabular-nums text-emerald-950">+{{ base_points }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-white/70 px-3 py-3">
+                        <p class="text-[11px] font-bold text-amber-700">빠른 답</p>
+                        <p class="mt-1 text-lg font-black tabular-nums text-amber-700">+{{ speed_bonus }}</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-6 text-center">
+                <p class="text-sm font-black text-rose-700">오답</p>
+                <p class="mt-2 text-4xl font-black tabular-nums text-rose-950">+0</p>
+            </div>
+            {% endif %}
         </div>
 
-        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <div class="mt-5 rounded-[28px] bg-slate-950 px-5 py-5 text-white">
+            <p class="text-xs font-black text-slate-300">{{ question.author.nickname }} 문제</p>
+            <p class="mt-2 line-clamp-2 text-xl font-black leading-7">{{ question.question_text }}</p>
+            <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                <div class="rounded-2xl bg-white/10 px-4 py-3">
+                    <p class="text-[11px] font-bold text-slate-300">내 답</p>
+                    <p class="mt-1 break-words text-base font-black">{{ selected_choice }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/10 px-4 py-3">
+                    <p class="text-[11px] font-bold text-slate-300">정답</p>
+                    <p class="mt-1 break-words text-base font-black text-emerald-200">{{ correct_choice }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5 grid gap-3 sm:grid-cols-2">
             <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-                <p class="text-xs font-bold text-slate-500">내가 고른 답</p>
-                <p class="mt-2 text-lg font-black text-slate-900">{{ selected_choice }}</p>
+                <p class="text-xs font-bold text-slate-500">출제</p>
+                <p class="mt-2 truncate text-lg font-black text-slate-900">{{ question.author.nickname }}</p>
             </div>
             <div class="rounded-2xl bg-slate-50 px-4 py-4 text-center">
-                <p class="text-xs font-bold text-slate-500">현재 누적</p>
-                <p class="mt-2 text-lg font-black text-slate-900">{{ player.total_score }}</p>
+                <p class="text-xs font-bold text-slate-500">현재 점수</p>
+                <p class="mt-2 text-lg font-black tabular-nums text-slate-900">{{ player.total_score }}</p>
             </div>
         </div>
 
@@ -23,7 +57,7 @@
                 hx-target="#game-area"
                 hx-swap="innerHTML"
                 class="mt-6 w-full rounded-2xl bg-slate-900 px-4 py-4 text-lg font-black text-white">
-            {% if room.status == 'finished' %}결과 보기{% else %}다음 문제{% endif %}
+            {% if room.status == 'finished' %}결과{% else %}다음{% endif %}
         </button>
     </div>
 
@@ -35,9 +69,15 @@
         </div>
         <div class="space-y-2">
             {% for row in leaderboard %}
-            <div class="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                <p class="text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
-                <p class="text-base font-black">{{ row.total_score }}</p>
+            <div class="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 {% if row.id == player.id %}bg-violet-500/25{% else %}bg-white/10{% endif %}"
+                 data-sqg-rank-row
+                 data-sqg-rank-player-id="{{ row.id }}"
+                 data-sqg-rank="{{ row.rank }}">
+                <p class="min-w-0 truncate text-sm font-bold">{{ row.rank }}위 {{ row.nickname }}</p>
+                <div class="flex shrink-0 items-center gap-2">
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-black" data-sqg-rank-delta>유지</span>
+                    <p class="text-base font-black tabular-nums">{{ row.total_score }}</p>
+                </div>
             </div>
             {% endfor %}
         </div>

@@ -680,6 +680,7 @@ class SQGameAnswer(models.Model):
     is_correct = models.BooleanField(default=False, verbose_name="정답 여부")
     time_taken_ms = models.PositiveIntegerField(default=0, verbose_name="소요 시간(ms)")
     points_earned = models.IntegerField(default=0, verbose_name="획득 점수")
+    request_id = models.UUIDField(default=uuid.uuid4, unique=True, verbose_name="답안 요청 ID")
     answered_at = models.DateTimeField(auto_now_add=True, verbose_name="답변 시각")
 
     class Meta:

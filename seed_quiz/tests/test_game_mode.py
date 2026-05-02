@@ -15,6 +15,7 @@ from seed_quiz.services.game_core import (
     create_game_room,
     get_next_question_for_player,
 )
+from seed_quiz.services.game_scoring import CREATOR_CORRECT_BONUS, creator_stats
 
 User = get_user_model()
 
@@ -151,7 +152,8 @@ class SeedQuizGameModeTest(TestCase):
         self.assertRedirects(response, shell_url)
         shell = self.student_client_1.get(shell_url)
         self.assertEqual(shell.status_code, 200)
-        self.assertContains(shell, "게임을 불러오는 중입니다.")
+        self.assertContains(shell, "LIVE QUIZ")
+        self.assertContains(shell, "불러오는 중")
 
     def test_student_join_invalid_name_redirects_with_error(self):
         self.room = self._create_room()
@@ -230,7 +232,9 @@ class SeedQuizGameModeTest(TestCase):
         question.refresh_from_db()
         self.assertEqual(question.status, "ready")
         self.assertGreaterEqual(question.base_points, 40)
-        self.assertContains(response, "문제가 준비됐어요")
+        self.assertContains(response, "준비 완료")
+        self.assertContains(response, "좋은 점")
+        self.assertContains(response, "다듬을 점")
 
     @patch("seed_quiz.services.game_core.evaluate_question_quality", side_effect=RuntimeError("deepseek timeout"))
     def test_ai_failure_moves_question_to_needs_review(self, mock_quality):
@@ -249,7 +253,7 @@ class SeedQuizGameModeTest(TestCase):
         question.refresh_from_db()
         self.assertEqual(question.status, "needs_review")
         self.assertEqual(question.base_points, 0)
-        self.assertContains(response, "선생님 확인 중")
+        self.assertContains(response, "선생님 확인")
         self.assertTrue(mock_quality.called)
 
     def test_generate_choices_with_broken_text_returns_partial_error(self):
@@ -375,6 +379,135 @@ class SeedQuizGameModeTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "보기는 서로 다르게 적어 주세요.")
         self.assertEqual(SQGameQuestion.objects.filter(game=self.room).count(), 0)
+
+    def test_prefilter_blocks_duplicate_question(self):
+        self.room = self._create_room()
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+        player = SQGamePlayer.objects.get(game=self.room, student=self.student1)
+        SQGameQuestion.objects.create(
+            game=self.room,
+            author=player,
+            question_type="ox",
+            question_text="서울은 대한민국의 수도다.",
+            answer_text="O",
+            choices=["O", "X"],
+            correct_index=0,
+            status="pending_ai",
+        )
+
+        response = self._submit_question(self.student_client_1, request_id=str(uuid.uuid4()))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "이미 만든 문제예요.")
+        self.assertEqual(SQGameQuestion.objects.filter(game=self.room).count(), 1)
+
+    def test_rewrite_needs_review_question_reopens_slot(self):
+        self.room = self._create_room()
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+        player = SQGamePlayer.objects.get(game=self.room, student=self.student1)
+        old_question = SQGameQuestion.objects.create(
+            game=self.room,
+            author=player,
+            question_type="ox",
+            question_text="다시 쓸 문제",
+            answer_text="O",
+            choices=["O", "X"],
+            correct_index=0,
+            status="needs_review",
+            ai_feedback="다듬기",
+        )
+
+        rewrite_response = self.student_client_1.get(
+            reverse("seed_quiz:htmx_student_game_state"),
+            {"rewrite": str(old_question.id)},
+        )
+        self.assertEqual(rewrite_response.status_code, 200)
+        self.assertContains(rewrite_response, "다시 쓰기")
+        self.assertContains(rewrite_response, "다시 쓸 문제")
+
+        submit_response = self.student_client_1.post(
+            reverse("seed_quiz:htmx_student_game_submit_question"),
+            {
+                "request_id": str(uuid.uuid4()),
+                "rewrite_question_id": str(old_question.id),
+                "question_type": "ox",
+                "question_text": "새로 쓴 문제",
+                "correct_ox": "X",
+            },
+        )
+
+        old_question.refresh_from_db()
+        self.assertEqual(submit_response.status_code, 200)
+        self.assertEqual(old_question.status, "rejected")
+        self.assertEqual(SQGameQuestion.objects.filter(game=self.room, author=player).count(), 2)
+
+    @patch("seed_quiz.services.game_core.evaluate_question_quality")
+    def test_ai_feedback_strengths_and_improvements_are_saved_and_rendered(self, mock_quality):
+        mock_quality.return_value = {
+            "relevance": 90,
+            "clarity": 86,
+            "difficulty": 72,
+            "overall": 84,
+            "approved": True,
+            "feedback": "좋은 문제",
+            "strengths": ["핵심 개념이 분명함"],
+            "improvements": ["보기 하나가 너무 쉬움"],
+            "fallback_used": False,
+        }
+        self.room = self._create_room()
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+
+        self._submit_question(self.student_client_1)
+        question = SQGameQuestion.objects.get(game=self.room)
+        response = self.student_client_1.get(
+            reverse("seed_quiz:htmx_student_game_question_status", kwargs={"question_id": question.id})
+        )
+
+        question.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(question.ai_quality_json["strengths"], ["핵심 개념이 분명함"])
+        self.assertEqual(question.ai_quality_json["improvements"], ["보기 하나가 너무 쉬움"])
+        self.assertContains(response, "핵심 개념이 분명함")
+        self.assertContains(response, "보기 하나가 너무 쉬움")
+
+    def test_teacher_can_toggle_room_sound_setting(self):
+        self.room = self._create_room()
+        url = reverse(
+            "seed_quiz:htmx_teacher_game_sound",
+            kwargs={"classroom_id": self.classroom.id, "room_id": self.room.id},
+        )
+
+        response = self.teacher_client.post(url, {"sound_enabled": "1"})
+        self.room.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.room.settings_json["sound_enabled"])
+        self.assertContains(response, "소리 켬")
+
+    def test_teacher_stage_mode_renders_full_and_partial_views(self):
+        self.room = self._create_room()
+        self._join_student(self.student_client_1, self.student1)
+        self._join_student(self.student_client_2, self.student2)
+        url = reverse(
+            "seed_quiz:teacher_game_stage",
+            kwargs={"classroom_id": self.classroom.id, "room_id": self.room.id},
+        )
+
+        response = self.teacher_client.get(url)
+        partial = self.teacher_client.get(url, {"partial": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "SEED QUIZ STAGE")
+        self.assertContains(response, self.room.join_code)
+        self.assertContains(response, "data-sqg-stage-scope")
+        self.assertContains(response, "sqg-stage-code")
+        self.assertContains(response, "상위 5명")
+        self.assertEqual(partial.status_code, 200)
+        self.assertContains(partial, "data-sqg-stage-event")
+        self.assertNotIn(b"<html", partial.content.lower())
 
     def test_teacher_can_approve_needs_review_question_with_default_points(self):
         self.room = self._create_room()
@@ -623,6 +756,113 @@ class SeedQuizGameModeTest(TestCase):
         self.assertEqual(response2.status_code, 200)
         self.assertEqual(SQGameAnswer.objects.filter(player=player, question=q2).count(), 1)
         self.assertContains(response2, "정답")
+
+    @patch("seed_quiz.services.game_core.evaluate_question_quality")
+    def test_same_answer_request_id_only_creates_one_answer(self, mock_quality):
+        mock_quality.return_value = {
+            "relevance": 90,
+            "clarity": 88,
+            "difficulty": 70,
+            "overall": 85,
+            "approved": True,
+            "feedback": "사용 가능",
+            "fallback_used": False,
+        }
+        self.room = self._create_room()
+        advance_phase(self.room, to_status="creating")
+        self._join_student(self.student_client_1, self.student1)
+        self._join_student(self.student_client_2, self.student2)
+
+        self._submit_question(self.student_client_1, question_text="지구는 둥글다.", correct_ox="O")
+        self._submit_question(self.student_client_2, question_text="바다는 육지다.", correct_ox="X")
+
+        q1 = SQGameQuestion.objects.get(author__student=self.student1)
+        q2 = SQGameQuestion.objects.get(author__student=self.student2)
+        self.student_client_1.get(reverse("seed_quiz:htmx_student_game_question_status", kwargs={"question_id": q1.id}))
+        self.student_client_2.get(reverse("seed_quiz:htmx_student_game_question_status", kwargs={"question_id": q2.id}))
+
+        advance_phase(self.room, to_status="playing")
+
+        request_id = str(uuid.uuid4())
+        answer_url = reverse("seed_quiz:htmx_student_game_answer", kwargs={"question_id": q2.id})
+        response1 = self.student_client_1.post(
+            answer_url,
+            {"request_id": request_id, "selected_index": "1", "time_taken_ms": "1000"},
+        )
+        response2 = self.student_client_1.post(
+            answer_url,
+            {"request_id": request_id, "selected_index": "0", "time_taken_ms": "2000"},
+        )
+
+        player = SQGamePlayer.objects.get(game=self.room, student=self.student1)
+        answer = SQGameAnswer.objects.get(player=player, question=q2)
+        self.assertEqual(response1.status_code, 200)
+        self.assertEqual(response2.status_code, 200)
+        self.assertEqual(str(answer.request_id), request_id)
+        self.assertEqual(answer.selected_index, 1)
+        self.assertEqual(SQGameAnswer.objects.filter(player=player, question=q2).count(), 1)
+        self.assertContains(response2, "정답")
+
+    def test_creator_stats_summarizes_authored_questions(self):
+        self.room = self._create_room()
+        self._join_student(self.student_client_1, self.student1)
+        self._join_student(self.student_client_2, self.student2)
+        self._join_student(self.student_client_3, self.student3)
+        author = SQGamePlayer.objects.get(game=self.room, student=self.student1)
+        solver1 = SQGamePlayer.objects.get(game=self.room, student=self.student2)
+        solver2 = SQGamePlayer.objects.get(game=self.room, student=self.student3)
+        easy_question = SQGameQuestion.objects.create(
+            game=self.room,
+            author=author,
+            question_type="ox",
+            question_text="쉬운 문제",
+            answer_text="O",
+            choices=["O", "X"],
+            correct_index=0,
+            status="ready",
+            base_points=20,
+        )
+        hard_question = SQGameQuestion.objects.create(
+            game=self.room,
+            author=author,
+            question_type="ox",
+            question_text="어려운 문제",
+            answer_text="X",
+            choices=["O", "X"],
+            correct_index=1,
+            status="ready",
+            base_points=20,
+        )
+        SQGameAnswer.objects.create(
+            question=easy_question,
+            player=solver1,
+            selected_index=0,
+            is_correct=True,
+            points_earned=150,
+        )
+        SQGameAnswer.objects.create(
+            question=easy_question,
+            player=solver2,
+            selected_index=1,
+            is_correct=False,
+            points_earned=0,
+        )
+        SQGameAnswer.objects.create(
+            question=hard_question,
+            player=solver1,
+            selected_index=0,
+            is_correct=False,
+            points_earned=0,
+        )
+
+        stats = creator_stats(author)
+
+        self.assertEqual(stats["question_count"], 2)
+        self.assertEqual(stats["answer_count"], 3)
+        self.assertEqual(stats["correct_count"], 1)
+        self.assertEqual(stats["correct_rate"], 33)
+        self.assertEqual(stats["bonus_score"], CREATOR_CORRECT_BONUS)
+        self.assertEqual(stats["hardest_question"], hard_question)
 
     @patch("seed_quiz.services.game_core.add_seeds")
     @patch("seed_quiz.services.game_core.evaluate_question_quality")

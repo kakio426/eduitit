@@ -78,6 +78,23 @@ def _fallback_distractors(correct_answer: str) -> list[str]:
     return _dedupe_choices(seeds, exclude={answer})[:3]
 
 
+def _short_text_list(value, *, fallback: list[str] | None = None) -> list[str]:
+    if isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, (list, tuple)):
+        raw_items = list(value)
+    else:
+        raw_items = []
+    items = []
+    for raw_item in raw_items:
+        item = str(raw_item or "").strip()
+        if item:
+            items.append(item[:80])
+        if len(items) >= 2:
+            break
+    return items or list(fallback or [])
+
+
 def generate_distractors(*, question: str, correct_answer: str, topic: str, grade: int) -> list[str]:
     topic_label = TOPIC_LABELS.get(topic, topic)
     user_prompt = (
@@ -166,7 +183,8 @@ def evaluate_question_quality(
         f"문제: {question_text}\n"
         f"정답: {answer_text}\n"
         "다음 JSON만 출력하세요:\n"
-        '{"relevance":0,"clarity":0,"difficulty":0,"overall":0,"approved":true,"feedback":"짧은 한 줄"}\n'
+        '{"relevance":0,"clarity":0,"difficulty":0,"overall":0,"approved":true,'
+        '"feedback":"짧은 한 줄","strengths":["좋은 점"],"improvements":["다듬을 점"]}\n'
         "규칙: 0~100 정수, approved는 overall이 40 이상이면 true."
     )
     payload = _call_ai_json(
@@ -179,6 +197,8 @@ def evaluate_question_quality(
     overall = max(0, min(100, int(payload.get("overall", 0) or 0)))
     approved = bool(payload.get("approved", overall >= 40))
     feedback = str(payload.get("feedback") or "").strip()[:200]
+    strengths = _short_text_list(payload.get("strengths"), fallback=["핵심이 분명해요."])
+    improvements = _short_text_list(payload.get("improvements"), fallback=["보기 하나를 더 다듬어 보세요."])
     return {
         "relevance": relevance,
         "clarity": clarity,
@@ -186,6 +206,8 @@ def evaluate_question_quality(
         "overall": overall,
         "approved": approved,
         "feedback": feedback or "평가가 완료됐습니다.",
+        "strengths": strengths,
+        "improvements": improvements,
         "fallback_used": False,
     }
 
@@ -198,6 +220,8 @@ def fallback_quality_result(feedback: str = "AI 확인이 늦어져서 선생님
         "overall": 0,
         "approved": False,
         "feedback": feedback,
+        "strengths": ["문제는 저장됐어요."],
+        "improvements": ["선생님 확인 후 사용할게요."],
         "fallback_used": True,
     }
 
