@@ -89,6 +89,30 @@ class FortunePrivacyBalancedTests(TestCase):
         self.assertNotIn("autoSaveResult()", content)
         self.assertIn("보관함에 저장", content)
 
+    def test_saju_page_is_guest_accessible_without_login_redirect(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("fortune:saju"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [])
+        self.assertContains(response, "보관함에 저장")
+
+    def test_saju_api_allows_guest_analysis_without_saving_profile(self):
+        self.client.logout()
+        ai_mock = AsyncMock(return_value="게스트 사주 분석 결과입니다.")
+
+        with patch("fortune.views._check_saju_ratelimit", new=AsyncMock(return_value=False)), patch(
+            "fortune.views.get_chart_context", return_value=self.chart_context
+        ), patch("fortune.views.get_prompt", return_value="PROMPT"), patch(
+            "fortune.views._collect_ai_response_async", new=ai_mock
+        ):
+            response = self.client.post(reverse("fortune:saju_api"), self.form_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(FortuneResult.objects.count(), 0)
+
     def test_saju_api_omits_name_and_does_not_auto_save_result(self):
         ai_mock = AsyncMock(return_value="사주 분석 결과입니다.")
 
@@ -150,3 +174,34 @@ class FortunePrivacyBalancedTests(TestCase):
         prompt_mock.assert_called_once()
         self.assertEqual(prompt_mock.call_args.args[0], "female")
         self.assertEqual(DailyFortuneLog.objects.filter(user=self.user).count(), 1)
+
+    def test_daily_api_allows_guest_without_saving_log(self):
+        self.client.logout()
+        ai_mock = AsyncMock(return_value="게스트 오늘 운세입니다.")
+
+        with patch("fortune.views._check_saju_ratelimit", new=AsyncMock(return_value=False)), patch(
+            "fortune.views.calculator.get_pillars", return_value=self.chart_context
+        ), patch("fortune.prompts.get_daily_fortune_prompt", return_value="PROMPT"), patch(
+            "fortune.views._collect_ai_response_async", new=ai_mock
+        ):
+            response = self.client.post(
+                reverse("fortune:daily_fortune_api"),
+                data=json.dumps(
+                    {
+                        "target_date": "2026-03-12",
+                        "natal_chart": {
+                            "year": ["甲", "子"],
+                            "month": ["乙", "丑"],
+                            "day": ["丙", "寅"],
+                            "hour": ["丁", "卯"],
+                        },
+                        "gender": "female",
+                        "mode": "teacher",
+                    }
+                ),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(DailyFortuneLog.objects.count(), 0)

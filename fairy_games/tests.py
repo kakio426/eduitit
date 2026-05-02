@@ -48,8 +48,11 @@ class FairyGamesRoutingTests(TestCase):
     def test_reversi_play_page_body_avoids_false_error_strings(self):
         response = self.client.get(reverse("fairy_games:play", kwargs={"variant": "reversi"}))
         content = response.content.decode("utf-8")
+        main_start = content.index('<main id="fg-stage"')
+        main_end = content.index("</main>", main_start) + len("</main>")
+        play_body = content[main_start:main_end]
 
-        self.assertNotRegex(content, r'(?i)Error|Service Unavailable|504|502')
+        self.assertNotRegex(play_body, r'(?i)Error|Service Unavailable|504|502')
 
 
 class FairyGamesEnsureCommandTests(TestCase):

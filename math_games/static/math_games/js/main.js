@@ -1,7 +1,7 @@
 "use strict";
 
 (function () {
-    const GENERIC_ERROR = "다시 시도해 주세요";
+    const GENERIC_ERROR = "다시 시도";
 
     function getCookie(name) {
         const parts = document.cookie ? document.cookie.split(";") : [];
@@ -28,10 +28,10 @@
 
     function fallbackMessage(response) {
         if (response.status === 403) {
-            return "새로고침 후 다시 눌러 주세요";
+            return "권한 없음";
         }
         if (response.status >= 500) {
-            return "서버 준비가 필요해요";
+            return "다시 시도";
         }
         return GENERIC_ERROR;
     }

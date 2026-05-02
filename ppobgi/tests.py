@@ -19,9 +19,12 @@ class PpobgiViewTest(TestCase):
         self.profile.role = "school"
         self.profile.save()
 
-    def test_main_requires_login(self):
+    def test_main_allows_guest_user(self):
         response = self.client.get(reverse("ppobgi:main"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "ppobgi/main.html")
+        self.assertContains(response, "학생 이름 명단")
+        self.assertContains(response, 'data-storage-scope="guest:', html=False)
 
     def test_main_page_renders_for_authenticated_user(self):
         self.client.force_login(self.user)
@@ -64,9 +67,11 @@ class PpobgiViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["names"], ["1번 학생", "3번 학생"])
 
-    def test_roster_names_requires_login(self):
+    def test_roster_names_allows_guest_without_private_data(self):
         response = self.client.get(reverse("ppobgi:roster_names"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["names"], [])
+        self.assertEqual(response.json()["message"], "직접 입력")
 
     def test_classroom_students_returns_active_students_for_owner(self):
         self.client.force_login(self.user)
@@ -81,16 +86,15 @@ class PpobgiViewTest(TestCase):
         self.assertEqual(response.json()["classroom_name"], "3학년 4반")
         self.assertEqual(response.json()["names"], ["1번 학생", "3번 학생"])
 
-    def test_classroom_students_requires_login(self):
+    def test_classroom_students_guest_gets_json_error_without_redirect(self):
         classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 4반")
 
         response = self.client.get(reverse("ppobgi:classroom_students", args=[classroom.pk]))
 
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "권한 없음")
 
     def test_main_blocks_phone_user_agent_without_force_desktop(self):
-        self.client.force_login(self.user)
-
         response = self.client.get(
             reverse("ppobgi:main"),
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
@@ -102,8 +106,6 @@ class PpobgiViewTest(TestCase):
         self.assertContains(response, "?force_desktop=1")
 
     def test_main_allows_phone_user_agent_with_force_desktop(self):
-        self.client.force_login(self.user)
-
         response = self.client.get(
             f"{reverse('ppobgi:main')}?force_desktop=1",
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
@@ -140,9 +142,13 @@ class PpobgiViewTest(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["error"], "classroom not found")
 
-    def test_role_cards_requires_login(self):
+    def test_role_cards_guest_gets_empty_payload_without_redirect(self):
         response = self.client.get(reverse("ppobgi:role_cards"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["classroom_name"], "직접 입력")
+        self.assertEqual(payload["roles"], [])
+        self.assertEqual(payload["message"], "직접 입력")
 
     def test_role_cards_returns_active_classroom_roles(self):
         self.client.force_login(self.user)

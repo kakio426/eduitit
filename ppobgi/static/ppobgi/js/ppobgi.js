@@ -194,6 +194,30 @@ function presentResult(detail) {
         applyMessage(els.editorMessage, text, kind);
     }
 
+    function feedbackMessage(payload, fallback) {
+        const raw = String(payload?.message || payload?.feedback || payload?.error || fallback || "다시 시도").trim();
+        if (!raw || raw.includes("<")) {
+            return fallback || "다시 시도";
+        }
+        if (raw === "permission denied" || raw === "classroom not found") {
+            return fallback || "다시 시도";
+        }
+        return raw;
+    }
+
+    async function readJsonResponse(response, fallback) {
+        let payload = {};
+        try {
+            payload = await response.json();
+        } catch (error) {
+            payload = {};
+        }
+        if (!response.ok) {
+            throw new Error(feedbackMessage(payload, fallback || "다시 시도"));
+        }
+        return payload;
+    }
+
     function dispatchSfx(kind) {
         root.dispatchEvent(new CustomEvent("ppobgi:play-sfx", { detail: { cue: kind } }));
     }
@@ -298,7 +322,7 @@ function presentResult(detail) {
         }
 
         if (els.startBtn) {
-            els.startBtn.disabled = parsed.valid.length === 0;
+            els.startBtn.disabled = false;
         }
     }
 
@@ -679,7 +703,7 @@ function presentResult(detail) {
         }
         const parsed = parseNameInput(els.input.value);
         if (parsed.valid.length === 0) {
-            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            setSetupMessage("이름 필요", "warn");
             els.input.focus();
             return;
         }
@@ -834,16 +858,14 @@ function presentResult(detail) {
         }
         try {
             const response = await window.fetch(rosterUrl, { credentials: "same-origin" });
-            if (!response.ok) {
-                throw new Error("명단을 가져오지 못했습니다.");
-            }
-            const data = await response.json();
+            const data = await readJsonResponse(response, "다시 시도");
             const names = Array.isArray(data.names) ? data.names : [];
             if (!names.length) {
+                const message = data.message || "등록된 당번 명단이 없습니다. 직접 입력해 주세요.";
                 if (isEditor) {
-                    setEditorMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                    setEditorMessage(message, "warn");
                 } else {
-                    setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                    setSetupMessage(message, "warn");
                 }
                 return;
             }
@@ -856,10 +878,11 @@ function presentResult(detail) {
                 setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
             }
         } catch (error) {
+            const message = error.message || "다시 시도";
             if (isEditor) {
-                setEditorMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+                setEditorMessage(message, "warn");
             } else {
-                setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+                setSetupMessage(message, "warn");
             }
         } finally {
             if (targetBtn) {
@@ -1268,8 +1291,7 @@ function presentResult(detail) {
             warnings.length ? "warn" : null,
         );
 
-        const valid = participants.valid.length >= 2 && (mode === "single" || roles.valid.length > 0);
-        if (els.startBtn) els.startBtn.disabled = !valid;
+        if (els.startBtn) els.startBtn.disabled = false;
     }
 
     function ladderColumns(count) {
@@ -1907,7 +1929,7 @@ function presentResult(detail) {
             els.statCut.textContent = String(parsed.cutCount);
         }
         if (els.startBtn) {
-            els.startBtn.disabled = parsed.valid.length === 0;
+            els.startBtn.disabled = false;
         }
 
         if (parsed.valid.length === 0) {
@@ -2071,7 +2093,7 @@ function presentResult(detail) {
     function startSequence() {
         const parsed = parseNameInput(els.input?.value || "");
         if (!parsed.valid.length) {
-            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            setSetupMessage("이름 필요", "warn");
             els.input?.focus();
             return;
         }
@@ -2201,20 +2223,17 @@ function presentResult(detail) {
                 credentials: "same-origin",
                 cache: "no-store",
             });
-            if (!response.ok) {
-                throw new Error("sequence roster fetch failed");
-            }
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, "다시 시도");
             const names = Array.isArray(payload.names) ? payload.names : [];
             if (!names.length) {
-                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                setSetupMessage(payload.message || "등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
                 return;
             }
             els.input.value = names.join("\n");
             updateSetupStats();
             setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
         } catch (error) {
-            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            setSetupMessage(error.message || "다시 시도", "warn");
         } finally {
             els.loadRosterBtn.disabled = false;
             els.loadRosterBtn.textContent = "당번 명단";
@@ -2501,7 +2520,7 @@ function presentResult(detail) {
             els.balanceNote.textContent = describeBalance(parsed.valid.length, state.teamCount);
         }
         if (els.startBtn) {
-            els.startBtn.disabled = parsed.valid.length === 0;
+            els.startBtn.disabled = false;
         }
 
         if (parsed.valid.length === 0) {
@@ -2675,7 +2694,7 @@ function presentResult(detail) {
     function startTeamBuild() {
         const parsed = parseNameInput(els.input?.value || "");
         if (!parsed.valid.length) {
-            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            setSetupMessage("이름 필요", "warn");
             els.input?.focus();
             return;
         }
@@ -2806,20 +2825,17 @@ function presentResult(detail) {
                 credentials: "same-origin",
                 cache: "no-store",
             });
-            if (!response.ok) {
-                throw new Error("team roster fetch failed");
-            }
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, "다시 시도");
             const names = Array.isArray(payload.names) ? payload.names : [];
             if (!names.length) {
-                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                setSetupMessage(payload.message || "등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
                 return;
             }
             els.input.value = names.join("\n");
             updateSetupStats();
             setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
         } catch (error) {
-            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            setSetupMessage(error.message || "다시 시도", "warn");
         } finally {
             els.loadRosterBtn.disabled = false;
             els.loadRosterBtn.textContent = "당번 명단";
@@ -3142,7 +3158,7 @@ function presentResult(detail) {
             els.statCut.textContent = String(parsed.cutCount);
         }
         if (els.startBtn) {
-            els.startBtn.disabled = parsed.valid.length === 0;
+            els.startBtn.disabled = false;
         }
 
         if (parsed.valid.length === 0) {
@@ -3333,7 +3349,7 @@ function presentResult(detail) {
     function startMeteorShow() {
         const parsed = parseNameInput(els.input?.value || "");
         if (!parsed.valid.length) {
-            window.alert("이름을 최소 1명 이상 입력해 주세요.");
+            setSetupMessage("이름 필요", "warn");
             els.input?.focus();
             return;
         }
@@ -3472,20 +3488,17 @@ function presentResult(detail) {
                 credentials: "same-origin",
                 cache: "no-store",
             });
-            if (!response.ok) {
-                throw new Error("meteor roster fetch failed");
-            }
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, "다시 시도");
             const names = Array.isArray(payload.names) ? payload.names : [];
             if (!names.length) {
-                setSetupMessage("등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
+                setSetupMessage(payload.message || "등록된 당번 명단이 없습니다. 직접 입력해 주세요.", "warn");
                 return;
             }
             els.input.value = names.join("\n");
             updateSetupStats();
             setSetupMessage(`당번 명단 ${names.length}명을 불러왔습니다.`, "info");
         } catch (error) {
-            setSetupMessage("명단 불러오기에 실패했습니다. 네트워크 상태를 확인해 주세요.", "warn");
+            setSetupMessage(error.message || "다시 시도", "warn");
         } finally {
             els.loadRosterBtn.disabled = false;
             els.loadRosterBtn.textContent = "당번 명단";
@@ -3821,10 +3834,7 @@ function presentResult(detail) {
                 credentials: "same-origin",
                 cache: "no-store",
             });
-            if (!response.ok) {
-                throw new Error("role cards fetch failed");
-            }
-            const payload = await response.json();
+            const payload = await readJsonResponse(response, "다시 시도");
             hydrate(payload);
             dispatchSfx("launch");
         } catch (error) {
@@ -3836,7 +3846,7 @@ function presentResult(detail) {
             renderHistory();
             renderLiveCard(null);
             updateCounters();
-            setMessage("오늘 역할을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.", "warn");
+            setMessage(error.message || "다시 시도", "warn");
         } finally {
             state.loading = false;
             updateAutoButton();

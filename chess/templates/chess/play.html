@@ -119,6 +119,16 @@
         display: flex;
     }
 
+    .ai-thinking.error {
+        display: flex;
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+
+    .ai-thinking.error .spinner {
+        display: none;
+    }
+
     .spinner {
         width: 20px;
         height: 20px;
@@ -261,9 +271,9 @@
 </main>
 
 <!-- Game Over Modal -->
-<div id="gameOverModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity"></div>
-    <div class="fixed inset-0 z-10 overflow-y-auto">
+<div id="gameOverModal" class="fixed left-0 right-0 bottom-0 z-[100] hidden" style="top: var(--main-nav-height, 0px);" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-gray-500/20 backdrop-blur-md transition-opacity"></div>
+    <div class="absolute inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4">
             <div
                 class="relative transform overflow-hidden rounded-[2.5rem] bg-white text-center shadow-2xl p-10 max-w-md w-full">

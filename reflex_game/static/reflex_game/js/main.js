@@ -508,9 +508,17 @@
         els.fullscreenBtn.textContent = document.fullscreenElement ? "전체화면 해제" : "전체화면";
     }
 
+    function showFullscreenStatus(message) {
+        if (!els.fullscreenBtn) {
+            return;
+        }
+        els.fullscreenBtn.textContent = message || "다시 시도";
+        window.setTimeout(updateFullscreenButtonText, 1800);
+    }
+
     async function toggleFullscreen() {
         if (!isFullscreenSupported()) {
-            window.alert("현재 브라우저에서는 전체화면을 지원하지 않습니다.");
+            showFullscreenStatus("전체화면 미지원");
             return;
         }
 
@@ -521,7 +529,7 @@
                 await document.documentElement.requestFullscreen();
             }
         } catch (error) {
-            window.alert("전체화면 전환에 실패했습니다.");
+            showFullscreenStatus("전체화면 실패");
         }
     }
 

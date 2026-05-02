@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 
@@ -76,12 +75,22 @@ def _should_block_for_large_screen_service(request):
     return False
 
 
-@login_required
+def _guest_storage_scope(request):
+    if not request.session.session_key:
+        request.session.save()
+    return f"guest:{request.session.session_key or 'local'}"
+
+
 def main(request):
-    active_classroom = get_active_classroom_for_request(request)
-    storage_scope = f"user:{request.user.pk}"
-    if active_classroom:
-        storage_scope = f"{storage_scope}:classroom:{active_classroom.pk}"
+    active_classroom = None
+    if request.user.is_authenticated:
+        active_classroom = get_active_classroom_for_request(request)
+        storage_scope = f"user:{request.user.pk}"
+        if active_classroom:
+            storage_scope = f"{storage_scope}:classroom:{active_classroom.pk}"
+    else:
+        storage_scope = _guest_storage_scope(request)
+
     if _should_block_for_large_screen_service(request):
         return render(
             request,
@@ -111,8 +120,10 @@ def main(request):
     )
 
 
-@login_required
 def roster_names(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"names": [], "message": "직접 입력"})
+
     names = list(
         DTStudent.objects.filter(user=request.user, is_active=True)
         .order_by("number", "name")
@@ -121,9 +132,14 @@ def roster_names(request):
     return JsonResponse({"names": names})
 
 
-@login_required
 def classroom_students(request, pk):
     """HSClassroom 기반 학생 목록 API (ppobgi 자동 채우기용)."""
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"error": "permission denied", "message": "권한 없음"},
+            status=403,
+        )
+
     try:
         from happy_seed.models import HSClassroom
         classroom = HSClassroom.objects.get(pk=pk, teacher=request.user, is_active=True)
@@ -175,8 +191,16 @@ def _serialize_role_cards(user, classroom):
     return cards
 
 
-@login_required
 def role_cards(request):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {
+                "classroom_name": "직접 입력",
+                "roles": [],
+                "message": "직접 입력",
+            }
+        )
+
     classroom = get_active_classroom_for_request(request)
     cards = _serialize_role_cards(request.user, classroom)
     classroom_name = classroom.name if classroom else "기본 명단"
@@ -192,5 +216,4 @@ def role_cards(request):
             "message": message,
         }
     )
-
 

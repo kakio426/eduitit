@@ -8,6 +8,29 @@ var selectedSquare = null;
 var isEngineReady = false;
 var pendingCommands = [];
 
+function setAIStatus(message, kind) {
+    var statusEl = document.getElementById('aiThinking');
+    if (!statusEl) return;
+    var labelEl = statusEl.querySelector('span');
+    if (labelEl) {
+        labelEl.textContent = message || 'AI가 수를 계산하는 중...';
+    }
+    statusEl.classList.toggle('active', Boolean(message));
+    statusEl.classList.toggle('error', kind === 'error');
+}
+
+function disableAIMode(message) {
+    stockfish = null;
+    isAIThinking = false;
+    isEngineReady = false;
+    pendingCommands = [];
+    if (typeof IS_AI_MODE !== 'undefined') {
+        IS_AI_MODE = false;
+    }
+    setAIStatus(message || 'AI 준비 실패', 'error');
+    updateStatus();
+}
+
 // [CONFIGURATION]
 // These variables must be defined in the HTML before loading this script:
 // var STOCKFISH_PATH = "...";
@@ -120,7 +143,7 @@ function initStockfish() {
 
         stockfish.onerror = function (e) {
             console.error("Stockfish Worker Error:", e);
-            alert("AI 엔진 로드에 실패했습니다.");
+            disableAIMode("AI 준비 실패");
         };
 
         // UCI 모드 시작
@@ -128,7 +151,7 @@ function initStockfish() {
 
     } catch (e) {
         console.error("Failed to create Stockfish worker:", e);
-        alert("AI 엔진을 시작할 수 없습니다: " + e.message);
+        disableAIMode("AI 준비 실패");
     }
 }
 
@@ -246,7 +269,11 @@ function onSnapEnd() {
 // 3. AI Logic
 // ---------------------------------------------------------
 function makeAIMove() {
-    if (game.game_over() || !stockfish || isAIThinking) return;
+    if (game.game_over() || isAIThinking) return;
+    if (!stockfish) {
+        disableAIMode("AI 준비 실패");
+        return;
+    }
 
     isAIThinking = true;
     updateStatus(); // Show "AI Thinking..."
@@ -255,6 +282,7 @@ function makeAIMove() {
     var statusEl = document.getElementById('aiThinking');
     if (statusEl) {
         statusEl.classList.add('active');
+        statusEl.classList.remove('error');
     }
 
     var fen = game.fen();

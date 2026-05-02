@@ -46,6 +46,12 @@ def _render_private_fortune_page(request, template_name, context):
     return apply_private_fortune_headers(response)
 
 
+def _fortune_user_label(user):
+    if user and user.is_authenticated:
+        return getattr(user, "username", str(user))
+    return "guest"
+
+
 def _should_use_async_ai_stream():
     return getattr(settings, 'FORTUNE_ASYNC_STREAM_ENABLED', False)
 
@@ -315,7 +321,6 @@ async def _collect_ai_response_async(prompt, request):
     return await _collect_ai_response(prompt, request)
 
 
-@login_required
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_h, method='POST', block=True, group='saju_service')
 @ratelimit(key=ratelimit_key_for_master_only, rate=fortune_rate_d, method='POST', block=True, group='saju_service')
 def saju_view(request):
@@ -346,14 +351,14 @@ def saju_view(request):
 
             try:
                 if cached_result:
-                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: HIT, User: %s, Mode: %s", request.user.username, mode)
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: HIT, User: %s, Mode: %s", _fortune_user_label(request.user), mode)
                     generated_text = cached_result.result_text
                 else:
                     generated_text = "".join(generate_ai_response(prompt, request))
                     generated_text = scrub_personal_fortune_text(generated_text)
                     if cache_fingerprint and generated_text:
                         store_cached_pseudonymous_result(request.user, 'full', cache_fingerprint, generated_text)
-                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: MISS, User: %s, Mode: %s", request.user.username, mode)
+                    logger.info("[Fortune] Action: SAJU_ANALYZE, Cache: MISS, User: %s, Mode: %s", _fortune_user_label(request.user), mode)
                 
                 # Validation: If result is empty/whitespace, treat as None/Error
                 if generated_text and generated_text.strip():
@@ -413,7 +418,6 @@ def saju_view(request):
     })
 
 
-@login_required
 async def saju_streaming_api(request):
     """실시간 스트리밍 사주 분석 API (async)"""
     if request.method != 'POST':
@@ -443,7 +447,6 @@ async def saju_streaming_api(request):
     response['X-Accel-Buffering'] = 'no'
     return response
 
-@login_required
 async def saju_api_view(request):
     """사주 분석 API (async)"""
     try:
@@ -463,7 +466,8 @@ async def saju_api_view(request):
 
         data = form.cleaned_data
         mode = data['mode']
-        logger.info("[Fortune] Action: SAJU_API_REQUEST, User: %s, Mode: %s", request.user, mode)
+        user_label = _fortune_user_label(request.user)
+        logger.info("[Fortune] Action: SAJU_API_REQUEST, User: %s, Mode: %s", user_label, mode)
 
         # Logic Engine (DB 조회 포함)
         chart_context = await sync_to_async(get_chart_context)(data)
@@ -471,14 +475,14 @@ async def saju_api_view(request):
         cache_fingerprint, cached_result = await sync_to_async(_get_full_analysis_cache_entry)(request.user, data)
 
         if cached_result:
-            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: HIT, User: %s, Mode: %s", request.user, mode)
+            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: HIT, User: %s, Mode: %s", user_label, mode)
             response_text = cached_result.result_text
         else:
             response_text = await _collect_ai_response_async(prompt, request)
             response_text = scrub_personal_fortune_text(response_text)
             if cache_fingerprint and response_text:
                 await sync_to_async(store_cached_pseudonymous_result)(request.user, 'full', cache_fingerprint, response_text)
-            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: MISS, User: %s, Mode: %s", request.user, mode)
+            logger.info("[Fortune] Action: SAJU_API_REQUEST, Cache: MISS, User: %s, Mode: %s", user_label, mode)
 
         return JsonResponse({
             'success': True,
@@ -572,9 +576,6 @@ async def daily_fortune_api(request):
 
         natal_context = await build_natal_context(natal_data)
 
-        if not request.user.is_authenticated:
-            return JsonResponse({'error': 'LOGIN_REQUIRED', 'message': '로그인이 필요합니다.'}, status=401)
-
         # Prompt
         from .prompts import get_daily_fortune_prompt
         prompt = get_daily_fortune_prompt(gender, natal_context, target_dt, target_context, mode=mode)
@@ -583,14 +584,14 @@ async def daily_fortune_api(request):
         )(request.user, mode, target_date_str, natal_data)
 
         if cached_response:
-            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: HIT, User: %s, Date: %s", request.user.username, target_date_str)
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: HIT, User: %s, Date: %s", _fortune_user_label(request.user), target_date_str)
             response_text = cached_response.result_text
         else:
             response_text = await _collect_ai_response_async(prompt, request)
             response_text = scrub_personal_fortune_text(response_text)
             if cache_fingerprint and response_text:
                 await sync_to_async(store_cached_pseudonymous_result)(request.user, 'daily', cache_fingerprint, response_text)
-            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: MISS, User: %s, Date: %s", request.user.username, target_date_str)
+            logger.info("[Fortune] Action: DAILY_ANALYZE, Cache: MISS, User: %s, Date: %s", _fortune_user_label(request.user), target_date_str)
 
         # 통계용 로그 저장
         if request.user.is_authenticated:
