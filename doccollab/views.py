@@ -276,6 +276,8 @@ def _build_dashboard_context(request):
     document_daily_limit = document_daily_limit_per_user()
     return {
         "service_title": "잇티한글",
+        "hide_navbar": True,
+        "doccollab_immersive_editor": True,
         "my_rooms": my_rooms,
         "shared_rooms": shared_rooms,
         "recent_revisions": recent_revisions,
@@ -643,6 +645,8 @@ def room_detail(request, room_id):
         "assistant_analysis_payload": assistant_analysis_payload,
         "assistant_analyze_url": reverse("doccollab:assistant_analyze", kwargs={"room_id": room.id}),
         "assistant_ask_url": reverse("doccollab:assistant_ask", kwargs={"room_id": room.id}),
+        "hide_navbar": True,
+        "doccollab_immersive_editor": True,
     }
     return render(request, "doccollab/room.html", context)
 

@@ -6,25 +6,60 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
 
-<section class="service-shell service-shell--compact doccollab-shell">
-    <div class="doccollab-frame">
-        <header class="doccollab-hero doccollab-hero--room">
-            <div>
-                <a href="{% url 'doccollab:main' %}" class="doccollab-back">잇티한글</a>
-                <p class="doccollab-kicker">{% if is_generated_worksheet %}학습지 편집{% else %}문서 편집{% endif %}</p>
-                <h1 class="doccollab-title">{{ room.title }}</h1>
-                <p class="doccollab-copy">{{ share_title }} · {{ share_copy }}</p>
-            </div>
-            <div class="doccollab-chip-row">
-                <span class="doccollab-chip">{{ access_label }}</span>
-                {% if is_generated_worksheet %}
-                <span class="doccollab-chip">학습지</span>
-                {% elif is_generated_draft %}
-                <span class="doccollab-chip">AI 문서</span>
-                {% else %}
-                <span class="doccollab-chip">원본 {{ room.get_source_format_display }}</span>
+<section class="service-shell service-shell--compact doccollab-shell doccollab-shell--immersive doccollab-shell--room">
+    <div class="doccollab-frame doccollab-frame--instant">
+        <header class="doccollab-workbar doccollab-workbar--room" aria-label="잇티한글 문서 작업">
+            <a href="{% url 'doccollab:main' %}" class="doccollab-workbar-title doccollab-workbar-title--link">
+                <strong>잇티한글</strong>
+                <span>{{ room.title }}</span>
+            </a>
+            <span class="sr-only">{% if is_generated_worksheet %}학습지 편집{% else %}문서 편집{% endif %} · {{ share_title }} · {{ share_copy }}</span>
+            <div class="doccollab-workbar-actions">
+                <a href="{% url 'doccollab:main' %}" class="doccollab-tool-button">문서함</a>
+                {% if assistant_enabled %}
+                <form method="post" action="{{ assistant_analyze_url }}" data-doccollab-assistant-form="true">
+                    {% csrf_token %}
+                    <button type="submit" id="doccollab-assistant-button" class="doccollab-tool-button">AI 정리</button>
+                </form>
+                <button type="button" class="doccollab-tool-button" disabled title="PDF는 선택형 외부 API 연결 후 사용합니다.">PDF</button>
                 {% endif %}
-                <span class="doccollab-chip">저장 HWPX</span>
+                {% if is_generated_worksheet and can_manage and not public_library_view %}
+                <form method="post" action="{{ worksheet_publish_url }}">
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        id="doccollab-publish-button"
+                        class="doccollab-tool-button"
+                        {% if not current_revision or not editing_supported %}disabled{% endif %}
+                    >
+                        공개
+                    </button>
+                </form>
+                {% endif %}
+                {% if is_generated_worksheet and public_library_view %}
+                <form method="post" action="{{ worksheet_clone_url }}">
+                    {% csrf_token %}
+                    <button type="submit" class="doccollab-tool-button">내 자료로</button>
+                </form>
+                {% endif %}
+                <a
+                    id="doccollab-download-link"
+                    href="{% if fallback_download_url %}{{ fallback_download_url }}{% else %}#{% endif %}"
+                    class="doccollab-tool-button {% if not fallback_download_url %}doccollab-tool-button--disabled{% endif %}"
+                    {% if not fallback_download_url %}aria-disabled="true"{% endif %}
+                >
+                    다운로드
+                </a>
+                {% if can_edit %}
+                <button
+                    type="button"
+                    id="doccollab-save-button"
+                    class="doccollab-tool-button doccollab-tool-button--primary"
+                    {% if not editing_supported %}disabled{% endif %}
+                >
+                    저장
+                </button>
+                {% endif %}
             </div>
         </header>
 
@@ -36,68 +71,9 @@
         </div>
         {% endif %}
 
-        <div class="doccollab-room-layout">
+        <div class="doccollab-room-layout doccollab-room-layout--immersive">
             <div class="doccollab-stack">
-                <section class="doccollab-card doccollab-card--editor">
-                    <div class="doccollab-toolbar doccollab-toolbar--editor">
-                        <div class="doccollab-toolbar-copy">
-                            <p class="doccollab-label">{% if is_generated_worksheet %}학습지 입력{% else %}문서 입력{% endif %}</p>
-                            <h2 class="doccollab-card-title">{% if public_library_view %}공개 학습지 보기{% elif is_generated_worksheet %}한 장 학습지{% else %}바로 수정{% endif %}</h2>
-                            <p class="doccollab-footnote">
-                                {{ share_copy }}
-                                현재 저장 <strong id="doccollab-current-revision-label">{% if current_revision %}r{{ current_revision.revision_number }} · {{ current_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong>
-                                · 배포본 <strong id="doccollab-published-revision-label">{% if published_revision %}r{{ published_revision.revision_number }} · {{ published_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong>
-                            </p>
-                        </div>
-                        <div class="doccollab-toolbar-actions">
-                            {% if can_edit %}
-                            <button
-                                type="button"
-                                id="doccollab-save-button"
-                                class="doccollab-primary"
-                                {% if not editing_supported %}disabled{% endif %}
-                            >
-                                저장
-                            </button>
-                            {% endif %}
-                            <a
-                                id="doccollab-download-link"
-                                href="{% if fallback_download_url %}{{ fallback_download_url }}{% else %}#{% endif %}"
-                                class="doccollab-secondary {% if not fallback_download_url %}doccollab-secondary--disabled{% endif %}"
-                                {% if not fallback_download_url %}aria-disabled="true"{% endif %}
-                            >
-                                다운로드
-                            </a>
-                            {% if assistant_enabled %}
-                            <form method="post" action="{{ assistant_analyze_url }}" data-doccollab-assistant-form="true">
-                                {% csrf_token %}
-                                <button type="submit" id="doccollab-assistant-button" class="doccollab-secondary">
-                                    AI 정리
-                                </button>
-                            </form>
-                            <button type="button" class="doccollab-secondary" disabled title="PDF는 선택형 외부 API 연결 후 사용합니다.">PDF</button>
-                            {% endif %}
-                            {% if is_generated_worksheet and can_manage and not public_library_view %}
-                            <form method="post" action="{{ worksheet_publish_url }}">
-                                {% csrf_token %}
-                                <button
-                                    type="submit"
-                                    id="doccollab-publish-button"
-                                    class="doccollab-secondary"
-                                    {% if not current_revision or not editing_supported %}disabled{% endif %}
-                                >
-                                    공개
-                                </button>
-                            </form>
-                            {% endif %}
-                            {% if is_generated_worksheet and public_library_view %}
-                            <form method="post" action="{{ worksheet_clone_url }}">
-                                {% csrf_token %}
-                                <button type="submit" class="doccollab-secondary">내 자료로</button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </div>
+                <section class="doccollab-card doccollab-card--editor doccollab-card--immersive">
 
                     {% if not can_edit %}
                     <div class="doccollab-readonly">
@@ -110,7 +86,7 @@
                     </div>
                     {% endif %}
 
-                    <div id="doccollab-editor-app" class="doccollab-editor-surface {% if not editing_supported %}doccollab-editor-surface--readonly{% endif %}"></div>
+                    <div id="doccollab-editor-app" class="doccollab-editor-surface doccollab-editor-surface--room {% if not editing_supported %}doccollab-editor-surface--readonly{% endif %}"></div>
                     <div id="doccollab-load-error" class="doccollab-load-error" hidden>
                         <strong>브라우저에서 열 수 없습니다.</strong>
                         <p id="doccollab-load-error-message" class="doccollab-footnote">파일을 내려받아 확인해 주세요.</p>
@@ -119,9 +95,11 @@
                         {% endif %}
                     </div>
 
-                    <div class="doccollab-status-row">
+                    <div class="doccollab-status-row doccollab-status-row--compact">
                         <span id="doccollab-status-badge" class="doccollab-chip">준비 중</span>
                         <span id="doccollab-snapshot-badge" class="doccollab-chip">자동 저장 대기</span>
+                        <span class="doccollab-chip">현재 저장 <strong id="doccollab-current-revision-label">{% if current_revision %}r{{ current_revision.revision_number }} · {{ current_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong></span>
+                        <span class="doccollab-chip">배포본 <strong id="doccollab-published-revision-label">{% if published_revision %}r{{ published_revision.revision_number }} · {{ published_revision.ui_export_format_label }}{% else %}없음{% endif %}</strong></span>
                         <span class="doccollab-footnote">
                             {% if is_generated_worksheet %}
                             서버 생성 학습지

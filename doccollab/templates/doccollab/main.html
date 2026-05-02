@@ -6,7 +6,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
 
-<section class="service-shell service-shell--compact doccollab-shell doccollab-shell--instant">
+<section class="service-shell service-shell--compact doccollab-shell doccollab-shell--instant doccollab-shell--immersive">
     <div class="doccollab-frame doccollab-frame--instant">
         <header class="doccollab-workbar" aria-label="잇티한글 작업">
             <div class="doccollab-workbar-title">
@@ -15,7 +15,7 @@
             </div>
             <div class="doccollab-workbar-actions">
                 <details class="doccollab-tool-menu" data-doccollab-tool-menu>
-                    <summary class="doccollab-tool-button">AI 문서</summary>
+                    <summary class="doccollab-tool-button" title="AI 문서">AI</summary>
                     <div class="doccollab-popover doccollab-popover--ai">
                         <form method="post" action="{% url 'doccollab:generate_document' %}" class="doccollab-form doccollab-form--compact" data-doccollab-document-form="true">
                             {% csrf_token %}
@@ -53,7 +53,7 @@
                 </details>
 
                 <details class="doccollab-tool-menu" data-doccollab-tool-menu>
-                    <summary class="doccollab-tool-button">파일 열기</summary>
+                    <summary class="doccollab-tool-button" title="파일 열기">열기</summary>
                     <div class="doccollab-popover doccollab-popover--open">
                         <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form doccollab-form--compact" data-doccollab-upload-form="true">
                             {% csrf_token %}
