@@ -11,7 +11,7 @@
     }
 
     .portfolio-lightbox-image {
-        max-height: min(76vh, 920px);
+        max-height: min(calc(100vh - var(--main-nav-height, 88px) - 9rem), 820px);
     }
 </style>
 {% endblock %}
@@ -307,7 +307,8 @@
     </div>
 
     <div id="portfolioLightbox"
-        class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/85 px-4 py-6 backdrop-blur-md"
+        class="fixed inset-x-0 bottom-0 z-[90] hidden items-center justify-center bg-slate-950/85 px-4 py-6 backdrop-blur-md"
+        style="top: var(--main-nav-height, 88px);"
         aria-hidden="true">
         <div class="absolute inset-0" data-lightbox-close></div>
         <div class="relative z-10 w-full max-w-6xl">
@@ -332,6 +333,7 @@
                 aria-describedby="portfolioLightboxCaption">
                 <div class="relative overflow-hidden rounded-[1.6rem] bg-slate-900/40">
                     <img id="portfolioLightboxImage" src="" alt="" class="portfolio-lightbox-image mx-auto w-full object-contain">
+                    <p id="portfolioLightboxStatus" class="hidden px-4 py-10 text-center text-sm font-bold text-white" aria-live="polite"></p>
                     <button type="button"
                         id="portfolioLightboxPrev"
                         class="portfolio-lightbox-button absolute left-3 top-1/2 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-slate-950/55 text-xl text-white transition hover:bg-slate-950/75"
@@ -373,6 +375,7 @@
         const captionEl = document.getElementById('portfolioLightboxCaption');
         const metaEl = document.getElementById('portfolioLightboxMeta');
         const counterEl = document.getElementById('portfolioLightboxCounter');
+        const statusEl = document.getElementById('portfolioLightboxStatus');
         const closeButton = document.getElementById('portfolioLightboxClose');
         const prevButton = document.getElementById('portfolioLightboxPrev');
         const nextButton = document.getElementById('portfolioLightboxNext');
@@ -411,6 +414,11 @@
 
             imageEl.src = item.url;
             imageEl.alt = item.alt || item.caption || item.title;
+            imageEl.classList.remove('hidden');
+            if (statusEl) {
+                statusEl.classList.add('hidden');
+                statusEl.textContent = '';
+            }
             titleEl.textContent = item.title || '';
             badgeEl.textContent = item.badge || '사진';
             captionEl.textContent = item.caption || item.title || '';
@@ -459,6 +467,14 @@
 
             restoreFocusEl = null;
         }
+
+        imageEl.addEventListener('error', function () {
+            imageEl.classList.add('hidden');
+            if (statusEl) {
+                statusEl.textContent = '파일 확인';
+                statusEl.classList.remove('hidden');
+            }
+        });
 
         function move(step) {
             if (!activeImages.length) {

@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -50,9 +53,13 @@ class DashboardModalTest(TestCase):
         self.assertIn(f'data-product-id="{self.product2.id}"', content)
     
     def test_modal_trigger_includes_product_id(self):
-        """Verify modal opener script exists in rendered dashboard/home"""
+        """Verify modal opener script exists in the loaded dashboard assets."""
         response = self.client.get(reverse('home'))
         content = response.content.decode('utf-8')
         
-        self.assertIn('window.openModal', content,
-                     "Home should include modal open handler script")
+        self.assertIn('data-product-id=', content)
+        self.assertIn('/static/core/js/base.js', content)
+
+        base_js = Path(settings.BASE_DIR) / 'core' / 'static' / 'core' / 'js' / 'base.js'
+        self.assertIn('window.openModal', base_js.read_text(encoding='utf-8'),
+                     "Base dashboard asset should include modal open handler script")

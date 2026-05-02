@@ -64,21 +64,26 @@ class UIAuthTestCase(TestCase):
         self.assertNotContains(response, "bot_password_input")
         self.assertNotContains(response, "bot_login_submit")
 
-    def test_home_nav_keeps_dropdown_shell_visible_for_classroom_shortcuts(self):
+    def test_delete_account_keeps_post_flow_but_uses_short_actions(self):
+        response = self.client.get(reverse("delete_account"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "회원 탈퇴")
+        self.assertContains(response, "계정 삭제")
+        self.assertContains(response, "취소")
+        self.assertNotContains(response, "네, 계정을 삭제하겠습니다")
+        self.assertNotContains(response, "아니오, 계속 이용하겠습니다")
+
+    def test_home_nav_uses_v6_shell_without_legacy_alpine_picker(self):
         profile = UserProfile.objects.get(user=self.user)
         profile.role = "school"
         profile.save(update_fields=["role"])
-        classroom = HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
+        HSClassroom.objects.create(teacher=self.user, name="3학년 2반")
 
         response = self.client.get(reverse("home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "clay-card--overflow-visible")
-        self.assertContains(response, 'id="desktopClassroomPicker"')
-        self.assertContains(response, 'id="classroomMenuBtn"')
-        self.assertContains(response, 'id="desktopClassroomMenu"')
-        self.assertContains(response, 'data-classroom-select="true"')
-        self.assertContains(response, f'data-classroom-id="{classroom.pk}"')
-        self.assertContains(response, "3학년 2반")
-        self.assertContains(response, 'data-classroom-clear="true"')
+        self.assertContains(response, 'data-home-layout-version="v6"')
+        self.assertContains(response, 'data-home-v6-page-frame="true"')
+        self.assertContains(response, 'data-home-v6-nav-shell="desktop"')
         self.assertNotContains(response, 'x-data="classroomPicker()"')

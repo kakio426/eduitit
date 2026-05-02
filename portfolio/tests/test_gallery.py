@@ -90,5 +90,7 @@ class PortfolioGalleryViewTests(TestCase):
         self.assertContains(response, "학생 결과물")
         self.assertContains(response, "대표 자료")
         self.assertContains(response, 'id="portfolioLightbox"', html=False)
+        self.assertContains(response, 'top: var(--main-nav-height, 88px);', html=False)
+        self.assertContains(response, 'id="portfolioLightboxStatus"', html=False)
         self.assertContains(response, 'data-portfolio-gallery', html=False)
         self.assertContains(response, 'data-gallery-image', html=False)

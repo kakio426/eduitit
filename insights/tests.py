@@ -100,6 +100,29 @@ class InsightModelTest(TestCase):
         self.assertContains(response, insight.thumbnail_url)
         self.assertContains(response, "원본 영상 열기")
 
+    def test_detail_like_failure_has_inline_status_and_safe_parser(self):
+        user = User.objects.create_user(
+            username="detail_liker",
+            email="detail_liker@example.com",
+            password="pw12345",
+        )
+        user.userprofile.nickname = "detail_liker_nick"
+        user.userprofile.save(update_fields=["nickname"])
+        insight = Insight.objects.create(
+            title="Like Detail",
+            content="Content",
+            category="column",
+        )
+        self.client.login(username="detail_liker", password="pw12345")
+
+        response = self.client.get(reverse("insights:detail", args=[insight.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="insight-like-status-detail"')
+        self.assertContains(response, "readInsightLikeDetailJson")
+        self.assertContains(response, "로그인 필요")
+        self.assertContains(response, "다시 시도")
+
 
 class InsightCreateViewTest(TestCase):
     def setUp(self):
@@ -194,6 +217,17 @@ class InsightListModalTemplateTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'x-teleport="body"')
         self.assertContains(response, "x-transition.opacity")
+        self.assertContains(response, "top: var(--main-nav-height, 88px);")
+
+    def test_like_failure_has_inline_status_and_safe_parser(self):
+        self.client.login(username="modal_admin", password="pw12345")
+        response = self.client.get(reverse("insights:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-insight-like-status")
+        self.assertContains(response, "readInsightLikeJson")
+        self.assertContains(response, "로그인 필요")
+        self.assertContains(response, "다시 시도")
 
 
 class InsightPermissionTest(TestCase):

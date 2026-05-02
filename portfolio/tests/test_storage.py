@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.test import TestCase
 from portfolio.models import Achievement
 from django.core.files.uploadedfile import SimpleUploadedFile
 from cloudinary_storage.storage import MediaCloudinaryStorage
-import os
+import unittest
 
+@unittest.skipUnless(getattr(settings, "USE_CLOUDINARY", False), "Cloudinary storage is disabled in this environment.")
 class StorageIntegrationTest(TestCase):
     def test_achievement_uses_cloudinary_storage(self):
         # Create a dummy achievement

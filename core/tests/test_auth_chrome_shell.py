@@ -8,11 +8,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class GlobalShellPaletteTests(SimpleTestCase):
-    def test_base_shell_css_uses_blue_brand_tokens_instead_of_legacy_purple(self):
+    def test_base_shell_css_keeps_current_purple_brand_tokens(self):
         css = (REPO_ROOT / "core/static/core/css/base.css").read_text(encoding="utf-8")
 
-        self.assertIn("--color-brand-700: #2457c5;", css)
-        self.assertIn("--color-brand-900: #173b67;", css)
+        self.assertIn("--color-brand-700: #6844c6;", css)
+        self.assertIn("--color-brand-900: #1f1538;", css)
         self.assertNotIn("#5b2ccf", css)
         self.assertNotIn("#43206f", css)
         self.assertNotIn("rgba(91, 44, 207", css)

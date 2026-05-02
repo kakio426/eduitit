@@ -124,8 +124,35 @@
 
 {% block extra_js %}
 <script>
+    function setInsightLikeStatus(insightId, message, isError) {
+        document.querySelectorAll(`[data-insight-like-status="${insightId}"]`).forEach((statusEl) => {
+            statusEl.textContent = message || '';
+            statusEl.classList.toggle('text-red-500', Boolean(isError));
+            statusEl.classList.toggle('text-slate-400', !isError);
+        });
+    }
+
+    async function readInsightLikeJson(response) {
+        const contentType = response.headers.get('content-type') || '';
+        const redirectedToLogin = response.redirected && response.url && response.url.includes('/accounts/login');
+        if (redirectedToLogin || response.status === 401 || response.status === 403) {
+            throw new Error('LOGIN_REQUIRED');
+        }
+        if (!response.ok) {
+            throw new Error('REQUEST_FAILED');
+        }
+        if (!contentType.includes('application/json')) {
+            throw new Error('REQUEST_FAILED');
+        }
+        return response.json();
+    }
+
     async function toggleLike(insightId, button) {
+        if (!button || button.disabled) return;
+        const previousDisabled = button.disabled;
         try {
+            button.disabled = true;
+            setInsightLikeStatus(insightId, '', false);
             const response = await fetch(`/insights/${insightId}/like/`, {
                 method: 'POST',
                 headers: {
@@ -134,9 +161,7 @@
                 },
             });
 
-            if (!response.ok) throw new Error('Failed to toggle like');
-
-            const data = await response.json();
+            const data = await readInsightLikeJson(response);
 
             if (data.liked) {
                 button.classList.remove('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
@@ -146,9 +171,14 @@
                 button.classList.add('bg-gray-200', 'text-gray-600', 'hover:bg-pink-100', 'hover:text-pink-600');
             }
 
-            document.querySelector(`.like-count-${insightId}`).textContent = data.total_likes;
+            const countEl = document.querySelector(`.like-count-${insightId}`);
+            if (countEl && typeof data.total_likes !== 'undefined') {
+                countEl.textContent = data.total_likes;
+            }
         } catch (error) {
-            console.error('Error:', error);
+            setInsightLikeStatus(insightId, error.message === 'LOGIN_REQUIRED' ? '로그인 필요' : '다시 시도', true);
+        } finally {
+            button.disabled = previousDisabled;
         }
     }
 </script>
