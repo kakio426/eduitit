@@ -81,7 +81,8 @@
 </div>
 
 <div id="seed-quiz-qr-modal"
-     class="fixed inset-0 z-[120] hidden"
+     class="fixed inset-x-0 bottom-0 z-[120] hidden"
+     style="top: var(--main-nav-height, 88px);"
      aria-hidden="true"
      role="dialog"
      aria-label="학생 접속 QR">
@@ -117,6 +118,23 @@
     }
 
     const closeButtons = Array.from(modal.querySelectorAll('[data-seed-quiz-qr-close]'));
+    function setCopyStatus(message, isError) {
+        if (!copyButton) {
+            return;
+        }
+        let status = copyButton.parentElement ? copyButton.parentElement.querySelector('[data-seed-quiz-copy-status]') : null;
+        if (!status && copyButton.parentElement) {
+            status = document.createElement('span');
+            status.dataset.seedQuizCopyStatus = 'true';
+            status.className = 'text-xs font-bold';
+            copyButton.parentElement.appendChild(status);
+        }
+        if (status) {
+            status.textContent = message;
+            status.classList.toggle('text-red-600', Boolean(isError));
+            status.classList.toggle('text-emerald-600', !isError);
+        }
+    }
 
     function openModal() {
         modal.classList.remove('hidden');
@@ -141,9 +159,9 @@
             }
             try {
                 await navigator.clipboard.writeText(targetUrl);
-                window.alert('복사되었습니다.');
+                setCopyStatus('복사 완료', false);
             } catch (_error) {
-                window.alert('복사에 실패했습니다.');
+                setCopyStatus('복사 실패', true);
             }
         });
     }

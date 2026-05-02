@@ -1116,7 +1116,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertContains(resp, "CSV 파일 용량이 제한을 초과했습니다.", status_code=400)
 
-    def test_csv_confirm_saves_as_private_approved(self):
+    def test_csv_confirm_saves_as_public_approved(self):
         csv_text = (
             "preset_type,grade,question_text,choice_1,choice_2,choice_3,choice_4,correct_index,explanation,difficulty\n"
             "orthography,3,대한민국 수도는?,서울,부산,대구,광주,1,서울입니다,easy\n"
@@ -1147,7 +1147,7 @@ class TeacherFlowTest(TestCase):
         self.assertEqual(confirm_resp.status_code, 200)
         self.assertContains(confirm_resp, "문제 준비 완료")
         self.assertContains(confirm_resp, 'data-seed-quiz-success="true"')
-        self.assertNotContains(confirm_resp, "공유 완료")
+        self.assertContains(confirm_resp, "공유 완료")
         self.assertContains(confirm_resp, "확인")
         self.assertContains(confirm_resp, "data-open-latest-preview")
         bank = SQQuizBank.objects.get(
@@ -1156,14 +1156,14 @@ class TeacherFlowTest(TestCase):
         )
         self.assertTrue(bank.title.startswith("CSV-orthography-G3-"))
         self.assertEqual(bank.quality_status, "approved")
-        self.assertFalse(bank.is_public)
-        self.assertFalse(bank.share_opt_in)
+        self.assertTrue(bank.is_public)
+        self.assertTrue(bank.share_opt_in)
         self.assertTrue(
             SQGenerationLog.objects.filter(
                 code="CSV_UPLOAD_CONFIRM_SUCCESS",
                 payload__classroom_id=str(self.classroom.id),
                 payload__teacher_id=self.teacher.id,
-                payload__share_opt_in=False,
+                payload__share_opt_in=True,
             ).exists()
         )
 

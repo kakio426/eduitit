@@ -51,15 +51,11 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button id="save-snapshot-button" type="button"
-                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-                            data-desktop-only-action="true"
-                            data-mobile-lock-label="데스크톱에서 진행">
+                            class="inline-flex items-center justify-center rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60">
                             스냅샷 저장
                         </button>
                         <button id="publish-workspace-button" type="button"
-                            class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            data-desktop-only-action="true"
-                            data-mobile-lock-label="데스크톱에서 진행">
+                            class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
                             확정
                         </button>
                     </div>
@@ -85,9 +81,6 @@
             </div>
             <div id="publish-stage-message" class="mt-4 rounded-2xl border {% if publish_readiness.can_publish %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %} px-4 py-3 text-sm font-semibold">
                 {{ publish_readiness.stage_message }}
-            </div>
-            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 xl:hidden">
-                모바일에서는 시간표 확인 위주로 보고, 실제 배정과 확정은 데스크톱에서 진행해 주세요.
             </div>
         </header>
 
@@ -328,8 +321,6 @@
                                 <button type="button"
                                     class="class-link-revoke-button inline-flex items-center justify-center rounded-2xl bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60 {% if not row.link_id %}opacity-50{% endif %}"
                                     data-revoke-url="{{ row.revoke_url }}"
-                                    data-desktop-only-action="true"
-                                    data-mobile-lock-label="데스크톱에서 진행"
                                     {% if not row.link_id %}disabled aria-disabled="true"{% endif %}>
                                     링크 끊기
                                 </button>
@@ -455,9 +446,7 @@
                                     <button type="button"
                                         class="snapshot-restore-button inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                         data-restore-url="{{ snapshot.restore_url }}"
-                                        data-snapshot-name="{{ snapshot.name }}"
-                                        data-desktop-only-action="true"
-                                        data-mobile-lock-label="데스크톱에서 진행">
+                                        data-snapshot-name="{{ snapshot.name }}">
                                         이 상태로 복원
                                     </button>
                                 </div>

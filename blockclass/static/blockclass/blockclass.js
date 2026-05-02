@@ -89,6 +89,29 @@ function safeStatus(message) {
   }
 }
 
+function setControlsDisabled(isDisabled) {
+  const controlIds = [
+    "blockclass-save-json-button",
+    "blockclass-load-json-button",
+    "blockclass-save-image-button",
+  ];
+  controlIds.forEach((id) => {
+    const control = document.getElementById(id);
+    if (control) {
+      control.disabled = Boolean(isDisabled);
+      control.classList.toggle("opacity-50", Boolean(isDisabled));
+      control.classList.toggle("cursor-not-allowed", Boolean(isDisabled));
+    }
+  });
+}
+
+function setRetryVisible(isVisible) {
+  const retryButton = document.getElementById("blockclass-retry-button");
+  if (retryButton) {
+    retryButton.hidden = !isVisible;
+  }
+}
+
 function setActiveTemplateButton(activeKey) {
   const buttons = document.querySelectorAll(".blockclass-template-button");
   buttons.forEach((button) => {
@@ -313,8 +336,7 @@ function restoreWorkspaceJson(workspace, rawText) {
   try {
     data = JSON.parse(rawText);
   } catch (error) {
-    window.alert("JSON 파일을 읽지 못했습니다. 다시 선택해 주세요.");
-    safeStatus("JSON 읽기 실패");
+    safeStatus("불러오기 실패");
     return;
   }
 
@@ -339,9 +361,19 @@ function saveWorkspaceSvg(workspace) {
 function initBlockclass() {
   const workspaceElement = document.getElementById("blockclass-workspace");
   const toolbox = document.getElementById("blockclass-toolbox");
+  const retryButton = document.getElementById("blockclass-retry-button");
+  if (retryButton) {
+    retryButton.addEventListener("click", () => {
+      window.location.reload();
+    });
+  }
   if (!workspaceElement || !toolbox || typeof Blockly === "undefined") {
+    setControlsDisabled(true);
+    setRetryVisible(true);
+    safeStatus("준비 실패");
     return;
   }
+  setRetryVisible(false);
 
   if (typeof Blockly.setLocale === "function") {
     Blockly.setLocale(Blockly.Msg);
@@ -441,6 +473,7 @@ function initBlockclass() {
 
   observeWorkspaceShell(workspace);
   scheduleWorkspaceResize(workspace);
+  setControlsDisabled(false);
   loadTemplate(workspace, "sequence");
 }
 

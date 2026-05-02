@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django_ratelimit.core import is_ratelimited
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.db.models import F
 from django.shortcuts import render
 from django.urls import reverse
@@ -1055,11 +1055,3 @@ def daily_recommendation(request):
             "message": "오늘 추천을 불러왔습니다.",
         }
     )
-
-
-def start_consent_followup(request):
-    return HttpResponse("연결 종료", status=410)
-
-
-def start_signature_followup(request):
-    return HttpResponse("연결 종료", status=410)

@@ -289,7 +289,7 @@ class BambooViewTest(TestCase):
         self.assertEqual(BambooStory.objects.count(), 5)
         self.assertEqual(mock_llm.call_count, 5)
 
-    def test_report_one_hides_story(self):
+    def test_report_one_keeps_story_visible_with_report_badge(self):
         story = BambooStory.objects.create(
             author=self.user,
             anon_handle="나무123",
@@ -302,9 +302,10 @@ class BambooViewTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         story.refresh_from_db()
-        self.assertTrue(story.is_hidden_by_report)
-        self.assertFalse(story.is_public)
+        self.assertFalse(story.is_hidden_by_report)
+        self.assertTrue(story.is_public)
         self.assertEqual(BambooReport.objects.filter(story=story).count(), 1)
+        self.assertContains(response, "신고 접수됨")
 
     def test_only_author_or_staff_can_delete(self):
         story = BambooStory.objects.create(
@@ -508,7 +509,7 @@ class BambooViewTest(TestCase):
         self.assertEqual(deleted.status_code, 200)
         self.assertFalse(BambooComment.objects.filter(pk=comment.pk).exists())
 
-    def test_comment_delete_authorization_and_report_hides_immediately(self):
+    def test_comment_delete_authorization_and_report_keeps_comment_visible(self):
         story = BambooStory.objects.create(
             author=self.user,
             anon_handle="나무123",
@@ -533,6 +534,7 @@ class BambooViewTest(TestCase):
         self.assertEqual(reported.status_code, 200)
         comment.refresh_from_db()
         story.refresh_from_db()
-        self.assertTrue(comment.is_hidden_by_report)
-        self.assertEqual(story.comment_count, 0)
+        self.assertFalse(comment.is_hidden_by_report)
+        self.assertEqual(story.comment_count, 1)
         self.assertEqual(BambooCommentReport.objects.filter(comment=comment).count(), 1)
+        self.assertContains(reported, "신고 접수됨")

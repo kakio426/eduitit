@@ -379,6 +379,27 @@
 })();
 
 (function () {
+    function showCopyStatus(button, message, isError) {
+        const parent = button.closest('div') || button.parentElement;
+        if (!parent) {
+            window.dispatchEvent(new CustomEvent('eduitit:toast', { detail: { message: message, tag: isError ? 'error' : 'success' } }));
+            return;
+        }
+        let status = parent.querySelector('[data-seed-quiz-copy-status]');
+        if (!status) {
+            status = document.createElement('span');
+            status.dataset.seedQuizCopyStatus = 'true';
+            status.className = 'text-xs font-bold';
+            parent.appendChild(status);
+        }
+        status.textContent = message;
+        status.classList.toggle('text-red-600', Boolean(isError));
+        status.classList.toggle('text-emerald-600', !isError);
+        window.setTimeout(function () {
+            status.textContent = '';
+        }, 2200);
+    }
+
     document.addEventListener('click', async function (event) {
         const copyButton = event.target.closest('[data-seed-quiz-dashboard-copy-url]');
         if (!copyButton) {
@@ -390,9 +411,9 @@
         }
         try {
             await navigator.clipboard.writeText(targetUrl);
-            window.alert('복사되었습니다.');
+            showCopyStatus(copyButton, '복사 완료', false);
         } catch (_error) {
-            window.alert('복사에 실패했습니다.');
+            showCopyStatus(copyButton, '복사 실패', true);
         }
     });
 })();
@@ -992,7 +1013,24 @@
         return targetRaw && targetRaw.nodeType === 1 ? targetRaw : null;
     }
 
-    function showErrorAlertFromResultArea() {
+    function showResultStatus(message, isError) {
+        let status = resultArea.querySelector('[data-seed-quiz-inline-status]');
+        if (!status) {
+            status = document.createElement('div');
+            status.dataset.seedQuizInlineStatus = 'true';
+            status.className = 'mb-3 rounded-xl border px-4 py-3 text-sm font-bold';
+            resultArea.insertBefore(status, resultArea.firstChild);
+        }
+        status.textContent = message;
+        status.classList.toggle('border-red-200', Boolean(isError));
+        status.classList.toggle('bg-red-50', Boolean(isError));
+        status.classList.toggle('text-red-700', Boolean(isError));
+        status.classList.toggle('border-emerald-200', !isError);
+        status.classList.toggle('bg-emerald-50', !isError);
+        status.classList.toggle('text-emerald-700', !isError);
+    }
+
+    function showErrorNoticeFromResultArea() {
         const errorBox = resultArea.querySelector('[data-seed-quiz-error="true"]');
         if (!errorBox) {
             return;
@@ -1001,15 +1039,14 @@
             .map(function (node) { return String(node.textContent || '').trim(); })
             .filter(Boolean);
         if (!lines.length) {
-            window.alert('문제 준비 실패. 오류 내용을 확인해 주세요.');
+            showResultStatus('문제 확인', true);
             return;
         }
         const totalRaw = Number(errorBox.dataset.errorTotal || lines.length);
         const totalCount = Number.isFinite(totalRaw) && totalRaw > 0 ? Math.floor(totalRaw) : lines.length;
-        const preview = lines.slice(0, 3).join('\n');
         const restCount = Math.max(0, totalCount - 3);
-        const rest = restCount > 0 ? '\n외 ' + restCount + '건' : '';
-        window.alert('문제 준비 실패.\n아래 항목을 수정 후 다시 시도해 주세요.\n\n' + preview + rest);
+        showResultStatus(restCount > 0 ? '문제 확인 ' + totalCount + '건' : '문제 확인', true);
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function openLatestPreviewFromResultArea() {
@@ -1049,11 +1086,11 @@
             const title = successBox.dataset.successTitle || '문제 준비 완료';
             const created = successBox.dataset.createdCount || '0';
             const updated = successBox.dataset.updatedCount || '0';
-            window.alert(title + '\n신규 생성 ' + created + '개 / 기존 갱신 ' + updated + '개');
+            showResultStatus(title + ' · 신규 ' + created + ' / 갱신 ' + updated, false);
             openLatestPreviewFromResultArea();
             return;
         }
-        showErrorAlertFromResultArea();
+        showErrorNoticeFromResultArea();
     });
 
     if (previewArea) {
@@ -1090,26 +1127,23 @@
             } else if (previewTarget) {
                 previewTarget.innerHTML = (
                     '<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">' +
-                    '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' +
+                    '다시 시도' +
                     '</div>'
                 );
             }
-            const statusText = xhr.status ? '\n오류 코드: ' + xhr.status : '';
-            window.alert('요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' + statusText);
             return;
         }
         if (xhr.status === 400 && xhr.responseText) {
             resultArea.innerHTML = xhr.responseText;
             resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            showErrorAlertFromResultArea();
+            showErrorNoticeFromResultArea();
             return;
         }
         resultArea.innerHTML = (
             '<div class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm">' +
-            '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' +
+            '다시 시도' +
             '</div>'
         );
-        window.alert('요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     });
 })();
 </script>

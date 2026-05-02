@@ -157,9 +157,8 @@ def report_story(request, story_uuid):
             defaults={"reason": str(request.POST.get("reason") or "").strip()[:120]},
             **report_fields,
         )
-        BambooStory.objects.filter(pk=story.pk).update(is_hidden_by_report=True, is_public=False)
-    story.refresh_from_db()
     story.was_reported_now = True
+    _prepare_stories([story], request)
     if request.headers.get("HX-Request") == "true" and request.POST.get("source") == "post":
         return _private(render(request, "bamboo/partials/story_actions.html", {"story": story}))
     if request.headers.get("HX-Request") != "true":
@@ -240,7 +239,6 @@ def report_comment(request, story_uuid, comment_id):
             defaults={"reason": str(request.POST.get("reason") or "").strip()[:120]},
             **report_fields,
         )
-        BambooComment.objects.filter(pk=comment.pk).update(is_hidden_by_report=True)
     _sync_comment_count(story)
 
     if request.headers.get("HX-Request") == "true":
@@ -363,9 +361,11 @@ def _count_view_once(request, story):
 
 def _comments_context(story, request):
     comments = list(BambooComment.objects.visible().filter(story=story).select_related("author").order_by("created_at"))
+    reported_ids = _reported_comment_ids(request, [comment.id for comment in comments])
     for comment in comments:
         comment.user_can_manage = _is_comment_owner(comment, request)
-        comment.user_can_report = not comment.user_can_manage
+        comment.was_reported_by_me = comment.id in reported_ids
+        comment.user_can_report = not comment.user_can_manage and not comment.was_reported_by_me
         comment.is_story_author = _is_comment_from_story_author(comment, story)
     return {"comments": comments}
 
@@ -401,9 +401,11 @@ def _comment_anon_handle(story, request):
 def _prepare_stories(stories, request):
     stories = list(stories)
     _mark_liked(stories, request)
+    reported_ids = _reported_story_ids(request, [story.id for story in stories])
     for story in stories:
         story.user_can_manage = _is_story_owner(story, request)
-        story.user_can_report = not story.user_can_manage
+        story.was_reported_by_me = story.id in reported_ids
+        story.user_can_report = not story.user_can_manage and not story.was_reported_by_me
     return stories
 
 
@@ -456,10 +458,45 @@ def _guest_key(request):
     return hashlib.sha256(str(raw_key).encode("utf-8")).hexdigest()
 
 
+def _existing_guest_key(request):
+    raw_key = request.session.get(BAMBOO_GUEST_SESSION_KEY)
+    if not raw_key:
+        return ""
+    return hashlib.sha256(str(raw_key).encode("utf-8")).hexdigest()
+
+
 def _actor_fields(request, *, user_field="user", guest_field="guest_key"):
     if _is_authenticated(request):
         return {user_field: request.user}
     return {guest_field: _guest_key(request)}
+
+
+def _reported_story_ids(request, story_ids):
+    if not story_ids:
+        return set()
+    reports = BambooReport.objects.filter(story_id__in=story_ids)
+    if _is_authenticated(request):
+        reports = reports.filter(user=request.user)
+    else:
+        guest_key = _existing_guest_key(request)
+        if not guest_key:
+            return set()
+        reports = reports.filter(guest_key=guest_key)
+    return set(reports.values_list("story_id", flat=True))
+
+
+def _reported_comment_ids(request, comment_ids):
+    if not comment_ids:
+        return set()
+    reports = BambooCommentReport.objects.filter(comment_id__in=comment_ids)
+    if _is_authenticated(request):
+        reports = reports.filter(user=request.user)
+    else:
+        guest_key = _existing_guest_key(request)
+        if not guest_key:
+            return set()
+        reports = reports.filter(guest_key=guest_key)
+    return set(reports.values_list("comment_id", flat=True))
 
 
 def _is_story_owner(story, request):

@@ -66,37 +66,3 @@ class NoticeGenWorkflowFollowupTests(TestCase):
         self.assertContains(response, "내일은 준비물을 꼭 챙겨 주세요.")
         self.assertNotContains(response, "동의서로 이어서 만들기")
         self.assertNotContains(response, "서명으로 이어서 만들기")
-
-    def test_consent_followup_is_retired(self):
-        response = self.client.post(
-            reverse("noticegen:start_consent_followup"),
-            {
-                "target": "parent",
-                "topic": "notice",
-                "length_style": "medium",
-                "keywords": "준비물 안내",
-                "result_text": "내일은 준비물을 꼭 챙겨 주세요.",
-            },
-        )
-
-        self.assertEqual(response.status_code, 410)
-        self.assertContains(response, "연결 종료", status_code=410)
-        session = self.client.session
-        self.assertNotIn("workflow_action_seeds", session)
-
-    def test_signature_followup_is_retired(self):
-        response = self.client.post(
-            reverse("noticegen:start_signature_followup"),
-            {
-                "target": "parent",
-                "topic": "notice",
-                "length_style": "medium",
-                "keywords": "준비물 안내",
-                "result_text": "내일은 준비물을 꼭 챙겨 주세요.",
-            },
-        )
-
-        self.assertEqual(response.status_code, 410)
-        self.assertContains(response, "연결 종료", status_code=410)
-        session = self.client.session
-        self.assertNotIn("workflow_action_seeds", session)

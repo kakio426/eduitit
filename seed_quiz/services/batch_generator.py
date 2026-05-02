@@ -237,8 +237,8 @@ def ingest_completed_batch_output(job: SQBatchJob) -> SQBatchJob:
             source="ai",
             is_official=True,
             defaults={
-                "is_public": False,
-                "share_opt_in": False,
+                "is_public": True,
+                "share_opt_in": True,
                 "quality_status": "approved",
                 "is_active": True,
                 "available_from": target_date,
@@ -246,8 +246,8 @@ def ingest_completed_batch_output(job: SQBatchJob) -> SQBatchJob:
             },
         )
         bank.is_official = True
-        bank.is_public = False
-        bank.share_opt_in = False
+        bank.is_public = True
+        bank.share_opt_in = True
         bank.quality_status = "approved"
         bank.is_active = True
         bank.available_from = target_date

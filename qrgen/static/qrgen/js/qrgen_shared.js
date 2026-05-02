@@ -51,30 +51,38 @@
         try {
             parsed = new URL(withScheme);
         } catch (_error) {
-            return { url: "", error: "유효한 링크 형식이 아니에요." };
+            return { url: "", error: "링크 확인" };
         }
 
         if (!["http:", "https:"].includes(parsed.protocol)) {
-            return { url: "", error: "http/https 링크만 사용할 수 있어요." };
+            return { url: "", error: "링크 확인" };
         }
 
         if (isPrivateOrLocalHostname(parsed.hostname)) {
-            return { url: "", error: "localhost, 사설 IP, 학교 내부망 주소는 QR로 만들 수 없어요." };
+            return { url: "", error: "링크 확인" };
         }
         if (!parsed.hostname || parsed.hostname.indexOf(".") === -1) {
-            return { url: "", error: "도메인이 포함된 링크를 입력해 주세요." };
+            return { url: "", error: "링크 확인" };
         }
 
         return { url: parsed.toString(), error: "" };
     }
 
+    function hasQrLibrary() {
+        return typeof QRCode !== "undefined" && QRCode && QRCode.CorrectLevel;
+    }
+
     function renderQrCode(container, text, size, colorDark) {
         if (!container) {
-            return;
+            return false;
         }
         container.innerHTML = "";
-        if (!text || typeof QRCode === "undefined") {
-            return;
+        if (!text) {
+            return true;
+        }
+        if (!hasQrLibrary()) {
+            container.innerHTML = '<p class="px-3 text-center text-sm font-bold text-red-600">QR 준비 실패</p>';
+            return false;
         }
         new QRCode(container, {
             text,
@@ -84,6 +92,7 @@
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.M,
         });
+        return true;
     }
 
     function sanitizeInterval(value) {
@@ -123,8 +132,11 @@
             autoTimer: null,
             countdownTimer: null,
             renderTimer: null,
+            libraryReady: false,
+            libraryError: "",
 
             init() {
+                this.refreshLibraryState();
                 this.addItem("링크 1", "");
                 this.queueRender();
 
@@ -138,6 +150,20 @@
                         this.$nextTick(() => this.renderCycleQr());
                     }
                 });
+            },
+
+            refreshLibraryState() {
+                this.libraryReady = hasQrLibrary();
+                this.libraryError = this.libraryReady ? "" : "QR 준비 실패";
+                return this.libraryReady;
+            },
+
+            retryQrLibrary() {
+                this.refreshLibraryState();
+                this.queueRender();
+                if (!this.libraryReady) {
+                    this.libraryError = "QR 준비 실패";
+                }
             },
 
             addItem(defaultTitle, defaultUrl) {
@@ -192,6 +218,7 @@
             },
 
             renderAllPreviews() {
+                this.refreshLibraryState();
                 this.items.forEach((item) => {
                     renderQrCode(document.getElementById(`preview-qr-${item.uid}`), item.normalizedUrl, 170, "#111827");
                 });
@@ -235,6 +262,10 @@
             },
 
             startCycleMode() {
+                if (!this.refreshLibraryState()) {
+                    this.queueRender();
+                    return;
+                }
                 if (!this.validItems().length) {
                     return;
                 }
@@ -355,6 +386,9 @@
             },
 
             renderCycleQr() {
+                if (!this.refreshLibraryState()) {
+                    return;
+                }
                 const item = this.activeItem();
                 const side = Math.max(280, Math.min(780, Math.floor(window.innerWidth * 0.76)));
                 renderQrCode(document.getElementById("cycleQrCanvas"), item ? item.normalizedUrl : "", side, "#000000");
@@ -397,7 +431,7 @@
                     return;
                 }
                 this.status = "success";
-                this.message = settings.successMessage || "학생에게 바로 보여줄 QR이 준비됐습니다.";
+                this.message = hasQrLibrary() ? (settings.successMessage || "QR 준비 완료") : "QR 준비 실패";
                 this.$nextTick(() => {
                     renderQrCode(document.getElementById(this.previewDomId), parsed.url, 152, "#111827");
                 });
@@ -430,6 +464,7 @@
         renderQrCode,
         sanitizeInterval,
         copyToClipboard,
+        hasQrLibrary,
     };
     window.createQrgenApp = createQrgenApp;
     window.createQrgenSingleLinkMiniApp = createQrgenSingleLinkMiniApp;

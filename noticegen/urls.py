@@ -9,6 +9,4 @@ urlpatterns = [
     path("daily-recommendation/", views.daily_recommendation, name="daily_recommendation"),
     path("generate/", views.generate_notice, name="generate"),
     path("generate-mini/", views.generate_notice_mini, name="generate_mini"),
-    path("workflow/consent/", views.start_consent_followup, name="start_consent_followup"),
-    path("workflow/signatures/", views.start_signature_followup, name="start_signature_followup"),
 ]

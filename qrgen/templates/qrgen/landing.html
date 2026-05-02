@@ -4,7 +4,7 @@
 {% block title %}{{ page_title|default:'잇티QR - Eduitit' }}{% endblock %}
 
 {% block content %}
-<section class="service-shell pb-20 px-4 min-h-screen">
+<section class="service-shell pb-20 px-4 min-h-screen" data-link-error-copy="링크 확인" data-qr-library-error="QR 준비 실패">
     <div class="max-w-6xl mx-auto" x-data="createQrgenApp()" x-init="init()" @keydown.window.escape="closeCycleMode()">
         <div class="text-center mb-8">
             <div class="text-5xl mb-3">{{ service.icon|default:'🔳' }}</div>
@@ -44,6 +44,15 @@
                     class="px-3 py-2 rounded-lg bg-indigo-600 text-white font-bold text-sm disabled:opacity-50"
                 >
                     자동 전환 시작
+                </button>
+                <span x-show="libraryError" x-text="libraryError" class="text-xs font-black text-red-600"></span>
+                <button
+                    type="button"
+                    x-show="libraryError"
+                    @click="retryQrLibrary()"
+                    class="px-3 py-2 rounded-lg bg-red-50 text-red-700 font-bold text-sm"
+                >
+                    다시 시도
                 </button>
             </div>
         </div>
@@ -109,7 +118,7 @@
             id="cycleStage"
             x-show="cycleMode"
             x-cloak
-            class="fixed inset-0 z-[140] bg-white flex flex-col"
+            class="fixed left-0 right-0 bottom-0 z-[140] bg-white flex flex-col top-[var(--main-nav-height,88px)]"
             @click.self="closeCycleMode()"
         >
             <div class="px-4 md:px-8 py-4 border-b border-gray-100">

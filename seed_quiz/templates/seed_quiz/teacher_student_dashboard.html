@@ -125,6 +125,18 @@
     if (!copyButton) {
         return;
     }
+    function setCopyStatus(message, isError) {
+        let status = document.querySelector('[data-student-dashboard-copy-status]');
+        if (!status) {
+            status = document.createElement('span');
+            status.dataset.studentDashboardCopyStatus = 'true';
+            status.className = 'ml-2 text-xs font-bold';
+            copyButton.insertAdjacentElement('afterend', status);
+        }
+        status.textContent = message;
+        status.classList.toggle('text-red-600', Boolean(isError));
+        status.classList.toggle('text-emerald-600', !isError);
+    }
     copyButton.addEventListener('click', async function () {
         const targetUrl = copyButton.dataset.copyUrl || '';
         if (!targetUrl) {
@@ -132,9 +144,9 @@
         }
         try {
             await navigator.clipboard.writeText(targetUrl);
-            window.alert('학생 접속 링크를 복사했습니다.');
+            setCopyStatus('복사 완료', false);
         } catch (_error) {
-            window.alert('복사에 실패했습니다.');
+            setCopyStatus('복사 실패', true);
         }
     });
 })();

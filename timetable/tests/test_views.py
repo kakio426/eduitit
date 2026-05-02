@@ -549,7 +549,10 @@ class TimetableViewTests(TestCase):
         response = self.client.get(reverse("timetable:workspace_detail", args=[self.workspace.id]))
         self.assertContains(response, 'id="timetable-retry-save-button"')
         self.assertContains(response, 'id="timetable-action-dialog"')
-        self.assertContains(response, 'data-desktop-only-action="true"')
+        self.assertContains(response, 'id="publish-workspace-button"')
+        self.assertContains(response, 'id="save-snapshot-button"')
+        self.assertNotContains(response, 'data-desktop-only-action="true"')
+        self.assertNotContains(response, "데스크톱에서 진행")
 
     def test_timetable_static_scripts_use_inline_feedback(self):
         app_root = Path(__file__).resolve().parents[1]

@@ -1,5 +1,5 @@
 <article data-bamboo-story-root class="min-w-0 max-w-full overflow-hidden rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
-    {% if story.was_reported_now or story.is_hidden_by_report %}
+    {% if story.is_hidden_by_report %}
     <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
         신고 접수됨
     </div>
@@ -54,6 +54,11 @@
                 신고
             </button>
         </form>
+        {% elif story.was_reported_now or story.was_reported_by_me %}
+        <span class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-sm font-black leading-none text-amber-800">
+            <i class="fa-solid fa-flag text-sm leading-none"></i>
+            신고 접수됨
+        </span>
         {% endif %}
     </div>
     {% endif %}

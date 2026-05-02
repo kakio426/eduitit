@@ -1584,7 +1584,7 @@ def htmx_text_upload(request, classroom_id):
         created_count, updated_count, shared_count = save_parsed_sets_to_bank(
             parsed_sets=parsed_sets,
             created_by=request.user,
-            share_opt_in=False,
+            share_opt_in=True,
         )
         latest_bank_id = _resolve_latest_saved_bank_id(
             parsed_sets=parsed_sets,
@@ -1691,7 +1691,7 @@ def htmx_csv_confirm(request, classroom_id):
             status=400,
         )
 
-    share_opt_in = False
+    share_opt_in = True
     created_count, updated_count, shared_count = save_parsed_sets_to_bank(
         parsed_sets=parsed_sets,
         created_by=request.user,

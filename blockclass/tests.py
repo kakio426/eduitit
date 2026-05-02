@@ -31,9 +31,9 @@ class BlockclassViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "서비스 목록으로 돌아가기")
-        self.assertContains(response, "시작 순서")
+        self.assertContains(response, "블록으로 수업 흐름 만들기")
         self.assertContains(response, 'id="blockclass-workspace"', html=False)
-        self.assertContains(response, "카테고리를 눌러 블록 고르기")
+        self.assertContains(response, "템플릿")
         self.assertContains(response, "blockclass-workspace-card")
         self.assertContains(response, 'id="blockclass-save-json-button"', html=False)
         self.assertContains(response, 'id="blockclass-save-image-button"', html=False)

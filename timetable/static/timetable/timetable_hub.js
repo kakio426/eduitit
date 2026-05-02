@@ -1218,36 +1218,6 @@
     }
   });
 
-  const desktopOnlyQuery = typeof window.matchMedia === "function"
-    ? window.matchMedia("(max-width: 1279px)")
-    : { matches: false };
-  const updateDesktopOnlyActions = () => {
-    const locked = desktopOnlyQuery.matches;
-    document.querySelectorAll("[data-desktop-only-action='true']").forEach((button) => {
-      const reason = button.dataset.mobileLockLabel || "데스크톱에서 진행";
-      if (!button.dataset.originalLabel) {
-        button.dataset.originalLabel = button.textContent.trim();
-      }
-      if (!button.dataset.originalTitle) {
-        button.dataset.originalTitle = button.getAttribute("title") || "";
-      }
-      button.disabled = locked || button.dataset.originalDisabled === "true";
-      button.setAttribute("aria-disabled", button.disabled ? "true" : "false");
-      button.setAttribute("title", locked ? reason : button.dataset.originalTitle);
-      button.textContent = locked ? `${button.dataset.originalLabel} · 데스크톱` : button.dataset.originalLabel;
-    });
-  };
-
-  document.querySelectorAll("[data-desktop-only-action='true']").forEach((button) => {
-    button.dataset.originalDisabled = button.disabled ? "true" : "false";
-  });
-  if (typeof desktopOnlyQuery.addEventListener === "function") {
-    desktopOnlyQuery.addEventListener("change", updateDesktopOnlyActions);
-  } else if (typeof desktopOnlyQuery.addListener === "function") {
-    desktopOnlyQuery.addListener(updateDesktopOnlyActions);
-  }
-  updateDesktopOnlyActions();
-
   resetEventForm();
   mountWorkbook();
 })();

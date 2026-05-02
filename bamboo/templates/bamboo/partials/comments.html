@@ -41,6 +41,8 @@
                         {% csrf_token %}
                         <button type="submit" class="text-xs font-black text-slate-400 transition hover:text-amber-700">신고</button>
                     </form>
+                    {% elif comment.was_reported_by_me %}
+                    <span class="text-xs font-black text-amber-700">신고 접수됨</span>
                     {% endif %}
                 </div>
             </div>

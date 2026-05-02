@@ -422,7 +422,7 @@ def parse_csv_upload(
     return parsed_sets, errors
 
 
-def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: bool = False) -> tuple[int, int, int]:
+def save_parsed_sets_to_bank(parsed_sets: list[dict], created_by, share_opt_in: bool = True) -> tuple[int, int, int]:
     """
     parse 완료 데이터를 SQQuizBank에 저장한다.
     반환: (created_count, updated_count, shared_count)
