@@ -103,7 +103,7 @@
     gap: 0.28rem;
     flex: 0 1 auto;
     min-width: 0;
-    overflow-x: auto;
+    overflow: visible;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
 }
@@ -119,6 +119,11 @@
 
 .doccollab-tool-menu {
     position: relative;
+    z-index: 1;
+}
+
+.doccollab-tool-menu[open] {
+    z-index: 80;
 }
 
 .doccollab-tool-menu:not([open]) .doccollab-popover {
@@ -182,6 +187,7 @@ summary.doccollab-tool-button::-webkit-details-marker {
 
 .doccollab-popover {
     position: absolute;
+    z-index: 90;
     top: calc(100% + 0.35rem);
     right: 0;
     width: min(28rem, calc(100vw - 2rem));
@@ -1230,7 +1236,12 @@ summary.doccollab-tool-button::-webkit-details-marker {
     .doccollab-workbar-actions {
         justify-content: flex-start;
         overflow-x: auto;
+        overflow-y: hidden;
         padding-bottom: 0.05rem;
+    }
+
+    .doccollab-workbar-actions:has(.doccollab-tool-menu[open]) {
+        overflow: visible;
     }
 
     .doccollab-tool-button {

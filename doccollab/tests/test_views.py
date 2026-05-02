@@ -1,5 +1,6 @@
 import zipfile
 from io import BytesIO
+from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -426,6 +427,16 @@ class DoccollabViewTests(TestCase):
         self.assertContains(response, "삭제")
         self.assertContains(response, "제거")
         self.assertNotContains(response, "함께문서실")
+
+    def test_compact_toolbar_popovers_are_not_clipped_by_action_scroller(self):
+        css_path = Path(__file__).resolve().parents[1] / "static" / "doccollab" / "doccollab.css"
+        css = css_path.read_text(encoding="utf-8")
+        actions_rule = css.split(".doccollab-workbar-actions {", 1)[1].split("}", 1)[0]
+
+        self.assertIn("overflow: visible;", actions_rule)
+        self.assertIn(".doccollab-workbar-actions:has(.doccollab-tool-menu[open])", css)
+        self.assertIn(".doccollab-tool-menu[open]", css)
+        self.assertIn("z-index: 90;", css)
 
     def test_remove_room_archives_owned_document_from_dashboard(self):
         own_room, _ = self._create_room(self.owner, "지울 문서", "remove-me.hwpx")
