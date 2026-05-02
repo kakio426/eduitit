@@ -1,0 +1,71 @@
+{% if guide_modal_payload %}
+{{ guide_modal_payload|json_script:"service-guide-modal-data" }}
+
+<div id="serviceGuideModal"
+     class="service-guide-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="serviceGuideModalTitle"
+     data-service-guide-modal
+     data-service-guide-autostart="{{ guide_modal_autostart|default:'' }}"
+     hidden>
+    <div class="service-guide-modal__backdrop" data-service-guide-close></div>
+    <section class="service-guide-modal__panel" aria-describedby="serviceGuideModalDescription">
+        <header class="service-guide-modal__header">
+            <div class="service-guide-modal__eyebrow">서비스 이용방법</div>
+            <div>
+                <h2 id="serviceGuideModalTitle" class="service-guide-modal__title">이용방법</h2>
+                <p id="serviceGuideModalDescription" class="service-guide-modal__description"></p>
+            </div>
+            <button type="button" class="service-guide-modal__close" data-service-guide-close aria-label="이용방법 닫기">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="service-guide-modal__body">
+            <aside class="service-guide-modal__rail" aria-label="서비스 선택">
+                <div class="service-guide-modal__rail-title">서비스</div>
+                <div class="service-guide-modal__service-list" data-service-guide-service-list></div>
+            </aside>
+
+            <main class="service-guide-modal__main">
+                <div class="service-guide-modal__viewport" data-service-guide-viewport>
+                    <figure class="service-guide-modal__screen">
+                        <div class="service-guide-modal__screen-frame" data-service-guide-screen-frame></div>
+                        <figcaption data-service-guide-screen-caption></figcaption>
+                    </figure>
+
+                    <article class="service-guide-modal__copy">
+                        <div class="service-guide-modal__step-meta">
+                            <span data-service-guide-step-label></span>
+                            <span data-service-guide-badge></span>
+                        </div>
+                        <h3 data-service-guide-slide-title></h3>
+                        <p data-service-guide-slide-content></p>
+                        <div class="service-guide-modal__focus-note" data-service-guide-focus-note hidden></div>
+                        <ul data-service-guide-points></ul>
+                    </article>
+                </div>
+
+                <footer class="service-guide-modal__footer">
+                    <div class="service-guide-modal__dots" data-service-guide-dots aria-label="이용방법 단계"></div>
+                    <div class="service-guide-modal__actions">
+                        <button type="button" class="service-guide-modal__nav-button" data-service-guide-prev aria-label="이전 단계">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            이전
+                        </button>
+                        <button type="button" class="service-guide-modal__nav-button service-guide-modal__nav-button--primary" data-service-guide-next aria-label="다음 단계">
+                            다음
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                        <a href="#" class="service-guide-modal__launch" data-service-guide-launch>
+                            열기
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+                </footer>
+            </main>
+        </div>
+    </section>
+</div>
+{% endif %}

@@ -3,7 +3,6 @@ from urllib.parse import urlencode
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
-from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.models import UserProfile
 from products.models import DTSettings, ManualSection, Product, ProductFeature, ServiceManual
 
@@ -155,9 +154,9 @@ class ProductDetailHeroTests(TestCase):
         self.assertContains(response, "미리보기")
         self.assertContains(response, "대상 고르기")
         self.assertContains(response, "문구 만들기")
-        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
+        self.assertContains(response, reverse("service_guide_detail", kwargs={"pk": manual.pk}))
         self.assertContains(response, reverse("account_login"))
-        self.assertEqual(response.context["guide_href"], SERVICE_GUIDE_PADLET_URL)
+        self.assertEqual(response.context["guide_href"], reverse("service_guide_detail", kwargs={"pk": manual.pk}))
         self.assertEqual(response.context["product_access_label"], "로그인 필요")
         self.assertEqual(response.context["start_label"], "로그인하고 시작")
 
@@ -178,10 +177,11 @@ class ProductDetailHeroTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "공개 체험")
-        self.assertContains(response, "가이드 찾기")
-        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
+        self.assertContains(response, "이용방법")
+        expected_guide_href = f"{reverse('service_guide_list')}?{urlencode({'guide': f'product-{product.pk}'})}"
+        self.assertContains(response, expected_guide_href)
         self.assertContains(response, "https://example.com/start")
-        self.assertEqual(response.context["guide_href"], SERVICE_GUIDE_PADLET_URL)
+        self.assertEqual(response.context["guide_href"], expected_guide_href)
         self.assertEqual(response.context["product_demo_block"]["kind"], "steps")
         self.assertGreaterEqual(len(response.context["quick_preview_steps"]), 1)
 
@@ -363,9 +363,9 @@ class ClassroomCatalogVisibilityTests(TestCase):
         self.assertIn('시작하기', content)
         self.assertIn(f'{card_cta_prefix}시작하기', content)
         self.assertNotIn(f'{card_cta_prefix}열기', content)
-        self.assertEqual(visible_product.guide_url, SERVICE_GUIDE_PADLET_URL)
-        self.assertEqual(response.context['catalog_hub']['guide_url'], SERVICE_GUIDE_PADLET_URL)
-        self.assertContains(response, SERVICE_GUIDE_PADLET_URL)
+        self.assertTrue(visible_product.guide_url.startswith('/service-guides/'))
+        self.assertEqual(response.context['catalog_hub']['guide_url'], reverse('service_guide_list'))
+        self.assertContains(response, reverse('service_guide_list'))
 
     def test_catalog_uses_hwpxchat_task_and_support_copy(self):
         hwpx_product = Product.objects.create(

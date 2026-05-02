@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
 {% load static manual_extras cloudinary_extras %}
 
-{% block title %}{{ page_title|default:'서비스 가이드 - Eduitit' }}{% endblock %}
+{% block title %}{{ page_title|default:'서비스 이용방법 - Eduitit' }}{% endblock %}
 
 {% block extra_css %}
+<link href="{% static 'core/css/service_guide_modal.css' %}" rel="stylesheet">
 <style>
     .prose img {
         border-radius: 1rem;
@@ -57,14 +58,18 @@
                     {% endif %}
                 </div>
 
-                {% if launch_href %}
                 <div class="flex-shrink-0">
+                    <button type="button" data-service-guide-trigger="{{ manual.pk }}"
+                       class="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 md:w-auto">
+                        화면 안내 <i class="fa-solid fa-images"></i>
+                    </button>
+                    {% if launch_href %}
                     <a href="{{ launch_href }}" {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
                        class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                         {{ launch_label|default:"바로 열기" }} <i class="fa-solid fa-arrow-right-long"></i>
                     </a>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
 
@@ -174,4 +179,9 @@
         </div>
     </div>
 </section>
+{% include 'core/includes/service_guide_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="{% static 'core/js/service_guide_modal.js' %}"></script>
 {% endblock %}

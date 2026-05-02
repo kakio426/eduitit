@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from collect.models import CollectionRequest
 from core.context_processors import seo_meta
-from core.guide_links import SERVICE_GUIDE_PADLET_URL
 from core.seo import DEFAULT_HOME_DESCRIPTION
 from insights.models import Insight
 from products.models import Product, ServiceManual
@@ -270,19 +269,23 @@ class SeoFoundationTests(TestCase):
                 self.assertIn(f'<link rel="canonical" href="{canonical}">', content)
                 self.assertIn(f'<meta property="og:url" content="{canonical}">', content)
 
-    def test_guide_routes_redirect_to_padlet(self):
+    def test_tool_guide_redirects_to_internal_service_guides(self):
+        response = self.client.get(reverse("tool_guide"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("service_guide_list"))
+
         cases = (
-            reverse("tool_guide"),
-            reverse("service_guide_list"),
-            reverse("service_guide_detail", kwargs={"pk": self.manual.pk}),
-            reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}),
+            (reverse("service_guide_list"), "서비스 이용방법"),
+            (reverse("service_guide_detail", kwargs={"pk": self.manual.pk}), "미술 수업 도우미 시작하기"),
+            (reverse("service_guide_detail", kwargs={"pk": self.sensitive_manual.pk}), "학급 캘린더 시작하기"),
         )
 
-        for path in cases:
+        for path, expected_text in cases:
             with self.subTest(path=path):
                 response = self.client.get(path)
-                self.assertEqual(response.status_code, 302)
-                self.assertEqual(response["Location"], SERVICE_GUIDE_PADLET_URL)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, expected_text)
+                self.assertContains(response, "service-guide-modal-data")
 
     def test_public_landing_pages_get_unique_meta(self):
         cases = (

@@ -1,9 +1,12 @@
 import os
+import re
 
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles import finders
 from django.http import HttpResponse, JsonResponse
+from django.templatetags.static import static
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -11,7 +14,6 @@ from django.urls import NoReverseMatch
 from django.core.cache import cache
 from products.models import Product, ServiceManual
 from .forms import UserProfileUpdateForm
-from .guide_links import SERVICE_GUIDE_PADLET_URL
 from .home_agent_registry import (
     MESSAGE_CAPTURE_PLACEHOLDER,
     MESSAGE_CAPTURE_REVERSE_SEED,
@@ -110,7 +112,10 @@ from .seo import (
     build_about_page_seo,
     build_home_page_seo,
     build_prompt_lab_page_seo,
+    build_service_guide_detail_seo,
+    build_service_guide_list_seo,
 )
+from .storage_urls import safe_storage_url
 from .teacher_first_cards import build_favorite_service_title, build_workbench_card_meta
 from .teacher_buddy import (
     TeacherBuddyError,
@@ -1862,7 +1867,7 @@ def _build_product_guide_url_map(products):
     for manual in manuals:
         if manual.product_id in guide_url_map:
             continue
-        guide_url_map[manual.product_id] = SERVICE_GUIDE_PADLET_URL
+        guide_url_map[manual.product_id] = reverse("service_guide_detail", kwargs={"pk": manual.pk})
     return guide_url_map
 
 
@@ -4572,8 +4577,8 @@ def _build_catalog_hub_context(product_list):
         "description": "홈의 캘린더 요약에서 오늘 일정과 메모를 먼저 보고, 필요할 때만 월간 확장 보기로 이동하세요.",
         "href": reverse("home"),
         "is_external": False,
-        "guide_url": SERVICE_GUIDE_PADLET_URL,
-        "guide_is_external": True,
+        "guide_url": reverse("service_guide_list"),
+        "guide_is_external": False,
         "primary_label": "홈에서 시작하기",
     }
 
@@ -4680,6 +4685,8 @@ def _build_guide_groups(manuals, products_without_manual):
     ]
     for product in pending_products:
         product.pending_public_name = _get_public_product_name(product)
+        product.pending_guide_id = f"product-{product.pk}"
+        product.pending_href = reverse("product_detail", kwargs={"pk": product.pk})
 
     return [
         {
@@ -4710,6 +4717,339 @@ def _build_guide_groups(manuals, products_without_manual):
             "pending_products": pending_products,
         },
     ]
+
+
+SERVICE_GUIDE_SCREENSHOT_ROOT = "core/images/service_guides"
+
+
+def _service_guide_static_exists(relative_path):
+    try:
+        return bool(finders.find(relative_path))
+    except Exception:
+        logger.exception("[service guide] static lookup failed for %s", relative_path)
+        return False
+
+
+def _service_guide_key(product):
+    route_name = str(getattr(product, "launch_route_name", "") or "").strip()
+    external_url = str(getattr(product, "external_url", "") or "").strip()
+    title = str(getattr(product, "title", "") or "").strip()
+    raw_key = route_name or external_url or title or f"service-{getattr(product, 'pk', 'unknown')}"
+    raw_key = re.sub(r"^https?://", "", raw_key.lower())
+    key = re.sub(r"[^0-9a-z]+", "-", raw_key).strip("-")
+    return key or f"service-{getattr(product, 'pk', 'unknown')}"
+
+
+def _service_guide_screenshot_url(product, section=None):
+    if section is not None:
+        image = getattr(section, "image", None)
+        if image:
+            image_url = safe_storage_url(image)
+            if image_url:
+                return image_url
+
+    key = _service_guide_key(product)
+    order = getattr(section, "display_order", "") if section is not None else ""
+    candidates = []
+    if order not in ("", None):
+        candidates.extend(
+            [
+                f"{SERVICE_GUIDE_SCREENSHOT_ROOT}/{key}-step-{order}.png",
+                f"{SERVICE_GUIDE_SCREENSHOT_ROOT}/{key}-{order}.png",
+            ]
+        )
+    candidates.append(f"{SERVICE_GUIDE_SCREENSHOT_ROOT}/{key}.png")
+
+    for relative_path in candidates:
+        if _service_guide_static_exists(relative_path):
+            return static(relative_path)
+    return ""
+
+
+def _service_guide_clean_line(value):
+    text = re.sub(r"<[^>]+>", " ", str(value or ""))
+    text = text.replace("\r\n", "\n")
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = text.replace("`", "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _service_guide_points(content, *, limit=5):
+    points = []
+    for raw_line in str(content or "").replace("\r\n", "\n").splitlines():
+        line = _service_guide_clean_line(raw_line)
+        line = re.sub(r"\s+(?=\d+[\).]\s*)", "\n", line)
+        line = re.sub(r"\s+(?=(?:Tip|TIP|팁)[:：])", "\n", line)
+        for candidate in line.splitlines():
+            candidate = re.sub(r"^[-*•\d.)\s]+", "", candidate).strip()
+            candidate = re.sub(r":\s*/\s*$", ".", candidate)
+            if not candidate:
+                continue
+            if len(candidate) > 120:
+                candidate = f"{candidate[:119].rstrip()}…"
+            points.append(candidate)
+            if len(points) >= limit:
+                break
+        if len(points) >= limit:
+            break
+    if points:
+        return points
+
+    fallback = _service_guide_clean_line(content)
+    if not fallback:
+        return []
+    if len(fallback) > 120:
+        fallback = f"{fallback[:119].rstrip()}…"
+    return [fallback]
+
+
+def _service_guide_slide_summary(content, points):
+    if len(points) >= 2:
+        return "아래 순서대로 실제 화면의 버튼과 상태를 확인하면 바로 따라 할 수 있습니다."
+
+    summary = _service_guide_clean_line(content)
+    if len(summary) > 140:
+        summary = f"{summary[:139].rstrip()}…"
+    return summary
+
+
+SERVICE_GUIDE_FOCUS_SEQUENCE = [
+    {
+        "x": 8,
+        "y": 14,
+        "w": 42,
+        "h": 50,
+        "title": "첫 실행 위치",
+        "hint": "서비스명과 첫 버튼이 있는 영역을 먼저 확인합니다.",
+        "zoom": 2.35,
+    },
+    {
+        "x": 48,
+        "y": 16,
+        "w": 42,
+        "h": 54,
+        "title": "핵심 작업 영역",
+        "hint": "입력, 선택, 설정이 모이는 영역에서 필요한 값을 고릅니다.",
+        "zoom": 2.45,
+    },
+    {
+        "x": 10,
+        "y": 58,
+        "w": 78,
+        "h": 26,
+        "title": "결과 확인 영역",
+        "hint": "작업 후 저장, 공유, 진행 상태가 바뀌는 부분을 확인합니다.",
+        "zoom": 2.3,
+    },
+    {
+        "x": 58,
+        "y": 10,
+        "w": 34,
+        "h": 26,
+        "title": "마무리 버튼",
+        "hint": "공유, 다운로드, 실행 버튼으로 결과를 처리합니다.",
+        "zoom": 2.5,
+    },
+]
+
+SERVICE_GUIDE_FOCUS_PRESETS = {
+    "dutyticker": [
+        {"x": 8, "y": 18, "w": 40, "h": 50, "title": "시작 버튼과 기본 안내", "hint": "왼쪽의 시작 버튼과 첫 안내 문구를 확인한 뒤 첫 작업을 실행합니다.", "zoom": 2.4},
+        {"x": 54, "y": 18, "w": 36, "h": 46, "title": "미리 보기 흐름", "hint": "오른쪽 미리 보기 카드에서 교실 화면에 표시될 순서를 확인합니다.", "zoom": 2.55},
+        {"x": 48, "y": 58, "w": 42, "h": 24, "title": "핵심 흐름 목록", "hint": "하단 흐름 목록에서 오늘 교실에 맞는 단계만 빠르게 점검합니다.", "zoom": 2.5},
+    ],
+    "consent-dashboard": [
+        {"x": 68, "y": 14, "w": 25, "h": 16, "title": "새 동의서 만들기", "hint": "오른쪽 상단 버튼에서 새 동의서를 만들고 발송 흐름을 시작합니다.", "zoom": 2.7},
+        {"x": 8, "y": 36, "w": 84, "h": 22, "title": "수신자와 진행 상태", "hint": "표에서 제목, 진행 상태, 수신자, 생성일을 확인합니다.", "zoom": 2.2},
+        {"x": 8, "y": 72, "w": 84, "h": 16, "title": "기준과 법령 확인", "hint": "하단 기준 영역에서 수합 전에 필요한 근거를 점검합니다.", "zoom": 2.4},
+    ],
+    "quickdrop-landing": [
+        {"x": 12, "y": 28, "w": 76, "h": 32, "title": "파일 업로드 영역", "hint": "가장 먼저 파일을 올리는 영역을 확인하고 전송 준비를 시작합니다.", "zoom": 2.25},
+        {"x": 58, "y": 16, "w": 34, "h": 24, "title": "링크 발송 설정", "hint": "공유 링크나 발송 옵션을 확인해 받을 사람에게 전달합니다.", "zoom": 2.55},
+        {"x": 14, "y": 62, "w": 72, "h": 24, "title": "전송 결과 확인", "hint": "전송 후 상태와 다운로드 안내가 표시되는 영역을 확인합니다.", "zoom": 2.35},
+    ],
+    "signatures": [
+        {"x": 62, "y": 14, "w": 30, "h": 18, "title": "서명 세션 만들기", "hint": "상단 버튼에서 새 연수 서명 세션을 만듭니다.", "zoom": 2.65},
+        {"x": 8, "y": 34, "w": 84, "h": 30, "title": "참여자 서명 현황", "hint": "명단 영역에서 누가 서명했는지 바로 확인합니다.", "zoom": 2.25},
+        {"x": 58, "y": 58, "w": 34, "h": 26, "title": "QR 공유와 마감", "hint": "QR 공유 또는 마감 버튼으로 현장 운영을 정리합니다.", "zoom": 2.55},
+    ],
+    "hwpxchat-main": [
+        {"x": 8, "y": 18, "w": 38, "h": 52, "title": "문서 업로드", "hint": "왼쪽 업로드 영역에 한글 문서를 넣고 분석을 시작합니다.", "zoom": 2.35},
+        {"x": 46, "y": 18, "w": 46, "h": 54, "title": "AI 답변 영역", "hint": "오른쪽 대화 영역에서 문서 기반 답변을 확인합니다.", "zoom": 2.45},
+        {"x": 18, "y": 70, "w": 64, "h": 18, "title": "질문 입력", "hint": "하단 입력창에 추가 질문을 넣어 필요한 내용을 좁혀 갑니다.", "zoom": 2.55},
+    ],
+    "teacher-law-main": [
+        {"x": 12, "y": 18, "w": 76, "h": 24, "title": "사안 입력", "hint": "상단 입력 영역에 상담하거나 검토할 상황을 적습니다.", "zoom": 2.35},
+        {"x": 12, "y": 44, "w": 76, "h": 28, "title": "근거와 답변", "hint": "답변 영역에서 적용 근거와 다음 조치를 함께 확인합니다.", "zoom": 2.25},
+        {"x": 58, "y": 70, "w": 34, "h": 18, "title": "결과 활용", "hint": "복사, 저장, 이어 질문 버튼으로 교사용 기록에 활용합니다.", "zoom": 2.6},
+    ],
+    "infoboard-dashboard": [
+        {"x": 62, "y": 14, "w": 30, "h": 18, "title": "보드 만들기", "hint": "상단 버튼에서 새 게시판이나 수합 보드를 만듭니다.", "zoom": 2.65},
+        {"x": 8, "y": 32, "w": 84, "h": 34, "title": "게시물 흐름", "hint": "카드 목록에서 제출 상태와 최근 활동을 확인합니다.", "zoom": 2.2},
+        {"x": 12, "y": 68, "w": 74, "h": 18, "title": "공유 정보", "hint": "QR, 링크, 코드 영역을 통해 학생에게 접속 방법을 안내합니다.", "zoom": 2.45},
+    ],
+    "chess-index": [{"x": 28, "y": 18, "w": 44, "h": 50, "title": "게임판과 모드", "hint": "가운데 게임판과 모드 버튼을 확인하고 수업 활동을 시작합니다.", "zoom": 2.25}],
+    "janggi-index": [{"x": 28, "y": 18, "w": 44, "h": 50, "title": "게임판과 모드", "hint": "가운데 게임판과 모드 버튼을 확인하고 대국 방식을 정합니다.", "zoom": 2.25}],
+    "yut-game": [{"x": 22, "y": 18, "w": 56, "h": 52, "title": "윷판과 진행 버튼", "hint": "가운데 윷판과 진행 버튼을 보며 모둠 활동을 운영합니다.", "zoom": 2.2}],
+    "reflex-game-main": [{"x": 22, "y": 20, "w": 56, "h": 46, "title": "도전 영역", "hint": "중앙 게임 영역에서 시작 버튼과 현재 기록을 확인합니다.", "zoom": 2.3}],
+    "colorbeat-main": [{"x": 18, "y": 18, "w": 64, "h": 48, "title": "비트 제작 영역", "hint": "중앙의 색상/비트 영역을 눌러 활동을 시작합니다.", "zoom": 2.25}],
+    "ssambti-main": [{"x": 18, "y": 20, "w": 64, "h": 48, "title": "검사 시작 영역", "hint": "시작 버튼과 질문 흐름을 확인하고 선생님 유형 검사를 시작합니다.", "zoom": 2.25}],
+    "fortune-saju": [{"x": 18, "y": 24, "w": 64, "h": 42, "title": "정보 입력 영역", "hint": "생년월일 등 필요한 정보를 입력하는 영역부터 확인합니다.", "zoom": 2.35}],
+}
+
+
+def _service_guide_focus_payload(product, index, title, points):
+    key = _service_guide_key(product)
+    presets = SERVICE_GUIDE_FOCUS_PRESETS.get(key, SERVICE_GUIDE_FOCUS_SEQUENCE)
+    preset = presets[(index - 1) % len(presets)] if presets else SERVICE_GUIDE_FOCUS_SEQUENCE[0]
+    hint = preset.get("hint") or (points[0] if points else "강조된 영역에서 이 단계의 핵심 조작을 확인합니다.")
+    return {
+        "label": "확대 포인트",
+        "title": preset.get("title") or _service_guide_clean_line(title) or "지금 볼 부분",
+        "hint": hint,
+        "rect": {
+            "x": preset.get("x", 12),
+            "y": preset.get("y", 18),
+            "w": preset.get("w", 42),
+            "h": preset.get("h", 36),
+        },
+        "zoom": preset.get("zoom", 2.35),
+    }
+
+
+def _build_service_guide_modal_payload(manuals, request):
+    payload = []
+    for manual in manuals:
+        manual = _prepare_manual_display(manual)
+        product = manual.product
+        launch_href, launch_is_external = _resolve_product_launch_url(product, user=request.user)
+        sections = list(manual.sections.all())
+        if not sections:
+            sections = [None]
+
+        slides = []
+        for index, section in enumerate(sections, start=1):
+            if section is None:
+                section_title = "처음 시작"
+                section_content = manual.public_description or "서비스 화면을 열고 핵심 흐름을 확인합니다."
+                badge_text = "시작"
+                order = index
+            else:
+                section_title = _replace_public_service_terms(section.title, product) or f"{index}단계"
+                section_content = _replace_public_service_terms(section.content, product)
+                badge_text = str(getattr(section, "badge_text", "") or "").strip()
+                order = getattr(section, "display_order", index)
+
+            points = _service_guide_points(section_content)
+            slides.append(
+                {
+                    "id": f"{manual.pk}-{index}",
+                    "order": order,
+                    "stepLabel": f"{index}/{len(sections)}",
+                    "title": section_title,
+                    "badge": badge_text,
+                    "content": _service_guide_slide_summary(section_content, points),
+                    "points": points,
+                    "focus": _service_guide_focus_payload(product, index, section_title, points),
+                    "screenshotUrl": _service_guide_screenshot_url(product, section),
+                    "screenshotAlt": f"{manual.public_service_name} 실제 화면",
+                }
+            )
+
+        payload.append(
+            {
+                "id": manual.pk,
+                "serviceName": manual.public_service_name,
+                "title": manual.public_title,
+                "description": _service_guide_clean_line(manual.public_description),
+                "chips": manual.public_chips,
+                "launchHref": launch_href,
+                "launchIsExternal": launch_is_external,
+                "launchLabel": manual.public_launch_label,
+                "slideCount": len(slides),
+                "slides": slides,
+            }
+        )
+    return payload
+
+
+def _build_service_guide_product_fallback_payload(products, request):
+    payload = []
+    for product in products:
+        public_name = _get_public_product_name(product)
+        launch_href, launch_is_external = _resolve_product_launch_url(product, user=request.user)
+        features = list(product.features.all())
+        slide_specs = []
+
+        intro = (
+            getattr(product, "lead_text", "")
+            or getattr(product, "solve_text", "")
+            or getattr(product, "description", "")
+            or f"{public_name} 화면을 열고 핵심 흐름을 확인합니다."
+        )
+        slide_specs.append(
+            {
+                "title": "처음 시작",
+                "content": intro,
+                "badge": "시작",
+            }
+        )
+        for feature in features[:3]:
+            slide_specs.append(
+                {
+                    "title": _service_guide_clean_line(feature.title),
+                    "content": _service_guide_clean_line(feature.description),
+                    "badge": "핵심",
+                }
+            )
+        if len(slide_specs) == 1 and launch_href:
+            slide_specs.append(
+                {
+                    "title": "바로 열기",
+                    "content": "서비스 화면에서 첫 버튼을 눌러 작업을 시작합니다.",
+                    "badge": "실행",
+                }
+            )
+
+        slide_count = len(slide_specs)
+        slides = []
+        for index, item in enumerate(slide_specs, start=1):
+            content = _replace_public_service_terms(item["content"], product)
+            points = _service_guide_points(content)
+            slides.append(
+                {
+                    "id": f"product-{product.pk}-{index}",
+                    "order": index,
+                    "stepLabel": f"{index}/{slide_count}",
+                    "title": item["title"] or f"{index}단계",
+                    "badge": item["badge"],
+                    "content": _service_guide_slide_summary(content, points),
+                    "points": points,
+                    "focus": _service_guide_focus_payload(product, index, item["title"], points),
+                    "screenshotUrl": _service_guide_screenshot_url(product),
+                    "screenshotAlt": f"{public_name} 실제 화면",
+                }
+            )
+
+        payload.append(
+            {
+                "id": f"product-{product.pk}",
+                "serviceName": public_name,
+                "title": f"{public_name} 이용방법",
+                "description": _service_guide_clean_line(
+                    _replace_public_service_terms(getattr(product, "description", ""), product)
+                ),
+                "chips": list(getattr(product, "detail_context_chips", []) or []),
+                "launchHref": launch_href,
+                "launchIsExternal": launch_is_external,
+                "launchLabel": f"{public_name} 열기",
+                "slideCount": len(slides),
+                "slides": slides,
+            }
+        )
+    return payload
 
 
 def _home_v2(request, products, posts, page_obj, feed_scope, pinned_notice_posts):
@@ -6907,7 +7247,7 @@ def _build_tool_guide_sections(tools):
 
 
 def tool_guide(request):
-    return redirect(SERVICE_GUIDE_PADLET_URL)
+    return redirect('service_guide_list')
 
 
 def about(request):
@@ -7429,10 +7769,71 @@ def feedback_view(request):
     return redirect('home')
 
 def service_guide_list(request):
-    return redirect(SERVICE_GUIDE_PADLET_URL)
+    manuals = (
+        ServiceManual.objects.filter(is_published=True, product__is_active=True)
+        .select_related("product")
+        .prefetch_related("sections")
+        .order_by("product__display_order", "product__title", "id")
+    )
+    products_without_manual = (
+        Product.objects.filter(is_active=True)
+        .exclude(manual__is_published=True)
+        .prefetch_related("features")
+        .order_by("display_order", "title")
+    )
+    manual_list = list(manuals)
+    pending_products = list(products_without_manual)
+    guide_modal_payload = (
+        _build_service_guide_modal_payload(manual_list, request)
+        + _build_service_guide_product_fallback_payload(pending_products, request)
+    )
+    guide_ids = {str(item.get("id")) for item in guide_modal_payload}
+    autostart_guide_id = str(request.GET.get("guide") or "")
+    if autostart_guide_id not in guide_ids:
+        autostart_guide_id = ""
+
+    return render(
+        request,
+        "core/service_guide_list.html",
+        {
+            "guide_entry_points": _build_guide_entry_points(),
+            "guide_groups": _build_guide_groups(manual_list, pending_products),
+            "active_products_count": Product.objects.filter(is_active=True).count(),
+            "manual_count": len(manual_list),
+            "missing_manual_count": len(pending_products),
+            "fallback_guide_count": len(pending_products),
+            "guide_modal_payload": guide_modal_payload,
+            "guide_modal_autostart": autostart_guide_id,
+            **build_service_guide_list_seo(request).as_context(),
+        },
+    )
 
 def service_guide_detail(request, pk):
-    return redirect(SERVICE_GUIDE_PADLET_URL)
+    manual = get_object_or_404(
+        ServiceManual.objects.select_related("product").prefetch_related("sections"),
+        pk=pk,
+        is_published=True,
+        product__is_active=True,
+    )
+    manual = _prepare_manual_display(manual)
+    launch_href, launch_is_external = _resolve_product_launch_url(manual.product, user=request.user)
+    sections = list(manual.sections.all())
+    guide_modal_payload = _build_service_guide_modal_payload([manual], request)
+
+    return render(
+        request,
+        "core/service_guide_detail.html",
+        {
+            "manual": manual,
+            "sections": sections,
+            "launch_href": launch_href,
+            "launch_is_external": launch_is_external,
+            "launch_label": manual.public_launch_label,
+            "guide_modal_payload": guide_modal_payload,
+            "guide_modal_autostart": manual.pk,
+            **build_service_guide_detail_seo(request, manual).as_context(),
+        },
+    )
 
 
 @require_POST

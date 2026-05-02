@@ -599,19 +599,19 @@ def build_service_guide_list_seo(request) -> PageSeoMeta:
     canonical_url = _absolute_url(reverse("service_guide_list"))
     description = f"{SITE_NAME_KO} 주요 서비스를 설명 없이도 따라갈 수 있도록 첫 사용 흐름만 빠르게 정리한 안내 모음입니다."
     return _build_page_seo(
-        title="서비스 시작 가이드 | Eduitit",
+        title="서비스 이용방법 | Eduitit",
         description=description,
         canonical_url=canonical_url,
         structured_data=(
             _collection_page_structured_data(
-                name="서비스 시작 가이드",
+                name="서비스 이용방법",
                 description=description,
                 url=canonical_url,
             ),
             _breadcrumb_list_structured_data(
                 [
                     ("홈", reverse("home")),
-                    ("서비스 시작 가이드", canonical_url),
+                    ("서비스 이용방법", canonical_url),
                 ]
             ),
         ),
@@ -722,7 +722,7 @@ def build_service_guide_detail_seo(request, manual) -> PageSeoMeta:
         or getattr(getattr(manual, "product", None), "description", "")
     )
     canonical_url = _absolute_url(reverse("service_guide_detail", kwargs={"pk": manual.pk}))
-    article_title = f"{public_title} - 서비스 가이드 - Eduitit"
+    article_title = f"{public_title} - 서비스 이용방법 - Eduitit"
     article_description = description or f"{product_name} 사용 흐름을 빠르게 따라갈 수 있는 안내입니다."
     image_url = _image_field_url(getattr(getattr(manual, "product", None), "image", None))
     return _build_page_seo(
@@ -738,14 +738,14 @@ def build_service_guide_detail_seo(request, manual) -> PageSeoMeta:
                 image_url=image_url,
                 date_published=getattr(manual, "created_at", None),
                 date_modified=getattr(manual, "updated_at", None),
-                article_section="서비스 가이드",
+                article_section="서비스 이용방법",
                 about_name=product_name or public_title,
             ),
             _breadcrumb_list_structured_data(
                 [
                     ("홈", reverse("home")),
-                    ("서비스 시작 가이드", reverse("service_guide_list")),
-                    (public_title or product_name or "서비스 가이드", canonical_url),
+                    ("서비스 이용방법", reverse("service_guide_list")),
+                    (public_title or product_name or "서비스 이용방법", canonical_url),
                 ]
             ),
         ),
