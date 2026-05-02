@@ -175,6 +175,7 @@ TEMPLATES = [
                 'core.context_processors.search_products',
                 'core.context_processors.active_classroom',
                 'core.context_processors.home_agent_limit_nav',
+                'core.context_processors.service_guide_nav',
             ],
         },
     },

@@ -170,6 +170,9 @@
                 {% if public_simple_navbar %}
                 <div class="shell-nav-public-actions">
                     <a href="{% url 'portfolio:list' %}" class="shell-nav-public-link{% if current_view == 'portfolio:list' %} shell-nav-public-link--active{% endif %}" data-public-simple-nav-link="portfolio"{% if current_view == 'portfolio:list' %} aria-current="page"{% endif %}>포트폴리오</a>
+                    {% if service_guide_nav_href %}
+                    <a href="{{ service_guide_nav_href }}" class="shell-nav-public-link" data-service-guide-nav-link="desktop-public">{{ service_guide_nav_label|default:"이용방법" }}</a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <nav class="shell-nav-primary shell-nav-primary--desktop hidden lg:flex" aria-label="주요 메뉴">
@@ -188,6 +191,16 @@
                             <span class="hidden xl:inline">서비스 찾기</span>
                             <span class="shell-utility-shortcut" aria-hidden="true">⌘K</span>
                         </button>
+                        {% endif %}
+                        {% if service_guide_nav_href %}
+                        <a href="{{ service_guide_nav_href }}"
+                            class="shell-utility-button shell-utility-button--subtle"
+                            data-service-guide-nav-link="desktop"
+                            title="{{ service_guide_nav_label|default:'이용방법' }}"
+                            aria-label="{{ service_guide_nav_label|default:'이용방법' }}">
+                            <i class="fa-regular fa-circle-question text-sm"></i>
+                            <span class="hidden xl:inline">{{ service_guide_nav_label|default:"이용방법" }}</span>
+                        </a>
                         {% endif %}
                         {% if user.is_authenticated and home_agent_limit_nav_action %}
                         <a
@@ -362,6 +375,15 @@
                         <i class="fa-solid fa-magnifying-glass text-sm"></i>
                     </button>
                     {% endif %}
+                    {% if service_guide_nav_href %}
+                    <a href="{{ service_guide_nav_href }}"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-xl shell-icon-button shadow-clay transition"
+                        data-service-guide-nav-link="tablet"
+                        title="{{ service_guide_nav_label|default:'이용방법' }}"
+                        aria-label="{{ service_guide_nav_label|default:'이용방법' }}">
+                        <i class="fa-regular fa-circle-question text-sm"></i>
+                    </a>
+                    {% endif %}
                     {% if user.is_authenticated and home_agent_limit_nav_action %}
                     <a
                         href="{{ home_agent_limit_nav_action.href }}"
@@ -419,6 +441,15 @@
                 </button>
                 {% endif %}
                 {% endif %}
+                {% if service_guide_nav_href and not public_simple_navbar %}
+                <a href="{{ service_guide_nav_href }}"
+                    class="md:hidden lg:hidden w-10 h-10 rounded-xl shell-icon-button shadow-clay-inner flex items-center justify-center transition"
+                    data-service-guide-nav-link="mobile-topbar"
+                    title="{{ service_guide_nav_label|default:'이용방법' }}"
+                    aria-label="{{ service_guide_nav_label|default:'이용방법' }}">
+                    <i class="fa-regular fa-circle-question text-base"></i>
+                </a>
+                {% endif %}
                 {% if current_view == 'home' and user.is_authenticated %}
                 <a
                     href="{% url 'messagebox:developer_chat' %}"
@@ -452,7 +483,7 @@
         {% endif %}
 
         <!-- Mobile Menu Panel -->
-        {% if not public_simple_navbar %}
+        {% if not hide_navbar and not public_simple_navbar %}
         <div id="mobileMenu"
             class="fixed inset-x-0 z-40 lg:hidden transform -translate-y-full opacity-0 transition-all duration-300 ease-in-out pointer-events-none"
             style="top: var(--mobile-menu-top, 88px); max-height: calc(100vh - var(--mobile-menu-top, 88px)); overflow-y: auto;"
@@ -463,6 +494,13 @@
                         class="shell-link transition py-2 border-b shell-section-divider">
                         <i class="fa-solid fa-briefcase mr-3 shell-icon-accent-soft"></i> 포트폴리오
                     </a>
+                    {% if service_guide_nav_href %}
+                    <a href="{{ service_guide_nav_href }}"
+                        class="shell-link transition py-2 border-b shell-section-divider"
+                        data-service-guide-nav-link="mobile-menu">
+                        <i class="fa-regular fa-circle-question mr-3 shell-icon-accent-soft"></i> {{ service_guide_nav_label|default:"이용방법" }}
+                    </a>
+                    {% endif %}
 
                     {% if show_visitor_counts %}
                     <!-- Visitor Count (Mobile / Superuser only) -->

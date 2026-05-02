@@ -44,6 +44,14 @@ class CollectFlowTest(TestCase):
         self.assertIn("로그인 후 만들기", content)
         self.assertLess(content.index("제출 참여"), content.index("요청 만들기"))
 
+    def test_public_landing_guards_aos_when_library_is_missing(self):
+        response = self.client.get(reverse("collect:landing"))
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("if (window.AOS && typeof window.AOS.init === 'function')", content)
+        self.assertNotIn("\n        AOS.init(", content)
+
     def test_guest_submit_file_and_teacher_download(self):
         req = CollectionRequest.objects.create(
             creator=self.teacher,

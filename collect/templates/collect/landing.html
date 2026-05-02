@@ -118,6 +118,17 @@
 </main>
 
 <script>
-    AOS.init({ duration: 800, once: true, offset: 100 });
+    (function initCollectAos() {
+        function run() {
+            if (window.AOS && typeof window.AOS.init === 'function') {
+                window.AOS.init({ duration: 800, once: true, offset: 100 });
+            }
+        }
+
+        run();
+        if (document.readyState !== 'complete') {
+            window.addEventListener('load', run, { once: true });
+        }
+    })();
 </script>
 {% endblock %}

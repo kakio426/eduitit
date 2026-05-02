@@ -15,6 +15,7 @@ from .seo import (
     SITE_WORDMARK,
     build_default_page_seo,
 )
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.contrib import messages as django_messages
 import json
@@ -32,6 +33,12 @@ SERVICE_LAUNCHER_DISABLED_PREFIXES = (
     "/health/",
 )
 SITE_CONFIG_DISABLED_PREFIXES = (
+    "/admin/",
+    "/secret-admin-kakio/",
+    "/admin-dashboard/",
+    "/health/",
+)
+SERVICE_GUIDE_NAV_DISABLED_PREFIXES = (
     "/admin/",
     "/secret-admin-kakio/",
     "/admin-dashboard/",
@@ -250,4 +257,47 @@ def active_classroom(request):
 def home_agent_limit_nav(request):
     return {
         'home_agent_limit_nav_action': build_home_agent_limit_nav_action(getattr(request, 'user', None)),
+    }
+
+
+def service_guide_nav(request):
+    """현재 화면에 맞는 이용방법 링크를 공통 상단바에 제공."""
+    if _path_matches_prefixes(request, SERVICE_GUIDE_NAV_DISABLED_PREFIXES):
+        return {}
+
+    try:
+        guide_list_url = reverse("service_guide_list")
+    except NoReverseMatch:
+        return {}
+
+    resolver_match = getattr(request, "resolver_match", None)
+    view_name = getattr(resolver_match, "view_name", "") or ""
+    href = guide_list_url
+    matched_manual_id = None
+
+    if view_name:
+        try:
+            from products.models import ServiceManual
+
+            manual = (
+                ServiceManual.objects.select_related("product")
+                .filter(
+                    is_published=True,
+                    product__is_active=True,
+                    product__launch_route_name=view_name,
+                )
+                .order_by("product__display_order", "product_id")
+                .first()
+            )
+            if manual:
+                href = reverse("service_guide_detail", kwargs={"pk": manual.pk})
+                matched_manual_id = manual.pk
+        except Exception:
+            logger.exception("[ServiceGuideNav] link build failed view_name=%s", view_name)
+            href = guide_list_url
+
+    return {
+        "service_guide_nav_href": href,
+        "service_guide_nav_label": "이용방법",
+        "service_guide_nav_manual_id": matched_manual_id,
     }
