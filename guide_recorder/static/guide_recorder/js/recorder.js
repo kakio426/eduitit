@@ -34,6 +34,23 @@
   }
 
   // ── fetch 헬퍼 ────────────────────────────────────────────────────────────
+  function readJsonResponse(res) {
+    return res.text().then(function (text) {
+      var data = {};
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (_error) {
+          data = {};
+        }
+      }
+      if (!res.ok) {
+        throw new Error(data.error || '다시 시도');
+      }
+      return data;
+    });
+  }
+
   function postJson(url, payload) {
     return fetch(url, {
       method: 'POST',
@@ -43,8 +60,7 @@
       },
       body: JSON.stringify(payload),
     }).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
+      return readJsonResponse(res);
     });
   }
 
@@ -244,7 +260,7 @@
       })
       .catch(function (err) {
         console.error('[GuideRecorder] captureStep 오류:', err);
-        showToast('캡처 실패: ' + err.message, 3500);
+        showToast(err.message === '다시 시도' ? '다시 시도' : '저장 실패', 3500);
       })
       .finally(function () {
         state.pendingCapture = false;
@@ -270,7 +286,7 @@
       })
       .catch(function (err) {
         console.error('[GuideRecorder] startRecording 오류:', err);
-        showToast('녹화 시작 실패: ' + err.message, 3500);
+        showToast(err.message === '다시 시도' ? '다시 시도' : '저장 실패', 3500);
       })
       .finally(function () {
         btn.disabled = false;
@@ -303,7 +319,7 @@
       })
       .catch(function (err) {
         console.error('[GuideRecorder] stopRecording 오류:', err);
-        showToast('저장 실패 — 나중에 다시 시도해 주세요', 4000);
+        showToast('저장 실패', 4000);
         btn.disabled = false;
       });
   }

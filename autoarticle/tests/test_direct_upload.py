@@ -3,31 +3,33 @@ from django.urls import reverse
 from autoarticle.views import ArticleCreateView
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.messages.middleware import MessageMiddleware
+from django.contrib.auth.models import User
 
 class DirectUploadTestCase(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.view = ArticleCreateView.as_view()
+        self.user = User.objects.create_user(username='direct-user', email='direct@example.com', password='password')
 
     def test_post_step1_with_image_urls(self):
         """
         RED PHASE: This test verifies that Step 1 can receive Cloudinary URLs from the client.
         Current implementation only handles FILES, so this will either fail to save URLs or error.
         """
-        from django.http import QueryDict
-        from django.urls import reverse
         url = reverse('autoarticle:create')
-        data = QueryDict(mutable=True)
-        data.update({
+        data = {
             'step': '1',
             'school_name': 'Test School',
             'event_name': 'Test Event',
             'keywords': 'test, keywords',
-        })
-        data.appendlist('image_urls', 'https://res.cloudinary.com/demo/image/upload/v1/test1.jpg')
-        data.appendlist('image_urls', 'https://res.cloudinary.com/demo/image/upload/v2/test2.jpg')
+            'image_urls': [
+                'https://res.cloudinary.com/demo/image/upload/v1/test1.jpg',
+                'https://res.cloudinary.com/demo/image/upload/v2/test2.jpg',
+            ],
+        }
         
         request = self.factory.post(url, data)
+        request.user = self.user
         
         # Add session and messages middleware manually for RequestFactory
         middleware = SessionMiddleware(lambda r: None)

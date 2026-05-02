@@ -47,7 +47,7 @@
                     </button>
                     {% endif %}
                 </form>
-                <form action="{% url 'handoff:session_delete' session.id %}" method="post" onsubmit="return confirm('세션을 삭제할까요?');">
+                <form action="{% url 'handoff:session_delete' session.id %}" method="post" data-handoff-confirm="삭제하시겠습니까?" onsubmit="return confirm('삭제하시겠습니까?');">
                     {% csrf_token %}
                     <button type="submit" class="px-4 py-2 rounded-xl bg-red-50 text-red-700 font-black border border-red-100">
                         삭제
@@ -171,7 +171,81 @@
     <button id="undoButton" type="button" class="text-sm font-black text-amber-300 hover:text-amber-200">실행 취소</button>
 </div>
 
+<div id="handoffStatusToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[81] bg-red-700 text-white px-4 py-3 rounded-xl shadow-xl">
+    <span id="handoffStatusText" class="text-sm font-black"></span>
+</div>
+
+<div id="handoffConfirmModal" class="hidden fixed left-0 right-0 bottom-0 top-[var(--main-nav-height,88px)] z-[90] items-center justify-center bg-black/30 px-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+        <p id="handoffConfirmText" class="text-lg font-black text-gray-800">삭제하시겠습니까?</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="handoffConfirmCancel" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600">취소</button>
+            <button type="button" id="handoffConfirmOk" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white">삭제</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modal = document.getElementById("handoffConfirmModal");
+        const modalText = document.getElementById("handoffConfirmText");
+        const cancelButton = document.getElementById("handoffConfirmCancel");
+        const okButton = document.getElementById("handoffConfirmOk");
+        if (!modal || !modalText || !cancelButton || !okButton) {
+            return;
+        }
+        let pendingForm = null;
+        let pendingButton = null;
+        const closeModal = () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            pendingForm = null;
+            if (pendingButton) {
+                pendingButton.focus();
+            }
+            pendingButton = null;
+        };
+        document.querySelectorAll("form[data-handoff-confirm]").forEach((form) => {
+            form.onsubmit = null;
+            form.addEventListener("submit", (event) => {
+                if (form.dataset.handoffConfirmed === "1") {
+                    delete form.dataset.handoffConfirmed;
+                    return;
+                }
+                event.preventDefault();
+                pendingForm = form;
+                pendingButton = event.submitter || form.querySelector("button[type='submit']");
+                modalText.textContent = form.dataset.handoffConfirm || "삭제하시겠습니까?";
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+                okButton.focus();
+            });
+        });
+        cancelButton.addEventListener("click", closeModal);
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+                closeModal();
+            }
+        });
+        okButton.addEventListener("click", () => {
+            if (!pendingForm) {
+                closeModal();
+                return;
+            }
+            pendingForm.dataset.handoffConfirmed = "1";
+            if (pendingButton) {
+                pendingForm.requestSubmit(pendingButton);
+            } else {
+                pendingForm.requestSubmit();
+            }
+        });
+    });
+
     window.handoffSessionConfig = {
         isOpen: {{ is_session_open|yesno:"true,false" }},
         pendingNoticeTemplate: "{{ pending_notice_text|escapejs }}",

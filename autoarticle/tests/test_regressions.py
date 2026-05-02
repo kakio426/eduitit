@@ -1,5 +1,6 @@
 import zipfile
 from datetime import date
+from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
@@ -45,3 +46,17 @@ class AutoarticleRegressionTests(TestCase):
         self.article.refresh_from_db()
         self.assertTrue(self.article.ppt_file)
         self.assertTrue(zipfile.is_zipfile(self.article.ppt_file.path))
+
+    def test_failure_feedback_does_not_print_traceback(self):
+        views_path = Path(__file__).resolve().parents[1] / "views.py"
+        source = views_path.read_text(encoding="utf-8-sig")
+
+        self.assertNotIn("traceback.print_exc", source)
+        self.assertIn("logger.exception", source)
+
+    def test_delete_actions_have_internal_confirm_hooks(self):
+        detail_response = self.client.get(reverse("autoarticle:detail", kwargs={"pk": self.article.pk}))
+        archive_response = self.client.get(reverse("autoarticle:archive"))
+
+        self.assertContains(detail_response, "data-aa-confirm")
+        self.assertContains(archive_response, "aaConfirmModal")

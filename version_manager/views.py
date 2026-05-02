@@ -1,17 +1,32 @@
 from pathlib import Path
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.db import transaction
 from django.db.models import Max
-from django.http import FileResponse, Http404, HttpResponseForbidden
+from django.http import FileResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Document, DocumentGroup, DocumentProtectedPhrase, DocumentShareLink, DocumentVersion
 from .utils import extract_text_from_uploaded, make_diff_summary
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_error_response(request, message, *, status=400, back_url=None):
+    return render(
+        request,
+        'version_manager/safe_error.html',
+        {
+            'message': message,
+            'back_url': back_url or reverse('version_manager:document_list'),
+        },
+        status=status,
+    )
 
 
 @login_required
@@ -49,10 +64,11 @@ def document_create_view(request):
         base_name = (request.POST.get('base_name') or '').strip()
         group_id = (request.POST.get('group_id') or '').strip()
         new_group_name = (request.POST.get('new_group_name') or '').strip()
+        form_values = {'base_name': base_name, 'group_id': group_id, 'new_group_name': new_group_name}
 
         if not base_name:
             messages.error(request, '문서명을 입력해 주세요.')
-            return render(request, 'version_manager/document_form.html', {'groups': groups})
+            return render(request, 'version_manager/document_form.html', {'groups': groups, 'form_values': form_values})
 
         group = None
         if new_group_name:
@@ -62,7 +78,7 @@ def document_create_view(request):
 
         if group is None:
             messages.error(request, '그룹을 선택하거나 새 그룹명을 입력해 주세요.')
-            return render(request, 'version_manager/document_form.html', {'groups': groups})
+            return render(request, 'version_manager/document_form.html', {'groups': groups, 'form_values': form_values})
 
         document, created = Document.objects.get_or_create(
             group=group,
@@ -194,7 +210,8 @@ def set_published_view(request, document_id, version_id):
     if request.method != 'POST':
         return redirect('version_manager:document_detail', document_id=document_id)
     if not request.user.is_staff:
-        return HttpResponseForbidden('배포본 지정 권한이 없습니다.')
+        messages.error(request, '권한 없음')
+        return redirect('version_manager:document_detail', document_id=document_id)
 
     document = get_object_or_404(Document, pk=document_id)
     version = get_object_or_404(DocumentVersion, pk=version_id, document=document)
@@ -213,13 +230,20 @@ def set_published_view(request, document_id, version_id):
     return redirect('version_manager:document_detail', document_id=document.id)
 
 
-def _download_response(version: DocumentVersion):
+def _download_response(request, version: DocumentVersion, *, back_url):
     if not version.upload:
-        raise Http404('파일이 존재하지 않습니다.')
+        messages.error(request, '파일 확인')
+        return redirect(back_url)
     try:
         handle = version.upload.open('rb')
-    except FileNotFoundError as exc:
-        raise Http404('파일을 찾을 수 없습니다.') from exc
+    except FileNotFoundError:
+        logger.warning("Version manager file missing for version %s", version.pk)
+        messages.error(request, '파일 확인')
+        return redirect(back_url)
+    except Exception:
+        logger.exception("Version manager download failed for version %s", version.pk)
+        messages.error(request, '다운로드 실패')
+        return redirect(back_url)
     return FileResponse(handle, as_attachment=True, filename=Path(version.upload.name).name)
 
 
@@ -230,7 +254,11 @@ def download_latest_view(request, document_id):
     if version is None:
         messages.error(request, '다운로드할 최신 버전이 없습니다.')
         return redirect('version_manager:document_detail', document_id=document.id)
-    return _download_response(version)
+    return _download_response(
+        request,
+        version,
+        back_url=reverse('version_manager:document_detail', kwargs={'document_id': document.id}),
+    )
 
 
 @login_required
@@ -240,14 +268,22 @@ def download_published_view(request, document_id):
     if version is None:
         messages.error(request, '배포본이 아직 지정되지 않았습니다.')
         return redirect('version_manager:document_detail', document_id=document.id)
-    return _download_response(version)
+    return _download_response(
+        request,
+        version,
+        back_url=reverse('version_manager:document_detail', kwargs={'document_id': document.id}),
+    )
 
 
 @login_required
 def download_version_view(request, document_id, version_id):
     document = get_object_or_404(Document, pk=document_id)
     version = get_object_or_404(DocumentVersion, pk=version_id, document=document)
-    return _download_response(version)
+    return _download_response(
+        request,
+        version,
+        back_url=reverse('version_manager:document_detail', kwargs={'document_id': document.id}),
+    )
 
 
 @transaction.atomic
@@ -275,7 +311,12 @@ def delete_version_view(request, document_id, version_id):
                     redirect_to_shared = True
 
     if not allowed:
-        return HttpResponseForbidden('본인이 업로드한 버전만 삭제할 수 있습니다.')
+        messages.error(request, '권한 없음')
+        if token and DocumentShareLink.objects.filter(token=token, document=document).exists():
+            return redirect('version_manager:shared_upload', token=token)
+        if request.user.is_authenticated:
+            return redirect('version_manager:document_detail', document_id=document.id)
+        return _safe_error_response(request, '권한 없음', status=403)
 
     if document.published_version_id == version.id:
         document.published_version = None
@@ -356,9 +397,11 @@ def toggle_share_link_view(request, document_id, link_id):
 
 @transaction.atomic
 def shared_upload_view(request, token):
-    share_link = get_object_or_404(DocumentShareLink.objects.select_related('document__group'), token=token)
+    share_link = DocumentShareLink.objects.select_related('document__group').filter(token=token).first()
+    if share_link is None:
+        return _safe_error_response(request, '링크 확인', status=404)
     if not share_link.is_valid():
-        return HttpResponseForbidden('만료되었거나 비활성화된 링크입니다.')
+        return _safe_error_response(request, '링크 확인', status=410)
 
     document = share_link.document
     if request.method == 'POST':

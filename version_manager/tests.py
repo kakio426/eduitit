@@ -1,11 +1,17 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
-from version_manager.models import Document, DocumentGroup, DocumentVersion
+from core.models import UserPolicyConsent
+from core.policy_meta import PRIVACY_VERSION, TERMS_VERSION
+from version_manager.models import Document, DocumentGroup, DocumentShareLink, DocumentVersion
+
+User = get_user_model()
 
 
 class DeleteExpiredVersionsCommandTests(TestCase):
@@ -62,3 +68,70 @@ class DeleteExpiredVersionsCommandTests(TestCase):
         document.refresh_from_db()
         self.assertIsNone(document.published_version)
         self.assertTrue(DocumentVersion.objects.filter(pk=latest_version.pk).exists())
+
+
+class VersionManagerUxFailureTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="teacher", email="teacher@example.com", password="pw123456")
+        profile = self.user.userprofile
+        profile.nickname = "담임선생님"
+        profile.role = "school"
+        profile.save(update_fields=["nickname", "role"])
+        UserPolicyConsent.objects.create(
+            user=self.user,
+            provider="direct",
+            terms_version=TERMS_VERSION,
+            privacy_version=PRIVACY_VERSION,
+            agreed_at=self.user.date_joined,
+            agreement_source="test",
+        )
+        self.group = DocumentGroup.objects.create(name="학년자료")
+        self.document = Document.objects.create(base_name="가정통신문", group=self.group)
+        self.version = DocumentVersion.objects.create(
+            document=self.document,
+            version=1,
+            upload=SimpleUploadedFile("notice.pdf", b"%PDF-1.4\nbody", content_type="application/pdf"),
+            original_filename="notice.pdf",
+            uploaded_by=self.user,
+        )
+
+    def test_non_staff_publish_recovers_with_permission_message(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("version_manager:set_published", args=[self.document.id, self.version.id]),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "권한 없음")
+        self.document.refresh_from_db()
+        self.assertIsNone(self.document.published_version)
+
+    def test_expired_shared_upload_returns_user_safe_message(self):
+        share_link = DocumentShareLink.objects.create(document=self.document, created_by=self.user, is_active=False)
+
+        response = self.client.get(reverse("version_manager:shared_upload", args=[share_link.token]))
+
+        self.assertEqual(response.status_code, 410)
+        self.assertContains(response, "링크 확인", status_code=410)
+        self.assertNotContains(response, "HttpResponseForbidden", status_code=410)
+
+    def test_missing_shared_upload_returns_user_safe_message(self):
+        response = self.client.get(reverse("version_manager:shared_upload", args=["missing-token"]))
+
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "링크 확인", status_code=404)
+        self.assertNotContains(response, "Page not found", status_code=404)
+
+    def test_missing_file_download_returns_to_detail_with_file_message(self):
+        self.client.force_login(self.user)
+        self.version.upload.delete(save=False)
+
+        response = self.client.get(
+            reverse("version_manager:download_version", args=[self.document.id, self.version.id]),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "파일 확인")

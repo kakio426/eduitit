@@ -332,7 +332,10 @@ class ArticleCreateView(View):
 
             # 이미지 처리
             uploaded_images = request.FILES.getlist('images')
-            client_image_urls = request.POST.getlist('image_urls[]') or request.POST.getlist('image_urls')
+            client_image_urls = [
+                *request.POST.getlist('image_urls[]'),
+                *request.POST.getlist('image_urls'),
+            ]
             image_paths = []
             upload_errors = []
 
@@ -395,10 +398,9 @@ class ArticleCreateView(View):
                 if 'article_images' in request.session:
                     del request.session['article_images']
                 return redirect(f"{reverse('autoarticle:create')}?step=3")
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                messages.error(request, f"AI 생성 중 오류가 발생했습니다: {str(e)}")
+            except Exception:
+                logger.exception("Autoarticle AI generation failed for user %s", request.user.pk)
+                messages.error(request, "생성 실패. 다시 시도")
                 return redirect('autoarticle:create')
 
         elif step == '3':
@@ -453,8 +455,9 @@ class ArticleCreateView(View):
                 del request.session['article_draft']
                 messages.success(request, "기사가 성공적으로 저장되었습니다.")
                 return redirect('autoarticle:detail', pk=article.pk)
-            except Exception as e:
-                messages.error(request, f"저장 중 오류가 발생했습니다: {str(e)}")
+            except Exception:
+                logger.exception("Autoarticle save failed for user %s", request.user.pk)
+                messages.error(request, "저장 실패. 다시 시도")
                 return redirect('autoarticle:create')
 
 
@@ -490,63 +493,78 @@ class ArticleArchiveView(ListView):
         layout_version = _get_export_layout_version(request)
 
         if action == 'generate_pdf':
-            pdf = PDFEngine(theme, school_name, layout_version=layout_version)
-            pdf.draw_cover()
-            for art in articles:
-                art_data = {
-                    'title': art.title,
-                    'content': art.full_text,
-                    'date': str(art.event_date),
-                    'location': art.location,
-                    'grade': art.audience_label,
-                    'images': art.images or []
-                }
-                pdf.add_article(art_data, is_booklet=True)
-            
-            pdf_data = pdf.output(dest='S')
-            if isinstance(pdf_data, bytearray):
-                pdf_data = bytes(pdf_data)
-            elif isinstance(pdf_data, str):
-                pdf_data = pdf_data.encode('latin-1')
-            response = HttpResponse(pdf_data, content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="newsletter.pdf"'
-            return response
+            try:
+                pdf = PDFEngine(theme, school_name, layout_version=layout_version)
+                pdf.draw_cover()
+                for art in articles:
+                    art_data = {
+                        'title': art.title,
+                        'content': art.full_text,
+                        'date': str(art.event_date),
+                        'location': art.location,
+                        'grade': art.audience_label,
+                        'images': art.images or []
+                    }
+                    pdf.add_article(art_data, is_booklet=True)
+
+                pdf_data = pdf.output(dest='S')
+                if isinstance(pdf_data, bytearray):
+                    pdf_data = bytes(pdf_data)
+                elif isinstance(pdf_data, str):
+                    pdf_data = pdf_data.encode('latin-1')
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = 'attachment; filename="newsletter.pdf"'
+                return response
+            except Exception:
+                logger.exception("Autoarticle archive PDF export failed for user %s", request.user.pk)
+                messages.error(request, "다운로드 실패. 다시 시도")
+                return redirect('autoarticle:archive')
 
         elif action == 'generate_ppt':
-            ppt_engine = PPTEngine(theme, school_name, layout_version=layout_version)
-            ppt_articles = []
-            for art in articles:
-                ppt_articles.append({
-                    'title': art.title,
-                    'content': art.content_summary_list,
-                    'date': str(art.event_date),
-                    'location': art.location,
-                    'grade': art.audience_label,
-                    'images': art.images or []
-                })
+            try:
+                ppt_engine = PPTEngine(theme, school_name, layout_version=layout_version)
+                ppt_articles = []
+                for art in articles:
+                    ppt_articles.append({
+                        'title': art.title,
+                        'content': art.content_summary_list,
+                        'date': str(art.event_date),
+                        'location': art.location,
+                        'grade': art.audience_label,
+                        'images': art.images or []
+                    })
 
-            ppt_buffer = ppt_engine.create_presentation(ppt_articles)
-            response = HttpResponse(ppt_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
-            response['Content-Disposition'] = 'attachment; filename="presentation.pptx"'
-            return response
+                ppt_buffer = ppt_engine.create_presentation(ppt_articles)
+                response = HttpResponse(ppt_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+                response['Content-Disposition'] = 'attachment; filename="presentation.pptx"'
+                return response
+            except Exception:
+                logger.exception("Autoarticle archive PPT export failed for user %s", request.user.pk)
+                messages.error(request, "다운로드 실패. 다시 시도")
+                return redirect('autoarticle:archive')
 
         elif action == 'generate_word':
-            word_engine = WordEngine(theme, school_name, layout_version=layout_version)
-            word_articles = []
-            for art in articles:
-                word_articles.append({
-                    'title': art.title,
-                    'content': art.full_text,
-                    'date': str(art.event_date),
-                    'location': art.location,
-                    'grade': art.audience_label,
-                    'images': art.images or []
-                })
+            try:
+                word_engine = WordEngine(theme, school_name, layout_version=layout_version)
+                word_articles = []
+                for art in articles:
+                    word_articles.append({
+                        'title': art.title,
+                        'content': art.full_text,
+                        'date': str(art.event_date),
+                        'location': art.location,
+                        'grade': art.audience_label,
+                        'images': art.images or []
+                    })
 
-            word_buffer = word_engine.generate(word_articles)
-            response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-            response['Content-Disposition'] = 'attachment; filename="newsletter.docx"'
-            return response
+                word_buffer = word_engine.generate(word_articles)
+                response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                response['Content-Disposition'] = 'attachment; filename="newsletter.docx"'
+                return response
+            except Exception:
+                logger.exception("Autoarticle archive Word export failed for user %s", request.user.pk)
+                messages.error(request, "다운로드 실패. 다시 시도")
+                return redirect('autoarticle:archive')
 
         elif action == 'delete_selected':
             deleted_count = 0
@@ -580,22 +598,27 @@ class ArticleCardNewsView(View):
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
         layout_version = _get_export_layout_version(request)
 
-        engine = CardNewsEngine(theme, layout_version=layout_version)
-        card = engine.create_card(
-            title=article.title,
-            date=str(article.event_date),
-            location=article.location,
-            grade=article.audience_label,
-            hashtags=article.hashtags,
-            images=article.images
-        )
+        try:
+            engine = CardNewsEngine(theme, layout_version=layout_version)
+            card = engine.create_card(
+                title=article.title,
+                date=str(article.event_date),
+                location=article.location,
+                grade=article.audience_label,
+                hashtags=article.hashtags,
+                images=article.images
+            )
 
-        buffer = io.BytesIO()
-        card.save(buffer, format='PNG')
+            buffer = io.BytesIO()
+            card.save(buffer, format='PNG')
 
-        response = HttpResponse(buffer.getvalue(), content_type='image/png')
-        response['Content-Disposition'] = f'attachment; filename="cardnews_{article.id}.png"'
-        return response
+            response = HttpResponse(buffer.getvalue(), content_type='image/png')
+            response['Content-Disposition'] = f'attachment; filename="cardnews_{article.id}.png"'
+            return response
+        except Exception:
+            logger.exception("Autoarticle card download failed for article %s", article.pk)
+            messages.error(request, "다운로드 실패. 다시 시도")
+            return redirect('autoarticle:detail', pk=pk)
 
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
@@ -606,20 +629,25 @@ class ArticleWordView(View):
         theme = request.session.get('autoarticle_theme', '웜 & 플레이풀')
         layout_version = _get_export_layout_version(request)
 
-        word_engine = WordEngine(theme, article.school_name, layout_version=layout_version)
-        article_data = {
-            'title': article.title,
-            'content': article.full_text,
-            'date': str(article.event_date),
-            'location': article.location,
-            'grade': article.audience_label,
-            'images': article.images or []
-        }
+        try:
+            word_engine = WordEngine(theme, article.school_name, layout_version=layout_version)
+            article_data = {
+                'title': article.title,
+                'content': article.full_text,
+                'date': str(article.event_date),
+                'location': article.location,
+                'grade': article.audience_label,
+                'images': article.images or []
+            }
 
-        word_buffer = word_engine.generate([article_data])
-        response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        response['Content-Disposition'] = f'attachment; filename="article_{article.id}.docx"'
-        return response
+            word_buffer = word_engine.generate([article_data])
+            response = HttpResponse(word_buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            response['Content-Disposition'] = f'attachment; filename="article_{article.id}.docx"'
+            return response
+        except Exception:
+            logger.exception("Autoarticle Word download failed for article %s", article.pk)
+            messages.error(request, "다운로드 실패. 다시 시도")
+            return redirect('autoarticle:detail', pk=pk)
 
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
@@ -772,13 +800,9 @@ class ArticlePPTDownloadView(View):
                 content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
             )
             
-        except Exception as e:
-            logger.error("Lazy PPT Generation failed for article %s: %s", article.id, e, exc_info=True)
-            error_text = str(e)
-            if "not a valid pptx zip" in error_text.lower() or "zip" in error_text.lower():
-                messages.error(request, "PPT 파일 생성 결과가 손상되어 다시 시도해주세요.")
-            else:
-                messages.error(request, f"PPT 생성 중 오류가 발생했습니다: {error_text}")
+        except Exception:
+            logger.exception("Lazy PPT generation failed for article %s", article.id)
+            messages.error(request, "다운로드 실패. 다시 시도")
             return redirect('autoarticle:detail', pk=pk)
 
 @method_decorator(login_required(login_url='account_login'), name='dispatch')
@@ -811,7 +835,7 @@ class ArticlePDFDownloadView(View):
             response = HttpResponse(pdf_data, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="newsletter_{article.id}.pdf"'
             return response
-        except Exception as e:
-            logger.error(f"Lazy PDF Generation failed: {e}", exc_info=True)
-            messages.error(request, f"PDF generation failed: {str(e)}")
+        except Exception:
+            logger.exception("Lazy PDF generation failed for article %s", article.id)
+            messages.error(request, "다운로드 실패. 다시 시도")
             return redirect('autoarticle:detail', pk=pk)

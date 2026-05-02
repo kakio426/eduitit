@@ -13,6 +13,8 @@
     var undoToast = document.getElementById("undoToast");
     var undoText = document.getElementById("undoText");
     var undoButton = document.getElementById("undoButton");
+    var statusToast = document.getElementById("handoffStatusToast");
+    var statusText = document.getElementById("handoffStatusText");
 
     var rows = Array.prototype.slice.call(document.querySelectorAll(".receipt-row"));
     var currentFilter = "pending";
@@ -191,13 +193,26 @@
         }, 5000);
     }
 
-    function showAlertError(message) {
-        window.alert(message || "처리 중 오류가 발생했습니다.");
+    function showStatusMessage(message, tone) {
+        if (!statusToast || !statusText) {
+            return;
+        }
+        statusText.textContent = message || "다시 시도";
+        statusToast.classList.remove("hidden", "bg-gray-900", "bg-red-700", "bg-emerald-700");
+        statusToast.classList.add(tone === "success" ? "bg-emerald-700" : "bg-red-700");
+        window.clearTimeout(statusToast._handoffTimer);
+        statusToast._handoffTimer = window.setTimeout(function () {
+            statusToast.classList.add("hidden");
+        }, 2600);
     }
 
     async function parseJsonSafe(response) {
+        var text = await response.text();
+        if (!text) {
+            return {};
+        }
         try {
-            return await response.json();
+            return JSON.parse(text);
         } catch (error) {
             return {};
         }
@@ -227,7 +242,7 @@
             });
             var data = await parseJsonSafe(response);
             if (!response.ok || !data.success) {
-                throw new Error(data.error || "상태 업데이트에 실패했습니다.");
+                throw new Error(data.error || "다시 시도");
             }
 
             setRowState(row, data.receipt);
@@ -237,7 +252,7 @@
                 showUndoToast(row, previousState, data.receipt.state, data.receipt.member_name);
             }
         } catch (error) {
-            showAlertError(error.message);
+            showStatusMessage("다시 시도");
             hiddenState.value = previousState === "received" ? "pending" : "received";
         } finally {
             if (button) button.disabled = false;
@@ -265,9 +280,9 @@
         var text = buildPendingNoticeText();
         try {
             await navigator.clipboard.writeText(text);
-            window.alert("미수령 안내문을 복사했습니다.");
+            showStatusMessage("복사 완료", "success");
         } catch (error) {
-            showAlertError("클립보드 복사에 실패했습니다.");
+            showStatusMessage("다시 시도");
         }
     }
 

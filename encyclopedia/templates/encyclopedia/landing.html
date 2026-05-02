@@ -22,9 +22,27 @@
             <span class="rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-gray-700 shadow-sm">열기</span>
         </div>
 
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="rounded-xl border px-4 py-3 text-sm font-bold
+                {% if 'error' in message.tags %}
+                    border-red-200 bg-red-50 text-red-700
+                {% elif 'success' in message.tags %}
+                    border-emerald-200 bg-emerald-50 text-emerald-700
+                {% else %}
+                    border-blue-200 bg-blue-50 text-blue-700
+                {% endif %}
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <!-- 새 항목 등록 (로그인 사용자만) -->
         {% if user.is_authenticated %}
-        <div class="clay-card p-6 mb-8" data-aos="fade-up" x-data="{ open: false }">
+        <div class="clay-card p-6 mb-8" data-aos="fade-up" x-data="{ open: {% if form.errors %}true{% else %}false{% endif %} }">
             <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
                 <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2">
                     <i class="fa-solid fa-plus-circle text-blue-500"></i>
@@ -112,7 +130,7 @@
                         <a href="{% url 'encyclopedia:entry_edit' entry.pk %}" class="px-3 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition text-sm">
                             <i class="fa-solid fa-pen"></i>
                         </a>
-                        <form action="{% url 'encyclopedia:entry_delete' entry.pk %}" method="post" onsubmit="return confirm('정말로 삭제하시겠습니까?');">
+                        <form action="{% url 'encyclopedia:entry_delete' entry.pk %}" method="post" data-ency-confirm="삭제하시겠습니까?" onsubmit="return confirm('삭제하시겠습니까?');">
                             {% csrf_token %}
                             <button type="submit" class="px-3 py-3 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition text-sm">
                                 <i class="fa-solid fa-trash"></i>
@@ -143,6 +161,78 @@
 </section>
 
 <script>
-    AOS.init({ duration: 800, once: true, offset: 100 });
+    if (window.AOS && typeof window.AOS.init === 'function') {
+        window.AOS.init({ duration: 800, once: true, offset: 100 });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('encyConfirmModal');
+        const modalText = document.getElementById('encyConfirmText');
+        const cancelButton = document.getElementById('encyConfirmCancel');
+        const okButton = document.getElementById('encyConfirmOk');
+        if (!modal || !modalText || !cancelButton || !okButton) {
+            return;
+        }
+        let pendingForm = null;
+        let pendingButton = null;
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            pendingForm = null;
+            if (pendingButton) {
+                pendingButton.focus();
+            }
+            pendingButton = null;
+        };
+        document.querySelectorAll('form[data-ency-confirm]').forEach((form) => {
+            form.onsubmit = null;
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.encyConfirmed === '1') {
+                    delete form.dataset.encyConfirmed;
+                    return;
+                }
+                event.preventDefault();
+                pendingForm = form;
+                pendingButton = event.submitter || form.querySelector('button[type="submit"]');
+                modalText.textContent = form.dataset.encyConfirm || '삭제하시겠습니까?';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                okButton.focus();
+            });
+        });
+        cancelButton.addEventListener('click', closeModal);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+        okButton.addEventListener('click', () => {
+            if (!pendingForm) {
+                closeModal();
+                return;
+            }
+            pendingForm.dataset.encyConfirmed = '1';
+            if (pendingButton) {
+                pendingForm.requestSubmit(pendingButton);
+            } else {
+                pendingForm.requestSubmit();
+            }
+        });
+    });
 </script>
+
+<div id="encyConfirmModal" class="hidden fixed left-0 right-0 bottom-0 top-[var(--main-nav-height,88px)] z-[90] items-center justify-center bg-black/30 px-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+        <p id="encyConfirmText" class="text-lg font-black text-gray-800">삭제하시겠습니까?</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="encyConfirmCancel" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600">취소</button>
+            <button type="button" id="encyConfirmOk" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white">삭제</button>
+        </div>
+    </div>
+</div>
 {% endblock %}

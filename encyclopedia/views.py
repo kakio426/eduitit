@@ -35,6 +35,7 @@ def entry_create(request):
         return redirect('encyclopedia:landing')
 
     # 폼 에러 시 다시 렌더링
+    messages.error(request, '저장 실패')
     from products.models import Product
     service = Product.objects.filter(title='교사 백과사전').first()
     entries = NotebookEntry.objects.filter(is_active=True).select_related('creator')
@@ -59,6 +60,7 @@ def entry_edit(request, pk):
             form.save()
             messages.success(request, '수정되었습니다!')
             return redirect('encyclopedia:landing')
+        messages.error(request, '저장 실패')
     else:
         form = NotebookEntryForm(instance=entry)
 

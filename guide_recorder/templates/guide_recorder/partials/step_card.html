@@ -25,7 +25,32 @@
 
             {# 설명 + 편집 (Alpine.js) #}
             <div class="p-4"
-                 x-data="{ editing: false, desc: '{{ step.description|escapejs }}' }">
+                 x-data="{
+                    editing: false,
+                    desc: '{{ step.description|escapejs }}',
+                    saving: false,
+                    status: '',
+                    async saveDescription() {
+                        this.saving = true;
+                        this.status = '';
+                        try {
+                            const response = await fetch('{% url 'guide_recorder:api_update_description' pk=step.pk %}', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}', 'Accept': 'application/json'},
+                                body: JSON.stringify({description: this.desc})
+                            });
+                            const data = await window.guideRecorderReadJson(response);
+                            if (!data.ok) {
+                                throw new Error(data.error || '저장 실패');
+                            }
+                            this.editing = false;
+                        } catch (error) {
+                            this.status = '저장 실패';
+                        } finally {
+                            this.saving = false;
+                        }
+                    }
+                 }">
 
                 {# 보기 모드 #}
                 <div x-show="!editing" class="flex items-start justify-between gap-3">
@@ -40,8 +65,9 @@
                         <button hx-post="{% url 'guide_recorder:api_delete_step' pk=step.pk %}"
                                 hx-target="#gr-step-{{ step.order }}"
                                 hx-swap="outerHTML"
-                                hx-confirm="이 단계를 삭제할까요?"
+                                hx-trigger="guide-confirmed"
                                 hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                data-gr-confirm="삭제하시겠습니까?"
                                 class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors"
                                 title="단계 삭제">
                             <i class="fa-solid fa-trash text-xs"></i>
@@ -62,17 +88,13 @@
                                 class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
                             취소
                         </button>
-                        <button @click.prevent="
-                                fetch('{% url 'guide_recorder:api_update_description' pk=step.pk %}', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-                                    body: JSON.stringify({description: desc})
-                                }).then(r => r.json()).then(d => { if(d.ok) editing = false; else alert('저장 실패'); })
-                                .catch(() => alert('저장 실패'));"
-                                class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
-                            저장
+                        <button @click.prevent="saveDescription()"
+                                :disabled="saving"
+                                class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
+                            <span x-text="saving ? '저장 중' : '저장'"></span>
                         </button>
                     </div>
+                    <p x-show="status" x-text="status" class="text-xs font-bold text-red-600"></p>
                 </div>
                 {% endif %}
 

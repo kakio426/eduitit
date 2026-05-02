@@ -124,7 +124,8 @@
                             </button>
 
                             <button type="submit" name="action" value="delete_selected"
-                                onclick="return confirm('선택한 기사를 삭제하시겠습니까? 연동된 이미지도 함께 삭제됩니다.');"
+                                data-aa-confirm="삭제하시겠습니까?"
+                                onclick="return confirm('삭제하시겠습니까?');"
                                 class="w-full py-5 rounded-3xl bg-red-500 text-white font-bold text-xl shadow-clay hover:bg-red-600 transition-all flex items-center justify-center gap-3">
                                 <i class="fa-solid fa-trash"></i> 선택 기사 삭제
                             </button>
@@ -138,6 +139,16 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="aaConfirmModal" class="hidden fixed left-0 right-0 bottom-0 top-[var(--main-nav-height,88px)] z-[90] items-center justify-center bg-black/30 px-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+        <p id="aaConfirmText" class="text-lg font-black text-gray-800">삭제하시겠습니까?</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="aaConfirmCancel" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600">취소</button>
+            <button type="button" id="aaConfirmOk" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white">삭제</button>
+        </div>
     </div>
 </div>
 
@@ -166,6 +177,63 @@
         const cb = document.getElementById(id);
         cb.checked = !cb.checked;
         updateCount();
+    }
+
+    const aaConfirmModal = document.getElementById('aaConfirmModal');
+    const aaConfirmText = document.getElementById('aaConfirmText');
+    const aaConfirmCancel = document.getElementById('aaConfirmCancel');
+    const aaConfirmOk = document.getElementById('aaConfirmOk');
+    let aaPendingButton = null;
+
+    function closeAaConfirm() {
+        aaConfirmModal.classList.add('hidden');
+        aaConfirmModal.classList.remove('flex');
+        if (aaPendingButton) {
+            aaPendingButton.focus();
+        }
+        aaPendingButton = null;
+    }
+
+    document.querySelectorAll('button[data-aa-confirm]').forEach((button) => {
+        button.onclick = null;
+        button.addEventListener('click', (event) => {
+            if (button.dataset.aaConfirmed === '1') {
+                delete button.dataset.aaConfirmed;
+                return;
+            }
+            event.preventDefault();
+            aaPendingButton = button;
+            aaConfirmText.textContent = button.dataset.aaConfirm || '삭제하시겠습니까?';
+            aaConfirmModal.classList.remove('hidden');
+            aaConfirmModal.classList.add('flex');
+            aaConfirmOk.focus();
+        });
+    });
+
+    if (aaConfirmCancel) {
+        aaConfirmCancel.addEventListener('click', closeAaConfirm);
+    }
+    if (aaConfirmModal) {
+        aaConfirmModal.addEventListener('click', (event) => {
+            if (event.target === aaConfirmModal) {
+                closeAaConfirm();
+            }
+        });
+    }
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && aaConfirmModal && !aaConfirmModal.classList.contains('hidden')) {
+            closeAaConfirm();
+        }
+    });
+    if (aaConfirmOk) {
+        aaConfirmOk.addEventListener('click', () => {
+            if (!aaPendingButton || !aaPendingButton.form) {
+                closeAaConfirm();
+                return;
+            }
+            aaPendingButton.dataset.aaConfirmed = '1';
+            aaPendingButton.form.requestSubmit(aaPendingButton);
+        });
     }
 </script>
 

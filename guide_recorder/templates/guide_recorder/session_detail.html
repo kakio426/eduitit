@@ -4,7 +4,7 @@
 {% block title %}{{ session.title }} — 가이드{% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-20 px-4 min-h-screen bg-gray-50">
+<section class="service-shell pb-20 px-4 min-h-screen bg-gray-50">
     <div class="max-w-3xl mx-auto">
 
         {# 헤더 #}
@@ -27,29 +27,49 @@
 
             {% if can_edit %}
             {{ share_url|default:""|json_script:"gr-initial-share-url" }}
-            <div class="flex gap-2 flex-shrink-0"
-                 x-data="{ shareUrl: JSON.parse(document.getElementById('gr-initial-share-url').textContent) || '', copied: false, publishing: false }">
+            <div class="flex flex-wrap gap-2 flex-shrink-0"
+                 x-data="{
+                    shareUrl: JSON.parse(document.getElementById('gr-initial-share-url').textContent) || '',
+                    copied: false,
+                    publishing: false,
+                    status: '',
+                    statusTone: 'text-gray-500',
+                    async toggleShare() {
+                        this.publishing = true;
+                        this.status = '';
+                        try {
+                            const response = await fetch('{% url 'guide_recorder:publish_session' pk=session.pk %}', {
+                                method: 'POST',
+                                headers: {'X-CSRFToken': '{{ csrf_token }}', 'Accept': 'application/json'}
+                            });
+                            const data = await window.guideRecorderReadJson(response);
+                            if (!data.ok) {
+                                throw new Error(data.error || '다시 시도');
+                            }
+                            if (data.share_url) {
+                                this.shareUrl = data.share_url;
+                                const copied = await window.guideRecorderCopyText(data.share_url);
+                                this.copied = copied;
+                                this.status = copied ? '복사 완료' : data.share_url;
+                                this.statusTone = copied ? 'text-green-600' : 'text-indigo-600';
+                                setTimeout(() => this.copied = false, 2500);
+                            } else {
+                                this.shareUrl = '';
+                                this.status = '공유 해제';
+                                this.statusTone = 'text-gray-500';
+                            }
+                        } catch (error) {
+                            this.status = '다시 시도';
+                            this.statusTone = 'text-red-600';
+                        } finally {
+                            this.publishing = false;
+                        }
+                    }
+                 }">
 
                 {# 공유 링크 복사 버튼 #}
                 <button
-                    @click.prevent="
-                        publishing = true;
-                        fetch('{% url 'guide_recorder:publish_session' pk=session.pk %}', {
-                            method: 'POST',
-                            headers: {'X-CSRFToken': '{{ csrf_token }}'}
-                        }).then(r => r.json()).then(d => {
-                            publishing = false;
-                            if (d.ok && d.share_url) {
-                                shareUrl = d.share_url;
-                                navigator.clipboard.writeText(d.share_url).then(() => {
-                                    copied = true;
-                                    setTimeout(() => copied = false, 2500);
-                                }).catch(() => { alert('공유 링크: ' + d.share_url); });
-                            } else if (d.ok && !d.share_url) {
-                                shareUrl = '';
-                                alert('공유가 해제되었습니다.');
-                            }
-                        }).catch(() => { publishing = false; alert('오류가 발생했습니다.'); });"
+                    @click.prevent="toggleShare()"
                     :disabled="publishing"
                     class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
                     :class="shareUrl
@@ -71,15 +91,15 @@
                 </button>
 
                 {# 세션 삭제 버튼 #}
-                <button
-                    hx-post="{% url 'guide_recorder:delete_session' pk=session.pk %}"
-                    hx-confirm="이 가이드를 삭제할까요? 되돌릴 수 없습니다."
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    hx-on::after-request="if(event.detail.successful) window.location.href='{% url 'guide_recorder:session_list' %}'"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">
-                    <i class="fa-solid fa-trash text-xs"></i>
-                    삭제
-                </button>
+                <form method="post" action="{% url 'guide_recorder:delete_session' pk=session.pk %}" data-gr-confirm="삭제하시겠습니까?" onsubmit="return confirm('삭제하시겠습니까?');">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                        삭제
+                    </button>
+                </form>
+                <p x-show="status" x-text="status" :class="statusTone" class="basis-full text-xs font-bold break-all"></p>
             </div>
             {% endif %}
         </div>
@@ -101,4 +121,127 @@
 
     </div>
 </section>
+
+<div id="grConfirmModal" class="hidden fixed left-0 right-0 bottom-0 top-[var(--main-nav-height,88px)] z-[90] items-center justify-center bg-black/30 px-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+        <p id="grConfirmText" class="text-lg font-black text-gray-800">삭제하시겠습니까?</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="grConfirmCancel" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-600">취소</button>
+            <button type="button" id="grConfirmOk" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white">삭제</button>
+        </div>
+    </div>
+</div>
+
+<script>
+window.guideRecorderReadJson = async function (response) {
+    const text = await response.text();
+    let data = {};
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (_error) {
+            data = {};
+        }
+    }
+    if (!response.ok) {
+        throw new Error(data.error || '다시 시도');
+    }
+    return data;
+};
+
+window.guideRecorderCopyText = async function (text) {
+    if (!navigator.clipboard || !text) {
+        return false;
+    }
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (_error) {
+        return false;
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('grConfirmModal');
+    const modalText = document.getElementById('grConfirmText');
+    const cancelButton = document.getElementById('grConfirmCancel');
+    const okButton = document.getElementById('grConfirmOk');
+    if (!modal || !modalText || !cancelButton || !okButton) {
+        return;
+    }
+
+    let pendingTarget = null;
+    let pendingButton = null;
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        pendingTarget = null;
+        if (pendingButton) {
+            pendingButton.focus();
+        }
+        pendingButton = null;
+    };
+
+    document.querySelectorAll('[data-gr-confirm]').forEach((target) => {
+        if (target.tagName === 'FORM') {
+            target.onsubmit = null;
+            target.addEventListener('submit', (event) => {
+                if (target.dataset.grConfirmed === '1') {
+                    delete target.dataset.grConfirmed;
+                    return;
+                }
+                event.preventDefault();
+                pendingTarget = target;
+                pendingButton = event.submitter || target.querySelector('button[type="submit"]');
+                modalText.textContent = target.dataset.grConfirm || '삭제하시겠습니까?';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                okButton.focus();
+            });
+            return;
+        }
+
+        target.addEventListener('click', (event) => {
+            event.preventDefault();
+            pendingTarget = target;
+            pendingButton = target;
+            modalText.textContent = target.dataset.grConfirm || '삭제하시겠습니까?';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            okButton.focus();
+        });
+    });
+
+    cancelButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
+    okButton.addEventListener('click', () => {
+        if (!pendingTarget) {
+            closeModal();
+            return;
+        }
+        if (pendingTarget.tagName === 'FORM') {
+            pendingTarget.dataset.grConfirmed = '1';
+            if (pendingButton) {
+                pendingTarget.requestSubmit(pendingButton);
+            } else {
+                pendingTarget.requestSubmit();
+            }
+            return;
+        }
+        if (window.htmx) {
+            window.htmx.trigger(pendingTarget, 'guide-confirmed');
+        }
+        closeModal();
+    });
+});
+</script>
 {% endblock %}

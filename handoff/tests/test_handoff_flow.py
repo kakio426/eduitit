@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -175,7 +177,7 @@ class HandoffFlowTest(TestCase):
             reverse("handoff:group_detail", args=[group.id]),
             data={"return_to": return_to},
         )
-        self.assertContains(detail_response, "활성 멤버를 먼저 넣어야 연결할 수 있습니다")
+        self.assertContains(detail_response, "활성 멤버 필요")
         self.assertNotContains(
             detail_response,
             f"{return_to}&amp;shared_roster_group={group.id}",
@@ -295,11 +297,11 @@ class HandoffFlowTest(TestCase):
         self.assertContains(dashboard_response, "공용 명부 목록")
         self.assertNotContains(dashboard_response, "최근 배부 세션")
         self.assertNotContains(dashboard_response, "배부 세션 시작")
-        self.assertContains(dashboard_response, "진행 중 세션 이어하기")
+        self.assertContains(dashboard_response, "진행 중 세션")
 
         detail_response = self.client.get(reverse("handoff:group_detail", args=[group.id]))
-        self.assertContains(detail_response, "이 명부로 배부 체크 시작")
-        self.assertContains(detail_response, "이 명부의 최근 배부 세션")
+        self.assertContains(detail_response, "배부 시작")
+        self.assertContains(detail_response, "최근 세션")
         self.assertContains(detail_response, session.title)
 
     def test_invalid_session_create_returns_to_group_detail(self):
@@ -451,14 +453,14 @@ class HandoffProxyRosterTests(TestCase):
 
         response = self.client.get(reverse("handoff:dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
+        self.assertContains(response, "교사 명부 관리")
         self.assertContains(response, 'name="acting_for_user"', html=False)
 
         self.client.force_login(self.other_admin)
 
         response = self.client.get(reverse("handoff:dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "교사 대신 공용 명부를 만들어 넣을 수 있습니다.")
+        self.assertNotContains(response, "교사 명부 관리")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
 
     def test_only_main_admin_sees_proxy_roster_controls_on_landing(self):
@@ -466,14 +468,14 @@ class HandoffProxyRosterTests(TestCase):
 
         response = self.client.get(reverse("handoff:landing"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "다른 선생님 명부 넣어주기")
+        self.assertContains(response, "다른 교사 명부 관리")
         self.assertContains(response, 'name="acting_for_user"', html=False)
 
         self.client.force_login(self.other_admin)
 
         response = self.client.get(reverse("handoff:landing"))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "다른 선생님 명부 넣어주기")
+        self.assertNotContains(response, "다른 교사 명부 관리")
         self.assertNotContains(response, 'name="acting_for_user"', html=False)
 
     def test_main_admin_can_search_proxy_teachers_by_username_on_landing(self):
@@ -490,7 +492,7 @@ class HandoffProxyRosterTests(TestCase):
         self.assertContains(response, 'name="teacher_query"', html=False)
         self.assertContains(response, "한빛선생 (teacher_alpha)")
         self.assertNotContains(response, "별빛선생 (teacher_beta)")
-        self.assertContains(response, '"teacher_alpha" 검색 결과 1명')
+        self.assertContains(response, '"teacher_alpha" 1명')
 
     def test_main_admin_can_search_proxy_teachers_by_nickname_on_dashboard(self):
         self._create_teacher("teacher_alpha", "alpha@example.com", "한빛선생")
@@ -507,7 +509,7 @@ class HandoffProxyRosterTests(TestCase):
         self.assertContains(response, "김선생 (teacher_proxy)")
         self.assertNotContains(response, "한빛선생 (teacher_alpha)")
         self.assertNotContains(response, "별빛선생 (teacher_beta)")
-        self.assertContains(response, '"김선생" 검색 결과 1명')
+        self.assertContains(response, '"김선생" 1명')
 
     def test_main_admin_can_create_teacher_owned_roster_and_teacher_can_use_it(self):
         self.client.force_login(self.main_admin)
@@ -691,3 +693,12 @@ class HandoffProxyRosterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("운영자 계정에서만 다른 교사에게 명부를 복사할 수 있습니다.", self._message_texts(response))
         self.assertFalse(HandoffRosterGroup.objects.filter(owner=self.teacher, name="운영자 명부").exists())
+
+
+class HandoffUxFailureTests(TestCase):
+    def test_session_detail_js_has_no_alert_fallback(self):
+        js_path = Path(__file__).resolve().parents[1] / "static" / "handoff" / "js" / "session_detail.js"
+        script = js_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("window.alert", script)
+        self.assertIn("handoffStatusToast", script)
