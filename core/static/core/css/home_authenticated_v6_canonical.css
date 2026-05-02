@@ -8712,3 +8712,119 @@ transform: none;
         max-height: min(44svh, 26rem);
     }
 }
+
+/* AI home layout stabilization: keep the visible card paint and chat lane stable after late skins. */
+.home-v6-page .home-v6-card,
+.home-v6-page .home-mini-card--v6,
+.home-v6-page [data-home-v6-rail-card="true"],
+.home-v6-page [data-home-v6-favorite-card="true"],
+.home-v6-page [data-home-v6-mobile-workbench-card="true"],
+.home-v6-page [data-home-v6-representative-services="true"] .home-v6-card {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    backface-visibility: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.home-v6-page .home-v6-card:hover,
+.home-v6-page .home-v6-card:focus-visible,
+.home-v6-page .home-mini-card--v6:hover,
+.home-v6-page .home-mini-card--v6:focus-visible,
+.home-v6-page [data-home-v6-rail-card="true"]:hover,
+.home-v6-page [data-home-v6-rail-card="true"]:focus-visible,
+.home-v6-page [data-home-v6-favorite-card="true"]:hover,
+.home-v6-page [data-home-v6-favorite-card="true"]:focus-visible,
+.home-v6-page [data-home-v6-mobile-workbench-card="true"]:hover,
+.home-v6-page [data-home-v6-mobile-workbench-card="true"]:focus-visible {
+    transform: none;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-card,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-card {
+    overflow: hidden;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-main,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: clamp(38rem, 70vh, 54rem);
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-main-head--single-shell,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main-head--single-shell {
+    display: grid;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    align-content: start;
+    min-height: 0;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-dialogue-stage,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
+    align-self: stretch;
+    min-height: clamp(24rem, 52vh, 40rem);
+    max-height: none;
+    overflow-y: auto;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-dialogue-stage .home-v6-chat-history,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage .home-v6-chat-history {
+    min-height: 100%;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-dialogue-stage .home-v6-chat-history::before,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage .home-v6-chat-history::before {
+    flex: 0 0 0;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-chat-empty,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-chat-empty {
+    display: grid;
+    align-content: start;
+    min-height: 100%;
+}
+
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-card.is-shell-empty .home-v6-agent-dialogue-stage {
+    display: flex !important;
+}
+
+.home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-composer-dock,
+.home-v6-page .home-v6-mobile-agent-section .home-v6-agent-composer-dock {
+    align-self: end;
+}
+
+@media (min-width: 1100px) {
+    .home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-dialogue-stage {
+        min-height: clamp(26rem, 54vh, 42rem);
+        max-height: none;
+    }
+}
+
+@media (max-width: 1099px) {
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
+        min-height: min(82svh, 44rem);
+    }
+
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
+        min-height: min(38svh, 23rem);
+        max-height: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-main,
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-main {
+        min-height: min(82svh, 42rem);
+    }
+
+    .home-v6-page [data-home-v6-agent-workspace="true"] .home-v6-agent-dialogue-stage,
+    .home-v6-page .home-v6-mobile-agent-section .home-v6-agent-dialogue-stage {
+        min-height: min(40svh, 24rem);
+        max-height: none;
+    }
+}
