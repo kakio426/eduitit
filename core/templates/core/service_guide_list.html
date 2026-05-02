@@ -9,112 +9,149 @@
 
 {% block content %}
 <section class="min-h-screen bg-[#E0E5EC] px-4 pb-20 service-shell">
-    <div class="mx-auto max-w-7xl space-y-8">
-        <header class="space-y-5">
-            <div class="flex flex-wrap gap-3">
-                {% for entry in guide_entry_points %}
-                <a href="{{ entry.href }}" class="min-w-[12rem] rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-white">
-                    <div class="text-sm font-extrabold">{{ entry.title }}</div>
-                    <div class="mt-1 text-xs text-slate-500">{{ entry.description }}</div>
-                </a>
-                {% endfor %}
-            </div>
-
-            <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-sm md:p-8">
-                <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-                    <div class="max-w-3xl">
-                        <span class="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
-                            막힐 때만 짧게 보는 안내
-                        </span>
-                        <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">처음 시작과 자주 하는 일만 먼저 보세요</h1>
-                        <p class="mt-3 text-base leading-7 text-slate-600">처음 시작, 캘린더, 자주 하는 일 순서로 필요한 안내를 찾습니다.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-3 text-sm font-bold text-slate-600">
-                        <span class="rounded-full border border-white/70 bg-slate-50 px-4 py-2">활성 서비스 {{ active_products_count }}개</span>
-                        <span class="rounded-full border border-white/70 bg-slate-50 px-4 py-2">이용방법 {{ manual_count }}개</span>
-                        {% if fallback_guide_count > 0 %}
-                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">자동 안내 {{ fallback_guide_count }}개</span>
-                        {% endif %}
-                    </div>
+    <div class="mx-auto max-w-6xl space-y-7">
+        <header class="rounded-xl border border-white/70 bg-white/90 p-5 shadow-sm md:p-6">
+            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <h1 class="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">이용방법</h1>
+                    <p class="mt-2 text-sm font-bold text-slate-500">막힌 서비스만 찾아 바로 봅니다.</p>
                 </div>
+                <label class="relative block w-full md:max-w-sm">
+                    <span class="sr-only">서비스 검색</span>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="search"
+                           data-service-guide-search
+                           class="h-12 w-full rounded-lg border border-slate-200 bg-white pl-11 pr-4 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                           placeholder="서비스 이름">
+                </label>
             </div>
         </header>
 
         {% for group in guide_groups %}
-        <section id="{{ group.anchor }}" class="space-y-4 rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-sm md:p-8">
+        <section id="{{ group.anchor }}" class="space-y-3" data-service-guide-section>
             <div>
-                <h2 class="text-2xl font-black text-slate-900">{{ group.title }}</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500">{{ group.description }}</p>
+                <h2 class="text-xl font-black text-slate-900 md:text-2xl">{{ group.title }}</h2>
             </div>
 
             {% if group.items %}
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-3 sm:grid-cols-3">
                 {% for item in group.items %}
-                <a href="{{ item.href }}" class="flex h-full flex-col justify-between rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                    <div>
-                        <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{{ group.title }}</p>
-                        <h3 class="mt-2 text-lg font-black text-slate-900">{{ item.title }}</h3>
-                        <p class="mt-3 text-sm leading-6 text-slate-500">{{ item.description }}</p>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between gap-3">
-                        <span class="text-xs font-bold text-slate-400">{{ item.meta }}</span>
-                        <span class="inline-flex items-center gap-2 text-sm font-bold text-indigo-700">바로 보기 <i class="fa-solid fa-arrow-right"></i></span>
-                    </div>
+                <a href="{{ item.href }}" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-4 text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
+                    <span>
+                        <strong class="block text-lg font-black">{{ item.title }}</strong>
+                        <span class="mt-1 block text-xs font-bold text-slate-400">{{ item.meta }}</span>
+                    </span>
+                    <i class="fa-solid fa-arrow-right text-indigo-600"></i>
                 </a>
                 {% endfor %}
             </div>
             {% endif %}
 
             {% if group.manuals %}
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {% for manual in group.manuals %}
-                <a href="{% url 'service_guide_detail' manual.pk %}" data-service-guide-trigger="{{ manual.pk }}" class="group flex h-full flex-col justify-between rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                    <div>
-                        <div class="flex items-center gap-3">
-                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl shadow-inner">
-                                <i class="{{ manual.product|product_icon_class }} text-{{ manual.product.color_theme }}-500"></i>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <h3 class="text-lg font-black text-slate-900">{{ manual.public_title }}</h3>
-                                <p class="mt-1 truncate text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{{ manual.public_service_name }}</p>
-                            </div>
+                <article data-service-guide-trigger="{{ manual.pk }}"
+                         data-service-guide-search-item
+                         data-service-guide-search-text="{{ manual.guide_card_title }} {{ manual.guide_card_subtitle }} {{ manual.public_title }} {{ manual.public_service_name }}"
+                         tabindex="0"
+                         role="button"
+                         class="group flex h-full cursor-pointer flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-100">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg shadow-inner">
+                            <i class="{{ manual.product|product_icon_class }} text-{{ manual.product.color_theme }}-500"></i>
                         </div>
-                        <p class="mt-4 line-clamp-3 text-sm leading-6 text-slate-500">{{ manual.public_description|default:"핵심 흐름만 짧게 볼 수 있는 안내입니다." }}</p>
-                        {% if manual.public_chips %}
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            {% for chip in manual.public_chips %}
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">{{ chip }}</span>
-                            {% endfor %}
+                        <div class="min-w-0 flex-1">
+                            <h3 class="truncate text-lg font-black text-slate-900">{{ manual.guide_card_title }}</h3>
+                            {% if manual.guide_card_subtitle %}
+                            <p class="mt-1 line-clamp-1 text-sm font-bold text-slate-500">{{ manual.guide_card_subtitle }}</p>
+                            {% endif %}
                         </div>
+                    </div>
+
+                    {% if manual.guide_card_chips %}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        {% for chip in manual.guide_card_chips %}
+                        <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">{{ chip }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <button type="button"
+                                data-service-guide-trigger="{{ manual.pk }}"
+                                class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 transition hover:bg-indigo-100">
+                            보기
+                        </button>
+                        {% if manual.guide_launch_href %}
+                        <a href="{{ manual.guide_launch_href }}"
+                           data-service-guide-bypass
+                           {% if manual.guide_launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                           class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-900 text-sm font-black text-white transition hover:bg-indigo-700">
+                            열기
+                        </a>
+                        {% else %}
+                        <span class="inline-flex h-11 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-400">준비중</span>
                         {% endif %}
                     </div>
-                    <div class="mt-5 flex items-center justify-between gap-3">
-                        <span class="text-xs font-bold text-slate-400">{{ group.title }}</span>
-                        <span class="inline-flex items-center gap-2 text-sm font-bold text-indigo-700">이용방법 <i class="fa-solid fa-arrow-right"></i></span>
-                    </div>
-                </a>
+                </article>
                 {% endfor %}
             </div>
             {% endif %}
 
             {% if group.pending_products %}
-            <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
-                <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">자동 구성 안내</p>
-                <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {% for product in group.pending_products %}
-                    <a href="{{ product.pending_href }}" data-service-guide-trigger="{{ product.pending_guide_id }}" class="group flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:text-slate-900 hover:shadow-sm">
-                        <span class="inline-flex items-center gap-3">
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {% for product in group.pending_products %}
+                <article data-service-guide-trigger="{{ product.pending_guide_id }}"
+                         data-service-guide-search-item
+                         data-service-guide-search-text="{{ product.pending_public_name|default:product.title }} {{ product.pending_card_subtitle }}"
+                         tabindex="0"
+                         role="button"
+                         class="group flex h-full cursor-pointer flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-100">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg shadow-inner">
                             <i class="{{ product|product_icon_class }} text-{{ product.color_theme }}-500"></i>
-                            {{ product.pending_public_name|default:product.title }}
-                        </span>
-                        <span class="text-xs text-indigo-700">보기</span>
-                    </a>
-                    {% endfor %}
-                </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="truncate text-lg font-black text-slate-900">{{ product.pending_public_name|default:product.title }}</h3>
+                            <p class="mt-1 line-clamp-1 text-sm font-bold text-slate-500">{{ product.pending_card_subtitle }}</p>
+                        </div>
+                    </div>
+
+                    {% if product.pending_card_chips %}
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        {% for chip in product.pending_card_chips %}
+                        <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">{{ chip }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <button type="button"
+                                data-service-guide-trigger="{{ product.pending_guide_id }}"
+                                class="inline-flex h-11 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-black text-indigo-700 transition hover:bg-indigo-100">
+                            보기
+                        </button>
+                        {% if product.pending_launch_href %}
+                        <a href="{{ product.pending_launch_href }}"
+                           data-service-guide-bypass
+                           {% if product.pending_launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                           class="inline-flex h-11 items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white transition hover:bg-indigo-700">
+                            열기
+                        </a>
+                        {% else %}
+                        <span class="inline-flex h-11 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-slate-400">준비중</span>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
             </div>
             {% endif %}
         </section>
         {% endfor %}
+
+        <p data-service-guide-empty hidden class="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-black text-slate-500 shadow-sm">
+            찾는 서비스가 없습니다.
+        </p>
     </div>
 </section>
 {% include 'core/includes/service_guide_modal.html' %}

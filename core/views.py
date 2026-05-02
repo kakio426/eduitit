@@ -4633,8 +4633,24 @@ def _build_guide_entry_points():
     ]
 
 
-def _build_guide_groups(manuals, products_without_manual):
+def _build_guide_groups(manuals, products_without_manual, request):
     prepared_manuals = [_prepare_manual_display(manual) for manual in manuals]
+    for manual in prepared_manuals:
+        launch_href, launch_is_external = _resolve_product_launch_url(manual.product, user=request.user)
+        card_subtitle = (
+            getattr(manual.product, "teacher_first_task_label", "")
+            or getattr(manual.product, "teacher_first_support_label", "")
+            or getattr(manual.product, "lead_text", "")
+            or getattr(manual.product, "solve_text", "")
+            or ""
+        )
+        if not card_subtitle and manual.public_title and "이용방법" not in manual.public_title:
+            card_subtitle = manual.public_title
+        manual.guide_launch_href = launch_href
+        manual.guide_launch_is_external = launch_is_external
+        manual.guide_card_title = manual.public_service_name
+        manual.guide_card_subtitle = _service_guide_clean_line(card_subtitle)
+        manual.guide_card_chips = list(manual.public_chips[:2])
 
     calendar_manuals = []
     task_manuals = []
@@ -4648,34 +4664,19 @@ def _build_guide_groups(manuals, products_without_manual):
     today_href = _safe_calendar_surface_reverse("calendar_today", "classcalendar:today")
     start_items = [
         {
-            "title": "홈에서 어디를 먼저 보는지",
-            "description": "홈에서 오늘 해야 하는 일과 메인 캘린더를 먼저 보는 흐름입니다.",
+            "title": "홈",
             "href": reverse("home"),
-            "meta": "홈에서 바로 확인",
+            "meta": "오늘 일",
         },
         {
-            "title": "오늘 보기 열기",
-            "description": "오늘 일정, 오늘 메모, 오늘 할 일을 한 화면에서 바로 확인합니다.",
+            "title": "오늘",
             "href": today_href or reverse("home"),
-            "meta": "오늘 보기",
+            "meta": "일정",
         },
         {
-            "title": "월간 확장 보기 열기",
-            "description": "날짜를 넓게 보거나 상세 편집이 필요할 때만 월간 화면으로 이동합니다.",
-            "href": calendar_href or reverse("home"),
-            "meta": "확장 보기",
-        },
-        {
-            "title": "첫 일정 만들기",
-            "description": "오늘 보기에서 일정 한 건만 먼저 추가해도 하루 흐름이 잡힙니다.",
-            "href": f"{today_href}?action=create" if today_href else reverse("home"),
-            "meta": "일정 추가",
-        },
-        {
-            "title": "자주 쓰는 도구 저장하기",
-            "description": "홈에서 자주 쓰는 도구에 추가해 다음부터 바로 열 수 있습니다.",
-            "href": reverse("home"),
-            "meta": "홈에서 설정",
+            "title": "서비스 찾기",
+            "href": reverse("product_list"),
+            "meta": "전체",
         },
     ]
 
@@ -4687,13 +4688,25 @@ def _build_guide_groups(manuals, products_without_manual):
         product.pending_public_name = _get_public_product_name(product)
         product.pending_guide_id = f"product-{product.pk}"
         product.pending_href = reverse("product_detail", kwargs={"pk": product.pk})
+        product.pending_launch_href, product.pending_launch_is_external = _resolve_product_launch_url(
+            product,
+            user=request.user,
+        )
+        product.pending_card_subtitle = (
+            getattr(product, "teacher_first_task_label", "")
+            or getattr(product, "teacher_first_support_label", "")
+            or getattr(product, "lead_text", "")
+            or getattr(product, "solve_text", "")
+            or "서비스 열기"
+        )
+        product.pending_card_chips = list(getattr(product, "detail_context_chips", []) or [])[:2]
 
     return [
         {
             "key": "start",
             "anchor": "guide-start",
             "title": "처음 시작",
-            "description": "홈과 오늘 보기, 월간 확장 보기 순서만 짧게 확인합니다.",
+            "description": "",
             "items": start_items,
             "manuals": [],
             "pending_products": [],
@@ -4701,8 +4714,8 @@ def _build_guide_groups(manuals, products_without_manual):
         {
             "key": "calendar",
             "anchor": "guide-calendar",
-            "title": "메인 캘린더 흐름",
-            "description": "홈 캘린더에서 자주 이어지는 흐름을 한곳에서 빠르게 찾을 수 있습니다.",
+            "title": "캘린더",
+            "description": "",
             "items": [],
             "manuals": calendar_manuals,
             "pending_products": [],
@@ -4711,7 +4724,7 @@ def _build_guide_groups(manuals, products_without_manual):
             "key": "tasks",
             "anchor": "guide-tasks",
             "title": "자주 하는 업무",
-            "description": "안내장, 수합, 수업 준비, 활동, 상담 흐름을 상황별로 찾습니다.",
+            "description": "",
             "items": [],
             "manuals": task_manuals,
             "pending_products": pending_products,
@@ -4776,7 +4789,7 @@ def _service_guide_clean_line(value):
     return text
 
 
-def _service_guide_points(content, *, limit=5):
+def _service_guide_points(content, *, limit=3):
     points = []
     for raw_line in str(content or "").replace("\r\n", "\n").splitlines():
         line = _service_guide_clean_line(raw_line)
@@ -4787,8 +4800,8 @@ def _service_guide_points(content, *, limit=5):
             candidate = re.sub(r":\s*/\s*$", ".", candidate)
             if not candidate:
                 continue
-            if len(candidate) > 120:
-                candidate = f"{candidate[:119].rstrip()}…"
+            if len(candidate) > 48:
+                candidate = f"{candidate[:47].rstrip()}…"
             points.append(candidate)
             if len(points) >= limit:
                 break
@@ -4800,18 +4813,18 @@ def _service_guide_points(content, *, limit=5):
     fallback = _service_guide_clean_line(content)
     if not fallback:
         return []
-    if len(fallback) > 120:
-        fallback = f"{fallback[:119].rstrip()}…"
+    if len(fallback) > 48:
+        fallback = f"{fallback[:47].rstrip()}…"
     return [fallback]
 
 
 def _service_guide_slide_summary(content, points):
     if len(points) >= 2:
-        return "아래 순서대로 실제 화면의 버튼과 상태를 확인하면 바로 따라 할 수 있습니다."
+        return ""
 
     summary = _service_guide_clean_line(content)
-    if len(summary) > 140:
-        summary = f"{summary[:139].rstrip()}…"
+    if len(summary) > 60:
+        summary = f"{summary[:59].rstrip()}…"
     return summary
 
 
@@ -4962,8 +4975,8 @@ def _build_service_guide_modal_payload(manuals, request):
             {
                 "id": manual.pk,
                 "serviceName": manual.public_service_name,
-                "title": manual.public_title,
-                "description": _service_guide_clean_line(manual.public_description),
+                "title": manual.public_service_name,
+                "description": "",
                 "chips": manual.public_chips,
                 "launchHref": launch_href,
                 "launchIsExternal": launch_is_external,
@@ -5037,10 +5050,8 @@ def _build_service_guide_product_fallback_payload(products, request):
             {
                 "id": f"product-{product.pk}",
                 "serviceName": public_name,
-                "title": f"{public_name} 이용방법",
-                "description": _service_guide_clean_line(
-                    _replace_public_service_terms(getattr(product, "description", ""), product)
-                ),
+                "title": public_name,
+                "description": "",
                 "chips": list(getattr(product, "detail_context_chips", []) or []),
                 "launchHref": launch_href,
                 "launchIsExternal": launch_is_external,
@@ -7797,7 +7808,7 @@ def service_guide_list(request):
         "core/service_guide_list.html",
         {
             "guide_entry_points": _build_guide_entry_points(),
-            "guide_groups": _build_guide_groups(manual_list, pending_products),
+            "guide_groups": _build_guide_groups(manual_list, pending_products, request),
             "active_products_count": Product.objects.filter(is_active=True).count(),
             "manual_count": len(manual_list),
             "missing_manual_count": len(pending_products),
@@ -7819,6 +7830,9 @@ def service_guide_detail(request, pk):
     launch_href, launch_is_external = _resolve_product_launch_url(manual.product, user=request.user)
     sections = list(manual.sections.all())
     guide_modal_payload = _build_service_guide_modal_payload([manual], request)
+    guide_preview_screenshot_url = ""
+    if guide_modal_payload and guide_modal_payload[0].get("slides"):
+        guide_preview_screenshot_url = guide_modal_payload[0]["slides"][0].get("screenshotUrl", "")
 
     return render(
         request,
@@ -7831,6 +7845,7 @@ def service_guide_detail(request, pk):
             "launch_label": manual.public_launch_label,
             "guide_modal_payload": guide_modal_payload,
             "guide_modal_autostart": manual.pk,
+            "guide_preview_screenshot_url": guide_preview_screenshot_url,
             **build_service_guide_detail_seo(request, manual).as_context(),
         },
     )

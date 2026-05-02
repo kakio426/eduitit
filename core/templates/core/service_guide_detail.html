@@ -1,181 +1,98 @@
 {% extends 'base.html' %}
-{% load static manual_extras cloudinary_extras %}
+{% load static manual_extras %}
 
 {% block title %}{{ page_title|default:'서비스 이용방법 - Eduitit' }}{% endblock %}
 
 {% block extra_css %}
 <link href="{% static 'core/css/service_guide_modal.css' %}" rel="stylesheet">
-<style>
-    .prose img {
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .manual-content ul {
-        list-style-type: disc;
-        padding-left: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    .manual-content ol {
-        list-style-type: decimal;
-        padding-left: 1.5rem;
-        margin-bottom: 1rem;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <section class="min-h-screen bg-[#F3F4F6] px-4 pb-20 service-shell">
-    <div class="mx-auto max-w-5xl">
-        <div class="mb-8 flex items-center gap-4">
-            <a href="{% url 'service_guide_list' %}" class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-400 transition hover:text-indigo-600 hover:shadow-md">
+    <div class="mx-auto max-w-5xl space-y-6">
+        <nav>
+            <a href="{% url 'service_guide_list' %}" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-indigo-600">
+                <span class="sr-only">목록</span>
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
-            <span class="text-sm font-bold text-gray-500">빠른 사용 안내</span>
-        </div>
+        </nav>
 
-        <div class="mb-12 rounded-[2rem] border border-white/80 bg-white/90 p-8 shadow-sm ring-1 ring-gray-900/5 md:p-10">
-            <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                <div class="max-w-3xl">
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
-                        <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">{{ manual.public_service_name|default:manual.product.title }}</span>
-                        <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-500">{{ manual.product.get_service_type_display }}</span>
-                        {% if manual.is_published %}
-                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">바로 사용 가능</span>
-                        {% else %}
-                        <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">안내 준비 중</span>
-                        {% endif %}
-                    </div>
-                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">{{ manual.public_title|default:manual.title }}</h1>
-                    {% if manual.public_description %}
-                    <p class="mt-3 max-w-2xl text-base leading-7 text-slate-600 whitespace-pre-line">{{ manual.public_description }}</p>
-                    {% endif %}
+        <header class="rounded-[1.5rem] border border-white/80 bg-white/95 p-5 shadow-sm md:p-7">
+            <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div class="min-w-0">
+                    <p class="text-sm font-black text-indigo-600">{{ manual.public_service_name|default:manual.product.title }}</p>
+                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">{{ manual.public_service_name|default:manual.product.title }}</h1>
                     {% if manual.public_chips %}
                     <div class="mt-4 flex flex-wrap gap-2">
-                        {% for chip in manual.public_chips %}
+                        {% for chip in manual.public_chips|slice:":2" %}
                         <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ chip }}</span>
                         {% endfor %}
                     </div>
                     {% endif %}
                 </div>
 
-                <div class="flex-shrink-0">
-                    <button type="button" data-service-guide-trigger="{{ manual.pk }}"
-                       class="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 md:w-auto">
-                        화면 안내 <i class="fa-solid fa-images"></i>
+                <div class="grid gap-2 sm:grid-cols-2 md:min-w-[18rem]">
+                    <button type="button"
+                            data-service-guide-trigger="{{ manual.pk }}"
+                            class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 text-sm font-black text-indigo-700 transition hover:bg-indigo-100">
+                        보기
                     </button>
                     {% if launch_href %}
-                    <a href="{{ launch_href }}" {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                       class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        {{ launch_label|default:"바로 열기" }} <i class="fa-solid fa-arrow-right-long"></i>
+                    <a href="{{ launch_href }}"
+                       {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+                       class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-black text-white transition hover:bg-indigo-700">
+                        서비스 열기
                     </a>
                     {% endif %}
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="space-y-14">
-            {% for section in sections %}
-            <div id="section-{{ section.id }}" class="scroll-mt-40">
-                {% if section.display_title|default:section.title %}
-                <div class="mb-5 ml-1 flex items-center gap-3">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white">
-                        {{ section.display_order }}
+        <section class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div class="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+                <button type="button"
+                        data-service-guide-trigger="{{ manual.pk }}"
+                        class="group block w-full bg-slate-50 p-4 text-left transition hover:bg-white">
+                    <div class="aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                        {% if guide_preview_screenshot_url %}
+                        <img src="{{ guide_preview_screenshot_url }}" alt="{{ manual.public_service_name }} 화면" class="h-full w-full object-contain object-top">
+                        {% else %}
+                        <div class="flex h-full items-center justify-center text-sm font-black text-slate-400">
+                            화면 보기
+                        </div>
+                        {% endif %}
+                    </div>
+                    <span class="mt-3 inline-flex items-center gap-2 text-sm font-black text-indigo-700">
+                        화면으로 보기
+                        <i class="fa-solid fa-arrow-right"></i>
                     </span>
-                    <h2 class="text-2xl font-black text-slate-900">{{ section.display_title|default:section.title }}</h2>
-                    {% if section.badge_text %}
-                    <span class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{{ section.badge_text }}</span>
-                    {% endif %}
-                </div>
-                {% endif %}
+                </button>
+            </div>
 
-                <div class="overflow-hidden rounded-[2rem] border border-gray-200/70 bg-white shadow-sm ring-1 ring-gray-900/5">
-                    {% if section.layout_type == 'text_only' %}
-                        <div class="manual-content prose max-w-none p-8 text-gray-600 md:p-12">{{ section.display_content|default:section.content|clean_manual_text|linebreaks }}</div>
-
-                    {% elif section.layout_type == 'image_left' %}
-                        <div class="grid gap-0 md:grid-cols-2">
-                            <div class="relative min-h-[300px] border-b border-gray-100 bg-gray-50 md:border-b-0 md:border-r">
-                                {% if section.image %}
-                                <img src="{{ section.image.url|optimize }}" alt="{{ section.display_title|default:section.title }}" loading="lazy" class="absolute inset-0 h-full w-full object-cover">
-                                {% else %}
-                                <div class="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-300">
-                                    <div class="text-center">
-                                        <i class="fa-regular fa-image mb-2 block text-4xl"></i>
-                                        <span class="text-xs font-bold">이미지 없음</span>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="manual-content prose max-w-none p-8 md:p-12">{{ section.display_content|default:section.content|clean_manual_text|linebreaks }}</div>
-                        </div>
-
-                    {% elif section.layout_type == 'image_right' %}
-                        <div class="grid gap-0 md:grid-cols-2">
-                            <div class="manual-content prose order-2 max-w-none p-8 md:order-1 md:p-12">{{ section.display_content|default:section.content|clean_manual_text|linebreaks }}</div>
-                            <div class="relative order-1 min-h-[300px] border-t border-gray-100 bg-gray-50 md:order-2 md:border-l md:border-t-0">
-                                {% if section.image %}
-                                <img src="{{ section.image.url|optimize }}" alt="{{ section.display_title|default:section.title }}" loading="lazy" class="absolute inset-0 h-full w-full object-cover">
-                                {% else %}
-                                <div class="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-300">
-                                    <div class="text-center">
-                                        <i class="fa-regular fa-image mb-2 block text-4xl"></i>
-                                        <span class="text-xs font-bold">이미지 없음</span>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                    {% elif section.layout_type == 'full_visual' %}
-                        <div class="bg-gray-50 p-6 md:p-8">
-                            {% if section.video_url %}
-                            <div class="mb-6 aspect-video overflow-hidden rounded-2xl bg-black shadow-lg ring-1 ring-black/10">
-                                <iframe src="{{ section.video_url }}" class="h-full w-full" frameborder="0" allowfullscreen></iframe>
-                            </div>
-                            {% elif section.image %}
-                            <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="mb-6 w-full rounded-2xl shadow-lg ring-1 ring-black/5">
-                            {% endif %}
-
+            <aside class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 class="text-lg font-black text-slate-900">순서</h2>
+                <ol class="mt-4 space-y-3">
+                    {% for section in sections %}
+                    <li class="flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">{{ forloop.counter }}</span>
+                        <div class="min-w-0">
+                            <p class="font-black leading-snug text-slate-900">{{ section.display_title|default:section.title }}</p>
                             {% if section.display_content|default:section.content %}
-                            <div class="manual-content prose mx-auto max-w-3xl p-2 text-center">{{ section.display_content|default:section.content|clean_manual_text|linebreaks }}</div>
+                            <p class="mt-1 line-clamp-2 text-sm font-bold leading-5 text-slate-500">{{ section.display_content|default:section.content|clean_manual_text|truncatechars:72 }}</p>
                             {% endif %}
                         </div>
+                    </li>
+                    {% empty %}
+                    <li class="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-500">바로 열기</li>
+                    {% endfor %}
+                </ol>
+            </aside>
+        </section>
 
-                    {% elif section.layout_type == 'card_carousel' %}
-                        <div class="bg-indigo-50/40 p-8 md:p-10">
-                            <div class="manual-content prose mb-8 max-w-none">{{ section.display_content|default:section.content|clean_manual_text|linebreaks }}</div>
-                            {% if section.image %}
-                            <div class="overflow-hidden rounded-2xl border-4 border-white shadow-lg">
-                                <img src="{{ section.image.url|optimize }}" alt="{{ section.title }}" loading="lazy" class="h-auto w-full">
-                            </div>
-                            {% else %}
-                            <div class="flex h-48 items-center justify-center rounded-2xl border-2 border-dashed border-indigo-200 bg-white/60 text-sm font-bold text-indigo-400">
-                                빠른 흐름 미리보기 영역
-                            </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="mt-16 flex flex-wrap items-center justify-between gap-4 rounded-[1.5rem] border border-white/70 bg-white/80 px-6 py-5 shadow-sm">
-            <div>
-                <p class="text-sm font-black text-slate-900">다른 안내도 바로 볼 수 있습니다.</p>
-                <p class="mt-1 text-sm text-slate-500">필요한 안내를 더 찾아보거나, 바로 서비스로 돌아가서 이어서 작업하세요.</p>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="{% url 'service_guide_list' %}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:text-slate-900">
-                    다른 안내 보기
-                </a>
-                {% if launch_href %}
-                <a href="{{ launch_href }}" {% if launch_is_external %}target="_blank" rel="noopener noreferrer"{% endif %}
-                   class="inline-flex items-center gap-2 rounded-2xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:-translate-y-0.5 hover:shadow-md">
-                    서비스로 돌아가기 <i class="fa-solid fa-arrow-right-long"></i>
-                </a>
-                {% endif %}
-            </div>
+        <div>
+            <a href="{% url 'service_guide_list' %}" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700">
+                다른 서비스 보기
+            </a>
         </div>
     </div>
 </section>

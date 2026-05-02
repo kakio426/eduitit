@@ -42,6 +42,8 @@
     var prevButton = modal.querySelector('[data-service-guide-prev]');
     var nextButton = modal.querySelector('[data-service-guide-next]');
     var launchLink = modal.querySelector('[data-service-guide-launch]');
+    var searchInput = document.querySelector('[data-service-guide-search]');
+    var emptyNode = document.querySelector('[data-service-guide-empty]');
 
     function text(value) {
         return typeof value === 'string' ? value : '';
@@ -241,7 +243,9 @@
             titleNode.textContent = guide.title || guide.serviceName || '서비스 이용방법';
         }
         if (descriptionNode) {
-            descriptionNode.textContent = guide.description || '';
+            var description = guide.description || '';
+            descriptionNode.textContent = description;
+            descriptionNode.hidden = !description;
         }
         if (stepLabelNode) {
             stepLabelNode.textContent = slide.stepLabel || ((state.slideIndex + 1) + '/' + slides.length);
@@ -268,6 +272,35 @@
         }
         if (nextButton) {
             nextButton.disabled = state.slideIndex >= slides.length - 1;
+        }
+    }
+
+    function openFromTrigger(trigger) {
+        var manualId = trigger.getAttribute('data-service-guide-trigger');
+        if (!guideById.has(String(manualId))) {
+            return false;
+        }
+        openGuideModal(manualId, 0);
+        return true;
+    }
+
+    function syncGuideSearch() {
+        if (!searchInput) {
+            return;
+        }
+        var query = text(searchInput.value).trim().toLowerCase();
+        var cards = Array.prototype.slice.call(document.querySelectorAll('[data-service-guide-search-item]'));
+        var visibleCount = 0;
+        cards.forEach(function (card) {
+            var haystack = text(card.getAttribute('data-service-guide-search-text')).toLowerCase();
+            var isVisible = !query || haystack.indexOf(query) !== -1;
+            card.hidden = !isVisible;
+            if (isVisible) {
+                visibleCount += 1;
+            }
+        });
+        if (emptyNode) {
+            emptyNode.hidden = !query || visibleCount > 0;
         }
     }
 
@@ -308,11 +341,9 @@
 
     document.addEventListener('click', function (event) {
         var trigger = event.target.closest('[data-service-guide-trigger]');
-        if (trigger) {
-            var manualId = trigger.getAttribute('data-service-guide-trigger');
-            if (guideById.has(String(manualId))) {
+        if (trigger && !event.target.closest('[data-service-guide-bypass]')) {
+            if (openFromTrigger(trigger)) {
                 event.preventDefault();
-                openGuideModal(manualId, 0);
                 return;
             }
         }
@@ -353,6 +384,11 @@
 
     document.addEventListener('keydown', function (event) {
         if (modal.hidden) {
+            var trigger = event.target.closest && event.target.closest('[data-service-guide-trigger]');
+            if (trigger && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                openFromTrigger(trigger);
+            }
             return;
         }
         if (event.key === 'Escape') {
@@ -368,6 +404,11 @@
     });
 
     window.openServiceGuide = openGuideModal;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', syncGuideSearch);
+        syncGuideSearch();
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         var autostartId = modal.getAttribute('data-service-guide-autostart');

@@ -34,15 +34,15 @@ body.service-guide-modal-open {
 .service-guide-modal__panel {
     position: relative;
     z-index: 1;
-    width: min(1380px, 100%);
+    width: min(1180px, 100%);
     max-height: min(860px, calc(100dvh - var(--main-nav-height, 64px) - 2rem));
     display: flex;
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(226, 232, 240, 0.86);
-    border-radius: 28px;
+    border-radius: 22px;
     background: #f8fafc;
-    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+    box-shadow: 0 22px 64px rgba(15, 23, 42, 0.24);
     opacity: 0;
     transform: translateY(18px) scale(0.985);
     transition: opacity 220ms ease, transform 220ms ease;
@@ -58,12 +58,13 @@ body.service-guide-modal-open {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
-    padding: 1.25rem 4rem 1.1rem 1.35rem;
+    padding: 1rem 4rem 0.95rem 1.2rem;
     border-bottom: 1px solid #e2e8f0;
     background: rgba(255, 255, 255, 0.92);
 }
 
 .service-guide-modal__eyebrow {
+    display: none;
     grid-column: 1 / -1;
     color: #64748b;
     font-size: 0.72rem;
@@ -87,6 +88,10 @@ body.service-guide-modal-open {
     font-size: 0.94rem;
     font-weight: 700;
     line-height: 1.55;
+}
+
+.service-guide-modal__description[hidden] {
+    display: none;
 }
 
 .service-guide-modal__close {
@@ -114,7 +119,7 @@ body.service-guide-modal-open {
 .service-guide-modal__body {
     min-height: 0;
     display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
+    grid-template-columns: 190px minmax(0, 1fr);
     flex: 1;
 }
 
@@ -122,7 +127,7 @@ body.service-guide-modal-open {
     min-height: 0;
     border-right: 1px solid #e2e8f0;
     background: #ffffff;
-    padding: 1rem;
+    padding: 0.8rem;
     overflow-y: auto;
 }
 
@@ -142,7 +147,7 @@ body.service-guide-modal-open {
 
 .service-guide-modal__service-button {
     width: 100%;
-    min-height: 4rem;
+    min-height: 3.3rem;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     background: #f8fafc;
@@ -192,7 +197,7 @@ body.service-guide-modal-open {
     min-height: 0;
     flex: 1;
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(340px, 0.82fr);
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.76fr);
     align-items: start;
     gap: 1rem;
     padding: 1rem;
@@ -204,9 +209,9 @@ body.service-guide-modal-open {
     min-width: 0;
     margin: 0;
     border: 1px solid #e2e8f0;
-    border-radius: 22px;
+    border-radius: 18px;
     background: #ffffff;
-    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
 }
 
 .service-guide-modal__screen {
@@ -225,8 +230,7 @@ body.service-guide-modal-open {
     place-items: center;
     padding: clamp(0.55rem, 1vw, 0.9rem);
     background:
-        linear-gradient(135deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%),
-        repeating-linear-gradient(45deg, rgba(148, 163, 184, 0.08) 0 1px, transparent 1px 12px);
+        linear-gradient(135deg, rgba(248, 250, 252, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
 }
 
 .service-guide-modal__screen-stage {
@@ -257,13 +261,13 @@ body.service-guide-modal-open {
     top: var(--focus-y);
     width: var(--focus-w);
     height: var(--focus-h);
-    border: 2px solid #22d3ee;
+    border: 2px solid #6366f1;
     border-radius: 16px;
-    background: rgba(34, 211, 238, 0.08);
+    background: rgba(99, 102, 241, 0.08);
     box-shadow:
         0 0 0 999px rgba(15, 23, 42, 0.34),
-        0 0 0 6px rgba(34, 211, 238, 0.14),
-        0 18px 40px rgba(8, 145, 178, 0.3);
+        0 0 0 6px rgba(99, 102, 241, 0.14),
+        0 18px 36px rgba(79, 70, 229, 0.24);
     pointer-events: none;
     transition: left 220ms ease, top 220ms ease, width 220ms ease, height 220ms ease;
 }
@@ -275,10 +279,10 @@ body.service-guide-modal-open {
     width: 0.85rem;
     height: 0.85rem;
     border-radius: 999px;
-    background: #22d3ee;
+    background: #6366f1;
     box-shadow:
-        0 0 0 6px rgba(34, 211, 238, 0.22),
-        0 0 0 14px rgba(34, 211, 238, 0.1);
+        0 0 0 6px rgba(99, 102, 241, 0.2),
+        0 0 0 14px rgba(99, 102, 241, 0.08);
     transform: translate(-50%, -50%);
     animation: service-guide-pin-pulse 1500ms ease-in-out infinite;
     pointer-events: none;
@@ -288,7 +292,7 @@ body.service-guide-modal-open {
     position: absolute;
     right: 1rem;
     bottom: 1rem;
-    width: min(18rem, 40%);
+    width: min(16rem, 38%);
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 18px;
     background: rgba(15, 23, 42, 0.9);
@@ -303,7 +307,7 @@ body.service-guide-modal-open {
     align-items: center;
     gap: 0.35rem;
     margin-bottom: 0.55rem;
-    color: #a5f3fc;
+    color: #c7d2fe;
     font-size: 0.68rem;
     font-weight: 900;
     letter-spacing: 0.14em;
@@ -340,13 +344,13 @@ body.service-guide-modal-open {
 @keyframes service-guide-pin-pulse {
     0%, 100% {
         box-shadow:
-            0 0 0 6px rgba(34, 211, 238, 0.22),
-            0 0 0 14px rgba(34, 211, 238, 0.1);
+            0 0 0 6px rgba(99, 102, 241, 0.2),
+            0 0 0 14px rgba(99, 102, 241, 0.08);
     }
     50% {
         box-shadow:
-            0 0 0 8px rgba(34, 211, 238, 0.28),
-            0 0 0 22px rgba(34, 211, 238, 0.08);
+            0 0 0 8px rgba(99, 102, 241, 0.24),
+            0 0 0 22px rgba(99, 102, 241, 0.06);
     }
 }
 
@@ -382,7 +386,7 @@ body.service-guide-modal-open {
 .service-guide-modal__copy {
     display: flex;
     flex-direction: column;
-    padding: 1.15rem;
+    padding: 1rem;
     transition: opacity 170ms ease, transform 170ms ease;
 }
 
@@ -412,7 +416,7 @@ body.service-guide-modal-open {
 .service-guide-modal__copy h3 {
     margin: 0.75rem 0 0;
     color: #0f172a;
-    font-size: clamp(1.35rem, 2.2vw, 2rem);
+    font-size: clamp(1.2rem, 2vw, 1.7rem);
     font-weight: 900;
     line-height: 1.25;
 }
@@ -431,17 +435,17 @@ body.service-guide-modal-open {
 
 .service-guide-modal__focus-note {
     margin: 0.75rem 0 0;
-    border: 1px solid rgba(34, 211, 238, 0.34);
+    border: 1px solid rgba(99, 102, 241, 0.24);
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(236, 254, 255, 0.92), rgba(255, 255, 255, 0.98));
+    background: #f8fafc;
     padding: 0.75rem 0.85rem;
-    box-shadow: 0 14px 30px rgba(8, 145, 178, 0.09);
+    box-shadow: none;
 }
 
 .service-guide-modal__focus-note span {
     display: inline-flex;
     margin-bottom: 0.45rem;
-    color: #0891b2;
+    color: #4f46e5;
     font-size: 0.68rem;
     font-weight: 900;
     letter-spacing: 0.14em;
