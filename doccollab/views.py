@@ -31,6 +31,7 @@ from .doc_generation_service import (
     reserve_document_daily_limit,
 )
 from .doc_hwp_builder import DocumentBuildError
+from .document_spec import DOCUMENT_OPTION_CHOICES
 from .models import DocGeneratedDraft, DocMembership, DocRevision, DocRoom, DocWorksheet
 from .services import (
     accessible_rooms_queryset,
@@ -107,6 +108,17 @@ def _request_payload(request):
         return json.loads(request.body.decode("utf-8") or "{}")
     except json.JSONDecodeError:
         return {}
+
+
+def _payload_list(payload, key):
+    if hasattr(payload, "getlist"):
+        return payload.getlist(key)
+    value = payload.get(key) if isinstance(payload, dict) else None
+    if isinstance(value, list):
+        return value
+    if value is None:
+        return []
+    return [value]
 
 
 def _membership_for_room(room, user):
@@ -286,6 +298,7 @@ def _build_dashboard_context(request):
             {"value": value, "label": label}
             for value, label in DocGeneratedDraft.DocumentType.choices
         ],
+        "document_block_choices": DOCUMENT_OPTION_CHOICES,
     }
 
 
@@ -345,11 +358,13 @@ def generate_document(request):
     payload = _request_payload(request)
     document_type = payload.get("document_type")
     prompt = payload.get("prompt")
+    selected_blocks = _payload_list(payload, "document_blocks")
     try:
         room, _draft, revision = create_generated_document_room(
             user=request.user,
             document_type=document_type,
             prompt=prompt,
+            selected_blocks=selected_blocks,
         )
     except ValidationError as exc:
         release_document_daily_limit(request.user.id)

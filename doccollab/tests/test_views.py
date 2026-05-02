@@ -27,6 +27,7 @@ from doccollab.assistant_service import MAX_DOCUMENT_BYTES, MAX_QUESTIONS_PER_AN
 from doccollab.doc_generation_llm import DocumentGenerationLlmError
 from doccollab.doc_generation_service import document_daily_limit_used
 from doccollab.doc_hwp_builder import DocumentBuildError
+from doccollab.document_spec import DOCUMENT_SCHEMA_VERSION
 from doccollab.services import (
     accessible_rooms_queryset,
     append_room_collab_update,
@@ -822,6 +823,7 @@ class DoccollabViewTests(TestCase):
         self.assertEqual(response.context["generated_draft"].id, draft.id)
         self.assertEqual(draft.status, DocGeneratedDraft.Status.READY)
         self.assertEqual(draft.document_type, DocGeneratedDraft.DocumentType.NOTICE)
+        self.assertEqual(draft.content_json["schema_version"], DOCUMENT_SCHEMA_VERSION)
         self.assertEqual(draft.summary_text, "5월 체험학습 안내")
         self.assertEqual(revision.export_format, DocRevision.ExportFormat.HWPX_EXPORT)
         self.assertEqual(response.context["room_payload"]["notes"], "AI가 만든 HWPX 초안을 바로 엽니다.")

@@ -229,6 +229,10 @@
     gap: 0.5rem;
 }
 
+.doccollab-choice-grid--blocks {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .doccollab-choice {
     position: relative;
     display: block;

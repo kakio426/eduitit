@@ -50,6 +50,17 @@
                             {% endfor %}
                         </div>
                     </fieldset>
+                    <fieldset class="doccollab-choice-field">
+                        <legend>구성</legend>
+                        <div class="doccollab-choice-grid doccollab-choice-grid--blocks">
+                            {% for choice in document_block_choices %}
+                            <label class="doccollab-choice">
+                                <input type="checkbox" name="document_blocks" value="{{ choice.value }}">
+                                <span>{{ choice.label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
                     <label class="doccollab-field">
                         <span>요청 내용</span>
                         <textarea name="prompt" rows="5" maxlength="2000" placeholder="예: 5월 체험학습 안내문" required></textarea>

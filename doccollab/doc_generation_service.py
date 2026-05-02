@@ -15,6 +15,7 @@ from .doc_generation_llm import (
     generate_document_content,
 )
 from .doc_hwp_builder import build_document_hwpx_bytes, document_hwpx_file_name
+from .document_spec import normalize_document_spec, normalize_feature_codes, validate_document_spec
 from .models import DocGeneratedDraft, DocMembership, DocRevision, DocRoom, DocWorkspace
 from .services import save_room_revision
 
@@ -78,7 +79,7 @@ def release_document_daily_limit(user_id):
     cache.set(cache_key, current - 1, timeout=DAILY_LIMIT_CACHE_TTL)
 
 
-def validate_document_generation_request(*, document_type, prompt):
+def validate_document_generation_request(*, document_type, prompt, selected_blocks=None):
     normalized_type = str(document_type or "").strip() or DocGeneratedDraft.DocumentType.FREEFORM
     normalized_prompt = re.sub(r"\s+", " ", str(prompt or "").strip())
     if normalized_type not in DOCUMENT_TYPE_LABELS:
@@ -87,29 +88,45 @@ def validate_document_generation_request(*, document_type, prompt):
         raise ValidationError("요청 내용을 20자 이상 적어 주세요.")
     if len(normalized_prompt) > MAX_PROMPT_CHARS:
         raise ValidationError("요청 내용은 2000자 안쪽으로 적어 주세요.")
-    return normalized_type, normalized_prompt
+    return normalized_type, normalized_prompt, normalize_feature_codes(selected_blocks)
 
 
 def document_content_json_from_payload(payload):
-    return {
-        "title": payload.get("title") or "",
-        "subtitle": payload.get("subtitle") or "",
-        "meta_lines": list(payload.get("meta_lines") or [])[:6],
-        "body_blocks": list(payload.get("body_blocks") or [])[:8],
-        "closing": payload.get("closing") or "",
-        "summary_text": payload.get("summary_text") or "",
-    }
+    source = payload if isinstance(payload, dict) else {}
+    return normalize_document_spec(
+        source,
+        document_type=source.get("document_type") or DocGeneratedDraft.DocumentType.FREEFORM,
+        prompt=source.get("summary_text") or source.get("title") or "학교 실무 문서 초안",
+        selected_blocks=source.get("selected_blocks"),
+    )
 
 
-def create_generated_document_room(*, user, document_type, prompt):
-    normalized_type, normalized_prompt = validate_document_generation_request(
+def create_generated_document_room(*, user, document_type, prompt, selected_blocks=None):
+    normalized_type, normalized_prompt, normalized_blocks = validate_document_generation_request(
         document_type=document_type,
         prompt=prompt,
+        selected_blocks=selected_blocks,
     )
     room, draft = _create_draft_shell(user=user, document_type=normalized_type, prompt=normalized_prompt)
     try:
-        payload = generate_document_content(document_type=normalized_type, prompt=normalized_prompt)
+        payload = generate_document_content(
+            document_type=normalized_type,
+            prompt=normalized_prompt,
+            selected_blocks=normalized_blocks,
+        )
+        payload = normalize_document_spec(
+            payload,
+            document_type=normalized_type,
+            prompt=normalized_prompt,
+            selected_blocks=normalized_blocks,
+        )
+        issues = validate_document_spec(payload)
+        if issues:
+            raise ValidationError(issues[0])
         generated = build_document_hwpx_bytes(content=payload)
+        build_issues = validate_document_spec(payload, page_count=max(int(generated.get("page_count") or 0), 0))
+        if build_issues:
+            raise ValidationError(build_issues[0])
         revision = _complete_generated_document(
             user=user,
             room=room,

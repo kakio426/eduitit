@@ -6,21 +6,19 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 from openai import OpenAI
 
+from .document_spec import (
+    DOCUMENT_PROMPT_VERSION,
+    DOCUMENT_SCHEMA_VERSION,
+    DOCUMENT_TYPE_LABELS,
+    normalize_document_spec,
+    normalize_feature_codes,
+)
+
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_MODEL_NAME = "deepseek-chat"
-DOCUMENT_PROMPT_VERSION = "document-draft-v1"
 MIN_PROMPT_CHARS = 20
 MAX_PROMPT_CHARS = 2000
-
-DOCUMENT_TYPE_LABELS = {
-    "notice": "안내문",
-    "home_letter": "가정통신문",
-    "plan": "계획안",
-    "minutes": "회의록",
-    "report": "보고서",
-    "freeform": "자유 문서",
-}
 
 DOCUMENT_TYPE_GUIDES = {
     "notice": "학교 안내문 형식으로 대상, 일정, 준비물, 확인 사항이 드러나게 작성하세요.",
@@ -36,7 +34,7 @@ class DocumentGenerationLlmError(Exception):
     """Raised when AI document draft generation fails."""
 
 
-def generate_document_content(*, document_type, prompt, timeout_seconds=45):
+def generate_document_content(*, document_type, prompt, selected_blocks=None, timeout_seconds=45):
     normalized_type = str(document_type or "").strip()
     normalized_prompt = _clean_text(prompt, limit=MAX_PROMPT_CHARS)
     if normalized_type not in DOCUMENT_TYPE_LABELS:
@@ -44,10 +42,12 @@ def generate_document_content(*, document_type, prompt, timeout_seconds=45):
     if len(normalized_prompt) < MIN_PROMPT_CHARS:
         raise DocumentGenerationLlmError("요청 내용을 20자 이상 적어 주세요.")
 
-    system_prompt = _document_system_prompt(normalized_type)
+    normalized_blocks = normalize_feature_codes(selected_blocks)
+    system_prompt = _document_system_prompt(normalized_type, selected_blocks=normalized_blocks)
     user_prompt = (
         "문서 요청:\n"
         f"{normalized_prompt}\n\n"
+        f"선택 구성: {', '.join(normalized_blocks) if normalized_blocks else '문서 종류 기본값'}\n\n"
         "반드시 JSON 객체만 반환하세요."
     )
     payload = _call_json_response(
@@ -57,42 +57,23 @@ def generate_document_content(*, document_type, prompt, timeout_seconds=45):
         ],
         timeout_seconds=timeout_seconds,
     )
-    return normalize_document_payload(payload, document_type=normalized_type, prompt=normalized_prompt)
+    return normalize_document_payload(
+        payload,
+        document_type=normalized_type,
+        prompt=normalized_prompt,
+        selected_blocks=normalized_blocks,
+    )
 
 
-def normalize_document_payload(payload, *, document_type, prompt):
+def normalize_document_payload(payload, *, document_type, prompt, selected_blocks=None):
     if not isinstance(payload, dict):
         raise DocumentGenerationLlmError("DeepSeek returned invalid JSON.")
-
-    label = DOCUMENT_TYPE_LABELS.get(document_type, DOCUMENT_TYPE_LABELS["freeform"])
-    title = _clean_text(payload.get("title"), limit=80) or f"{label} 초안"
-    subtitle = _clean_text(payload.get("subtitle"), limit=100)
-    meta_lines = _normalize_string_list(payload.get("meta_lines"), limit=80, max_items=6)
-    body_blocks = _normalize_body_blocks(payload.get("body_blocks"))
-    if not body_blocks:
-        body_blocks = [
-            {
-                "heading": label,
-                "paragraphs": [_clean_text(prompt, limit=420)],
-                "bullets": [],
-            }
-        ]
-    closing = _clean_text(payload.get("closing"), limit=300)
-    summary_text = _clean_text(payload.get("summary_text"), limit=160)
-    if not summary_text:
-        first_block = body_blocks[0]
-        first_paragraph = (first_block.get("paragraphs") or [""])[0]
-        first_bullet = (first_block.get("bullets") or [""])[0]
-        summary_text = _clean_text(first_paragraph or first_bullet or title, limit=160)
-
-    return {
-        "title": title,
-        "subtitle": subtitle,
-        "meta_lines": meta_lines,
-        "body_blocks": body_blocks,
-        "closing": closing,
-        "summary_text": summary_text,
-    }
+    return normalize_document_spec(
+        payload,
+        document_type=document_type,
+        prompt=prompt,
+        selected_blocks=selected_blocks,
+    )
 
 
 def _normalize_body_blocks(value):
@@ -138,18 +119,26 @@ def _normalize_string_list(value, *, limit, max_items):
     return result
 
 
-def _document_system_prompt(document_type):
+def _document_system_prompt(document_type, *, selected_blocks=None):
     label = DOCUMENT_TYPE_LABELS[document_type]
     guide = DOCUMENT_TYPE_GUIDES[document_type]
+    selected_text = ", ".join(selected_blocks or []) or "문서 종류 기본값"
     return (
         "당신은 학교 교사의 업무 문서 초안을 작성하는 문서 비서입니다. "
         "반드시 JSON 객체만 반환하세요. "
         f"문서 종류는 {label}입니다. {guide} "
-        "title, subtitle, meta_lines, body_blocks, closing, summary_text 키를 포함하세요. "
-        "body_blocks는 heading, paragraphs, bullets를 가진 객체 배열입니다. "
+        f"schema_version은 반드시 {DOCUMENT_SCHEMA_VERSION}입니다. "
+        "title, subtitle, summary_text, blocks 키를 포함하세요. "
+        "blocks는 type을 가진 객체 배열이며 허용 type은 "
+        "masthead, title, meta_table, paragraph, bullet_list, info_table, schedule_table, "
+        "decision_table, budget_table, callout_box, signature_box 뿐입니다. "
+        "표 블록은 title, headers, rows를 가지며 headers는 최대 5개, rows는 최대 8개입니다. "
+        "paragraph는 title과 text, bullet_list는 title과 items를 사용하세요. "
+        "masthead에는 school_name, department, contact, fax를 넣고 모르면 ○○학교와 빈 값을 사용하세요. "
+        f"교사가 선택한 구성은 {selected_text}입니다. 선택 구성은 가능한 한 해당 블록으로 반영하세요. "
         "없는 정보는 지어내지 말고 빈 문자열이나 일반 표현으로 두세요. "
         "교사가 바로 수정할 수 있도록 자연스러운 한국어 공문/학교 문서 문체로 쓰세요. "
-        "title은 80자 이하, meta_lines는 최대 6개, body_blocks는 최대 8개입니다. "
+        "title은 80자 이하, 표 셀은 짧은 구절로 작성하세요. "
         "문단은 짧고 명확하게 쓰고, 과도한 장식 기호나 이모지는 넣지 마세요."
     )
 
