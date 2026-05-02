@@ -6,213 +6,168 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'doccollab/doccollab.css' %}">
 
-<section class="service-shell service-shell--compact doccollab-shell">
-    <div class="doccollab-frame">
-        <header class="doccollab-hero">
-            <div>
-                <p class="doccollab-kicker">온라인 HWP 편집</p>
-                <h1 class="doccollab-title">{{ service_title }}</h1>
-                <p class="doccollab-copy">열기, 정리, 저장.</p>
+<section class="service-shell service-shell--compact doccollab-shell doccollab-shell--instant">
+    <div class="doccollab-frame doccollab-frame--instant">
+        <header class="doccollab-workbar" aria-label="잇티한글 작업">
+            <div class="doccollab-workbar-title">
+                <strong>{{ service_title }}</strong>
+                <span id="doccollab-instant-status">새문서</span>
             </div>
-            <div class="doccollab-chip-row">
-                <span class="doccollab-chip">HWP/HWPX</span>
-                <span class="doccollab-chip">AI 정리</span>
-                <span class="doccollab-chip">저장 HWPX</span>
+            <div class="doccollab-workbar-actions">
+                <details class="doccollab-tool-menu" data-doccollab-tool-menu>
+                    <summary class="doccollab-tool-button">AI 문서</summary>
+                    <div class="doccollab-popover doccollab-popover--ai">
+                        <form method="post" action="{% url 'doccollab:generate_document' %}" class="doccollab-form doccollab-form--compact" data-doccollab-document-form="true">
+                            {% csrf_token %}
+                            <label class="doccollab-field">
+                                <span>문서 종류</span>
+                                <select name="document_type">
+                                    {% for choice in document_type_choices %}
+                                    <option value="{{ choice.value }}">{{ choice.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <fieldset class="doccollab-choice-field">
+                                <legend>구성</legend>
+                                <div class="doccollab-choice-grid doccollab-choice-grid--compact">
+                                    {% for choice in document_block_choices %}
+                                    <label class="doccollab-choice doccollab-choice--small">
+                                        <input type="checkbox" name="document_blocks" value="{{ choice.value }}">
+                                        <span>{{ choice.label }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </fieldset>
+                            <label class="doccollab-field">
+                                <span>요청 내용</span>
+                                <textarea name="prompt" rows="4" maxlength="2000" placeholder="예: 5월 체험학습 안내문" required></textarea>
+                            </label>
+                            <div class="doccollab-popover-footer">
+                                <p id="doccollab-document-status" class="doccollab-footnote doccollab-upload-status">
+                                    {% if document_generation_enabled %}생성 가능 {{ document_daily_used }}/{{ document_daily_limit }}{% else %}오늘 한도{% endif %}
+                                </p>
+                                <button type="submit" class="doccollab-primary doccollab-primary--compact" data-doccollab-document-button="true" {% if not document_generation_enabled %}disabled{% endif %}>만들기</button>
+                            </div>
+                        </form>
+                    </div>
+                </details>
+
+                <details class="doccollab-tool-menu" data-doccollab-tool-menu>
+                    <summary class="doccollab-tool-button">파일 열기</summary>
+                    <div class="doccollab-popover doccollab-popover--open">
+                        <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form doccollab-form--compact" data-doccollab-upload-form="true">
+                            {% csrf_token %}
+                            <label class="doccollab-field">
+                                <span>HWP/HWPX 파일</span>
+                                <input type="file" name="source_file" accept=".hwp,.hwpx" required>
+                            </label>
+                            <label class="doccollab-field">
+                                <span>문서 이름</span>
+                                <input type="text" name="title">
+                            </label>
+                            <div class="doccollab-popover-footer">
+                                <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">파일 선택</p>
+                                <button type="submit" class="doccollab-primary doccollab-primary--compact" data-doccollab-open-button="true">열기</button>
+                            </div>
+                        </form>
+                    </div>
+                </details>
+
+                <details class="doccollab-tool-menu" data-doccollab-tool-menu>
+                    <summary class="doccollab-tool-button">문서함</summary>
+                    <div class="doccollab-popover doccollab-popover--library">
+                        <section class="doccollab-library-section">
+                            <h2>오늘</h2>
+                            {% if today_room_cards %}
+                            <div class="doccollab-list doccollab-list--tight">
+                                {% for room in today_room_cards %}
+                                <div class="doccollab-room-row doccollab-room-row--workspace doccollab-room-row--compact">
+                                    <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
+                                        <span class="doccollab-room-title">{{ room.title }}</span>
+                                        <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
+                                    </a>
+                                    <div class="doccollab-room-side doccollab-room-side--actions">
+                                        <span class="doccollab-room-meta">{{ room.activity_label }}</span>
+                                        <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="doccollab-empty doccollab-empty--compact">문서 없음</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="doccollab-library-section">
+                            <h2>최근 수정한 문서</h2>
+                            {% if my_room_cards %}
+                            <div class="doccollab-list doccollab-list--tight">
+                                {% for room in my_room_cards %}
+                                <div class="doccollab-room-row doccollab-room-row--workspace doccollab-room-row--compact">
+                                    <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
+                                        <span class="doccollab-room-title">{{ room.title }}</span>
+                                        <span class="doccollab-room-submeta">{{ room.revision_label }} · {{ room.activity_label }}</span>
+                                    </a>
+                                    <div class="doccollab-room-side doccollab-room-side--actions">
+                                        <div class="doccollab-row-actions">
+                                            <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
+                                            <form method="post" action="{{ room.delete_url }}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="doccollab-empty doccollab-empty--compact">문서 없음</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="doccollab-library-section">
+                            <h2>공유받은 문서</h2>
+                            {% if shared_room_cards %}
+                            <div class="doccollab-list doccollab-list--tight">
+                                {% for room in shared_room_cards %}
+                                <div class="doccollab-room-row doccollab-room-row--workspace doccollab-room-row--compact">
+                                    <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
+                                        <span class="doccollab-room-title">{{ room.title }}</span>
+                                        <span class="doccollab-room-submeta">{{ room.owner_label }} · {{ room.revision_label }}</span>
+                                    </a>
+                                    <div class="doccollab-room-side doccollab-room-side--actions">
+                                        <div class="doccollab-row-actions">
+                                            <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
+                                            <form method="post" action="{{ room.delete_url }}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="doccollab-empty doccollab-empty--compact">문서 없음</p>
+                            {% endif %}
+                        </section>
+                    </div>
+                </details>
+
+                <button type="button" id="doccollab-instant-save-button" class="doccollab-tool-button doccollab-tool-button--primary" disabled>저장</button>
             </div>
         </header>
 
         {% if messages %}
-        <div class="doccollab-stack">
+        <div class="doccollab-stack doccollab-stack--instant">
             {% for message in messages %}
             <div class="doccollab-alert {% if message.tags %}doccollab-alert--{{ message.tags }}{% endif %}">{{ message }}</div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <section class="doccollab-action-grid">
-            <article class="doccollab-card">
-                <div class="doccollab-card-head">
-                    <div>
-                        <p class="doccollab-label">AI 문서</p>
-                        <h2 class="doccollab-card-title">초안 만들기</h2>
-                    </div>
-                </div>
-                <form method="post" action="{% url 'doccollab:generate_document' %}" class="doccollab-form" data-doccollab-document-form="true">
-                    {% csrf_token %}
-                    <fieldset class="doccollab-choice-field">
-                        <legend>문서 종류</legend>
-                        <div class="doccollab-choice-grid">
-                            {% for choice in document_type_choices %}
-                            <label class="doccollab-choice">
-                                <input type="radio" name="document_type" value="{{ choice.value }}" {% if forloop.first %}checked{% endif %}>
-                                <span>{{ choice.label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </fieldset>
-                    <fieldset class="doccollab-choice-field">
-                        <legend>구성</legend>
-                        <div class="doccollab-choice-grid doccollab-choice-grid--blocks">
-                            {% for choice in document_block_choices %}
-                            <label class="doccollab-choice">
-                                <input type="checkbox" name="document_blocks" value="{{ choice.value }}">
-                                <span>{{ choice.label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </fieldset>
-                    <label class="doccollab-field">
-                        <span>요청 내용</span>
-                        <textarea name="prompt" rows="5" maxlength="2000" placeholder="예: 5월 체험학습 안내문" required></textarea>
-                    </label>
-                    <button type="submit" class="doccollab-primary" data-doccollab-document-button="true" {% if not document_generation_enabled %}disabled{% endif %}>만들기</button>
-                    <p id="doccollab-document-status" class="doccollab-footnote doccollab-upload-status">
-                        {% if document_generation_enabled %}생성 가능 {{ document_daily_used }}/{{ document_daily_limit }}{% else %}오늘 한도{% endif %}
-                    </p>
-                </form>
-            </article>
-
-            <article class="doccollab-card">
-                <div class="doccollab-card-head">
-                    <div>
-                        <p class="doccollab-label">파일 열기</p>
-                        <h2 class="doccollab-card-title">문서 편집</h2>
-                    </div>
-                </div>
-                <form method="post" action="{% url 'doccollab:create_room' %}" enctype="multipart/form-data" class="doccollab-form" data-doccollab-upload-form="true">
-                    {% csrf_token %}
-                    <label class="doccollab-field">
-                        <span>HWP/HWPX 파일</span>
-                        <input type="file" name="source_file" accept=".hwp,.hwpx" required>
-                    </label>
-                    <label class="doccollab-field">
-                        <span>문서 이름</span>
-                        <input type="text" name="title">
-                    </label>
-                    <button type="submit" class="doccollab-primary" data-doccollab-open-button="true">파일 열기</button>
-                    <p id="doccollab-upload-status" class="doccollab-footnote doccollab-upload-status">선택 후 바로 열림</p>
-                </form>
-            </article>
-        </section>
-
-        <div class="doccollab-stack">
-            <section class="doccollab-card">
-                <div class="doccollab-card-head">
-                    <div>
-                        <p class="doccollab-label">오늘</p>
-                        <h2 class="doccollab-card-title">오늘 연 문서</h2>
-                    </div>
-                </div>
-                {% if today_room_cards %}
-                <div class="doccollab-list">
-                    {% for room in today_room_cards %}
-                    <div class="doccollab-room-row doccollab-room-row--workspace">
-                        <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
-                            <div class="doccollab-room-heading">
-                                <span class="doccollab-room-title">{{ room.title }}</span>
-                                <div class="doccollab-room-badges">
-                                    <span class="doccollab-chip doccollab-chip--soft">{{ room.scope_label }}</span>
-                                    <span class="doccollab-chip doccollab-chip--soft">{{ room.revision_label }}</span>
-                                </div>
-                            </div>
-                            <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
-                        </a>
-                        <div class="doccollab-room-side doccollab-room-side--actions">
-                            <span class="doccollab-room-meta">{{ room.activity_label }}</span>
-                            <div class="doccollab-row-actions">
-                                <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="doccollab-empty">오늘 연 문서가 없습니다.</p>
-                {% endif %}
-            </section>
-
-            <div class="doccollab-grid doccollab-grid--dashboard">
-                <section class="doccollab-card">
-                    <div class="doccollab-card-head">
-                        <div>
-                            <p class="doccollab-label">최근</p>
-                            <h2 class="doccollab-card-title">최근 수정한 문서</h2>
-                        </div>
-                    </div>
-                    {% if my_room_cards %}
-                    <div class="doccollab-list">
-                        {% for room in my_room_cards %}
-                        <div class="doccollab-room-row doccollab-room-row--workspace">
-                            <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
-                                <div class="doccollab-room-heading">
-                                    <span class="doccollab-room-title">{{ room.title }}</span>
-                                    <div class="doccollab-room-badges">
-                                        {% if room.is_today %}
-                                        <span class="doccollab-chip doccollab-chip--soft">오늘</span>
-                                        {% endif %}
-                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.scope_label }}</span>
-                                    </div>
-                                </div>
-                                <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
-                            </a>
-                            <div class="doccollab-room-side doccollab-room-side--actions">
-                                <span class="doccollab-room-meta">{{ room.revision_label }}</span>
-                                <span class="doccollab-room-meta">{{ room.activity_label }}</span>
-                                <div class="doccollab-row-actions">
-                                    <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
-                                    <form method="post" action="{{ room.delete_url }}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="doccollab-empty">최근 연 문서가 없습니다.</p>
-                    {% endif %}
-                </section>
-
-                <section class="doccollab-card">
-                    <div class="doccollab-card-head">
-                        <div>
-                            <p class="doccollab-label">공유</p>
-                            <h2 class="doccollab-card-title">공유받은 문서</h2>
-                        </div>
-                    </div>
-                    {% if shared_room_cards %}
-                    <div class="doccollab-list">
-                        {% for room in shared_room_cards %}
-                        <div class="doccollab-room-row doccollab-room-row--workspace">
-                            <a href="{{ room.url }}" class="doccollab-room-main doccollab-room-main--link">
-                                <div class="doccollab-room-heading">
-                                    <span class="doccollab-room-title">{{ room.title }}</span>
-                                    <div class="doccollab-room-badges">
-                                        <span class="doccollab-chip doccollab-chip--soft">{{ room.role_label }}</span>
-                                    </div>
-                                </div>
-                                <span class="doccollab-room-submeta">{{ room.owner_label }}</span>
-                            </a>
-                            <div class="doccollab-room-side doccollab-room-side--actions">
-                                <span class="doccollab-room-meta">{{ room.revision_label }}</span>
-                                <span class="doccollab-room-meta">{{ room.activity_label }}</span>
-                                <div class="doccollab-row-actions">
-                                    <a href="{{ room.url }}" class="doccollab-secondary doccollab-secondary--row">{{ room.open_label }}</a>
-                                    <form method="post" action="{{ room.delete_url }}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="doccollab-secondary doccollab-secondary--row doccollab-secondary--danger">{{ room.delete_label }}</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="doccollab-empty">공유받은 문서가 없습니다.</p>
-                    {% endif %}
-                </section>
-            </div>
+        <div id="doccollab-instant-editor-app" class="doccollab-editor-surface doccollab-editor-surface--instant" data-studio-url="{% static 'doccollab/rhwp-studio/index.html' %}">
+            <div class="doccollab-editor-placeholder">새문서</div>
         </div>
     </div>
 </section>

@@ -61,7 +61,7 @@ const TABLE_COMMAND_IDS = new Set([
   'table:delete-col',
 ]);
 
-const EDIT_ALIGNMENT_FALLBACKS = new Set(['distribute', 'split']);
+const EDIT_ALIGNMENT_RELAYOUT_TARGETS = new Set(['justify', 'distribute', 'split']);
 
 export function installDoccollabBridge(options: InstallOptions): DoccollabBridgeController {
   const {
@@ -90,12 +90,21 @@ export function installDoccollabBridge(options: InstallOptions): DoccollabBridge
     : null;
 
   inputHandler.executeOperation = ((descriptor: unknown) => {
-    if (!bridgeState.applyingRemoteBatch && !readOnlyMode) {
+    const shouldStabilizeLayout = !bridgeState.applyingRemoteBatch && !readOnlyMode;
+    const shouldRefreshLayoutAfterEdit = shouldStabilizeLayout
+      && shouldRefreshDescriptorLayoutAfterEdit(descriptor as Record<string, unknown>);
+    if (shouldStabilizeLayout) {
       stabilizeDescriptorLayout(descriptor as Record<string, unknown>, wasm);
     }
     originalExecuteOperation(descriptor as never);
     if (bridgeState.applyingRemoteBatch || readOnlyMode) {
       return;
+    }
+    if (
+      shouldRefreshLayoutAfterEdit
+      && stabilizeDescriptorLayout(descriptor as Record<string, unknown>, wasm)
+    ) {
+      inputHandler.triggerAfterEdit();
     }
     const commands = normalizeDescriptor(
       descriptor as Record<string, unknown>,
@@ -512,13 +521,31 @@ function buildMergeCommand(position: DocumentPosition, forwardDelete: boolean) {
     : new MergeParagraphCommand(position);
 }
 
+function shouldRefreshDescriptorLayoutAfterEdit(
+  descriptor: Record<string, unknown> | null,
+): boolean {
+  const command = descriptor?.command as Record<string, unknown> | undefined;
+  if (!command || typeof command.type !== 'string') {
+    return false;
+  }
+  switch (command.type) {
+    case 'insertText':
+      return /\s/u.test(String(command.text || ''));
+    case 'deleteText':
+    case 'deleteSelection':
+      return true;
+    default:
+      return false;
+  }
+}
+
 function stabilizeDescriptorLayout(
   descriptor: Record<string, unknown> | null,
   wasm: WasmBridge,
-): void {
+): boolean {
   const command = descriptor?.command as Record<string, unknown> | undefined;
   if (!command || typeof command.type !== 'string') {
-    return;
+    return false;
   }
   switch (command.type) {
     case 'insertText':
@@ -530,14 +557,14 @@ function stabilizeDescriptorLayout(
     case 'mergeNextParagraph':
     case 'mergeParagraphInCell':
     case 'mergeNextParagraphInCell':
-      stabilizePositionLayout(clonePosition((command.position as DocumentPosition | undefined) || null), wasm);
-      break;
+      return stabilizePositionLayout(clonePosition((command.position as DocumentPosition | undefined) || null), wasm);
     case 'deleteSelection':
-      stabilizePositionLayout(clonePosition((command.start as DocumentPosition | undefined) || null), wasm);
-      stabilizePositionLayout(clonePosition((command.end as DocumentPosition | undefined) || null), wasm);
-      break;
+      return [
+        stabilizePositionLayout(clonePosition((command.start as DocumentPosition | undefined) || null), wasm),
+        stabilizePositionLayout(clonePosition((command.end as DocumentPosition | undefined) || null), wasm),
+      ].some(Boolean);
     default:
-      break;
+      return false;
   }
 }
 
@@ -564,37 +591,39 @@ function stabilizeCommandLayout(command: DoccollabBridgeCommand, wasm: WasmBridg
   }
 }
 
-function stabilizePositionLayout(position: DocumentPosition | null, wasm: WasmBridge): void {
+function stabilizePositionLayout(position: DocumentPosition | null, wasm: WasmBridge): boolean {
   if (!position) {
-    return;
+    return false;
   }
   try {
     if ((position.cellPath?.length ?? 0) > 1) {
-      return;
+      return false;
     }
     if (position.parentParaIndex !== undefined) {
       const props = readCellParagraphProperties(position, wasm);
       const alignment = String(props?.alignment || '').trim();
-      if (!EDIT_ALIGNMENT_FALLBACKS.has(alignment)) {
-        return;
+      if (!EDIT_ALIGNMENT_RELAYOUT_TARGETS.has(alignment.toLowerCase())) {
+        return false;
       }
-      // Reapply the existing fallback alignment to trigger re-layout
+      // Reapply the existing alignment to trigger re-layout
       // without mutating the teacher's original paragraph formatting.
       applyCellParagraphAlignment(position, wasm, alignment);
-      return;
+      return true;
     }
     const props = wasm.getParaPropertiesAt(position.sectionIndex, position.paragraphIndex);
     const alignment = String(props?.alignment || '').trim();
-    if (!EDIT_ALIGNMENT_FALLBACKS.has(alignment)) {
-      return;
+    if (!EDIT_ALIGNMENT_RELAYOUT_TARGETS.has(alignment.toLowerCase())) {
+      return false;
     }
     wasm.applyParaFormat(
       position.sectionIndex,
       position.paragraphIndex,
       JSON.stringify({ alignment }),
     );
+    return true;
   } catch (error) {
     console.warn('[doccollab-bridge] paragraph alignment stabilization failed', error);
+    return false;
   }
 }
 

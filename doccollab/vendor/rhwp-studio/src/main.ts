@@ -659,6 +659,15 @@ window.addEventListener('message', async (e) => {
         reply({ pageCount: docInfo.pageCount });
         break;
       }
+      case 'createNewDocument': {
+        await initializePromise;
+        await createNewDocument();
+        reply({
+          pageCount: wasm.pageCount,
+          fileName: wasm.fileName || '새 문서.hwp',
+        });
+        break;
+      }
       case 'exportHwp':
         await initializePromise;
         reply({
